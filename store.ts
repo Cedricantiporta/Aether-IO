@@ -12,7 +12,7 @@ import { activeChar, activeProfileKey, characters } from './characters';
 import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
-import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
+import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
 import { runInfo, hardMul, phaseOfTime, type RunMode } from './engine/runMods';
@@ -382,7 +382,15 @@ const generateUpgradeOptions = (_hero: HeroClass, skillLevels: SkillLevels, _sta
   return rollRunCards(opener ? 3 : count, (skillLevels.ult ?? 0) > 0, String(world.room.biome), { trend: trendCounts(rp), epic, opener, spoils }).map((c) => withCardText({ ...c, id: uid('card') }));
 };
 /** The store rewrites the Max HP number with HP_INFLATE (the catalogue lists the base value). */
-const withCardText = (opt: Upgrade): Upgrade => { if (opt.type === 'HEALTH') opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; return opt; };
+/** (owner 2026-10-25 card balance) flat Max HP / Defense cards grow with the hero: at least this share of the current total per tier
+ *  [COMMON, RARE, EPIC, LEGENDARY, MYTHIC] (same steps as the % damage card), so they stay worth a pick when gear is strong. */
+const FLAT_CARD_FRAC = [0.06, 0.10, 0.15, 0.22, 0.35];
+const withCardText = (opt: Upgrade): Upgrade => {
+  const st = useGameStore.getState().stats, f = FLAT_CARD_FRAC[Math.min(4, opt.tier ?? 0)];
+  if (opt.type === 'HEALTH') { opt.value = Math.max(opt.value, Math.round((st.maxHealth / HP_INFLATE) * f)); opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; }
+  else if (opt.type === 'DEFENSE') { opt.value = Math.max(opt.value, Math.round(st.defense * f)); opt.description = `+${opt.value} Defense`; }
+  return opt;
+};
 
 /** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
 const addCores = (inv: Item[], n: number): Item[] => {
@@ -459,7 +467,8 @@ interface Profile {
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
-  sp2?: boolean;      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
+  sp2?: boolean;
+  sp3?: boolean;     // one-time: skill points per level rise with the level (classLevels.spGainAt)      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
   mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
   grade3?: boolean;   // 3-grade system (LOW/MID/HIGH): older saves relabel their old LOW as MID once (grade.ts legacyLowToMid)
@@ -489,6 +498,19 @@ const spMigrate = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<Hero
   if (done) return cp;
   const out = { ...cp };
   for (const h of Object.keys(out) as HeroClass[]) out[h] = { ...out[h], sp: out[h].sp + (SP_PER_LEVEL - 1) * Math.max(0, out[h].lv - 1) };
+  return out;
+};
+/** One-time (owner 2026-10-25): skill points per level now rise with the level (spGainAt); every class gets the difference for the levels it already has. */
+const spMigrate3 = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<HeroClass, ClassProg> => {
+  if (done) return cp;
+  const out = { ...cp };
+  for (const h of Object.keys(out) as HeroClass[]) out[h] = { ...out[h], sp: out[h].sp + Math.max(0, spTotalAt(out[h].lv) - (START_SP + SP_PER_LEVEL * Math.max(0, out[h].lv - 1))) };
+  return out;
+};
+/** (owner 2026-10-25) talent points dropped from 4 to 3.3 per level: a class that has more spent than its level gives gets a free reset. */
+const talentFit = (t: Record<HeroClass, TalentRanks>, cp: Record<HeroClass, ClassProg>): Record<HeroClass, TalentRanks> => {
+  const out = { ...t };
+  for (const h of Object.keys(out) as HeroClass[]) if (talentsSpent(out[h]) > talentPointsTotal(cp[h]?.lv ?? 1)) out[h] = {};
   return out;
 };
 
@@ -557,7 +579,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment, !p.grade3),
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix).map((i) => (p.grade3 ? i : legacyLowToMid(i))) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix).map((i) => (p.grade3 ? i : legacyLowToMid(i))) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
               dashMods: sanitizeDashMods(p.dashMods),
@@ -568,7 +590,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.settings?.hardMode && sanitizeProgress(p.progress).endings > 0 ? 'HARD' : 'NORMAL',   // (Hard mode: Settings toggle, locked until the first ending)
               attrs: sanitizeAttrs(p.attrs),
-              talents: sanitizeTalents(p.talents),
+              talents: talentFit(sanitizeTalents(p.talents), spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3)),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen), chestsOpened: Array.isArray(p.chestsOpened) ? p.chestsOpened.filter((x: unknown) => typeof x === 'string').slice(0, 64) : [],
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
@@ -618,7 +640,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, sp3: true, al1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -812,7 +834,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     debugSetLevel: (lv) => {
       lv = Math.max(1, Math.min(MAX_LEVEL, Math.floor(lv)));   // (owner) never past the real max level
       const s = get(), cp = s.classProg[s.hero];
-      const sp = Math.max(0, cp.sp + SP_PER_LEVEL * (lv - cp.lv));
+      const sp = Math.max(0, cp.sp + spTotalAt(lv) - spTotalAt(cp.lv));
       set({ classProg: { ...s.classProg, [s.hero]: { ...cp, lv, xp: 0, sp } } });
       if (s.status === GameStatus.MENU) get().selectHero(s.hero);   // rebuild stats / skills from the new level
       else set({ level: lv, heroRank: lv, experience: 0, experienceToNextLevel: xpNeed(lv), skillPoints: sp });
@@ -1021,7 +1043,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (level >= MAX_LEVEL) { experience = 0; break; }
         level += 1;
         experienceToNextLevel = xpNeed(level);
-        sp += SP_PER_LEVEL;
+        sp += spGainAt(level);
         base = growBase(base, get().hero);   // class scaling per level (shown on the character sheet)
       }
 
@@ -1067,9 +1089,10 @@ export const useGameStore = create<GameState>()((set, get) => {
         switch (upgrade.type) {
           case 'HEALTH': base.maxHealth += upgrade.value; world.player.hp += upgrade.value * HP_INFLATE; break;
           case 'MAX_MANA': base.maxMana += upgrade.value; world.player.mana += upgrade.value; break;
-          case 'DAMAGE': base.damage += base.damage * upgrade.value; break;
-          case 'SPEED': base.moveSpeed += base.moveSpeed * upgrade.value; break;
-          case 'FIRE_RATE': base.fireRate += base.fireRate * upgrade.value; break;
+          // (owner 2026-10-25) % cards add up on the run's starting value (five +10% = +50%), they no longer compound
+          case 'DAMAGE': base.damage = (base.damage / (1 + runCards.pctDmg)) * (1 + runCards.pctDmg + upgrade.value); runCards.pctDmg += upgrade.value; break;
+          case 'SPEED': base.moveSpeed = (base.moveSpeed / (1 + runCards.pctSpeed)) * (1 + runCards.pctSpeed + upgrade.value); runCards.pctSpeed += upgrade.value; break;
+          case 'FIRE_RATE': base.fireRate = (base.fireRate / (1 + runCards.pctRate)) * (1 + runCards.pctRate + upgrade.value); runCards.pctRate += upgrade.value; break;
           case 'DEFENSE': base.defense += upgrade.value; break;
           case 'CRIT_RATE': base.critRate += upgrade.value; break;
           case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
@@ -1079,7 +1102,7 @@ export const useGameStore = create<GameState>()((set, get) => {
           case 'AEGIS': { const sh = upgrade.value;   // the shield HP by the card's rarity (60 / 80 / 110 / 150)
  world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
           case 'COOLDOWN': base.cooldownReduction += upgrade.value; break;
-          case 'KNOCKBACK': base.knockback += base.knockback * upgrade.value; break;
+          case 'KNOCKBACK': base.knockback = (base.knockback / (1 + runCards.pctKb)) * (1 + runCards.pctKb + upgrade.value); runCards.pctKb += upgrade.value; break;
           case 'LIFESTEAL': base.lifeSteal += upgrade.value; break;
           case 'DMG_REDUCE': base.dmgReduce += upgrade.value; break;
           case 'MANA_REGEN': base.manaRegen += upgrade.value; break;

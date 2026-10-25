@@ -815,7 +815,7 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
-  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.8, st.stats.dmgReduce)) * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
+  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);

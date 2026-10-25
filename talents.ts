@@ -8,8 +8,8 @@
 //   ring 4  capstone ......................... needs both ring-3 nodes
 // (owner) gating: the first rings (0-1) only need 1 point in their parent; from ring 2 outward every talent needs its
 // parents MAXED (see reqMax). Special talents and the capstone also keep the ring's class level.
-// Rings also need a class level (RING_LEVEL) and cost more points per rank (RING_COST). 4 points per class level;
-// a full tree costs 158-164 of the 200 points at Lv 50, so every talent fits at the cap - before that you choose.
+// Rings also need a class level (RING_LEVEL 1 / 8 / 18 / 30 / 42) and cost more points per rank (RING_COST). 3.3 points per class
+// level: a full tree costs 158-164 of the 165 points at Lv 50, so the tree completes right at the cap - before that you choose.
 // Effects are plain StatFx merged in store.calculateStats; the mechanics are read from PlayerStats by the engine.
 // ============================================================================
 import type { HeroClass } from './types';
@@ -304,7 +304,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
 
 /** Points per rank by ring (owner: talent costs range 1..5) and the class level each ring needs. */
 export const RING_COST = [1, 1, 2, 3, 5];
-export const RING_LEVEL = [1, 4, 10, 20, 30];
+export const RING_LEVEL = [1, 8, 18, 30, 42];   // (owner 2026-10-25: spread over the whole 1..50 climb, capstones at 42)
 
 export const TALENTS: TalentNode[] = [];
 (Object.keys(DEF) as HeroClass[]).forEach((hero) => {
@@ -334,9 +334,9 @@ export const talentsOf = (hero: HeroClass): TalentNode[] => TALENTS.filter((t) =
 export type TalentRanks = Record<string, number>;
 export const emptyTalents = (): Record<HeroClass, TalentRanks> => ({ ARCHER: {}, WIZARD: {}, BARBARIAN: {}, KNIGHT: {}, NECROMANCER: {} });
 
-/** 4 points per class level (owner: at max level every talent is full; the fullest 4-branch tree costs 196 <= 50 x 4). */
-export const TALENT_POINTS_PER_LEVEL = 4;
-export const talentPointsTotal = (rank: number): number => Math.max(0, Math.floor(rank)) * TALENT_POINTS_PER_LEVEL;
+/** (owner 2026-10-25) 3.3 points per class level: the full tree (158-164 points by class) fills up right at Lv 50 (165 points). */
+export const TALENT_POINTS_PER_LEVEL = 3.3;
+export const talentPointsTotal = (rank: number): number => Math.floor(Math.max(0, Math.floor(rank)) * TALENT_POINTS_PER_LEVEL);
 export const talentsSpent = (ranks: TalentRanks): number => { let n = 0; for (const k in ranks) n += ranks[k] * (TALENT_BY_ID[k]?.cost ?? 1); return n; };
 export const branchSpent = (hero: HeroClass, branch: number, ranks: TalentRanks): number =>
   talentsOf(hero).reduce((n, t) => n + (t.branch === branch ? (ranks[t.id] || 0) * t.cost : 0), 0);

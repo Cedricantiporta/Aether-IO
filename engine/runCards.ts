@@ -47,6 +47,8 @@ export const runCards = {
   /** at least one outgoing-damage special owned (fast exit) */
   anyDmg: false,
   taken: {} as Record<string, boolean>,
+  /** (owner 2026-10-25) % stat cards taken so far (Sharpness, Haste, Wind Step, Impact): they ADD up instead of compounding */
+  pctDmg: 0, pctRate: 0, pctSpeed: 0, pctKb: 0,
 };
 
 /** (owner) charges a rarity upgrade costs: Common->Rare 1, Rare->Epic 2, Epic->Legendary 3, Legendary->Mythic 4. */
@@ -56,7 +58,7 @@ export function resetRunCards(): void {
   r.defiance = 0; r.defianceTaken = 0; r.mythicOffered = false; r.dashStacks = 0; r.dashCut = 0; r.defianceHp = 0.5; r.dashMod = null; r.potionCdStacks = 0; r.potionCdCut = 0; r.extraPicks = 0; r.manaCut = 0; r.ultCharge = 0;
   r.regenCap = REGEN_CAP_BASE; r.potionBonus = 0;
   r.afflict = 0; r.sunder = 0; r.guardian = 0; r.guardianTier = 0; r.slayer = 0; r.execute = 0; r.firstStrike = 0; r.secondWind = 0; r.linger = 0;
-  r.anyDmg = false; r.taken = {};
+  r.anyDmg = false; r.taken = {}; r.pctDmg = 0; r.pctRate = 0; r.pctSpeed = 0; r.pctKb = 0;
   aegisBiome = '';
 }
 events.on('runStart', resetRunCards);
@@ -89,21 +91,23 @@ export function cardDamageMul(e: Enemy): number {
 // ----------------------------------------------------------------- catalogue --
 interface StatDef { type: UpgradeType; name: string; vals: number[]; fmt: (v: number) => string; weight?: number }
 const pct = (v: number): string => `${Math.round(v * 1000) / 10}%`;
-/** value per tier [COMMON, RARE, EPIC, LEGENDARY, MYTHIC] */
+/** value per tier [COMMON, RARE, EPIC, LEGENDARY, MYTHIC]. (owner 2026-10-25 balance pass) every stat card steps up by roughly the same
+ *  ratios as Sharpness (1 : 1.6 : 2.5 : 3.7 : 5.8); the weak ones (speed, crit, cooldown, mana) were raised to match. Max HP and Defense
+ *  are lifted at offer time to a share of the hero's current totals (store.withCardText), so they keep up with gear. */
 const STATS: StatDef[] = [
   { type: 'DAMAGE', name: 'Sharpness', vals: [0.06, 0.10, 0.15, 0.22, 0.35], fmt: (v) => `+${pct(v)} Damage` },
   { type: 'HEALTH', name: 'Vitality Rune', vals: [8, 14, 22, 34, 55], fmt: (v) => `+${v} Max HP` },   // (store rewrites the number with HP_INFLATE)
   { type: 'DEFENSE', name: 'Iron Skin', vals: [3, 5, 8, 13, 22], fmt: (v) => `+${v} Defense` },
-  { type: 'FIRE_RATE', name: 'Haste', vals: [0.04, 0.07, 0.10, 0.15, 0.24], fmt: (v) => `+${pct(v)} Attack Speed` },
-  { type: 'SPEED', name: 'Wind Step', vals: [0.02, 0.035, 0.05, 0.075, 0.12], fmt: (v) => `+${pct(v)} Move Speed` },
-  { type: 'CRIT_RATE', name: 'Precision', vals: [0.02, 0.035, 0.05, 0.08, 0.13], fmt: (v) => `+${pct(v)} Crit Chance` },
-  { type: 'CRIT_DAMAGE', name: 'Lethality', vals: [0.10, 0.18, 0.28, 0.42, 0.70], fmt: (v) => `+${pct(v)} Crit Damage` },
-  { type: 'COOLDOWN', name: 'Clockwork', vals: [0.02, 0.03, 0.045, 0.07, 0.11], fmt: (v) => `-${pct(v)} Skill Cooldowns` },
-  { type: 'KNOCKBACK', name: 'Impact', vals: [0.10, 0.18, 0.28, 0.42, 0.70], fmt: (v) => `+${pct(v)} Knockback` },
+  { type: 'FIRE_RATE', name: 'Haste', vals: [0.05, 0.08, 0.12, 0.18, 0.28], fmt: (v) => `+${pct(v)} Attack Speed` },
+  { type: 'SPEED', name: 'Wind Step', vals: [0.03, 0.045, 0.065, 0.09, 0.14], fmt: (v) => `+${pct(v)} Move Speed` },
+  { type: 'CRIT_RATE', name: 'Precision', vals: [0.03, 0.045, 0.065, 0.09, 0.14], fmt: (v) => `+${pct(v)} Crit Chance` },
+  { type: 'CRIT_DAMAGE', name: 'Lethality', vals: [0.12, 0.20, 0.30, 0.44, 0.70], fmt: (v) => `+${pct(v)} Crit Damage` },
+  { type: 'COOLDOWN', name: 'Clockwork', vals: [0.03, 0.045, 0.065, 0.09, 0.13], fmt: (v) => `-${pct(v)} Skill Cooldowns` },
+  { type: 'KNOCKBACK', name: 'Impact', vals: [0.10, 0.18, 0.28, 0.42, 0.70], fmt: (v) => `+${pct(v)} Knockback`, weight: 0.5 },   // (rarely the pick you want: offered half as often)
   { type: 'LIFESTEAL', name: 'Bloodthirst', vals: [0.003, 0.005, 0.008, 0.012, 0.02], fmt: (v) => `${pct(v)} Life Steal` },
-  { type: 'DMG_REDUCE', name: 'Bulwark', vals: [0.02, 0.035, 0.05, 0.08, 0.12], fmt: (v) => `-${pct(v)} Damage Taken` },
-  { type: 'MAX_MANA', name: 'Mana Crystal', vals: [10, 18, 28, 45, 75], fmt: (v) => `+${v} Max Mana` },
-  { type: 'MANA_REGEN', name: 'Spring of Mana', vals: [0.3, 0.5, 0.8, 1.2, 2.0], fmt: (v) => `+${v} Mana / s` },
+  { type: 'DMG_REDUCE', name: 'Bulwark', vals: [0.025, 0.04, 0.06, 0.09, 0.13], fmt: (v) => `-${pct(v)} Damage Taken` },
+  { type: 'MAX_MANA', name: 'Mana Crystal', vals: [15, 25, 38, 55, 90], fmt: (v) => `+${v} Max Mana` },
+  { type: 'MANA_REGEN', name: 'Spring of Mana', vals: [0.4, 0.7, 1.0, 1.5, 2.4], fmt: (v) => `+${v} Mana / s` },
 ];
 
 interface SpecialDef { id: SpecialId; name: string; vals: [number, number]; fmt: (v: number, tier: number) => string; weight: number }
@@ -157,7 +161,7 @@ function manaCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(MANA_CUT_
 function ultCard(t: number): Omit<Upgrade, 'id'> { const v = Math.min(ULT_CHARGE_VALS[t], ULT_CHARGE_CAP - runCards.ultCharge); return mk('ULT_CHARGE', 'Surging Heart', `Your Ultimate charges ${pct(v)} faster (max +${pct(ULT_CHARGE_CAP)} total)`, t, v); }
 /** (owner 2026-10-24) the formerly fixed cards roll a rarity too; their numbers per tier [COMMON, RARE, EPIC, LEGENDARY, MYTHIC]
  *  (index below a card's lowest tier is unused). */
-const STEP_VALS = [0.06, 0.08, 0.10, 0.13, 0.16], RESTORE_VALS = [0.2, 0.25, 0.3, 0.4, 0.55], AEGIS_VALS = [0, 60, 80, 110, 150],
+const STEP_VALS = [0.06, 0.09, 0.12, 0.16, 0.22], RESTORE_VALS = [0.2, 0.25, 0.3, 0.4, 0.55], AEGIS_VALS = [0, 60, 80, 110, 150],
   ULT_FILL_VALS = [0, 60, 100, 100, 100], ULT_FILL_BONUS = [0, 0, 0, 0.08, 0.15], DEFY_VALS = [0, 0, 0.4, 0.5, 0.7];
 export const ultFillBonus = (t: number): number => ULT_FILL_BONUS[Math.min(4, t)] ?? 0;
 function stepCard(t: number): Omit<Upgrade, 'id'> { const v = STEP_VALS[t]; return mk('DASH_COOLDOWN', 'Shadow Step', `-${pct(v)} Dash cooldown (${runCards.dashStacks + 1}/${DASH_CARD_MAX})`, t, v); }
@@ -172,7 +176,7 @@ function defyCard(t: number): Omit<Upgrade, 'id'> { const v = DEFY_VALS[t]; retu
 function candidates(ultUnlocked: boolean, multishotOk: boolean, biomeKey: string): Entry[] {
   const out: Entry[] = [];
   for (const d of STATS) {
-    out.push({ weight: 1, cat: TYPE_CAT[d.type] ?? 'UTILITY', make: (am) => { const t = rollTier(0, 4, am); return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); } });
+    out.push({ weight: d.weight ?? 1, cat: TYPE_CAT[d.type] ?? 'UTILITY', make: (am) => { const t = rollTier(0, 4, am); return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); } });
   }
   if (runCards.dashStacks < DASH_CARD_MAX) {
     out.push({ weight: 0.7, cat: 'UTILITY', make: (am) => stepCard(rollTier(0, 4, am)) });

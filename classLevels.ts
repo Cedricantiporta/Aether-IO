@@ -9,8 +9,13 @@ import { SKILLS_INFO } from './constants';
 export interface ClassProg { lv: number; xp: number; sp: number; skills: SkillLevels }
 export const HEROES: HeroClass[] = ['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'];
 export const START_SP = 3;
-/** Skill points per class level (owner: 2, so most of the tree can be trained by Lv 50). */
+/** Skill points per class level (owner: 2, so most of the tree can be trained by Lv 50). Kept for the old one-time migration. */
 export const SP_PER_LEVEL = 2;
+/** (owner 2026-10-25) skill points for reaching level L: 2 up to Lv 9, then 4 / 5 / 6 / 7 per level in the 10s / 20s / 30s / 40s,
+ *  so every skill of a class can be maxed right at Lv 50 (a full class costs 239 SP; Lv 50 gives 246). */
+export const spGainAt = (L: number): number => (L < 10 ? 2 : L < 20 ? 4 : L < 30 ? 5 : L < 40 ? 6 : 7);
+/** Total skill points a class has earned by level `lv` (3 to start). */
+export function spTotalAt(lv: number): number { let n = START_SP; for (let L = 2; L <= lv; L++) n += spGainAt(L); return n; }
 export const MAX_LEVEL = 50;
 /** The class dash unlocks at this class level (below it Space does nothing). */
 export const DASH_UNLOCK_LV = 1;   // (owner: dash from level 1; was 20, 8, 6)
@@ -58,7 +63,7 @@ export function freshSkills(hero: HeroClass, base: SkillLevels): SkillLevels {
   return s as unknown as SkillLevels;
 }
 
-export const freshClass = (hero: HeroClass, base: SkillLevels, lv = 1): ClassProg => ({ lv, xp: 0, sp: START_SP + SP_PER_LEVEL * Math.max(0, lv - 1), skills: freshSkills(hero, base) });
+export const freshClass = (hero: HeroClass, base: SkillLevels, lv = 1): ClassProg => ({ lv, xp: 0, sp: spTotalAt(Math.max(1, lv)), skills: freshSkills(hero, base) });
 
 /** One level of class growth on the base stats (same numbers the old run level used). */
 export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
