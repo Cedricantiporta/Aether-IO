@@ -354,7 +354,7 @@ export function spawnEnemy(
   e.affix = affix;
   e.boss = boss;
   e.pos.set(pos.x, 0, pos.z);
-  e.maxHp = Math.round(def.hp * hpMul * biomeHp * (kind === 'GOBLIN_ARCHER' ? 1.6 : 1));   // (owner) tower archers are stationaries: +60% hp (and half damage taken, combat.ts)
+  e.maxHp = Math.round(def.hp * hpMul * biomeHp);   // (owner 2026-10-25: tower archers keep the normal goblin archer HP; only their defense is doubled, combat.ts)
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   if (elite && !boss) rollEliteShield(e);

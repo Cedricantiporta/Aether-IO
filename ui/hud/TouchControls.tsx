@@ -1,6 +1,7 @@
 // Touch controls: floating virtual joystick (move), optional aim stick (auto-aim off) and big ability buttons.
 // Everything is pointer-event based (multi-touch safe) and writes straight into world.input like the keyboard does.
 import React, { useEffect, useRef } from 'react';
+import { SpinRing } from './CornerButtons';
 import { world } from '../../engine/world';
 import { abilityState } from '../../engine/systems/abilities';
 import { useGameStore } from '../../store';
@@ -205,7 +206,7 @@ const AutoBtn: React.FC<{ at: At; left: boolean }> = ({ at, left }) => {
   const [on, setOn] = React.useState(world.autoBattle.on);
   return (
     <button className={`tc-auto pe ${on ? 'on' : ''}`} style={slotStyle(at, left, 38)} data-testid="tc-auto"
-      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); world.autoBattle.on = !world.autoBattle.on; setOn(world.autoBattle.on); }}><span className="auto-ring" aria-hidden />Auto</button>
+      onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); world.autoBattle.on = !world.autoBattle.on; setOn(world.autoBattle.on); }}><SpinRing on={on} />Auto</button>
   );
 };
 

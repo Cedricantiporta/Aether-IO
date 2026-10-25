@@ -397,6 +397,9 @@ export const Minimap: React.FC = () => {
         title="Full map (M)" data-testid="minimap" onClick={() => useFullMap.setState({ open: true })}>
         <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
         <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
+        <button className="mm-expand" data-testid="minimap-expand" aria-label="Open the full map (M)" title="Full map (M)" onClick={(e) => { e.stopPropagation(); useFullMap.setState({ open: true }); }}>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10V4h6M20 10V4h-6M4 14v6h6M20 14v6h-6" /></svg>
+        </button>
       </div>
       {open && <FullMap />}
     </>
