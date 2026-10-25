@@ -263,6 +263,7 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     s.armL = damp(s.armL, T.armL, fast, dt); s.armR = damp(s.armR, T.armR, fast, dt); s.spread = damp(s.spread, T.spread, fast, dt);
     s.pitch = damp(s.pitch, T.pitch, 9, dt); s.dy = damp(s.dy, T.dy, 9, dt); s.glow = damp(s.glow, T.glow, 8, dt); s.extraY = damp(s.extraY, T.extraY, 14, dt);
     s.yaw += T.spin * dt;
+    if (T.spin === 0) { const home = Math.round(s.yaw / 6.283185) * 6.283185; s.yaw = damp(s.yaw, home, 7, dt); }   // (owner: Ignar fought facing away) a spin pose must not leave the body turned once it ends
     // spawn rise / death sink
     let yOff = 0, fy = 1, shx = 0;
     if (kind === 'BOSS_HYDRA') yOff = -2.4;   // (rooted beyond the rim) the body lies low, mostly below the arena edge
