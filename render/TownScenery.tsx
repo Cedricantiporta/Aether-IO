@@ -14,7 +14,7 @@ import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { Inst } from './Inst';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bakeShoreField, makeWaterMaterial } from './waterFx';
-import { groundY } from './terrainFn';
+import { groundY, edgeR, GROUND_BOX, SEA_Y } from './terrainFn';
 import { VillageQt } from './qtVillage';
 import { PlazaFountain } from './PlazaFountain';
 import { TownKit } from './townKit';
@@ -687,7 +687,7 @@ function buildTown() {
 /** Instanced trees (nature geometry from models.ts), one draw call per species. Colliders: TOWN_COLLIDERS. */
 /** The lake west of the town: animated water surface, sandy shore line, reeds and a few shore rocks. */
 function Lake() {
-  const { water, shore, mat, shoreMat, field } = useMemo(() => {
+  const { water, sea, shore, mat, shoreMat, field } = useMemo(() => {
     const w = LAKE.x1 - LAKE.x0 + 10, d = LAKE.z1 + 10 - LAKE.z0;   // (+10: the wavy south shore, townData.lakeSouth)
     const lakeG = new PlaneGeometry(w, d, 1, 1).rotateX(-Math.PI / 2).translate((LAKE.x0 + LAKE.x1) / 2 - 3, -0.15, (LAKE.z0 + LAKE.z1 + 10) / 2);
     // the river south of the gate (same water, joins the lake at its west end)
@@ -695,9 +695,20 @@ function Lake() {
     // stylised water (render/waterFx.ts): the lake + river are ONE merged mesh; the shore distance is baked once from groundY
     const lakeX0 = (LAKE.x0 + LAKE.x1) / 2 - 3 - w / 2, lakeX1 = lakeX0 + w, lakeZ0 = LAKE.z0, lakeZ1 = LAKE.z1 + 10;
     const rvX0 = LAKE.x1 - 6, rvX1 = RIVER.x1 + 1.5, rvZ0 = RIVER.z0 - 3, rvZ1 = RIVER.z1 + 3;
-    const fx0 = Math.min(lakeX0, rvX0) - 4, fz0 = lakeZ0 - 4, fx1 = Math.max(lakeX1, rvX1) + 4, fz1 = lakeZ1 + 4;
-    const field = bakeShoreField(fx0, fz0, fx1 - fx0, fz1 - fz0, 0.6, 10, (x, z) =>
-      ((x > lakeX0 && x < lakeX1 && z > lakeZ0 && z < lakeZ1 && groundY(x, z) < -0.15) || (x > rvX0 && x < rvX1 && z > rvZ0 && z < rvZ1 && groundY(x, z) < -0.2)));
+    // ONE shore field for the lake, the river AND the surrounding sea: water wherever the ground is below the water line (the field's edge texels
+    // are deep sea, so the rest of the sea, far beyond it, reads as open water)
+    const B = GROUND_BOX, fx0 = B.x0 - 8, fz0 = B.z0 - 8, fx1 = B.x1 + 8, fz1 = B.z1 + 8;
+    const field = bakeShoreField(fx0, fz0, fx1 - fx0, fz1 - fz0, 0.9, 10, (x, z) =>
+      (x > rvX0 && x < rvX1 && z > rvZ0 && z < rvZ1 && groundY(x, z) < -0.2) || groundY(x, z) < SEA_Y);
+    // the open sea: a ring from just inside the island's edge out to the horizon (fog hides its far edge), at the lake's water level
+    const SEG = 360, R_OUT = 700, ringPos = new Float32Array(SEG * 2 * 3), ringIdx: number[] = [];
+    for (let i = 0; i < SEG; i++) {
+      const a = (i / SEG) * Math.PI * 2, rin = Math.max(2, edgeR(a) - 3);
+      ringPos.set([Math.cos(a) * rin, SEA_Y, Math.sin(a) * rin, Math.cos(a) * R_OUT, SEA_Y, Math.sin(a) * R_OUT], i * 6);
+      const n = (i + 1) % SEG; ringIdx.push(i * 2, n * 2, i * 2 + 1, n * 2, n * 2 + 1, i * 2 + 1);
+    }
+    const sea = new BufferGeometry();
+    sea.setAttribute('position', new Float32BufferAttribute(ringPos, 3)); sea.setIndex(ringIdx);
     const water = mergeGeometries([lakeG, riverG], false)!;
     lakeG.dispose(); riverG.dispose();
     const mat = makeWaterMaterial({ shore: 'tex', field, span: 8 });
@@ -715,12 +726,13 @@ function Lake() {
     // (the old small dock here was replaced by the beach pier, render/Beach.tsx)
     // (the mainland beach is painted into the ground like the lakeside one: engine/beachData MAIN_BEACH, palms in render/Beach)
     const shore = b.build();
-    return { water, shore, mat, shoreMat: litMat({ roughness: 0.9 }), field };
+    return { water, sea, shore, mat, shoreMat: litMat({ roughness: 0.9 }), field };
   }, []);
-  useEffect(() => () => { water.dispose(); shore.dispose(); field.tex.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, shore, mat, shoreMat, field]);
+  useEffect(() => () => { water.dispose(); sea.dispose(); shore.dispose(); field.tex.dispose(); mat.dispose(); shoreMat.dispose(); }, [water, sea, shore, mat, shoreMat, field]);
   return (
     <>
       <mesh geometry={water} material={mat} renderOrder={1} />
+      <mesh geometry={sea} material={mat} renderOrder={1} frustumCulled={false} />
       <mesh geometry={shore} material={shoreMat} castShadow receiveShadow />
     </>
   );

@@ -1,15 +1,24 @@
 // Pure terrain functions shared by ground mesh, props, forest and water.
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
-import { LAKE } from '../engine/townData';
+import { LAKE, ISLAND_BOXES } from '../engine/townData';
 import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt, lakeSouth } from '../engine/townData';
-import { inCampYard } from '../engine/caveData';
+import { inCampYard, CAVE_CLEAR } from '../engine/caveData';
 import { hillAt } from '../engine/townHills';
 import { BEACH, beachSandK, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff } from '../engine/beachData';
 import { fbm, lerp, smooth } from './util';
 
 export const POND = { x: ENGINE_POND.x, z: ENGINE_POND.z, r: ENGINE_POND.r - 1.5 };
 export const GROUND_SIZE = 2 * (ARENA_RADIUS + 70);
+/** Water level of the sea that surrounds the island (the lake / river keep their own levels, TownScenery). */
+export const SEA_Y = -0.15;
+/** Rectangle the town ground mesh covers: the island's bounding box + a margin (the sea hides everything beyond: its floor is never seen). */
+export const GROUND_BOX = (() => {
+  let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
+  for (const b of ISLAND_BOXES) { x0 = Math.min(x0, b[0]); z0 = Math.min(z0, b[1]); x1 = Math.max(x1, b[2]); z1 = Math.max(z1, b[3]); }
+  const m = 22;   // (island edge noise + the cave bay bulge + the sloping shore)
+  return { x0: x0 - m, z0: z0 - m, x1: x1 + m, z1: z1 + m };
+})();
 
 export function sstep(a: number, b: number, x: number) {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -85,10 +94,14 @@ function groundYLand(x: number, z: number) {
   const e = edgeR(a);
   const hill = hillAt(x, z) + towerKnollAt(x, z);   // rolling hills outside the walls (engine/townHills) + the Endless Tower's knoll
   if (r < e - 2) return hill;
-  const t = sstep(e - 2, e + 9, r);
-  let y = t * 4.4 + t * (fbm(x * 0.07, z * 0.07, 3) - 0.5) * 5.5;
-  y += sstep(e + 8, e + 70, r) * 9 * fbm(x * 0.035 + 9, z * 0.035 + 9, 3);
-  return y + hill;
+  // outside the walkable edge the island ends in the sea: the bank dips from the hills to just under the water line at ~edgeR, then the
+  // sea floor falls away (the opaque sea surface hides it; render/TownScenery Sea)
+  const k = sstep(e - 2, e + 1.6, r);
+  let y = hill * (1 - k) - 0.35 * k - 2.7 * sstep(e + 1.6, e + 12, r);
+  // the Crystal Cave's cliff stands half past the edge: keep a small headland of dry ground under it
+  const cd = Math.hypot(x - CAVE_CLEAR.x, z - CAVE_CLEAR.z);
+  if (cd < 14) y = Math.max(y, -0.15 + 0.6 * sstep(14, 6, cd));
+  return y;
 }
 
 /** Dirt coverage 0..1 (town plaza, paths). */
