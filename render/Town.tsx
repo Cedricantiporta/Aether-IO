@@ -20,6 +20,7 @@ import { KIT_SHOPS, SHOP_CHIMNEY } from './townKit';
 import { TownScenery } from './TownScenery';
 import { Rockfall } from './Rockfall';
 import { TownGates } from './TownGates';
+import { TownChests } from './TownChests';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
@@ -479,6 +480,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <TownScenery q={q} />}
       {village && <Rockfall />}
       {village && <TownGates />}
+      {village && <TownChests />}
       {village && <Stable />}
       {village && <Npcs />}
       {village && <TowerLandmark />}

@@ -107,6 +107,7 @@ export interface GameState {
   discovered: Discovered;                    // Codex discoveries (item/pet/loot names, skill keys, monster keys); persisted
   codexClaimed: string[];                    // Codex tabs whose 100% reward was claimed
   petSeen: string[];                         // Pet Collection: template ids of every pet species ever owned (petCollection.ts)
+  chestsOpened: string[];                   // town treasure chests already opened by this hero (engine/townChests.ts ids; saved with the profile)
   meta: MetaState;                           // daily / weekly goals, achievements, equipped title (goals.ts; written by goalsTracker.ts)
 
   // ---- currencies & in-run progression (level/xp/skillPoints/skillLevels/baseStats reset each run)

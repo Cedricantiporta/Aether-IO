@@ -7,6 +7,8 @@
 import { interacted, wantsInteract, npcMarkers } from './npcQuestLogic';
 import { animals, petAnimal } from './npcs';
 import { ANIMALS, NESTS, HIDDEN_CAT, WHEEL_PIN } from '../townData';
+import { TOWN_CHESTS, CHEST_REACH } from '../townChests';
+import { tickChests, openChest, chestIsOpen } from './townChestLogic';
 import { saveSpot } from '../lastSpot';
 import { useUiStore } from '../../ui/uiStore';
 import { STORY, gateOpen } from '../../story';
@@ -244,7 +246,7 @@ function sleepAtHome(): void {
   }, SLEEP_FADE);
 }
 
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'chest';
 export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -259,7 +261,7 @@ const GATE_R = 3.2;   // (only on top of the portal platform)
 const SHOP_LABEL: Record<string, string> = { SUPPLIES: 'Potion Shop', BLACKSMITH: 'Blacksmith', PETS: 'Pet House', ARMORY: 'Armor Shop', FORTUNE: 'Fortune Teller', WAREHOUSE: 'Warehouse', TECH: 'Tech House', BREWER: 'Elixir Brewer', FISH: 'Fishmonger', MINE: 'Mining Supplies' };
 /** Fishing + the Fishmonger need class level UNLOCK_LV.FISHING (unlocks.ts); below it their pills read "Unlocks at Lv N". */
 export const fishingLocked = (): boolean => useGameStore.getState().level < UNLOCK_LV.FISHING;
-const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a', GATE_COLOR = '#ffd27a';
+const FISH_LOCK = `Unlocks at Lv ${UNLOCK_LV.FISHING}`, LOCK_COLOR = '#ff9a7a', GATE_COLOR = '#ffd27a', CHEST_COLOR = '#ffd27a';
 
 /** Prompt priority when several NPCs / counters overlap: an NPC with something for you (main quest, new or finished side
  *  quest) and one the hero is facing come first (scales the squared distance used for sorting). */
@@ -317,6 +319,7 @@ function scanNearby(): void {
     if (wantsInteract('egg')) for (let k = 0; k < NESTS.length; k++) { if (!eggReady(k)) continue; d = q(NESTS[k][0], NESTS[k][1]); if (d < 4) push('E', 'Hold: Collect', 'Egg', '', 300 + k, d, 'farm'); }
     if (catHidden()) { d = q(HIDDEN_CAT.x, HIDDEN_CAT.z); if (d < 9) push('E', 'Hold: Coax', 'Biscuit the cat', '', 400, d, 'farm'); }
     if (beach) for (let i = 0; i < FISH_SPOTS.length; i++) { d = q(FISH_SPOTS[i].x, FISH_SPOTS[i].z); if (d < FISH_SPOT_R * FISH_SPOT_R) { if (fishLock) push('E', 'Locked', `Fishing · ${FISH_LOCK}`, '', i, d - 1, 'locked', LOCK_COLOR); else push('E', 'Fish', FISH_SPOTS[i].label, '', i, d - 1, 'fish'); } }   // lakeside fishing
+    for (let i = 0; i < TOWN_CHESTS.length; i++) { if (chestIsOpen(i)) continue; d = q(TOWN_CHESTS[i].x, TOWN_CHESTS[i].z); if (d < CHEST_REACH * CHEST_REACH) push('E', 'Open', 'Treasure Chest', '', i, d, 'chest', CHEST_COLOR); }   // hidden treasure chests (once per hero)
     if (pinHidden()) { d = q(WHEEL_PIN.x, WHEEL_PIN.z); if (d < 7) push('E', 'Hold: Pick up', 'Wheel pin', '', 401, d, 'farm'); }
   }
   if (world.village.ride.on) {   // (owner) on horseback: the only action is getting off
@@ -356,6 +359,7 @@ function scanNearby(): void {
 export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
+  if (it.act === 'chest') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && !v.ride.on) openChest(it.node); return; }
   if (it.act === 'blocked') { const g = TOWN_GATES[it.node]; if (g && !gateFlags[g.id]) st.addNotification(g.line, GATE_COLOR, 'WARNING'); return; }   // (the sign explains it; WARNING toasts repeat at most every 3 s)
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {
@@ -745,6 +749,7 @@ export function updateVillage(dt: number): void {
     }
     else if (inp.pressed.KeyE) interact(top);
   } else farmHold.t = 0;
+  tickChests(dt);
   scanNearby();
   world.camera.trauma = Math.max(0, world.camera.trauma - dt * 1.5);
   world.time += dt;

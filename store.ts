@@ -455,7 +455,7 @@ interface Profile {
   talents: Record<HeroClass, TalentRanks>;
   attrs?: Record<HeroClass, Attrs>;   // allocated attribute points per class (attributes.ts)
   starterGiven: Record<HeroClass, boolean>;
-  discovered?: Discovered; codexClaimed?: string[]; petSeen?: string[];
+  discovered?: Discovered; codexClaimed?: string[]; petSeen?: string[]; chestsOpened?: string[];   // chestsOpened: town treasure chests already opened (engine/townChests.ts)
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
@@ -518,7 +518,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile 
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
-  discovered: emptyDiscovered(), codexClaimed: [], petSeen: [],
+  discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], chestsOpened: [],
   meta: freshMeta(),
 });
 
@@ -567,7 +567,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               attrs: sanitizeAttrs(p.attrs),
               talents: sanitizeTalents(p.talents),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
-              discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen),
+              discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen), chestsOpened: Array.isArray(p.chestsOpened) ? p.chestsOpened.filter((x: unknown) => typeof x === 'string').slice(0, 64) : [],
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
               meta: sanitizeMeta(p.meta),
               elixirs: Array.isArray(p.elixirs) ? p.elixirs.filter(isElixirId) : [],
@@ -615,7 +615,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, al1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -797,7 +797,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     talents: profile.talents,
     attrs: profile.attrs ?? sanitizeAttrs(undefined),
     starterGiven: profile.starterGiven,
-    discovered: profile.discovered ?? emptyDiscovered(), petSeen: profile.petSeen ?? [],
+    discovered: profile.discovered ?? emptyDiscovered(), petSeen: profile.petSeen ?? [], chestsOpened: profile.chestsOpened ?? [],
     codexClaimed: profile.codexClaimed ?? [],
     meta: profile.meta ?? freshMeta(),
     gameStats: profile.gameStats,
@@ -913,7 +913,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('slimes'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
+        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], chestsOpened: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
       syncDiscoveries();
       get().resetGame();
@@ -2113,7 +2113,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.dashMods === prev.dashMods && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.petSeen === prev.petSeen && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.petSeen === prev.petSeen && s.chestsOpened === prev.chestsOpened && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
