@@ -8,7 +8,7 @@ import { debug } from './engine/debug';
 import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost } from './engine/runCards';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
-import { activeChar, activeProfileKey } from './characters';
+import { activeChar, activeProfileKey, characters } from './characters';
 import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
 import { rollMilestone, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
@@ -474,6 +474,8 @@ export const makeItemById = (id: string, quantity: number): Item[] => {
 
 /** One-time welcome gift for a brand new profile. */
 const WELCOME_GIFT = { gold: 15000, gems: 1000 };   // (owner: start with 15k gold, 1000 gems)
+/** (owner 2026-10-25) A second / later character gets the welcome gold but no gems (no gem farming with new characters). */
+const isAltChar = (): boolean => { try { return characters().length > 1; } catch { return false; } };
 /** Saved pets take their template's current tier (owner: pets spread over the six tiers). */
 /** Saved pets follow their template's current tier and skill (owner: e.g. the Green Blob became a fighter, the Fairy heals less). */
 const petRetier = (i: Item): Item => { if (i && i.type === 'POTION') { const t = ITEMS_POOL.find((q) => q.name === i.name); return t ? { ...i, description: t.description } : i; }   // (potion texts follow the catalog)
@@ -510,9 +512,9 @@ const starterEquipment = (hero: HeroClass): Equipment => {
 const isStarterId = (id: string | undefined): boolean => !!id && id.startsWith('start_');
 
 /** A brand-new profile with the welcome gift applied (welcomeGiftClaimed = true). */
-const freshProfile = (settings?: Settings, gameStats?: GameStatistics): Profile => ({
+const freshProfile = (settings?: Settings, gameStats?: GameStatistics, alt = false): Profile => ({
   v: PROFILE_VERSION,
-  gold: WELCOME_GIFT.gold, gems: WELCOME_GIFT.gems, crystals: 20,
+  gold: WELCOME_GIFT.gold, gems: alt ? 0 : WELCOME_GIFT.gems, crystals: 20,
   inventory: welcomeItems(), equipment: starterEquipment('ARCHER'), materials: emptyMaterials(), maxInventorySlots: INVENTORY_LIMIT,
   heroRank: 1, rankXp: 0, npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1),
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
@@ -582,7 +584,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
       }
     }
   } catch { /* corrupt or unavailable storage -> fresh profile */ }
-  return { profile: freshProfile(legacy.settings, legacy.gameStats), gift: true };
+  return { profile: freshProfile(legacy.settings, legacy.gameStats, isAltChar()), gift: true };
 };
 
 const DIFFICULTIES: Difficulty[] = ['EASY', 'NORMAL', 'HARD', 'NIGHTMARE'];
@@ -908,7 +910,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     resetProfile: () => {
       try { if (typeof localStorage !== 'undefined') localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
-      const f = freshProfile(get().settings);
+      const f = freshProfile(get().settings, undefined, isAltChar());
       set({
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('king'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
@@ -2124,7 +2126,7 @@ if (typeof window !== 'undefined') {
 }
 if (loaded.gift) {
   flushProfile(); // fresh profile (gift included) is written immediately: a reload can never grant it twice
-  useGameStore.getState().addNotification('Welcome gift: 5,000 gold, 500 gems, potions, an Ankh and 5 Upgrade Cores!', COLORS.uiAccent, 'SYSTEM');
+  useGameStore.getState().addNotification(`Welcome gift: ${WELCOME_GIFT.gold.toLocaleString()} gold${isAltChar() ? '' : `, ${WELCOME_GIFT.gems.toLocaleString()} gems`}, potions, an Ankh and 5 Upgrade Cores!`, COLORS.uiAccent, 'SYSTEM');
 }
 
 // ---- codex discovery: sync from inventory / equipment / skills on every change, plus engine events for monsters.
