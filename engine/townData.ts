@@ -75,7 +75,9 @@ export const BRIDGE = { hw: 6.3, z0: 57.5, z1: 78.5, h: 1.6 };
 export const PORTAL_S = 0.9;
 export const PORTAL = { x: 5, z: 155.4, r: 4.4, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = the arch's road-side edge PORTAL.z - (3.06 + 1.3) m)
 /** First arrival of a session (new game / boot, not coming back from a run): the middle of the town plaza, in front of the castle road. */
-export const PLAZA_ARRIVAL = { x: 0, z: 4.6 };
+export const PLAZA_ARRIVAL = { x: 0, z: 7.6 };   // (south of the plaza fountain)
+/** (owner 2026-10-25) the fountain in the middle of the plaza (town_kit_v2 fountain_small scaled up; collider r). */
+export const PLAZA_FOUNTAIN = { x: 0, z: 2, s: 1.6, r: 3.0 };
 /** Well on a grass patch (not on the plaza or a road). */
 export const WELL_POS = { x: -22.2, z: 17 };   // (the park fountain, south-west quarter)
 export const PEN = { x: -12.7, z: 29.6, hw: 3.7, hd: 2.2 };   // (chickens, between two houses of the south-west row)
@@ -654,7 +656,8 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
   // stalls are ~3.9 wide: two circles along their local x axis
   for (const s of STALLS) for (const k of [-1.1, 1.1]) c.push([s.x + Math.cos(s.rot) * k, s.z - Math.sin(s.rot) * k, 1.25]);
-  c.push([WELL_POS.x, WELL_POS.z, 1.9]);   // (the plaza fountain, town_kit_v2 fountain_small)
+  c.push([WELL_POS.x, WELL_POS.z, 1.9]);   // (the park fountain, town_kit_v2 fountain_small)
+  c.push([PLAZA_FOUNTAIN.x, PLAZA_FOUNTAIN.z, PLAZA_FOUNTAIN.r]);   // the plaza fountain
   c.push([PARK_EAST.fountain.x, PARK_EAST.fountain.z, 2.0]); kitRing(c, 'gazebo', PARK_EAST.gazebo.x, PARK_EAST.gazebo.z, 1, 0.9, 'front');   // the east park
   for (const [x, z] of WELLS) c.push([x, z, 1.35]);
   for (const [x, z] of SIGNPOSTS) c.push([x, z, 0.35]);

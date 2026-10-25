@@ -19,7 +19,7 @@ import { cullRegister } from './distCull';
 import { setInst } from './util';
 import { kitColor, ROYAL_ROOF } from './townPalette';
 import {
-  HOUSES, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, WELL_POS, STALLS, LAMPS, PLANTERS, SHOP_LOOK, shopLocal,
+  HOUSES, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, WELL_POS, PLAZA_FOUNTAIN, STALLS, LAMPS, PLANTERS, SHOP_LOOK, shopLocal,
   townLift,
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
@@ -135,6 +135,7 @@ function placements(): Record<string, Place[]> {
   for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); add(2, 'flower_planter', { x: p.x, y: lift(p.x, p.z), z: p.z, ry: along ? 0 : Math.PI / 2, sx: len / 1.7, sy: 1, sz: wid / 0.9 }); }
   for (const s of STALLS) add(2, 'market_stall', { x: s.x, y: lift(s.x, s.z), z: s.z, ry: s.rot, sx: 1, sy: 1, sz: 1 });
   add(2, 'fountain_small', { x: WELL_POS.x, y: lift(WELL_POS.x, WELL_POS.z), z: WELL_POS.z, ry: 0, sx: 1, sy: 1, sz: 1 });
+  add(2, 'fountain_small', { x: PLAZA_FOUNTAIN.x, y: lift(PLAZA_FOUNTAIN.x, PLAZA_FOUNTAIN.z), z: PLAZA_FOUNTAIN.z, ry: 0, sx: PLAZA_FOUNTAIN.s, sy: PLAZA_FOUNTAIN.s, sz: PLAZA_FOUNTAIN.s });   // (owner) the plaza fountain
   for (const [x, z, s] of BANNERS) add(2, 'banner', { x, y: lift(x, z), z, ry: 0, sx: s, sy: s, sz: s });
   return P;
 }

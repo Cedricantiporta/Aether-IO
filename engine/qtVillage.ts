@@ -13,5 +13,6 @@ export const QV_KIT_PREFIX = 'vh_';
 export const isQvKit = (kit?: string): boolean => !!kit && kit.startsWith(QV_KIT_PREFIX);
 export const qvPiece = (kit: string): string => kit.slice(QV_KIT_PREFIX.length);
 /** the Statue_Horse on a Pedestal in front of the portal (x, z, yaw of the horse; the statue + base are one stack) */
-export const HORSE_STATUES: { x: number; z: number; ry: number; r: number }[] = [{ x: -4.9, z: 7.8, ry: 0.35, r: 1.1 }, { x: 4.9, z: 7.8, ry: -0.35, r: 1.1 }];
+// (owner 2026-10-25) the two horse statues moved from the plaza to flank the road in front of the Adventure Portal (PORTAL x 5, front z 151), facing the town
+export const HORSE_STATUES: { x: number; z: number; ry: number; r: number }[] = [{ x: -0.6, z: 150.2, ry: Math.PI + 0.35, r: 1.1 }, { x: 10.6, z: 150.2, ry: Math.PI - 0.35, r: 1.1 }];
 export const PEDESTAL_H = 1.84;

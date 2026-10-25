@@ -15,6 +15,7 @@
 //                     barn, windmill, animals) | river with its bridges | lake + beach, pier + ship | mining camp | tower clearing
 // Everything else is forest, hedges, rocks and props: nothing is left as bare grass or bare paving.
 // ============================================================================
+import { HORSE_STATUES } from './qtVillage';
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
@@ -97,6 +98,7 @@ for (const [x, z] of NESTS) resv(x, z, 2.2);
 for (let x = ANIMAL_PEN.x0 + 1; x < ANIMAL_PEN.x1; x += 2.5) for (let z = ANIMAL_PEN.z0 - 1; z < ANIMAL_PEN.z1; z += 2.5) resv(x, z, 2.2);
 for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
 resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3); resv(PORTAL.out.x, PORTAL.out.z, 3);
+for (const h of HORSE_STATUES) resv(h.x, h.z, 2.4);   // (the horse statues by the portal)
 resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOWER.x, TOWER.z, TOWER.r + 2); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
 resv(HERO_HOUSE.x, HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
