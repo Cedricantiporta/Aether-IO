@@ -872,7 +872,7 @@ function grantReward(kind: RewardKind, bonus: number): void {
 
 /** (owner) Treasure chest: 1-2 different picks from a wide pool - a gold hoard, gems, a valuable trinket, a shard,
  *  potions, a reforge item, an Upgrade Core (Tier II deeper in), Aether Crystals, or now and then a piece of gear. */
-const CHEST_POOL: readonly (readonly [string, number])[] = [['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 9], ['crystals', 8]];
+const CHEST_POOL: readonly (readonly [string, number])[] = [['gems', 14], ['trinket', 14], ['shard', 12], ['potions', 12], ['reforge', 9], ['core', 4.5], ['crystals', 8]];
 /** (owner) Treasure chests: each chest is EITHER a piece of gear OR a pile of gold (50/50), never both. Blessed (speed clear) = better gear / more gold. */
 function chestLoot(x: number, z: number): void {
   const st = useGameStore.getState();
@@ -908,7 +908,7 @@ function treasurePool(x: number, z: number, n: number, core: boolean): void {
       case 'crystals': dropCrystals(2 + Math.floor(depth / 10), { x, z }); break;
     }
   }
-  if (core) give(makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
+  if (core && Math.random() < 0.5) give(makeItemById(biome >= 3 && Math.random() < 0.4 ? 'upgrade_core_2' : 'upgrade_core', 1)[0]);
 }
 
 function bossRewards(): void {

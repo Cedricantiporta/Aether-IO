@@ -282,4 +282,4 @@ export interface GameState {
   removeNotification: (id: string) => void;
 }
 
-export interface BulkSellOpts { rarities: Rarity[]; loot: boolean; craftMats: boolean }
+export interface BulkSellOpts { rarities: Rarity[]; loot: boolean; craftMats: boolean; /** when set, craft materials are filtered by these rarities */ matRarities?: Rarity[] }

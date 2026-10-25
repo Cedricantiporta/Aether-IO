@@ -202,7 +202,7 @@ export const applyPlus = (item: Item, plus: number): void => {
 /** Blacksmith upgrade odds/costs by the item's level (level 1 == +0). Owner rules: every + tier fails 10% more, higher +
  *  needs many more cores, gold x1.8, and going past +7 can shatter the item on a failure. */
 export const upgradeChanceAt = (level: number): number => { const plus = level - 1; return plus <= 0 ? 1 : Math.max(0.05, 0.9 - plus * 0.1); };
-export const upgradeCoresAt = (level: number): number => Math.ceil((level * level) / 3);
+export const upgradeCoresAt = (level: number): number => Math.ceil((level * level) / 6);
 /** Tiered cores (owner: 2 tiers): Common..Epic gear upgrades with Upgrade Cores, Legendary and above with Refined Cores. */
 export const CORE_IDS = ['upgrade_core', 'upgrade_core_2'] as const;
 export const CORE_NAMES = ['Upgrade Core', 'Refined Core'] as const;
@@ -210,7 +210,7 @@ export const CORE_FUSE = 5;
 export const upgradeCoreTierFor = (rarity: string): number => (rarity === 'COMMON' || rarity === 'UNCOMMON' || rarity === 'RARE' || rarity === 'EPIC' ? 0 : 1);   // (owner) Upgrade Cores now reach Epic gear
 /** Tier (0..2) of a bag core by its name, -1 when not a core. */
 export const coreTierOf = (item: { type: string; name: string }): number => (item.type === 'CORE' ? (item.name === 'Upgrade Core' ? 0 : 1) : -1)   // (an old 'Radiant Core' counts as a Refined Core);
-export const upgradeGoldFor = (price: number, level: number): number => Math.floor(price * level * 0.5 * 1.8);
+export const upgradeGoldFor = (price: number, level: number): number => Math.floor(price * level * 0.36);
 /** Chance a FAILED upgrade towards +8 or more destroys the item (target +8: 25%, +9: 40%). */
 export const upgradeBreakAt = (level: number): number => (level >= 8 ? 0.25 + (level - 8) * 0.15 : 0);
 

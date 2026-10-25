@@ -99,6 +99,9 @@ export const InventoryPanel: React.FC = () => {
   const { deposit, withdraw } = useGameStore(useShallow((s) => ({ deposit: s.depositItem, withdraw: s.withdrawItem })));
   // the bag accepts equipped items (unequip) and warehouse items (withdraw)
   const bagDrop = useDrop((d) => d.from === 'EQUIP' || d.from === 'WAREHOUSE', (d) => { if (d.from === 'EQUIP' && d.slot) unequipItem(d.slot); else withdraw(d.item.id); });
+  const upgradeOpen = useUiStore((s) => s.blacksmithTab === 'UPGRADE') && shopTab === 'BLACKSMITH';
+  // blacksmith Upgrade tab open: clicking a worn piece selects it for upgrade instead of unequipping it
+  const clickWorn = (slot: EquipSlot) => { const it = equipment[slot]; if (it && upgradeOpen && isGear(it) && it.type !== 'PET') setSelected(it); else unequipItem(slot); };
   const click = (it: Item) => {
     if (delMode || sellMode) { toggleDel(it.id); return; }
     if (shopTab === 'WAREHOUSE') { deposit(it.id); return; }
@@ -143,14 +146,14 @@ export const InventoryPanel: React.FC = () => {
           {equipOpen && (
             <div className="bag-equip-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 4.2rem)', justifyContent: 'center', gap: '.25rem .9rem' }} data-testid="paper-doll">
               <span />
-              <DollSlot slot="helmet" label="Helmet" item={equipment.helmet} onClick={() => unequipItem('helmet')} />
+              <DollSlot slot="helmet" label="Helmet" item={equipment.helmet} onClick={() => clickWorn('helmet')} />
               <span />
-              <DollSlot slot="weapon" label="Weapon" item={equipment.weapon} onClick={() => unequipItem('weapon')} />
-              <DollSlot slot="armor" label="Armor" item={equipment.armor} onClick={() => unequipItem('armor')} />
-              <DollSlot slot="gloves" label="Gloves" item={equipment.gloves} onClick={() => unequipItem('gloves')} />
-              <DollSlot slot="accessory" label="Accessory" item={equipment.accessory} onClick={() => unequipItem('accessory')} />
-              <DollSlot slot="boots" label="Boots" item={equipment.boots} onClick={() => unequipItem('boots')} />
-              <DollSlot slot="pet" label="Pet" item={equipment.pet} onClick={() => unequipItem('pet')} />
+              <DollSlot slot="weapon" label="Weapon" item={equipment.weapon} onClick={() => clickWorn('weapon')} />
+              <DollSlot slot="armor" label="Armor" item={equipment.armor} onClick={() => clickWorn('armor')} />
+              <DollSlot slot="gloves" label="Gloves" item={equipment.gloves} onClick={() => clickWorn('gloves')} />
+              <DollSlot slot="accessory" label="Accessory" item={equipment.accessory} onClick={() => clickWorn('accessory')} />
+              <DollSlot slot="boots" label="Boots" item={equipment.boots} onClick={() => clickWorn('boots')} />
+              <DollSlot slot="pet" label="Pet" item={equipment.pet} onClick={() => clickWorn('pet')} />
             </div>
           )}
         </div>

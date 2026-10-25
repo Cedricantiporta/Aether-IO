@@ -302,7 +302,7 @@ export function freeCaptive(): void {
 /** Captive thank-you: ONE non-gear reward (never wearables / weapons), weighted by rarity, amounts scale a little with depth. */
 const CAPTIVE_POOL: readonly (readonly [string, number])[] = [
   ['gold', 30], ['potion_small', 20], ['loot_common', 18], ['shard_common', 12],
-  ['potion_big', 6], ['shard_rare', 5], ['core', 4], ['medal', 3], ['shard_epic', 1.5], ['core2', 0.5],
+  ['potion_big', 6], ['shard_rare', 5], ['core', 2], ['medal', 3], ['shard_epic', 1.5], ['core2', 0.25],
 ];
 function captiveReward(): void {
   const depth = world.director.wave, p = world.player.pos;

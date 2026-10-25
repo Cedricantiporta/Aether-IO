@@ -339,6 +339,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   (`constants.RANK_REQ`); drops may be one tier above the equippable cap. Catalog = one item per class per slot per rarity
   (`itemCatalog.ts`, ids `c_<class>_<slot>_<n>`, older items `retired`), rings/amulets with special effects, weapon perks
   (`weaponPerks.ts`), item sets, bonus lines (`affixes.ts`: slots per rarity, perfect rolls), Mining Pickaxe weapon. +N upgrades
+  (2026-10-25: upgrade gold = price x level x 0.36, cores = ceil(L^2/6); upgrade-core drops halved in combat / shrine / room events; Upgrade tab has a gear picker grid (worn first, "E") and clicking a worn piece in the bag paper doll selects it while the Upgrade tab is open; Bulk Sell has a Materials mode (craft mats by rarity, never potions); town day = 960 s.)
   at the Blacksmith (cores: Upgrade/Refined/Radiant, fail/shatter at +8/+9), +7 and above glow. Crafting (`crafting.ts`,
   Workshop window), Reforge (`reforge.ts`: Reforge Stone = reroll all / one line, **Tempering Oil = swaps each line's stat TYPE but
   keeps its quality** (same % of the tier value, perfect stays perfect), **Binding Seal** locks a line (`ItemAffix.locked`: Stone + Oil

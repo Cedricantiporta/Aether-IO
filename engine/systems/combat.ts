@@ -566,7 +566,7 @@ export function dropTable(e: Enemy, luck: number, px: number, pz: number, specia
     const before = run.bossKills - 1, hm = runInfo.hard ? HARD_EPIC_MUL : 1;
     for (let i = 0; i < n; i++) {
       const r = Math.random();
-      if (r < 0.4) dropCore(px, pz, Math.min(0.4, 0.1 + 0.04 * biome));
+      if (r < 0.4) { if (Math.random() < 0.5) dropCore(px, pz, Math.min(0.4, 0.1 + 0.04 * biome)); }   // (owner) core drops halved
       else if (r < 0.7) {
         // bosses beaten before this one: the first boss never drops MYTHIC, LEGENDARY opens up after it
         let rarity: Rarity = 'EPIC';
@@ -583,14 +583,14 @@ export function dropTable(e: Enemy, luck: number, px: number, pz: number, specia
     for (let i = 0; i < n; i++) {
       const r = Math.random();
       if (r < 0.5) { const it = st.rollItemDrop(); dropGear(rollDropPlus(it && RARITY_RANK[it.rarity] > RARITY_RANK.EPIC ? st.rollItemDrop('EPIC') : it, special ? 1 : 0), px, pz); }
-      else if (r < 0.7) dropCore(px, pz, 0.03 + 0.01 * biome);
+      else if (r < 0.7) { if (Math.random() < 0.5) dropCore(px, pz, 0.03 + 0.01 * biome); }
       else dropLoot(Math.random() < 0.5 ? 'ELITE' : CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
     }
     return;
   }
   if (Math.random() >= 0.08 * Math.max(1, luck * 0.5)) return;
   const r = Math.random();
-  if (r < 0.1) dropCore(px, pz, 0);
+  if (r < 0.1) { if (Math.random() < 0.5) dropCore(px, pz, 0); }
   else if (r < 0.7) { if (Math.random() < 1 / 6) { const it = st.rollItemDrop(); dropGear(it && RARITY_RANK[it.rarity] > RARITY_RANK.RARE ? st.rollItemDrop('RARE') : it, px, pz); } else dropLoot(e.kind, luck, px, pz, true); }
   else dropLoot(CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
 }

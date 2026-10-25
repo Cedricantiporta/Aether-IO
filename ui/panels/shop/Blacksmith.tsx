@@ -48,7 +48,7 @@ const ForgeEmpty: React.FC<{ free?: boolean }> = ({ free }) => (
       </svg>
       <div className="forge-ring"><div className="forge-orb"><AnvilGlyph size={64} glow /></div></div>
     </div>
-    <div className="forge-text">Select a piece of gear<br />from your bag to upgrade</div>
+    <div className="forge-text">Pick a piece of gear<br />below to upgrade</div>
     <ChevronsDown size={22} className="forge-chev" />
     <div className="forge-slot">+</div>
     <button className="forge-btn" disabled>Upgrade</button>
@@ -60,6 +60,32 @@ const ForgeEmpty: React.FC<{ free?: boolean }> = ({ free }) => (
 export const GearDrop: React.FC<{ onItem: (it: Item) => void; children: React.ReactNode }> = ({ onItem, children }) => {
   const { hot, props } = useDrop((d) => (d.from === 'BAG' || d.from === 'EQUIP') && isGear(d.item) && d.item.type !== 'PET', (d) => onItem(d.item));
   return <div className={hot ? 'drop-hot' : undefined} {...props}>{children}</div>;
+};
+
+/** Upgrade tab picker: every upgradeable piece (worn first, marked E, then bag gear); a click puts it in the upgrade slot. */
+const UpgradePicker: React.FC<{ selectedId?: string; onPick: (it: Item) => void }> = ({ selectedId, onPick }) => {
+  const { inventory, equipment } = useGameStore(useShallow((s) => ({ inventory: s.inventory, equipment: s.equipment })));
+  const worn = Object.values(equipment).filter((i): i is Item => !!i && isGear(i) && i.type !== 'PET');
+  const bag = inventory.filter((i) => isGear(i) && i.type !== 'PET');
+  return (
+    <div className="flex flex-col gap-1.5 w-full" data-testid="upgrade-picker">
+      <div className="rpg-label">Choose gear to upgrade</div>
+      <div className="rpg-scroll p-1.5" style={{ maxHeight: '11.5rem', overflowY: 'auto' }}>
+        {worn.length + bag.length === 0 ? <div className="rpg-label opacity-70 text-center py-3">No gear to upgrade yet.</div> : (
+          <div className="slot-grid" style={{ ['--cell' as any]: '3.4rem' }}>
+            {worn.map((it) => (
+              <ItemSlot key={`w${it.id}`} item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} selected={selectedId === it.id} onClick={() => onPick(it)}>
+                <i className="absolute top-0 left-0 px-1 rounded-br text-[.55rem] font-bold bg-[var(--good)] text-black" aria-label="Equipped">E</i>
+              </ItemSlot>
+            ))}
+            {bag.map((it) => (
+              <ItemSlot key={`b${it.id}`} item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} selected={selectedId === it.id} onClick={() => onPick(it)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export const Upgrade: React.FC = () => {
@@ -77,7 +103,7 @@ export const Upgrade: React.FC = () => {
     if (actionResult?.type === 'UPGRADE' && actionResult.success && actionResult.item) setSelected(actionResult.item);
   }, [actionResult, setSelected]);
 
-  if (!item || !isGear(item)) return <GearDrop onItem={setSelected}><ForgeEmpty free={free} /></GearDrop>;
+  if (!item || !isGear(item)) return <div className="flex flex-col gap-3"><GearDrop onItem={setSelected}><ForgeEmpty free={free} /></GearDrop><UpgradePicker onPick={setSelected} /></div>;
   const maxed = item.level >= MAX_ITEM_LEVEL;
   const goldCost = free ? 0 : upgradeGoldCost(item), coreCost = free ? 0 : upgradeCoreCost(item);
   const chance = free ? 1 : upgradeChance(item), brk = free ? 0 : upgradeBreakChance(item);
@@ -99,7 +125,7 @@ export const Upgrade: React.FC = () => {
   // (owner reference: enchant screen) "+8 -> +9" header, the item in an ornate diamond frame between the material
   // circle (cores, left) and the success-chance circle (right), stat rows old > new, big red Upgrade with the gold cost.
   return (
-    <GearDrop onItem={setSelected}><div className="enc relative" data-testid="upgrade-view">
+    <div className="flex flex-col gap-3"><GearDrop onItem={setSelected}><div className="enc relative" data-testid="upgrade-view">
       <div className="enc-lv">
         <span className="rpg-num">+{item.level - 1}</span>
         <i className="enc-arrow" aria-hidden><b /><b /><b /></i>
@@ -139,7 +165,7 @@ export const Upgrade: React.FC = () => {
         {!maxed && <span className="enc-btn-c rpg-num" style={{ color: gold >= goldCost ? undefined : '#ffb4a8' }}><CoinGlyph size={14} /> {goldCost.toLocaleString()}</span>}
       </button>
       {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
-    </div></GearDrop>
+    </div></GearDrop><UpgradePicker selectedId={item.id} onPick={setSelected} /></div>
   );
 };
 

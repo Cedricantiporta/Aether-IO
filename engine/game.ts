@@ -197,7 +197,7 @@ export function startRun(): void {
 }
 
 /** Real seconds per full town day. */
-const TOWN_DAY_SEC = 480;
+const TOWN_DAY_SEC = 960;
 let prevStatus: GameStatus | null = null;
 export function updateGame(rawDt: number): void {
   if (dreamFx.busy) blockInput();   // (the wake-up fade: no input)

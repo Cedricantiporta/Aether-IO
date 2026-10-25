@@ -50,6 +50,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
     if (i.type !== 'LOOT' || REFORGE_NAMES.has(i.name)) continue;
     const mat = CRAFT_MAT_NAMES.has(i.name);
     if (mat ? !o.craftMats : !o.loot) continue;
+    if (mat && o.matRarities && !o.matRarities.includes(i.rarity)) continue;
     const q = i.quantity || 1; items.push(i); gold += sellUnit(i) * q; count += q; loot += q; if (isFishName(i.name)) fish += q;
   }
   return { items, gold, count, loot, fish };
