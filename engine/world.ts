@@ -130,7 +130,7 @@ export const world = {
    *  walk = walk-cycle phase, mv = current move speed 0..1 (render animation), hitT = hurt flinch timer.
    *  life = Infinity for permanent summons (they stay until slain); src 1 = Raise Dead, 2 = Army of the Dead (holds the ult
    *  cooldown); def = damage reduction 0..1; skillT = cleave cooldown (warriors); spin = cleave animation 1 -> 0. */
-  minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, shield: 0, shieldT: 0, hitT: 0, walk: 0, mv: 0, src: 0, born: 0, def: 0, skillT: 0, spin: 0 })),
+  minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, shield: 0, shieldT: 0, hitT: 0, walk: 0, mv: 0, src: 0, born: 0, def: 0, skillT: 0, spin: 0, burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, stunT: 0, slowT: 0 })),   // (owner 2026-10-25) summons take burn / poison / stun / slow too (minions.minionDebuff)
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT' | 'SPEED', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',

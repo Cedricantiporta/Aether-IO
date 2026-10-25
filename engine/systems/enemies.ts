@@ -34,7 +34,7 @@ import {
   optionalForClear,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
-import { damageMinion, nearestMinion } from './minions';
+import { damageMinion, nearestMinion, minionDebuff, minionTraitHit } from './minions';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
@@ -1454,7 +1454,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   }
   const dmg = e.contactDamage * (e.state === 'ATTACK' ? 2 : 1) * (e.traits & TR.COMBO && e.state !== 'ATTACK' ? 0.7 : 1);
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
-  if (curMin >= 0) { damageMinion(curMin, dmg); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton
+  if (curMin >= 0) { damageMinion(curMin, dmg); minionTraitHit(curMin, e.traits); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton (+ its on-hit effects)
   const grab = e.kind === 'ZOMBIE';
   const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
   const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
@@ -2044,6 +2044,12 @@ export function updateEnemyProjectiles(dt: number): void {
       if (hitM >= 0) {
         p.active = false;
         damageMinion(hitM, p.damage);
+        // (owner) elemental shots carry their effect onto summons too
+        if (p.kind === 'FIRE_BOLT' || p.debuff === 2) minionDebuff(hitM, 'BURN', 3, Math.max(2, p.damage * 0.12));
+        else if (p.kind === 'POISON_ARROW') minionDebuff(hitM, 'POISON', 3.5, Math.max(1.5, p.damage * 0.1));
+        else if (p.kind === 'BOLT' || p.debuff === 1) minionDebuff(hitM, 'STUN', 0.6);
+        else if (p.kind === 'ICE_SHARD') minionDebuff(hitM, 'SLOW', 1.2);
+        minionTraitHit(hitM, p.traits);
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
         continue;
       }

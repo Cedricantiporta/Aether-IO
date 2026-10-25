@@ -89,7 +89,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   m.life = m.maxLife = life <= 0 ? Infinity : dropped ? life : life * mm.life;   // (the ult golem lasts exactly its timer)
   m.dmg = dmg * mm.dmg * DMG_MUL * (kind === MINION_GOLEM ? 1.04 : 1);   // (the bone golem hits 4% harder: 1.3 x 0.8)
   m.src = src; m.born = ++bornSeq; m.atkT = 0.4 + Math.random() * 0.3; m.tgt = -1; m.retarget = 0;
-  m.shield = 0; m.shieldT = 0;
+  m.shield = 0; m.shieldT = 0; m.burnT = m.poisonT = m.stunT = m.slowT = 0; m.burnDps = m.poisonDps = 0;
   m.rise = dropped ? 0 : 0.6; m.swing = 0; m.slot = Math.random() * Math.PI * 2; m.hitT = 0; m.walk = 0; m.mv = 0;
   // HP from the hero's max HP (golems are the tanks, mages are frail)
   const st = useGameStore.getState().stats;
@@ -108,6 +108,29 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
 function crumble(m: (typeof world.minions)[number]): void {
   m.active = false;
   events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: m.kind === MINION_GOLEM ? 2.5 : 1.2, color: 0xd8d0b8 });
+}
+
+/** (owner 2026-10-25) Status effects on summons: BURN / POISON tick `dps` for `dur` s, STUN freezes it in place, SLOW = 60% speed.
+ *  The ally (ally.ts) is left alone. A short float text marks a fresh effect. */
+export type MinionDebuff = 'BURN' | 'POISON' | 'STUN' | 'SLOW';
+const DEBUFF_TXT: Record<MinionDebuff, [string, number]> = { BURN: ['BURN', 0xff8a3a], POISON: ['POISON', 0x8be04a], STUN: ['STUN', 0xffe066], SLOW: ['SLOW', 0x8fd3ff] };
+export function minionDebuff(i: number, type: MinionDebuff, dur: number, dps = 0): void {
+  const m = world.minions[i];
+  if (!m || !m.active || m.src === SRC_ALLY || m.rise > 0) return;
+  let fresh = false;
+  if (type === 'BURN') { fresh = m.burnT <= 0; m.burnT = Math.max(m.burnT, dur); m.burnDps = Math.max(fresh ? 0 : m.burnDps, dps); }
+  else if (type === 'POISON') { fresh = m.poisonT <= 0; m.poisonT = Math.max(m.poisonT, dur); m.poisonDps = Math.max(fresh ? 0 : m.poisonDps, dps); }
+  else if (type === 'STUN') { fresh = m.stunT <= 0; m.stunT = Math.max(m.stunT, dur * (m.kind === MINION_GOLEM ? 0.5 : 1)); }
+  else { fresh = m.slowT <= 0; m.slowT = Math.max(m.slowT, dur); }
+  if (fresh) events.emit('floatText', { pos: tmp.set(m.x, 2.2, m.z).clone(), text: DEBUFF_TXT[type][0], color: DEBUFF_TXT[type][1], scale: 0.7, dy: 1 });
+}
+/** On-hit effects of a monster's traits (enemyTraits TR) on a summon. */
+export function minionTraitHit(i: number, tr: number): void {
+  if (!tr) return;
+  const wave = world.director.wave;
+  if (tr & 8) minionDebuff(i, 'POISON', 4, 1 + wave * 0.3);              // TR.POISON
+  if (tr & 128 && Math.random() < 0.3) minionDebuff(i, 'STUN', 0.8);     // TR.STUN
+  if (tr & (64 | 4096)) minionDebuff(i, 'SLOW', 1.5);                    // TR.SLOW / HIND_SLOW
 }
 
 /** A monster hits minion i (melee or projectile). Bone Armor-free: minions take the full hit. */
@@ -195,13 +218,23 @@ export function updateMinions(dt: number): void {
     m.life -= dt;
     if (m.life <= 0 || !pl.alive) { crumble(m); continue; }
     if (m.rise > 0) { m.rise -= dt; m.mv = 0; continue; }   // still clawing out of the ground
+    // status effects: burn / poison tick down its HP (a DoT kill counts like any other death), stun holds it still
+    if (m.burnT > 0 || m.poisonT > 0) {
+      let dot = 0;
+      if (m.burnT > 0) { m.burnT -= dt; dot += m.burnDps * dt; }
+      if (m.poisonT > 0) { m.poisonT -= dt; dot += m.poisonDps * dt; }
+      m.hp -= dot;
+      if (m.hp <= 0) { m.hp = 0.001; damageMinion(i, 1); if (!m.active) continue; }
+    }
+    if (m.slowT > 0) m.slowT -= dt;
+    if (m.stunT > 0) { m.stunT -= dt; m.mv = 0; continue; }
     if (m.swing > 0) m.swing = Math.max(0, m.swing - dt * 2.4);
     if (m.hitT > 0) m.hitT -= dt;
     if (m.shieldT > 0) { m.shieldT -= dt; if (m.shieldT <= 0) m.shield = 0; }
     if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
     if (m.skillT > 0) m.skillT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 3.2 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL, cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
+    const reach = golem ? 3.2 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
