@@ -278,6 +278,15 @@ const pick = <T,>(opts: readonly (readonly [T, number])[]): T => {
   return opts[0][0];
 };
 
+/** (owner 2026-10-25) upgrade cards are limited per biome: after CARD_CAP card rewards in a realm, card doors / rewards turn into gold, gems or shards. */
+export const CARD_CAP = 6;
+export const cardBudget = { biome: -1, used: 0 };
+export const cardsLeft = (biome: number): number => (cardBudget.biome === biome ? Math.max(0, CARD_CAP - cardBudget.used) : CARD_CAP);
+/** A card reward was paid out in this biome. */
+export function useCard(biome: number): void { if (cardBudget.biome !== biome) { cardBudget.biome = biome; cardBudget.used = 0; } cardBudget.used++; }
+/** Swap a CARD reward for another reward when the biome's card limit is reached. */
+export function capCard(r: RewardKind, biome: number): RewardKind { return r === 'CARD' && cardsLeft(biome) <= 0 ? pick<RewardKind>([['GOLD', 45], ['GEMS', 25], ['SHARDS', 30]]) : r; }
+
 function rollReward(type: RoomType): RewardKind {
   switch (type) {
     // (owner) no more Gear portals: gear comes from treasure chests, bosses and monster drops
@@ -298,7 +307,7 @@ export const duelChance = (biome: number): number => (biome <= 0 ? 0.06 : biome 
 let planBiome = 0;
 const plan = (type: RoomType, next = 0): RoomPlan => {
   if (type === 'MINIBOSS' && Math.random() < duelChance(planBiome)) type = 'DUEL';
-  const p: RoomPlan = { type, reward: rollReward(type) };
+  const p: RoomPlan = { type, reward: capCard(rollReward(type), planBiome) };
   if (type === 'TREASURE') p.obj = 'SPEED';   // (owner) the treasure is earned: clear the room in time for a blessed chest
   // from the 3rd room on: some fights carry an objective and / or a twist (shown on the portal)
   if (next >= 2 && (type === 'COMBAT' || type === 'ELITE')) {

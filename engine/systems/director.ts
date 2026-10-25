@@ -26,7 +26,7 @@ import { damagePlayer } from './combat';
 import { GameStatus } from '../../types';
 import { runMods, runInfo, veteran } from '../runMods';
 import {
-  BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef,
+  BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef, capCard, useCard, cardBudget,
 } from '../roomDefs';
 import { shape, insideShape } from '../roomShape';
 import { camp, campStartFacing } from '../campPaths';
@@ -200,6 +200,7 @@ export function resetDirector(): void {
 // ------------------------------------------------------------ run control ---
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
+  cardBudget.biome = -1; cardBudget.used = 0;   // (a new run: fresh card limits)
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
@@ -790,6 +791,7 @@ const at = (x: number, z: number): Vector3 => tmp2.set(x, 0, z);
 
 function grantReward(kind: RewardKind, bonus: number): void {
   const st = useGameStore.getState();
+  if (runInfo.mode !== 'TOWER') { kind = capCard(kind, world.room.biome); if (kind === 'CARD') useCard(world.room.biome); }   // (owner) a limited number of upgrade cards per biome
   if (runCards.guardian > 0 && (plan.type === 'MINIBOSS' || plan.type === 'DUEL' || plan.gate !== undefined)) {   // Guardian's Spoils: these stages also give a card selection
     if (kind === 'CARD') runCards.extraPicks++; else st.openWaveReward(false);
   }
