@@ -173,7 +173,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT'],
     boss: 'BOSS_WYRM', minis: ['SHELLBACK', 'BEHEMOTH'], lichCrypt: false,
-    roster: [['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3], ['FROST_WISP', 7, 0], ['YETI', 4, 1]],
+    roster: [['BOMBER', 5, 1], ['GOBLIN', 6, 0], ['SKELETON_ARCHER', 7, 0], ['WRAITH', 6, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 4, 0], ['ROCK_CRAB', 5, 1], ['SHIELDBEARER', 3, 2], ['BRUTE', 4, 2], ['ZOMBIE', 3, 3], ['FROST_WISP', 7, 0], ['YETI', 4, 1]],
   },
   { // 4 Ember Wastes: islands of plain dark-brown rock in a sea of lava (the floor beyond the walls drops into it); lava
     // rivers sink into channels, lava pools lie flat and irregular and grow with depth
@@ -214,7 +214,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     crates: ['CRATE', 'POT', 'POT', 'GRAVE'],
     boss: 'BOSS_VOID', minis: ['BEHEMOTH', 'WARDEN', 'PHALANX'], lichCrypt: true,
-    roster: [['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2], ['VOID_STALKER', 7, 0], ['VOID_EYE', 6, 1]],
+    roster: [['BOMBER', 5, 1], ['WRAITH', 8, 0], ['CULTIST', 7, 0], ['CRYSTAL_GOLEMITE', 6, 0], ['BAT', 5, 0], ['SHIELDBEARER', 4, 1], ['BRUTE', 4, 1], ['ZOMBIE', 4, 1], ['SPLITTER', 4, 2], ['BOMBER', 4, 2], ['VOID_STALKER', 7, 0], ['VOID_EYE', 6, 1]],
   },
 ];
 

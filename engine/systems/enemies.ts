@@ -368,6 +368,7 @@ export function spawnEnemy(
   e.xp = Math.round(def.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
+  if (kind === 'BOMBER' && world.room.active && world.room.biome >= 3) { e.speed *= 1.45; e.armor = Math.max(e.armor, 45); }   // (owner 2026-10-25) later realms: fast rushing bombers with medium defense
   e.mini = false;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
   e.dodgeCd = 1 + Math.random() * 2.5;
