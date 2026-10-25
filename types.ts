@@ -107,7 +107,7 @@ export interface PlayerStats {
 
 export interface ItemAffix { key: string; value: number; /** a perfect roll (125% of the tier value): shown in yellow */ perfect?: boolean; /** sealed by a Binding Seal: Reforge Stone / Tempering Oil skip this line */ locked?: boolean }
 /** gear grade inside its rarity tier (grade.ts): HIGH = +35% base stats */
-export type ItemGrade = 'LOW' | 'HIGH';
+export type ItemGrade = 'LOW' | 'MID' | 'HIGH';
 
 export interface Item {
   id: string;
@@ -141,7 +141,7 @@ export interface Item {
   petXp?: number;
   petStage?: number;
   
-  grade?: ItemGrade;       // gear only: LOW (default / old saves) or HIGH (grade.ts)
+  grade?: ItemGrade;       // gear only: LOW / MID (default / old saves) / HIGH (grade.ts)
   affixes?: ItemAffix[];   // rolled bonus lines (gear only)
   setName?: string;
   setBonus?: string; 

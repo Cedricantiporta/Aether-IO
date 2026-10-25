@@ -341,13 +341,18 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   skip it, persists on the item, max lines-1 locks, unlocking is free; Gem Shop 28 gems, chests / bosses / merchant / summon supplies),
   Augment Rune fills empty slots),
   Fusion (5 of a tier -> next tier, gear/shards/pets), Recycle in the bag (gear -> shards + cores).
-- **Gear stat ladder + grade** (owner 2026-10-21): base stats are low and every rarity is a big jump (`itemCatalog.ts` `TIER_LADDER`
-  Common 1 / Uncommon 1.7 / Rare 2.9 / Epic 5.5 / Legendary 10.5 / Mythic 20, each x1.7-1.9; anchored at 0.9 of the old Epic, so
-  Low Common ~0.29x, Uncommon ~0.44x, Rare ~0.66x, Epic 0.9x, Legendary ~0.98x, Mythic ~0.85x of the old values). Every gear piece also
-  has a **grade** (`grade.ts`, `Item.grade`): LOW or HIGH (+35% stats, ~22% of drops, 35% when crafted; starter gear always LOW).
-  Shown as "High Epic" tag in the tooltip + a star pill on the slot. Old saves: gear without `grade` is rescaled once by new/old
-  ladder (`migrateGear`, only generated-catalog names) and stamped LOW; `writeProfile` stamps runtime-made gear so it is never
-  rescaled twice (bonus-line values in `affixes.ts` are unchanged).
+- **Gear stat ladder + grade** (owner 2026-10-25): base stats are low and every rarity is a big jump (`itemCatalog.ts` `TIER_LADDER`
+  Common 1 / Uncommon 1.7 / Rare 3.06 / Epic 6.12 / Legendary 12.85 / Mythic 29.55, i.e. x1.7 / 1.8 / 2.0 / 2.1 / 2.3 per step;
+  `EPIC_ANCHOR` 0.70 puts Common 30% under the previous ladder, Legendary -14%, Mythic +3%, so the endgame matches the monster
+  curve as before: `waveHpMult` ~14x at depth 30, ~45x at depth 60, plus hero-level scaling). The catalog values are the **MID**
+  grade. EVERY gear piece (all six tiers, except the fixed-stat Mining Pickaxe) has a **grade** (`grade.ts`, `Item.grade`):
+  LOW x0.85 / MID x1.0 / HIGH x1.15 (price x0.9 / 1 / 1.1). Odds: drops, summons, fusion, quest rewards 30% / 52% / 18%
+  (`GRADE_DROP_ODDS`); crafting 12% / 58% / 30% (`GRADE_CRAFT_ODDS`); starter gear and shop (Armory) copies are MID; a High
+  Epic+ still needs +6 levels (`constants.itemReq`). Shown as a "High Epic" / "Mid Rare" / "Low Common" pill in the tooltip
+  (`ItemTip`, `.tt-grade`) and a soft rarity-tinted glow behind HIGH icons (`ItemSlot`). Saves: stored item stats are never
+  rescaled by the 3-grade change; gear stamped LOW by the old 2-grade system (plain tier value) is relabelled MID once per
+  save (profile / shared warehouse flag `grade3`, `legacyLowToMid`), old HIGH stays HIGH; gear with no grade at all (pre
+  2026-10-21) is still rescaled once by new/old ladder and becomes MID (`migrateGear`). Bonus-line values in `affixes.ts` are unchanged.
 - **Currencies**: gold (`GOLD_SCALE` 10), gems, **Aether Crystals** (real bag item `crystals.ts`; daily/weekly goals and
   achievements pay crystals only), shards (bag stacks, `shards.ts`). **Summon** (Fortune Teller window): Gem Altar, Crystal
   Altar (crystals), Gem Shop tab (gear/supplies, no pets), pity at 60 / 240 (`store.summonPity`). Tech House = permanent gem

@@ -60,7 +60,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
     <div style={{ width: '16rem' }}>
       <div className="tt-name" data-rt={item.rarity}>
         {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
-        {isGear(item) && item.type !== 'PET' && isGraded(item) && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : ''}`} data-testid="grade-tag">{gradeLabel(item)}</span>}
+        {isGear(item) && item.type !== 'PET' && isGraded(item) && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : gradeOf(item) === 'LOW' ? 'is-low' : ''}`} data-testid="grade-tag">{gradeLabel(item)}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}

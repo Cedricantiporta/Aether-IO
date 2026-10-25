@@ -1,6 +1,6 @@
 import { gradeOf } from '../../grade';
 /** (owner) the High-grade glow takes its tier's colour (light tints so it reads as light, not paint) */
-const HIGH_GLOW: Record<string, string> = { EPIC: '#f1c8ff', LEGENDARY: '#ffe0a0', MYTHIC: '#ffb8b0' };
+const HIGH_GLOW: Record<string, string> = { COMMON: '#fff6d8', UNCOMMON: '#d4f5c0', RARE: '#bfe0ff', EPIC: '#f1c8ff', LEGENDARY: '#ffe0a0', MYTHIC: '#ffb8b0' };
 import React from 'react';
 import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
