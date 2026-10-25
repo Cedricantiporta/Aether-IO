@@ -65,6 +65,8 @@ export const PERMANENT = 0;
 const SPEED_MUL = 0.8, DMG_MUL = 0.7, ATK_SPD_MUL = 0.7;
 /** (owner 2026-10-25) necro scaling: every summon +35% damage and HP at the base, upgrades (talents, gear, perk, skill level) count less. */
 const BASE_MUL = 1.35, UPG_K = 0.6;
+/** A summon farther than this from the hero teleports back beside it. */
+const TELE_R = 22;
 let bornSeq = 0;
 let ultHold = 0;   // the ult cooldown frozen while the ult army stands
 
@@ -265,7 +267,15 @@ export function updateMinions(dt: number): void {
       tx = trailPt[0] + Math.cos(a) * 3.2; tz = trailPt[1] + Math.sin(a) * 3.2; stop = 0.6;
     }
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
-    if (d > 30) { m.x = pl.pos.x; m.z = pl.pos.z; continue; }   // left far behind (room change): catch up
+    // (owner 2026-10-25) a summon too far from the hero blinks back to its side (a puff where it left and where it lands)
+    const hx = m.x - pl.pos.x, hz = m.z - pl.pos.z;
+    if (hx * hx + hz * hz > TELE_R * TELE_R || d > 30) {
+      events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: 1.1, color: 0x9a6bd8 });
+      const a = m.slot + i * 0.9;
+      m.x = pl.pos.x + Math.cos(a) * 2.6; m.z = pl.pos.z + Math.sin(a) * 2.6; m.tgt = -1; m.retarget = 0;
+      events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: 1.1, color: 0x9a6bd8 });
+      continue;
+    }
     let mv = 0;
     if (d > stop) {
       const s = Math.min(d - stop, speed * dt);
