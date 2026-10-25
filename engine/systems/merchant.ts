@@ -18,6 +18,8 @@ export const useMerchant = create<{ items: MerchantEntry[] }>(() => ({ items: []
 
 const MARKUP = 1.5;
 const SALE = 0.25;
+/** (owner 2026-10-25) chance a Legendary gear roll stays Legendary in the shop (else it becomes Epic). */
+const GOLD_KEEP = 0.05;
 
 /** Rolls a fresh stock for a merchant room at `depth`. */
 export function rollMerchantStock(depth: number): void {
@@ -34,7 +36,9 @@ export function rollMerchantStock(depth: number): void {
   const nPot = Math.random() < 0.5 ? 1 : 2;
   for (let i = 0; i < nPot; i++) add(makeItemById(kinds[i], 1)[0], kinds[i].endsWith('_big') ? 2 : 4);
   for (let i = 0; i < 3; i++) {
-    let gear = st.rollItemDrop(rarityForDepth(depth, 0.05, world.run.bossKills));
+    let rar = rarityForDepth(depth, 0.05, world.run.bossKills);
+    if (rar === 'MYTHIC' || (rar === 'LEGENDARY' && Math.random() >= GOLD_KEEP)) rar = 'EPIC';   // (owner) shops never sell Mythic, gold (Legendary) only very rarely
+    let gear = st.rollItemDrop(rar);
     if (gear) {   // (owner) the merchant's gear is always +2 or better (+2 / +3, rarely +4); priced on the upgraded item
       const plus = Math.random() < 0.1 ? 4 : Math.random() < 0.35 ? 3 : 2;
       while (Math.max(0, gear.level - 1) < plus) gear = plusOne(gear);
@@ -45,7 +49,7 @@ export function rollMerchantStock(depth: number): void {
   // rarely: an Ankh of Life or a Legendary (gold) shard, at an inflated price
   const r = Math.random();
   if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
-  else if (r < 0.22) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);
+  else if (r < 0.12) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);   // (owner: gold very rare in shops)
   else if (r < 0.45) add(makeItemById(['reforge_stone', 'temper_oil', 'reforge_stone', 'augment_rune', 'binding_seal'][Math.floor(Math.random() * 5)], 1)[0], 1, MARKUP * 1.5);   // a reforging tool
   // (owner: no 'X% off' sale entry any more)
   useMerchant.setState({ items });
