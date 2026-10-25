@@ -1114,13 +1114,16 @@ export const useGameStore = create<GameState>()((set, get) => {
       takeRunCard(upgrade);
       const more = runCards.extraPicks > 0;   // Guardian's Spoils: another selection right behind this one
       if (more) runCards.extraPicks--;
+      const catchUp = !more && runInfo.catchUp > 0;   // (owner 2026-10-25) the ship skipped biomes: their cards are picked here, one after another
+      if (catchUp) { runInfo.catchUp--; notify(`Catch-up for the skipped biomes: ${runInfo.catchUp + 1} card${runInfo.catchUp ? 's' : ''} left`, COLORS.uiAccent, 'SYSTEM'); }
       set({
         baseStats: base,
         skillLevels: levels,
         stats: calc(base, state.equipment),
         runPicks: [...state.runPicks, upgrade],
-        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade], runCards.guardianTier || 1) : [],
-        status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
+        upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade], runCards.guardianTier || 1)
+          : catchUp ? generateUpgradeOptions(state.hero, levels, calc(base, state.equipment), 3, [...state.runPicks, upgrade]) : [],
+        status: more || catchUp ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });
     },
 

@@ -210,7 +210,8 @@ export function startRunRooms(): void {
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
   if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
   const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens at that biome's camp)
-  if (sb > 0) { enterRoom(sb, 0, firstPlan()); return; }
+  runInfo.catchUp = 0;
+  if (sb > 0) { runInfo.catchUp = 4 * sb; enterRoom(sb, 0, firstPlan()); return; }   // (owner 2026-10-25: 4 catch-up card picks per skipped biome, a normal run gets up to 6 per biome)
   enterRoom(0, 0, firstPlan());
 }
 
