@@ -195,3 +195,50 @@ export function applyLavaShader(mat: MeshStandardMaterial, mask: PathMask, inver
   mat.customProgramCacheKey = () => 'lavaFloorV1';
   mat.needsUpdate = true;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Frostpeak ice floor (engine/iceFloor.ts): the blurred disc mask drawn as a glossy pale cyan / white sheet: soft frosty rim (snow melting into ice), faint
+// cracks (contour lines of a noise), lighter streaks and a little glow so it stays bright and cute. The sheet is shinier than snow (low roughness).
+// ---------------------------------------------------------------------------------------------------------------------------------------------------------
+const ICE_COMMON = /* glsl */ `
+uniform sampler2D uPath; uniform vec4 uPm;
+float icK = 0.0, icRim = 0.0, icCr = 0.0;
+float icHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float icNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(icHash(i), icHash(i + vec2(1.0, 0.0)), f.x), mix(icHash(i + vec2(0.0, 1.0)), icHash(i + vec2(1.0, 1.0)), f.x), f.y); }`;
+const ICE_COLOR = /* glsl */ `
+{
+  vec2 mq = (vPW - uPm.xy) * uPm.zw;
+  if (mq.x > 0.0 && mq.x < 1.0 && mq.y > 0.0 && mq.y < 1.0) {
+    float pm = texture2D(uPath, mq).r;
+    if (pm > 0.15) {
+      float n = icNoise(vPW * 0.7) * 0.6 + icNoise(vPW * 1.9 + 3.0) * 0.4;
+      float e = pm + (n - 0.5) * 0.22;
+      icK = smoothstep(0.5, 0.56, e);
+      icRim = smoothstep(0.25, 0.5, e) * (1.0 - icK);
+      float cn = icNoise(vPW * 0.33 + 11.0) * 0.7 + icNoise(vPW * 0.8 + 5.0) * 0.3;
+      icCr = (1.0 - smoothstep(0.0, 0.03, abs(cn - 0.52))) * smoothstep(0.58, 0.75, e);
+      float streak = icNoise(vec2(vPW.x * 0.25 + vPW.y * 0.1, vPW.y * 0.9)) ;
+      vec3 body = mix(vec3(0.66, 0.89, 0.97), vec3(0.86, 0.97, 1.0), streak * 0.8 + n * 0.2);
+      body = mix(body, vec3(0.45, 0.74, 0.92), icCr * 0.7);
+      vec3 rimC = mix(diffuseColor.rgb, vec3(0.93, 0.98, 1.0), 0.65);
+      diffuseColor.rgb = mix(mix(diffuseColor.rgb, rimC, icRim), body, icK);
+    }
+  }
+}`;
+const ICE_ROUGH = /* glsl */ `
+roughnessFactor = mix(roughnessFactor, 0.14, icK);`;
+const ICE_EMIT = /* glsl */ `
+totalEmissiveRadiance += vec3(0.30, 0.52, 0.62) * (0.16 * icK + 0.04 * icRim);`;
+/** Patch a Frostpeak (SNOW) ground material to show the ice sheets of `mask` (see above). */
+export function applyIceShader(mat: MeshStandardMaterial, mask: PathMask): void {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uPath = { value: mask.tex }; sh.uniforms.uPm = { value: mask.o };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vPW;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPW = position.xz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vPW;' + ICE_COMMON)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + ICE_COLOR)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + ICE_ROUGH)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' + ICE_EMIT);
+  };
+  mat.customProgramCacheKey = () => 'iceFloorV1';
+  mat.needsUpdate = true;
+}

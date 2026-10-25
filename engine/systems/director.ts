@@ -43,6 +43,7 @@ import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive, speedWon
 import { setupBiomeHazards } from './biomeHazards';
 import { setupRoomTraps } from './roomTraps';
 import { setupLavaFloor } from '../lavaFloor';
+import { setupIceFloor } from '../iceFloor';
 import { spawnEnemy, spawnMiniBoss, isSpawnable } from './enemies';
 import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
@@ -313,6 +314,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
   setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
   setupLavaFloor(b, p, seed);   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts)
+  setupIceFloor(b, p, seed);   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;
