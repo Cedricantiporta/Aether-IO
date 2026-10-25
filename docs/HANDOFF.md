@@ -649,9 +649,11 @@ screens, max-level question: class level cap is 50) have been removed.
 - **Necromancer summons**: per-source caps in `minions.ts`; when the last summon falls (in a room, hero alive) one skeleton warrior rises beside the hero for 5 s (`SRC_LAST` = 7; 6 is the run ally, once per wipe: it does not count as a summon, so it does not re-trigger or hold Raise Dead's cooldown); Raise Dead army of up to 5 (3 warriors + 2 random archer/mage),
   Bone Ward shields summons, golem ult.
   **Bone Golem ult (owner 2026-10-25)**: 50% bigger (render scale 2.85, body `mr` 1.95, reach 4.8), 20% faster attacks, its slam hits an area (`GOLEM_HIT_R` 3.4 around the target + shockwave), lasts 26 s (`GOLEM_LIFE` in abilities.ts). Every 4-6 s, if an enemy is 6-16 m away, it lobs a boulder (`golemRockAI` / `updateRocks` in minions.ts: METEOR_SHADOW telegraph 0.9 s, then 1.5x m.dmg area + short stun). When its timer ends or it is slain it explodes (`golemExplode`: 2.5x m.dmg in 6 m + BURN) and leaves a FIRE zone (aux 1 = real burn) for 5 s.
-- **Debug mode** (Settings > Debug, `ui/screens/DebugTab.tsx`, `engine/debug.ts`): god mode, one-hit kills, max stats/skills,
-  jump to any biome/room/gate, special fights (Malakar, Riruru, dark hero per class, humanoid mini boss), dreams, town
-  time, rockfall, "mark all biomes completed", unlock adventure, set level up to 50.
+- **Debug mode** (Settings > Debug, `ui/screens/DebugTab.tsx`, `engine/debug.ts`): collapsible sections (open state saved in
+  localStorage). Hero (class level set/+/max, talents max/reset, max skills, +SP, heal), Items & currency (N of EVERY crafting
+  material = `CRAFT_MAT_NAMES`, bag first then warehouse overflow; gold / gems / crystals / shards / cores by amount; random gear by
+  rarity + grade + slot), Run / rooms (kill all, jump to biome/room/boss, special fights, dark hero, ally), Story & world (complete
+  story step, town time, reset town chests, biome shortcuts, rockfall, dreams), Toggles (god, one-hit, max skills). Styles `.dbg-*` in index.css.
 - **Gear tint**: `render/gear.ts tintGear` recolours the KayKit model parts by rarity; weapons in `render/weapons.ts`.
   KayKit bone names have the dots stripped (`handslotr`).
 - **Hero HP/damage tuning knobs** most often touched: `store.CLASS_MANA_MUL`, `enemies.ts` (`LEVEL_*`, `ELITE_HP`,
