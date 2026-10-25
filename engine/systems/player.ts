@@ -9,7 +9,7 @@ import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
-import { lockedEnemy, updateTarget, clickMoveTo } from './target';
+import { lockedEnemy, updateTarget, clickMoveTo, lostGuide } from './target';
 import { trapAim, lockedTrap, nearestTrap, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
 import { hooks } from './hooks';
@@ -438,6 +438,15 @@ export function updatePlayer(dt: number): void {
         mx = dx / d; mz = dz / d; ml = 1;
         if (navActive() && !navClear(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z) && autoPathDir(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
       }
+    }
+  }
+
+  // ---- (owner) the PATH auto-walk also follows the red "lost" trail to a forgotten monster (any room shape)
+  if (ml === 0 && st.settings.autoNextSac === true && lostGuide.on && st.status === GameStatus.PLAYING && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0 && !stunned) {
+    const dx = lostGuide.x - p.pos.x, dz = lostGuide.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+    if (d > Math.max(3, heroRange(st) - 2)) {
+      mx = dx / d; mz = dz / d; ml = 1;
+      if (navActive() && !navClear(p.pos.x, p.pos.z, lostGuide.x, lostGuide.z) && autoPathDir(p.pos.x, p.pos.z, lostGuide.x, lostGuide.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
     }
   }
 

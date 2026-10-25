@@ -15,6 +15,8 @@ export const clickReq = { pending: false, nx: 0, ny: 0 };
 export const clickMark = { x: 0, z: 0, t: -1e9, attack: false };
 
 export const TARGET_DROP_RANGE = 40;
+/** (owner 2026-10-25) The red "lost" trail's goal (render/EnemyGuide writes it): the PATH auto-walk follows it too. */
+export const lostGuide = { on: false, x: 0, z: 0 };
 const PICK_SLACK = 1.2;
 const out: number[] = [];
 

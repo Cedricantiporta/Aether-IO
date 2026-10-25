@@ -9,6 +9,7 @@ import { events } from '../engine/events';
 import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import { optionalForClear } from '../engine/enemyDefs';
+import { lostGuide } from '../engine/systems/target';
 import { navActive, navClear, navFindPath, navPath } from '../engine/roomNav';
 
 const IDLE_S = 5, N = 40, STEP = 1.3;
@@ -28,9 +29,9 @@ export function EnemyGuide() {
     const t = tr.current; if (!t) return;
     const p = world.player;
     const fighting = useGameStore.getState().status === GameStatus.PLAYING && world.room.active && p.alive && world.director.phase === 'FIGHT';
-    if (!fighting) { idle.t = 0; t.visible = sh.current.visible = false; return; }
+    if (!fighting) { idle.t = 0; lostGuide.on = false; t.visible = sh.current.visible = false; return; }
     idle.t += dt;
-    if (idle.t < IDLE_S) { t.visible = sh.current.visible = false; S.tgt = -1; return; }
+    if (idle.t < IDLE_S) { lostGuide.on = false; t.visible = sh.current.visible = false; S.tgt = -1; return; }
     S.acc += dt;
     if (S.acc > 0.5) {   // re-pick the nearest monster + its route twice a second
       S.acc = 0; S.tgt = -1;
@@ -52,6 +53,7 @@ export function EnemyGuide() {
         }
       }
     }
+    lostGuide.on = S.tgt >= 0; lostGuide.x = S.tx; lostGuide.z = S.tz;
     let n = 0;
     if (S.tgt >= 0) {
       const scroll = (clock.elapsedTime * 1.8) % STEP;
