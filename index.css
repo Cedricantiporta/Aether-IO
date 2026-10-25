@@ -3926,3 +3926,22 @@ kbd { border: 0 !important; border-radius: 999px !important; background: rgba(25
 .mm-expand { position: absolute; right: 2%; bottom: 2%; width: 30px; height: 30px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; z-index: 2;
   color: #2b2a2e; background: #fff6e0; box-shadow: 0 2px 6px rgba(0, 0, 0, .4); }
 .mm-expand:hover { transform: scale(1.08); }
+
+/* ---- Settings > Debug: collapsible sections, rows = label left / controls right (ui/screens/DebugTab.tsx) ---- */
+.dbg-sec { margin-bottom: .55rem; border-radius: 18px; background: var(--z-tile, rgba(255, 255, 255, .08)); overflow: hidden; }
+.dbg-h { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: .55rem .9rem; border: 0; background: transparent; color: #fff; font-size: .82rem; font-weight: 800; letter-spacing: .02em; text-align: left; }
+.dbg-h small { font-weight: 600; font-size: .64rem; color: var(--z-dim, #c9c9d2); margin-left: .5rem; }
+.dbg-h .car { transition: transform .15s; font-size: .7rem; opacity: .8; }
+.dbg-sec.open .dbg-h .car { transform: rotate(90deg); }
+.dbg-body { padding: 0 .55rem .5rem; }
+.dbg-row { display: flex; align-items: center; gap: .7rem; min-height: 2.2rem; padding: .3rem .4rem; border-radius: 12px; }
+.dbg-row:hover { background: rgba(255, 255, 255, .05); }
+.dbg-lbl { flex: 0 0 8.5rem; min-width: 0; font-size: .76rem; font-weight: 700; color: #fff; line-height: 1.2; }
+.dbg-lbl em { display: block; font-style: normal; font-weight: 500; font-size: .6rem; color: var(--z-dim, #c9c9d2); margin-top: .1rem; }
+.dbg-ctl { flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .35rem; }
+.dbg-in { height: 1.9rem; padding: 0 .6rem; font-size: .78rem; color: #fff; background: rgba(255, 255, 255, .12); border: 0; border-radius: 12px; outline: none; }
+.dbg-in:focus { background: rgba(255, 255, 255, .2); box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); }
+.dbg-in.num { width: 5.8rem; text-align: right; font-variant-numeric: tabular-nums; }
+select.dbg-in { min-width: 7rem; padding-right: .3rem; }
+select.dbg-in option { background: #2a2a32; color: #fff; }
+@media (max-width: 560px) { .dbg-row { flex-direction: column; align-items: stretch; gap: .25rem; } .dbg-lbl { flex-basis: auto; } .dbg-ctl { justify-content: flex-start; } }
