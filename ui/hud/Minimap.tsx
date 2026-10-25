@@ -2,7 +2,8 @@
 // green grass, rounded forest blobs, tan roads, blue water, cream / brown buildings. The static terrain is baked ONCE per
 // area / room into an offscreen canvas (`bake`) and only blitted each frame; markers (hero badge, NPC dots, enemies, gates,
 // the tracked quest ring) are drawn on top from the world. No React state, no per-frame allocations (module scratch).
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { create } from 'zustand';
 import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
 import { useGameStore } from '../../store';
 import { TAP } from '../../engine/tavernData';
@@ -346,7 +347,7 @@ export const Minimap: React.FC = () => {
       if (!e.active || e.state === 'DYING') continue;
       if (e.boss) { boss = e; continue; }
       const x = sx(e.pos.x), y = sy(e.pos.z); if (Math.abs(x - h) > lim || Math.abs(y - h) > lim) continue;
-      if (e.elite) disc(ctx, x, y, 3.6 * u, '#c084fc'); else disc(ctx, x, y, 2.5 * u, C.red);
+      if (e.elite) { disc(ctx, x, y, 4.6 * u, '#2a1030'); disc(ctx, x, y, 3.6 * u, '#c084fc'); } else { disc(ctx, x, y, 3.4 * u, '#3a0a0a'); disc(ctx, x, y, 2.5 * u, C.red); }   // (dark rim: readable on any ground)
     }
     if (boss) { const x = sx(boss.pos.x), y = sy(boss.pos.z); ctx.globalAlpha = 0.35; disc(ctx, x, y, 11 * u, C.red); ctx.globalAlpha = 1; disc(ctx, x, y, 6.5 * u, '#ff3b3b'); disc(ctx, x, y, 2.4 * u, '#fff'); }
     // ---- tracked quest: a glowing yellow ring + dot; off the map it sits on the circle edge, pointing the way
@@ -379,10 +380,81 @@ export const Minimap: React.FC = () => {
       ctx.lineJoin = 'round'; ctx.lineWidth = 1.8 * u; ctx.strokeStyle = '#ffffff'; ctx.stroke();
     }
   });
+  const open = useFullMap((st) => st.open);
+  useEffect(() => {   // M toggles the full map, Esc closes it
+    const onKey = (e: KeyboardEvent): void => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (e.code === 'KeyM' && !e.repeat) useFullMap.setState((st) => ({ open: !st.open }));
+      else if (e.code === 'Escape' && useFullMap.getState().open) { e.stopPropagation(); useFullMap.setState({ open: false }); }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
   return (
-    <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.2) / 14.4}rem`, height: `${(SIZE * 1.2) / 14.4}rem` }}>
-      <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
-      <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
+    <>
+      <div className="pe relative mm-wrap" style={{ width: `${(SIZE * 1.2) / 14.4}rem`, height: `${(SIZE * 1.2) / 14.4}rem`, cursor: 'pointer' }}
+        title="Full map (M)" data-testid="minimap" onClick={() => useFullMap.setState({ open: true })}>
+        <canvas ref={ref} width={SIZE * 2} height={SIZE * 2} className="absolute inset-0 w-full h-full mm-canvas" />
+        <span className="absolute left-1/2 grid place-items-center mm-north">N</span>
+      </div>
+      {open && <FullMap />}
+    </>
+  );
+};
+
+/** (owner 2026-10-25) Full map popup (click the minimap / M): the whole baked area or stage with every enemy, exit, station and the hero. */
+const useFullMap = create<{ open: boolean }>(() => ({ open: false }));
+const FullMap: React.FC = () => {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [title] = useState(() => (world.room.active ? 'Stage map' : world.village.area === 'TOWN' ? 'Kingdom map' : 'Map'));
+  const close = (): void => useFullMap.setState({ open: false });
+  useRaf((_dt, now) => {
+    const c = ref.current; if (!c) return;
+    const cw = c.clientWidth, want = Math.round(cw * Math.min(2, window.devicePixelRatio || 1));
+    if (want > 0 && (c.width !== want || c.height !== want)) { c.width = want; c.height = want; }
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    const P = c.width, u = P / 520;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, P, P);
+    const room = world.room.active, area = room ? '' : world.village.area;
+    if (!baked.cv || area === 'CAVE') {
+      ctx.fillStyle = '#e8e2d2'; ctx.font = `${16 * u}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('No map here', P / 2, P / 2); return;
+    }
+    const pad = 14 * u, k = (P - pad * 2) / Math.max(baked.w, baked.h);
+    const ox = (P - baked.w * k) / 2, oy = (P - baked.h * k) / 2;
+    ctx.fillStyle = baked.bg; ctx.fillRect(0, 0, P, P);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(baked.cv, ox, oy, baked.w * k, baked.h * k);
+    const sx = (x: number): number => ox + (x - baked.x0) * k, sy = (z: number): number => oy + (z - baked.z0) * k;
+    if (room) {
+      const r = world.room;
+      if (r.station.kind !== 'NONE') { disc(ctx, sx(r.station.x), sy(r.station.z), 6 * u, '#5fd6ff'); disc(ctx, sx(r.station.x), sy(r.station.z), 2.6 * u, '#fff'); }
+      for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; gate(ctx, sx(po.x), sy(po.z), 8 * u, po.active ? portalLabel(po.plan, r.biome).color : '#8a8478'); }
+    } else {
+      const here = world.village.area;
+      for (let i = 0; i < NPCS.length; i++) { if ((NPCS[i].area ?? 'TOWN') !== here) continue; disc(ctx, sx(npcs[i].x), sy(npcs[i].z), 3.2 * u, C.cream); }
+    }
+    const es = world.enemies;
+    for (let i = 0; i < es.length; i++) {
+      const e = es[i]; if (!e.active || e.state === 'DYING') continue;
+      const x = sx(e.pos.x), y = sy(e.pos.z);
+      if (e.boss) { disc(ctx, x, y, 9 * u, '#3a0a0a'); disc(ctx, x, y, 7.5 * u, '#ff3b3b'); disc(ctx, x, y, 2.6 * u, '#fff'); }
+      else if (e.elite) { disc(ctx, x, y, 5.2 * u, '#2a1030'); disc(ctx, x, y, 4.2 * u, '#c084fc'); }
+      else { disc(ctx, x, y, 3.8 * u, '#3a0a0a'); disc(ctx, x, y, 2.9 * u, C.red); }
+    }
+    const p = world.player, hx = sx(p.pos.x), hy = sy(p.pos.z), pulse = 1 + Math.sin(now * 5) * 0.15;
+    ctx.globalAlpha = 0.35; disc(ctx, hx, hy, 12 * u * pulse, C.gold); ctx.globalAlpha = 1;
+    const fx = Math.sin(p.facing), fz = Math.cos(p.facing), L = 11 * u, W = 7 * u, B = 4.6 * u;
+    ctx.beginPath(); ctx.moveTo(hx + fx * L, hy + fz * L); ctx.lineTo(hx - fx * B - fz * W, hy - fz * B + fx * W); ctx.lineTo(hx - fx * 1.2 * u, hy - fz * 1.2 * u); ctx.lineTo(hx - fx * B + fz * W, hy - fz * B - fx * W); ctx.closePath();
+    ctx.fillStyle = C.gold; ctx.fill(); ctx.lineWidth = 2 * u; ctx.strokeStyle = '#fff'; ctx.stroke();
+  });
+  return (
+    <div className="fullmap-root pe" data-testid="full-map" onClick={close}>
+      <div className="fullmap-card" onClick={(e) => e.stopPropagation()}>
+        <div className="fullmap-head"><span>{title}</span><button className="fullmap-x" aria-label="Close map" onClick={close}>{'\u2715'}</button></div>
+        <canvas ref={ref} width={1040} height={1040} className="fullmap-canvas" />
+        <div className="fullmap-legend"><i style={{ background: '#ff6b6b' }} />Monster<i style={{ background: '#c084fc' }} />Elite<i style={{ background: '#ffd36a' }} />You<span className="fullmap-hint">M / Esc to close</span></div>
+      </div>
     </div>
   );
 };
