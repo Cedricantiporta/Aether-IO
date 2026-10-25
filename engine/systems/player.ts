@@ -24,7 +24,8 @@ import { envSlow } from './zones';
 import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
 import { iceAt, ICE_ACCEL, ICE_FRICTION } from '../iceFloor';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, roomHalls, type Collider } from '../mapgen';
-import { hallsPush } from '../roomHalls';
+import { hallsPush, halls } from '../roomHalls';
+import { sacWalkGoal } from './director';
 import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
 import { navActive, navClear, navFindPath, navPath } from '../roomNav';
@@ -197,6 +198,7 @@ function autoPathDir(x: number, z: number, gx: number, gz: number, dt: number): 
   return true;
 }
 
+const _sacGoal = { x: 0, z: 0 };
 export function updatePlayer(dt: number): void {
   const st = useGameStore.getState();
   const stats = st.stats;
@@ -424,6 +426,18 @@ export function updatePlayer(dt: number): void {
         if (navActive() && !navClear(p.pos.x, p.pos.z, e.pos.x, e.pos.z) && autoPathDir(p.pos.x, p.pos.z, e.pos.x, e.pos.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
       }
     }
+    }
+  }
+
+  // ---- auto-walk to the next sac (setting 'Auto: walk to next area', off by default; HALLS dungeon stages): no movement input, no enemy near (combat / AUTO chase wins) -> walk to the awake sac, or to the exit chamber when everything is beaten
+  if (ml === 0 && st.settings.autoNextSac === true && st.status === GameStatus.PLAYING && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0 && !stunned && halls.on) {
+    const kind = sacWalkGoal(_sacGoal);
+    if (kind > 0 && !findNearestEnemy(p.pos.x, p.pos.z, 14)) {
+      const dx = _sacGoal.x - p.pos.x, dz = _sacGoal.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
+      if (d > (kind === 2 ? 3.5 : 5)) {
+        mx = dx / d; mz = dz / d; ml = 1;
+        if (navActive() && !navClear(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z) && autoPathDir(p.pos.x, p.pos.z, _sacGoal.x, _sacGoal.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
+      }
     }
   }
 

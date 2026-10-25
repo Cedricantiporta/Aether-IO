@@ -2,7 +2,7 @@
 // Procedural HALLS floor plans (build-time, pure TS, deterministic for a given rnd stream). roomHalls.ts calls `genHalls` and rasterises the
 // result; when a plan is rejected (null) it asks again with the next attempt number (tighter gaps) and finally falls back to a fixed template.
 //   outdoor plan: 2-6 "sacs" (chambers) = soft ellipses of a mixed SIZE CLASS (small r 8-12, medium 14-18, big 20-26 m, squished <= 1.3,
-//   random rotation, kidney bend), grown as a random spanning tree (start -> ... -> exit are the two farthest chambers), 0-2 extra loop
+//   random rotation, kidney bend), grown as ONE LINEAR CHAIN (start = first, exit = last, no loops; owner 2026-10-25),
 //   passages, curved bezier passages 6.6-10 m wide, sometimes one small dead-end pocket chamber, tree / rock islands in the chambers.
 //   castle plan (Marble Halls): the same graph on axis-aligned rounded rectangles joined by STRAIGHT lanes (arch doorways), column rows
 //   along the long walls, a few statue spots at free hall ends.
@@ -15,6 +15,8 @@ export interface GenOut {
   blobs: GenBlob[]; paths: GenPath[]; edges: [number, number][]; castle: boolean;
   islands: [number, number, number][]; statues: [number, number][]; arches: [number, number, number][];   // arches: x, z, facing (rad)
   start: [number, number]; exit: [number, number]; hub: [number, number]; startIdx: number; exitIdx: number; pocketIdx: number;
+  /** visiting order of the chambers (indexes into `blobs`): the chain start -> ... -> exit, a dead-end pocket right after the chamber it hangs off */
+  order: number[];
 }
 
 /** size class radii (m): small, medium, big */
@@ -134,20 +136,11 @@ function hopDist(n: number, edges: [number, number][], src: number): number[] {
   return d;
 }
 
-/** farthest pair (distance + 8 per hop) among the non-pocket chambers: [start, exit] */
-function pickEnds(blobs: GenBlob[], edges: [number, number][], pocket: number): [number, number] | null {
-  const n = blobs.length;
-  let best = -1, bs = -1, be = -1;
-  for (let a = 0; a < n; a++) {
-    if (a === pocket) continue;
-    const hd = hopDist(n, edges, a);
-    for (let b = a + 1; b < n; b++) {
-      if (b === pocket || hd[b] < 1) continue;
-      const sc = hyp(blobs[a].x - blobs[b].x, blobs[a].z - blobs[b].z) + 8 * hd[b];
-      if (sc > best) { best = sc; bs = a; be = b; }
-    }
-  }
-  return bs < 0 ? null : [bs, be];
+/** visiting order of a chain 0..m-1 (+ optional pocket index m hanging off chamber `pp`): the pocket comes right after its parent */
+function chainOrder(m: number, pocket: number, pp: number): number[] {
+  const o: number[] = [];
+  for (let i = 0; i < m; i++) { o.push(i); if (pocket >= 0 && i === pp) o.push(pocket); }
+  return o;
 }
 
 /** the hub chamber (origin): a middle chamber near the centroid; with 2 chambers the exit one */
@@ -194,7 +187,8 @@ function endSpot(G: { blobs: GenBlob[]; edges: [number, number][]; paths: GenPat
 // ----------------------------------------------------------------------------- outdoor plan
 function genOutdoor(rnd: Rnd, type: string, attempt: number, count: number): GenOut | null {
   const R = (a: number, b: number): number => a + rnd() * (b - a);
-  const n = count, pocket = n >= 4 && rnd() < 0.4 ? n - 1 : -1;
+  const n = count, pocket = n >= 4 && rnd() < 0.4 ? n - 1 : -1, m = pocket >= 0 ? n - 1 : n;
+  let pocketParent = -1;
   const cls = pickClasses(rnd, n, pocket >= 0, false, type);
   const gs = 1 - Math.min(0.4, attempt * 0.02);
   const blobs: GenBlob[] = [];
@@ -202,14 +196,15 @@ function genOutdoor(rnd: Rnd, type: string, attempt: number, count: number): Gen
     const r = R(CLS_R[cls[i]][0], CLS_R[cls[i]][1]), sq = 1 + rnd() * (cls[i] === 2 ? 0.22 : 0.3);
     blobs.push({ x: 0, z: 0, rx: r * sq, rz: r, rot: rnd() * TAU, kid: cls[i] >= 1 ? (rnd() - 0.5) * 0.6 : (rnd() - 0.5) * 0.2, box: 0, cls: cls[i] });
   }
-  // random placement order: the first chamber sits at the origin, every other one is attached to an earlier one
+  // LINEAR map: chamber i is attached to i-1 (a gentle turn from the previous direction); the pocket hangs off a middle chamber
+  let prevA = rnd() * TAU;
   const deg = new Array<number>(n).fill(0), edges: [number, number][] = [], recs: PathRec[] = [], angs: number[][] = blobs.map(() => []);
   for (let i = 1; i < n; i++) {
     let ok = false;
     for (let tries = 0; tries < 70 && !ok; tries++) {
-      const p = Math.floor(rnd() * i);
-      if (deg[p] >= (blobs[p].cls === 0 ? 2 : 3) || (pocket === i && deg[p] >= 2)) continue;
-      const a = rnd() * TAU;
+      const isPk = i === pocket, p = isPk ? Math.floor(rnd() * (m - 1)) : i - 1;
+      if (deg[p] >= (blobs[p].cls === 0 ? 2 : 3)) continue;
+      const a = isPk || i === 1 ? rnd() * TAU : prevA + R(-1.5, 1.5);
       let crowd = false; for (const q of angs[p]) { let d = Math.abs(a - q) % TAU; if (d > Math.PI) d = TAU - d; if (d < 0.8) crowd = true; }
       if (crowd) continue;
       const P = blobs[p], C = blobs[i], gap = (n === 2 ? R(16, 30) : R(9, 26)) * gs;
@@ -228,34 +223,21 @@ function genOutdoor(rnd: Rnd, type: string, attempt: number, count: number): Gen
       if (!c) continue;
       const rec: PathRec = { c, w, a: p, b: i, pts: [] }; samplePath(c, rec.pts);
       recs.push(rec); edges.push([p, i]); deg[p]++; deg[i]++; angs[p].push(a); angs[i].push(a + Math.PI);
+      if (isPk) pocketParent = p; else prevA = a;
       ok = true;
     }
     if (!ok) return F('o1');
   }
-  // loop passages (not for 2 chambers, never touching the pocket)
-  let loops = n >= 3 ? (rnd() < (n >= 4 ? 0.5 : 0.3) ? (rnd() < 0.25 ? 2 : 1) : 0) : 0;
-  for (let tries = 0; tries < 24 && loops > 0; tries++) {
-    const a = Math.floor(rnd() * n), b = Math.floor(rnd() * n);
-    if (a === b || a === pocket || b === pocket || edges.some((e) => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) continue;
-    const A = blobs[a], B = blobs[b], ang = Math.atan2(B.z - A.z, B.x - A.x), gap = hyp(B.x - A.x, B.z - A.z) - dirR(A, ang) - dirR(B, ang + Math.PI);
-    if (gap < 6 || gap > 34) continue;
-    const w = R(6.6, 9), c = makeCurve(rnd, blobs, n, a, b, w, recs, gs);
-    if (!c) continue;
-    const rec: PathRec = { c, w, a, b, pts: [] }; samplePath(c, rec.pts);
-    recs.push(rec); edges.push([a, b]); loops--;
-  }
-  const ends = pickEnds(blobs, edges, pocket);
-  if (!ends) return F('o2');
-  const [si, ei] = ends;
+  const si = 0, ei = m - 1;
   if (hyp(blobs[si].x - blobs[ei].x, blobs[si].z - blobs[ei].z) < (n === 2 ? 30 : 40)) return F('o3');
   const hub = pickHub(blobs, si, ei, pocket);
   const G: GenOut = {
     blobs, paths: recs.map((r) => ({ c: r.c, w: r.w })), edges, castle: false, islands: [], statues: [], arches: [],
-    start: [0, 0], exit: [0, 0], hub: [0, 0], startIdx: si, exitIdx: ei, pocketIdx: pocket,
+    start: [0, 0], exit: [0, 0], hub: [0, 0], startIdx: si, exitIdx: ei, pocketIdx: pocket, order: chainOrder(m, pocket, pocketParent),
   };
   G.start = endSpot(G, si, rnd); G.exit = endSpot(G, ei, rnd);
   shiftAll(G, blobs[hub].x, blobs[hub].z);
-  for (const b of blobs) if (hyp(b.x, b.z) + Math.max(b.rx, b.rz) * 1.1 + 3 > 82) return F('o4');
+  for (const b of blobs) if (hyp(b.x, b.z) + Math.max(b.rx, b.rz) * 1.05 + 3 > 92) return F('o4');
   // islands (tree / rock clumps), away from the passage mouths, start, exit and the station area
   const mouths: [number, number][] = []; for (const p of G.paths) mouths.push(p.c[0], p.c[3]);
   for (let i = 0; i < n; i++) {
@@ -299,7 +281,8 @@ function laneBetween(rnd: Rnd, blobs: GenBlob[], np: number, a: number, b: numbe
 
 function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenOut | null {
   const R = (a: number, b: number): number => a + rnd() * (b - a);
-  const n = count, pocket = n >= 4 && rnd() < 0.4 ? n - 1 : -1;
+  const n = count, pocket = n >= 4 && rnd() < 0.4 ? n - 1 : -1, m = pocket >= 0 ? n - 1 : n;
+  let pocketParent = -1;
   const cls = pickClasses(rnd, n, pocket >= 0, true, type);
   const gs = 1 - Math.min(0.4, attempt * 0.02);
   const blobs: GenBlob[] = [];
@@ -308,7 +291,7 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
   for (let i = 1; i < n; i++) {
     let ok = false;
     for (let tries = 0; tries < 80 && !ok; tries++) {
-      const p = Math.floor(rnd() * i), s = Math.floor(rnd() * 4);
+      const isPk = i === pocket, p = isPk ? Math.floor(rnd() * (m - 1)) : i - 1, s = Math.floor(rnd() * 4);
       if (used[p] & (1 << s)) continue;
       const P = blobs[p], C = blobs[i], w = R(7, 10), gap = (n === 2 ? R(22, 38) : R(14, 34)) * gs, sg = s % 2 === 0 ? 1 : -1;
       if (s < 2) { C.x = P.x + sg * (P.rx + gap + C.rx); C.z = P.z + (rnd() - 0.5) * 2 * Math.max(0, P.rz + C.rz - (w + 10)); }
@@ -322,25 +305,12 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
       const cr = laneBetween(rnd, blobs, i + 1, p, i, s, w, corrs);
       if (!cr) continue;
       corrs.push(cr); edges.push([p, i]); used[p] |= 1 << s; used[i] |= 1 << (s ^ 1);
+      if (isPk) pocketParent = p;
       ok = true;
     }
     if (!ok) return F('c1');
   }
-  let loops = n >= 3 ? (rnd() < (n >= 4 ? 0.5 : 0.3) ? (rnd() < 0.25 ? 2 : 1) : 0) : 0;
-  for (let tries = 0; tries < 30 && loops > 0; tries++) {
-    const a = Math.floor(rnd() * n), b = Math.floor(rnd() * n);
-    if (a === b || a === pocket || b === pocket || edges.some((e) => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a))) continue;
-    const A = blobs[a], B = blobs[b];
-    let s = -1;
-    if (B.x - B.rx > A.x + A.rx + 8) s = 0; else if (A.x - A.rx > B.x + B.rx + 8) s = 1; else if (B.z - B.rz > A.z + A.rz + 8) s = 2; else if (A.z - A.rz > B.z + B.rz + 8) s = 3;
-    if (s < 0 || used[a] & (1 << s) || used[b] & (1 << (s ^ 1))) continue;
-    const cr = laneBetween(rnd, blobs, n, a, b, s, R(7, 9), corrs);
-    if (!cr || cr.eb * (s % 2 === 0 ? 1 : -1) - cr.ea * (s % 2 === 0 ? 1 : -1) > 42) continue;
-    corrs.push(cr); edges.push([a, b]); used[a] |= 1 << s; used[b] |= 1 << (s ^ 1); loops--;
-  }
-  const ends = pickEnds(blobs, edges, pocket);
-  if (!ends) return F('c2');
-  const [si, ei] = ends;
+  const si = 0, ei = m - 1;
   if (hyp(blobs[si].x - blobs[ei].x, blobs[si].z - blobs[ei].z) < (n === 2 ? 36 : 44)) return F('c3');
   const hub = pickHub(blobs, si, ei, pocket);
   const paths: GenPath[] = [], arches: [number, number, number][] = [];
@@ -356,7 +326,7 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
   }
   const G: GenOut = {
     blobs, paths, edges, castle: true, islands: [], statues: [], arches,
-    start: [0, 0], exit: [0, 0], hub: [0, 0], startIdx: si, exitIdx: ei, pocketIdx: pocket,
+    start: [0, 0], exit: [0, 0], hub: [0, 0], startIdx: si, exitIdx: ei, pocketIdx: pocket, order: chainOrder(m, pocket, pocketParent),
   };
   // start / exit: at the far end of a free side of their hall (else the middle)
   const spot = (i: number): [number, number] => {
