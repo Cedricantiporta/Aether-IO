@@ -14,7 +14,7 @@ import {
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
 import { npcMarkers } from '../../engine/systems/npcQuestLogic';
-import { HALL, CASTLE_DOOR } from '../../engine/castleData';
+import { HALL, CASTLE_DOOR, CASTLE_EXT, CASTLE_ROOMS, DOORS, GAP_W } from '../../engine/castleData';
 import { CAVE_DOOR } from '../../engine/caveData';
 import { TAVERN_DOOR } from '../../engine/tavernData';
 import { drawCaveMinimap, drawCaveFloorTag } from './minimapCave';
@@ -167,13 +167,20 @@ function bakeTown(): void {
 }
 
 function bakeInterior(area: string): void {
-  const hw = area === 'HOME' ? HOME_ROOM.hw : area === 'TAVERN' ? TAP.hw : area === 'CHURCH' ? NAVE.hw : HALL.hw;
+  const hw = area === 'HOME' ? HOME_ROOM.hw : area === 'TAVERN' ? TAP.hw : area === 'CHURCH' ? NAVE.hw : CASTLE_EXT.hw;
   const hd = area === 'HOME' ? HOME_ROOM.hd : area === 'TAVERN' ? TAP.hd : area === 'CHURCH' ? NAVE.hd : HALL.hd;
   const m = 16;
   bake(`A:${area}`, -hw - m, -hd - m, (hw + m) * 2, (hd + m) * 2, 900, '#8a6a52', (g) => {
     g.fillStyle = '#8a6a52'; g.fillRect(-hw - m, -hd - m, (hw + m) * 2, (hd + m) * 2);
     g.fillStyle = '#b98b5e'; rr(g, -hw - 1.2, -hd - 1.2, hw * 2 + 2.4, hd * 2 + 2.4, 3); g.fill();
     g.fillStyle = area === 'CASTLE' ? '#efe6d2' : area === 'CHURCH' ? '#ece3d2' : '#f3dcae'; rr(g, -hw, -hd, hw * 2, hd * 2, 2.4); g.fill();
+    if (area === 'CASTLE') {   // throne room + the two wings: one soft tile per room, a gap for every wall, a gold-ish bridge over every doorway
+      for (const r of CASTLE_ROOMS) { g.fillStyle = r.color; rr(g, r.x0 + 0.35, r.z0 + 0.35, r.x1 - r.x0 - 0.7, r.z1 - r.z0 - 0.7, 1.4); g.fill(); }
+      g.fillStyle = '#efe6d2';
+      for (const d of DOORS) { if (d.alongX) g.fillRect(d.x - GAP_W / 2 + 0.6, d.z - 0.6, GAP_W - 1.2, 1.2); else g.fillRect(d.x - 0.6, d.z - GAP_W / 2 + 0.6, 1.2, GAP_W - 1.2); }
+      g.fillStyle = '#9a7656'; g.font = 'bold 1.7px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const r of CASTLE_ROOMS) if (r.id !== 'hall') g.fillText(r.name, (r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2 - (r.z1 - r.z0 > 15 ? 3 : 1));
+    }
     if (area === 'CASTLE' || area === 'CHURCH') { g.strokeStyle = '#e48a7c'; g.lineWidth = area === 'CASTLE' ? 4 : 3; g.beginPath(); g.moveTo(0, -hd + 3); g.lineTo(0, hd - 1); g.stroke(); }
   });
 }
