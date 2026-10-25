@@ -10,6 +10,9 @@
 //   FREEZE POOL frozen water: you slip on it (long glide) and chill builds up (bossFx addChill: 4 stacks freeze).
 //   FIRE / FROST STATUE a stone dragon head on the rim: glowing mouth + ground strip (telegraph), then a LONG breath cone (~11.5 m, 2 s, slowly
 //                sweeping) that burns (fire) or chills + slows (frost: Frostpeak / Void). Destructible like the siege weapons.
+//   ICE LASER  (Frostpeak only) a cute crystal-ice turret: a thin glowing line on the floor toward you (1.0 s, tracks you for the first 0.45 s, then the lane is
+//                locked), then a straight ice beam (1.0 s) down that lane. A hit = ICE damage + FREEZE 1.0 s + a slow after; a dash goes through unharmed.
+//                2.5-3.5 s rest between shots, turrets start staggered. Destructible like the statues. No fire stationaries in Frostpeak.
 //   BOMB BARRELS clusters of explosive barrels (crates.ts EXPLOSIVE_BARREL: hit one, the chain goes off; hurts monsters AND the hero).
 // Burn / poison ticks hit the hero HERO_DOT_MUL (x4, combat.ts) like every other ticking hazard: hazards here either use `env: true` ticks
 // or apply BURN (whose ticks are multiplied) so the numbers stay consistent.
@@ -24,15 +27,15 @@ import { onBridge, feat } from '../roomFeatures';
 import { queryColliders, addTempCollider, removeTempCollider, CRATE_HP, type Collider } from '../mapgen';
 import { insideShape, shape } from '../roomShape';
 import { hallsRandomSpot, hallsSdf, halls } from '../roomHalls';
-import { damagePlayer, applyPlayerDebuff, applyStatus, addShake, type StatusEffect } from './combat';
+import { damagePlayer, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect } from './combat';
 import { spawnPickup } from './pickups';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { BT, addChill } from './bossFx';
 import { hz } from './biomeHazards';
 import { Vector3 } from 'three';
 
-export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7 } as const;
-const NKIND = 8;
+export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7, LASER: 8 } as const;
+const NKIND = 9;
 const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0;
 
 export const rt = {
@@ -40,6 +43,8 @@ export const rt = {
   nSiege: 0, siege: Array.from({ length: 6 }, () => ({ kind: 0, x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lx: 0, lz: 0, locked: false, fired: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.7, flash: 0, hitSeq: 0 })),
   nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
+  /** Frostpeak ice-laser turrets: idle (faces you, cd) -> telegraph (floor line, tracks then locks) -> beam -> rest */
+  nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
   /** HALLS only: a pillar that sends ONE very long (8 - 12 m) flame beam round: idle -> telegraph (floor line) -> rotating blaze -> rest */
   nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, state: 0, t: 0, off: 3, hitCd: 0, tick: 0 })),
@@ -65,6 +70,9 @@ function coneHit(q: { x: number; z: number; yaw: number }, px: number, pz: numbe
 export const BEAM_WARN = 1.5, BEAM_ON = 6.0;
 export const JET_WARN = 1.0, JET_ON = 1.5, VINE_REST = 4.5, BAR_LEN = 6.5, TOWER_WIND_T = TOWER_WIND, CATAPULT_WIND_T = CATAPULT_WIND, BOULDER_FLIGHT = FLIGHT;
 const POOL_GRIP = 0.16;
+/** Ice laser numbers: telegraph 1.0 s (aims for the first 0.45 s), beam 1.0 s, reach 34 m, half-width 0.4 m (+ hero radius), freeze 1.0 s then slow 3 s, rest 2.5-3.5 s. */
+export const LASER_WARN = 1.0, LASER_AIM = 0.45, LASER_ON = 1.0, LASER_LEN = 34, LASER_MUZZLE = 1.1, LASER_HALF_W = 0.4;
+const LASER_FREEZE = 1.0, LASER_SLOW = 3.0, LASER_DMG = 0.09, LASER_REST_MIN = 2.5, LASER_REST_VAR = 1.0, LASER_HP_HITS = 9;
 /** (owner) at most this many stationaries of the room's one kind */
 const MAX_PIECES = 3;
 /** (owner) siege weapons and magic towers can be destroyed: HP = this many of the hero's average hits, a little more deeper in */
@@ -80,8 +88,8 @@ export const trapLock = { obj: null as TrapObj | null };
 let curDepth = 0;
 export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && rt.on && world.room.active ? o : null; };
 /** i-th live-or-dead stationary across the three pools (no allocation). */
-const trapAt = (i: number): TrapObj => i < rt.nSiege ? rt.siege[i] : i < rt.nSiege + rt.nTower ? rt.tower[i - rt.nSiege] : rt.statue[i - rt.nSiege - rt.nTower];
-export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue;
+const trapAt = (i: number): TrapObj => i < rt.nSiege ? rt.siege[i] : i < rt.nSiege + rt.nTower ? rt.tower[i - rt.nSiege] : i < rt.nSiege + rt.nTower + rt.nStatue ? rt.statue[i - rt.nSiege - rt.nTower] : rt.laser[i - rt.nSiege - rt.nTower - rt.nStatue];
+export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser;
 /** Distance from (x,z) to the surface of a piece. */
 export const trapDist = (o: TrapObj, x: number, z: number): number => Math.hypot(o.x - x, o.z - z) - o.rad;
 /** Nearest live stationary whose surface is within maxR of (x,z). */
@@ -205,9 +213,29 @@ function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 
   return false;
 }
 
+/** The spot just found by spot() (module `out`) becomes a frost / fire breath statue. */
+function addStatue(kind: number, depth: number, more: number, i: number): void {
+  const q = rt.statue[rt.nStatue++];
+  q.kind = kind; q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 2 + Math.random() * 1.5 + i * 1.2; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
+  q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
+  keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
+}
+/** Find a free spot (towards the rim, else anywhere; HALLS: near a wall, else anywhere) and stand an ice-laser turret there. Timings are staggered by index. */
+function placeLaser(i: number, depth: number, more: number, halls: boolean): void {
+  if (rt.nLaser >= rt.laser.length) return;
+  let ok: boolean;
+  if (halls) { wallD = 8; ok = spot(1.3, 1.2, 0, 1, 14); wallD = 99; if (!ok) ok = spot(1.3, 1.2, 0, 1, 12); }
+  else ok = spot(1.3, 1.2, 0.6, 0.9, 14) || spot(1.3, 1.0, 0.3, 0.92, 10);
+  if (!ok) return;
+  const l = rt.laser[rt.nLaser++];
+  l.x = out[0]; l.z = out[1]; l.yaw = Math.atan2(-out[0], -out[1]); l.state = 0; l.t = 0; l.cd = 1.8 + Math.random() * 1.4 + i * 1.3; l.lock = l.yaw; l.glow = 0; l.hit = false; l.tier = more;
+  l.maxHp = l.hp = trapHp(LASER_HP_HITS, depth); l.dead = false; l.flash = 0; l.hitSeq = 0;
+  keep(l.x, l.z, 3.2); l.col = addTempCollider(l.x, l.z, 1.3, false);
+}
+
 /** Room entry (director.enterRoom, after setupBiomeHazards). biome: 0 Greenwood, 1 Marble, 2 Desert, 3 Swamp, 4 Frost, 5 Ember, 6 Void; idx: room 0..14. */
 export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void {
-  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nBar = rt.nBeam = rt.nJet = rt.nVine = rt.nPool = 0;
+  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nLaser = rt.nBar = rt.nBeam = rt.nJet = rt.nVine = rt.nPool = 0;
   trapAim.obj = null; trapLock.obj = null;
   for (const b of rt.boulders) b.on = false;
   trapMods.grip = 1; trapMods.slow = 1;
@@ -233,7 +261,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
 
   const rnd = Math.random, early = b === 0 && idx < 3;
   // ---- candidate hazard kinds with a weight (0 = not in this biome / depth yet)
-  const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
   w[TRAP.VINE] = 0;   // (owner 2026-10-24: the grabbing snare plant is gone everywhere)
   w[TRAP.POOL] = b === 4 ? 40 : 0;   // (owner 2026-10-25) frozen pools only in the ice biome (Frostpeak)
@@ -245,10 +273,11 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
   w[TRAP.JET] = b <= 1 ? 0 : b === 5 ? 34 : 7 + 2 * b;
   // (owner) breath statues on the rim: Ember Wastes most, Desert / Frostpeak (frost variant) / Void next, Greenwood rarely and only from room 5
   w[TRAP.STATUE] = b === 0 ? (idx >= 5 ? 5 : 0) : b === 1 ? 8 : b === 2 ? 26 : b === 3 ? 12 : b === 4 ? 26 : b === 5 ? 38 : 22;
+  if (b === 4) { w[TRAP.LASER] = 44; w[TRAP.STATUE] = 10; w[TRAP.BAR] = w[TRAP.JET] = 0; }   // (owner 2026-10-25) Frostpeak: ice lasers are the main stationary, frost breath statues second; no fire bars / fire jets
   if (b === 2) { w[TRAP.SIEGE] = 0; w[TRAP.TOWER] = 34; }   // (owner 2026-10-24) Sunscorch Desert: magic towers, never ballistas
-  if (b === 0 || b === 3 || b === 6) w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = 0;   // (owner 2026-10-24) Greenwood: no stationaries but its goblin archer towers; Coral Isles: none at all (its lake hydras are the danger)
+  if (b === 0 || b === 3 || b === 6) w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = w[TRAP.LASER] = 0;   // (owner 2026-10-24) Greenwood: no stationaries but its goblin archer towers; Coral Isles: none at all (its lake hydras are the danger)
   const wS = w.slice();   // (the stationary weights, kept for the HALLS mix below)
-  if (shape.kind === 'HALLS') w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = 0;   // (HALLS: the stationaries come as one planned mix below)
+  if (shape.kind === 'HALLS') w[TRAP.SIEGE] = w[TRAP.TOWER] = w[TRAP.STATUE] = w[TRAP.BAR] = w[TRAP.JET] = w[TRAP.LASER] = 0;   // (HALLS: the stationaries come as one planned mix below)
   // (owner) most rooms have no stationaries; a room that has them gets ONE kind, at most 3 pieces
   const n = dbgTraps.force ? 1 : rnd() < (early ? 0.15 : elite ? 0.5 : 0.3) ? 1 : 0;
   const picked: number[] = dbgTraps.force ? dbgTraps.force.slice() : [];
@@ -282,6 +311,10 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
         keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
       }
+    } else if (kind === TRAP.LASER) {
+      const cnt = Math.min(MAX_PIECES, 2 + (more > 0 && rnd() < 0.4 ? 1 : 0));
+      for (let i = 0; i < cnt; i++) placeLaser(i, depth, more, false);
+      if (rnd() < 0.35 && rt.nStatue < rt.statue.length && (spot(1.5, 1.2, 0.74, 0.9, 14) || spot(1.5, 0.8, 0.55, 0.92, 10))) addStatue(1, depth, more, 1);   // (+1 frost breath statue: the Frostpeak mix)
     } else if (kind === TRAP.TOWER) {
       const cnt = Math.min(MAX_PIECES, 2 + (more > 0 && rnd() < 0.4 ? 1 : 0));
       for (let i = 0; i < cnt && rt.nTower < rt.tower.length; i++) {
@@ -350,11 +383,11 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
     if (marbleH ? true : wS[TRAP.SIEGE] > 0) pool.push(TRAP.SIEGE);
     if (marbleH ? true : wS[TRAP.STATUE] > 0) pool.push(TRAP.STATUE);
     if (!marbleH && wS[TRAP.TOWER] > 0) pool.push(TRAP.TOWER);
-    pool.push(TRAP.BAR, TRAP.JET);
+    if (b === 4) pool.push(TRAP.LASER); else pool.push(TRAP.BAR, TRAP.JET);   // (Frostpeak: ice lasers instead of the fire bar / jet)
     const take = (): number => pool.splice(Math.floor(rnd() * pool.length), 1)[0];
     const mix: [number, number][] = [];
     const mainN = rnd() < 0.5 ? 2 : 3;
-    mix.push([b === 2 && pool.includes(TRAP.TOWER) ? pool.splice(pool.indexOf(TRAP.TOWER), 1)[0] : take(), mainN]);   // (owner: the desert always has its magic towers)
+    mix.push([b === 4 ? pool.splice(pool.indexOf(TRAP.LASER), 1)[0] : b === 2 && pool.includes(TRAP.TOWER) ? pool.splice(pool.indexOf(TRAP.TOWER), 1)[0] : take(), mainN]);   // (owner: the desert always has its magic towers)
     if (mainN === 3) { if (rnd() < 0.7) mix.push([take(), 1]); }
     else if (rnd() < 0.5) mix.push([take(), 2]);
     else { mix.push([take(), 1]); if (pool.length && rnd() < 0.5) mix.push([take(), 1]); }
@@ -380,6 +413,8 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
         q.x = out[0]; q.z = out[1]; q.yaw = Math.atan2(-out[0], -out[1]); q.state = 0; q.t = 0; q.cd = 2 + rnd() * 1.5 + i * 1.2; q.tier = more; q.lock = q.yaw; q.sw = 1; q.tick = 0; q.acc = 0; q.glow = 0;
         q.maxHp = q.hp = trapHp(STATUE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
         keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.5, false);
+      } else if (kind === TRAP.LASER) {
+        placeLaser(i, depth, more, true);
       } else if (kind === TRAP.TOWER) {
         if (rt.nTower >= rt.tower.length || !spot(1.5, 1.2, 0, 1, 10)) continue;
         const t = rt.tower[rt.nTower++];
@@ -404,7 +439,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       }
     }
   }
-  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nBar + rt.nBeam + rt.nJet + rt.nVine + rt.nPool > 0;
+  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser + rt.nBar + rt.nBeam + rt.nJet + rt.nVine + rt.nPool > 0;
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -500,6 +535,35 @@ export function updateRoomTraps(dt: number): void {
       m.t += dt;
       if (m.volley === 1 && m.tier >= 2 && m.t >= 0.55) { towerRing(m); m.volley = 2; }
       if (m.t >= 0.9) { m.state = 0; m.cd = (6.2 - 0.4 * m.tier) * (0.85 + Math.random() * 0.4); }
+    }
+  }
+
+  // ---- ice lasers (Frostpeak): idle (faces you) -> telegraph (floor line, tracks you, then locks) -> beam (one hit: damage + freeze + slow; a dash is immune) -> rest
+  for (let i = 0; i < rt.nLaser; i++) {
+    const l = rt.laser[i];
+    if (l.dead) continue;
+    l.glow = l.state === 1 ? Math.min(1, l.t / LASER_WARN) : l.state === 2 ? 1 : Math.max(0, l.glow - dt * 2.5);
+    if (l.state === 0) {
+      const dx = px - l.x, dz = pz - l.z, d = Math.hypot(dx, dz);
+      if (d > 2) l.yaw += wrapPi(Math.atan2(dx, dz) - l.yaw) * Math.min(1, dt * 2.0);
+      if (!fighting || !alive) { l.cd = Math.max(l.cd, 1.5); continue; }
+      l.cd -= dt;
+      if (l.cd <= 0 && d < 38) { l.state = 1; l.t = 0; l.hit = false; l.lock = l.yaw; }
+    } else if (l.state === 1) {
+      l.t += dt;
+      if (!fighting || !alive) { l.state = 0; l.cd = 2.5; continue; }
+      if (l.t < LASER_AIM) { l.yaw += wrapPi(Math.atan2(px - l.x, pz - l.z) - l.yaw) * Math.min(1, dt * 8); l.lock = l.yaw; }   // aims at you, then the lane is locked
+      else l.yaw = l.lock;
+      if (l.t >= LASER_WARN) { l.state = 2; l.t = 0; l.hit = false; addShake(0.12); }
+    } else if (l.state === 2) {
+      l.t += dt; l.yaw = l.lock;
+      if (alive && !l.hit && pl.dashT <= 0 && armDist(px, pz, l.x + Math.sin(l.lock) * LASER_MUZZLE, l.z + Math.cos(l.lock) * LASER_MUZZLE, l.lock, LASER_LEN) < LASER_HALF_W + 0.35) {
+        l.hit = true;
+        damagePlayer(dmgOf(LASER_DMG), { pos: tmp.set(l.x, 0, l.z), kind: 'ICE' });
+        if (freezePlayer(LASER_FREEZE)) { applyPlayerDebuff('SLOW', LASER_FREEZE + LASER_SLOW); events.emit('floatText', { pos: tmp.set(px, 2.2, pz), text: 'FROZEN', color: 0x8fe4ff, scale: 0.9, dy: 1.0 }); }
+        addShake(0.2);
+      }
+      if (l.t >= LASER_ON) { l.state = 0; l.cd = (LASER_REST_MIN + Math.random() * LASER_REST_VAR) * (1 - 0.04 * l.tier); }
     }
   }
 

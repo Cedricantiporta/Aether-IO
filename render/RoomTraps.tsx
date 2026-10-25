@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BoxGeometry, BufferGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial, Sphere, Vector3, type Material } from 'three';
 import { world } from '../engine/world';
-import { rt, BEAM_WARN, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
+import { rt, BEAM_WARN, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, LASER_WARN, LASER_AIM, LASER_ON, LASER_LEN, LASER_MUZZLE, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
 import { inView } from './view';
 import { CELL, FX, pushHalo, sparks, chunks, dustPuff, smokePuff, embers, scorch, flashStar } from './fx';
 import { BAR_VS, BAR_FS } from './Enemies';
@@ -136,6 +136,18 @@ export function RoomTraps() {
     rg.dodeca(0.8, [0, 0.35, 0], '#8a8294', [1.3, 0.55, 1.2], [0.2, 0.5, 0]); rg.dodeca(0.5, [0.85, 0.22, 0.3], '#a79fb2', [1.1, 0.6, 1], [0, 1, 0]); rg.dodeca(0.45, [-0.8, 0.2, -0.2], '#7a7284', [1.2, 0.55, 1], [0.3, 2, 0]);
     rg.dodeca(0.34, [0.2, 0.18, -0.95], '#9a92a6', [1, 0.6, 1.1], [0, 0.4, 0]); rg.dodeca(0.3, [-0.35, 0.16, 0.95], '#b8b0c2', [1, 0.6, 1], [0.5, 0, 0.3]);
     rg.box(1.5, 0.18, 0.3, [0.1, 0.52, 0.55], '#6a4624', [0.1, 0.7, 0.18]); rg.box(1.1, 0.16, 0.26, [-0.4, 0.42, -0.5], '#7e5430', [0, -0.5, -0.12]); rg.box(0.8, 0.14, 0.24, [0.7, 0.45, -0.4], '#4a3220', [0.12, 1.2, 0.1]);
+    // ---- ice laser turret (Frostpeak): a snowy plinth, a chunky crystal head with a barrel (front = +z) that turns, a glowing core + muzzle orb
+    const lzb = new GB([0.85, 1.1]);
+    lzb.cyl(1.3, 1.5, 0.5, 12, [0, 0.25, 0], '#bcd8ea'); lzb.cyl(0.95, 1.15, 0.4, 12, [0, 0.7, 0], '#e6f4fc');
+    for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU + 0.3; lzb.sph(0.34, [Math.sin(a) * 1.25, 0.28, Math.cos(a) * 1.25], '#ffffff', [1, 0.7, 1], 6); }
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.8; lzb.cone(0.2, 0.9 + (i % 2) * 0.4, 5, [Math.sin(a) * 1.4, 0.7, Math.cos(a) * 1.4], '#a8dcf6', [Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25]); }
+    const lzh = new GB([0.88, 1.12]);
+    lzh.ico(0.98, [0, 1.8, 0], '#c4e8fb', [1, 1.2, 1], 1); lzh.ico(0.6, [0, 2.7, -0.1], '#a4d8f4', [0.9, 1.3, 0.9], 1);
+    for (const x of [-1, 1]) { lzh.cone(0.26, 1.2, 5, [x * 0.75, 2.45, -0.3], '#8ccaf0', [0, 0, -x * 0.5]); lzh.cone(0.16, 0.7, 5, [x * 0.45, 2.9, -0.5], '#d6f2ff', [0, 0, -x * 0.3]); }
+    lzh.cyl(0.34, 0.44, 1.3, 8, [0, 1.8, 1.0], '#7cc0e8', [Math.PI / 2, 0, 0]); lzh.cyl(0.46, 0.46, 0.2, 8, [0, 1.8, 1.7], '#e6f8ff', [Math.PI / 2, 0, 0]);
+    lzh.sph(0.14, [-0.36, 2.0, 0.78], '#ffffff', [1, 1.2, 0.8], 5); lzh.sph(0.14, [0.36, 2.0, 0.78], '#ffffff', [1, 1.2, 0.8], 5);   // eyes
+    const lzg = new GB([1, 1]).octa(0.5, [0, 1.8, 0.2], '#ffffff', [0.9, 1.3, 0.9]).sph(0.3, [0, 1.8, 1.82], '#ffffff', 1, 6).build();   // core + muzzle orb (scaled by the charge)
+    const lzBoxG = new BoxGeometry(1, 1, 1).translate(0, 0, 0.5);   // unit beam, along +z
     const flat = (c: Color | string | number, o: number) => new MeshBasicMaterial({ color: c, transparent: true, opacity: o, depthWrite: false, toneMapped: false });
     const addM = new MeshBasicMaterial({ color: new Color(2.0, 1.1, 0.35), transparent: true, opacity: 0.55, depthWrite: false, blending: AdditiveBlending, toneMapped: false });
     const lit = litMat({ roughness: 0.85 });
@@ -161,6 +173,8 @@ export function RoomTraps() {
       vine: mk(vg.build(), lit, 5), pool: mk(pg.build(), litMat({ roughness: 0.15, metalness: 0.25 }), 4),
       pdisc: mk(new CylinderGeometry(1, 1, 0.03, 28), flat(new Color(0.7, 1.8, 2.4), 0.2), 4),
       rubble: mk(rg.build(), lit, 12),
+      lzB: mk(lzb.build(), lit, 4), lzH: mk(lzh.build(), lit, 4), lzG: mk(lzg, glowMat({ color: new Color(0.9, 1.9, 2.6) }), 4),
+      lzW: mk(stripGeo, flat(new Color(0.5, 1.7, 2.4), 0.6), 4), lzO: mk(lzBoxG, fireM(new Color(0.3, 1.2, 2.2), 0.5), 4), lzI: mk(lzBoxG, fireM(new Color(1.6, 2.2, 2.6), 0.9), 4),
       stB: mk(sts, lit, 3), stE: mk(eyeGeo, glowMat({ color: new Color(2.2, 1.5, 0.3) }), 3), stT: mk(throatGeo, glowMat({ color: new Color(2.6, 1.1, 0.25) }), 3),
       sfB: mk(stsF, lit, 3), sfE: mk(eyeGeo, glowMat({ color: new Color(0.7, 1.9, 2.6) }), 3), sfT: mk(throatGeo, glowMat({ color: new Color(0.6, 1.7, 2.6) }), 3),
       flO: mk(flameGeo, fireM(new Color(1.7, 0.5, 0.1), 0.34), 48), flI: mk(flameGeo, fireM(new Color(1.7, 0.95, 0.3), 0.4), 48),
@@ -168,7 +182,7 @@ export function RoomTraps() {
       wdF: mk(wedgeGeo, wedgeFire, 4), wdI: mk(wedgeGeo, wedgeFrost, 4),
       spF: mk(stripGeo, flat(new Color(1.9, 0.7, 0.25), 0.4), 8), spI: mk(stripGeo, flat(new Color(0.4, 1.4, 2.1), 0.4), 8),
     };
-    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(6), tower: new Int32Array(3), statue: new Int32Array(3), dead: new Uint8Array(12), ver: -1 } };
+    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(6), tower: new Int32Array(3), statue: new Int32Array(3), laser: new Int32Array(4), dead: new Uint8Array(16), ver: -1 } };
   }, []);
   const S = X.S;
 
@@ -176,10 +190,11 @@ export function RoomTraps() {
     const t = clock.elapsedTime, dt = Math.min(dtRaw, 0.05);
     const on = world.room.active && rt.on;
     let nBb = 0, nCb = 0, nBo = 0, nTw = 0, nHub = 0, nArm = 0, nJet = 0, nJw = 0, nVn = 0, nPl = 0, nRu = 0, nBar = 0;
+    let nLz = 0, nLw = 0, nLb = 0;
     let nSf = 0, nSi = 0, nFo = 0, nFk = 0, nWf = 0, nWi = 0, nSpf = 0, nSpi = 0;
     if (on) {
       const sn = X.seen;
-      if (sn.ver !== rt.ver) { sn.ver = rt.ver; sn.siege.fill(0); sn.tower.fill(0); sn.statue.fill(0); sn.dead.fill(0); }
+      if (sn.ver !== rt.ver) { sn.ver = rt.ver; sn.siege.fill(0); sn.tower.fill(0); sn.statue.fill(0); sn.laser.fill(0); sn.dead.fill(0); }
       const aimed = trapAim.obj ?? lockedTrap();
       for (let i = 0; i < rt.nSiege; i++) {
         const s = rt.siege[i];
@@ -282,6 +297,34 @@ export function RoomTraps() {
           }
         } else if (gl > 0.05 && rnd() < dt * 18) smokePuff(mxp, myp, mzp, 1, hot ? 0x6a5a52 : 0xcfe8f4, 0.5, 0.7, 0.8, 0.3, 0.35);   // a wisp after the breath
       }
+      for (let i = 0; i < rt.nLaser; i++) {   // ice-laser turrets (Frostpeak)
+        const l = rt.laser[i];
+        pieceFx(l, sn.laser, i, sn.dead, 12 + i, 1.8, 0x9ac8e0, 0xd6eefa);
+        if (l.dead) { if (inView(l.x, l.z, 5)) setInst(S.rubble, nRu++, l.x, 0, l.z, i * 1.7 + l.x, 1.2); continue; }
+        if (!inView(l.x, l.z, LASER_LEN + 4)) continue;
+        nBar = addBar(X.bars, nBar, l, 4.4, l === aimed);
+        const fs = 1 + 0.06 * l.flash, gl = l.glow, sx = Math.sin(l.yaw), cz = Math.cos(l.yaw), bob = Math.sin(t * 1.8 + i * 2) * 0.06;
+        setInst(S.lzB, nLz, l.x, 0, l.z, 0, 1.1 * fs);
+        setInst(S.lzH, nLz, l.x, bob, l.z, l.yaw, 1.1 * fs);
+        const cs = 0.55 + 0.7 * gl, mxp = l.x + sx * 1.9 * 1.1, mzp = l.z + cz * 1.9 * 1.1;
+        setInst(S.lzG, nLz, l.x, bob, l.z, l.yaw, 1.1 * cs * (1 + 0.06 * Math.sin(t * 20)));
+        nLz++;
+        pushHalo(mxp, 2.0, mzp, 1.4 + 2.4 * gl, 0.5, 1.5, 2.3, 0.3 + 0.5 * gl, CELL.GLOW);
+        if (l.state === 1) {   // telegraph: a thin glowing line on the floor toward you, the lane locks at LASER_AIM
+          const lockK = l.t >= LASER_AIM ? clamp((l.t - LASER_AIM) / (LASER_WARN - LASER_AIM), 0, 1) : 0, fl = 0.6 + 0.4 * Math.sin(t * 36);
+          const w = l.t < LASER_AIM ? 0.1 : 0.12 + 0.2 * lockK * fl;
+          setInst(S.lzW, nLw++, l.x + sx * LASER_MUZZLE, 0, l.z + cz * LASER_MUZZLE, l.yaw, w, 1, LASER_LEN * (0.5 + 0.5 * clamp(l.t / 0.3, 0, 1)));
+          if (rnd() < dt * 24 * gl) FX.add.emit(mxp + (rnd() - 0.5) * 0.4, 1.9 + rnd() * 0.3, mzp + (rnd() - 0.5) * 0.4, 0, 0.6, 0, 0.6, 0.2, 0.03, 1.4, 2.0, 2.4, 0.7, CELL.STAR, 0, 1, 0, 3);
+        } else if (l.state === 2) {   // the beam: a bright core in a cyan glow, along the locked lane
+          const env = clamp(l.t / 0.08, 0, 1) * clamp((LASER_ON - l.t) / 0.2, 0, 1), w = (0.95 + 0.12 * Math.sin(t * 50)) * env;
+          const bx = l.x + sx * LASER_MUZZLE, bz = l.z + cz * LASER_MUZZLE;
+          setInst(S.lzO, nLb, bx, 0.9, bz, l.yaw, w, w * 0.9, LASER_LEN);
+          setInst(S.lzI, nLb, bx, 0.9, bz, l.yaw, w * 0.4, w * 0.36, LASER_LEN);
+          nLb++;
+          pushHalo(mxp, 1.9, mzp, 3.6 * env, 0.5, 1.6, 2.4, 0.8 * env, CELL.GLOW);
+          for (let h = 0; h < 3; h++) if (rnd() < dt * 50 * env) { const dd = 2 + rnd() * (LASER_LEN - 4); FX.add.emit(l.x + sx * dd + (rnd() - 0.5) * 0.8, 0.5 + rnd() * 0.9, l.z + cz * dd + (rnd() - 0.5) * 0.8, 0, 0.8, 0, 0.7, 0.2, 0.03, 1.4, 2.0, 2.4, 0.7, CELL.STAR, 0, 1, 0, 3); }
+        }
+      }
       for (let i = 0; i < rt.nBar; i++) {
         const b = rt.bar[i]; if (!inView(b.x, b.z, BAR_LEN + 2)) continue;
         setInst(S.hub, nHub, b.x, 0, b.z, i, 1.0); setInst(S.hubG, nHub, b.x, 0, b.z, t * 2, 1 + Math.sin(t * 6) * 0.06);
@@ -350,6 +393,7 @@ export function RoomTraps() {
     commitInst(S.jetB, on ? rt.nJet : 0); commitInst(S.jetG, nJet); commitInst(S.jetW, nJw);
     commitInst(S.vine, nVn); commitInst(S.pool, nPl); commitInst(S.pdisc, nPl);
     commitInst(S.rubble, nRu);
+    commitInst(S.lzB, nLz); commitInst(S.lzH, nLz); commitInst(S.lzG, nLz); commitInst(S.lzW, nLw); commitInst(S.lzO, nLb); commitInst(S.lzI, nLb);
     commitInst(S.stB, nSf); commitInst(S.stE, nSf); commitInst(S.stT, nSf); commitInst(S.sfB, nSi); commitInst(S.sfE, nSi); commitInst(S.sfT, nSi);
     commitInst(S.flO, nFo); commitInst(S.flI, nFo); commitInst(S.fkO, nFk); commitInst(S.fkI, nFk);
     commitInst(S.wdF, nWf); commitInst(S.wdI, nWi); commitInst(S.spF, nSpf); commitInst(S.spI, nSpi);

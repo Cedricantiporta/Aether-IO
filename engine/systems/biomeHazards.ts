@@ -1,6 +1,6 @@
 // Biome environment hazards for normal combat / elite rooms (no boss arenas, camps, merchants, dreams, towers).
 //   Greenwood (biome index 0): THORN BRAMBLES (light scratch ticks + 30% slow) and SPORE MUSHROOMS (poison cloud when anyone steps near).
-//   Frostpeak (index 4): SLIPPERY ICE sheets (hero keeps momentum, monsters slide a little) and FALLING ICICLES (telegraph circle, then a crash).
+//   Frostpeak (index 4): FALLING ICICLES (the slippery ice floor itself lives in engine/iceFloor.ts; monsters slide there, iceMobs below) (telegraph circle, then a crash).
 //   The Void (index 6): VOID RIFTS (gentle pull, HP drain in the core) and GRAVITY FLIPS (warning, then the whole room drifts one way).
 // All state lives in `hz` (pooled, allocation-free per frame); render/BiomeHazards.tsx draws it, ui/hud/BiomeHazardHud.tsx the flip banner.
 // player.ts reads hazSlow / iceGrip / driftX / driftZ (one frame behind, fine).
@@ -13,10 +13,11 @@ import { startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
 import { queryColliders, type Collider } from '../mapgen';
 import { onBridge } from '../roomFeatures';
 import { insideShape } from '../roomShape';
-import { isStationary } from '../enemyDefs';
+import { isStationary, isSwarm } from '../enemyDefs';
 import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect, type DamageOpts } from './combat';
 import { updateRoomTraps, trapMods } from './roomTraps';
 import { Vector3 } from 'three';
+import { iceAt, ice, ICE_MOB_LERP } from '../iceFloor';
 
 export const HZ = { NONE: 0, GREEN: 1, FROST: 2, VOID: 3 } as const;
 const GREENWOOD = 0, FROSTPEAK = 4, VOID = 6;   // indices into BIOMES (see roomDefs.ts)
@@ -24,7 +25,6 @@ const GREENWOOD = 0, FROSTPEAK = 4, VOID = 6;   // indices into BIOMES (see room
 // ---- tuning
 const BRAMBLE_TICK = 0.5, BRAMBLE_DMG = 0.012, BRAMBLE_SLOW = 0.7, BRAMBLE_HOLD = 0.45;   // 1.2% max HP per tick, 30% slow that lingers 0.45 s
 const SHROOM_TRIGGER = 2.2, SHROOM_CD = 6, CLOUD_R = 2.5, CLOUD_T = 3, CLOUD_TICK = 0.5, CLOUD_HERO = 0.015, CLOUD_MOB = 0.04;
-const ICE_GRIP = 0.25;   // the hero's velocity lerp rate on ice (x0.25)
 const ICICLE_WARN = 1.0, ICICLE_R = 1.9, ICICLE_DMG = 0.08, ICICLE_STAY = 0.7;
 const RIFT_PULL_R = 6.5, RIFT_CORE_R = 2.0, RIFT_PULL = 5.0,   // (owner 2026-10-24: bigger, stronger pull)
   RIFT_TICK = 0.5, RIFT_HERO = 0.02, RIFT_MOB = 0.02;
@@ -121,13 +121,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
       keep(m.x, m.z, 1.1);
     }
   } else if (kind === HZ.FROST) {
-    const n = 4 + Math.floor(Math.random() * 2) + (R > 34 ? 1 : 0);
-    for (let i = 0; i < n && hz.nIce < hz.ice.length; i++) {
-      const r = 4.5 + Math.random() * 3;
-      if (!spot(r * 0.7, 1)) continue;
-      const s = hz.ice[hz.nIce++]; s.x = spotOut[0]; s.z = spotOut[1]; s.r = r;
-      keep(s.x, s.z, r * 0.5);
-    }
+    // (the slippery ice sheets are the floor of engine/iceFloor.ts now: big sheets painted on the ground, built after the stationaries)
     icT = 4 + Math.random() * 2;
   } else {
     const n = 3;   // (owner 2026-10-24: the black holes are the Void's stationaries)
@@ -138,7 +132,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     }
     hz.flip.next = 9 + Math.random() * 6;
   }
-  if (kind !== HZ.VOID && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its gravity flips even when no rift fit; no 'hazards here' toast: the owner found them noisy)
+  if (kind !== HZ.VOID && kind !== HZ.FROST && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its gravity flips even when no rift fit; no 'hazards here' toast: the owner found them noisy)
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -155,8 +149,22 @@ function puff(m: { x: number; z: number; cd: number }): void {
 export function updateBiomeHazards(dt: number): void {
   updateRoomTraps(dt);
   tickBiomeHazards(dt);
+  if (ice.on && world.room.active) iceMobs(dt);
   if (trapMods.grip < iceGrip) iceGrip = trapMods.grip;
   if (trapMods.slow < hazSlow) hazSlow = trapMods.slow;
+}
+/** Frostpeak ice floor (iceFloor.ts): walking monsters keep a little momentum on a sheet (their slide velocity lerps toward the AI's at ~3/s). Bosses, minis and stationaries do not slide. */
+function iceMobs(dt: number): void {
+  const k = 1 - Math.exp(-ICE_MOB_LERP * dt), list = world.enemies;
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    if (!e.active) continue;
+    const vx = e.vel.x, vz = e.vel.z;
+    if (!e.boss && !e.mini && e.state !== 'DYING' && e.state !== 'SPAWN' && !isStationary(e.kind) && !isSwarm(e.kind) && iceAt(e.pos.x, e.pos.z)) {
+      sx[i] += (vx - sx[i]) * k; sz[i] += (vz - sz[i]) * k;
+      e.pos.x += (sx[i] - vx) * dt; e.pos.z += (sz[i] - vz) * dt;
+    } else { sx[i] = vx; sz[i] = vz; }
+  }
 }
 function tickBiomeHazards(dt: number): void {
   const room = world.room, pl = world.player;
@@ -213,25 +221,6 @@ function tickBiomeHazards(dt: number): void {
       }
     }
   } else if (hz.kind === HZ.FROST) {
-    // ---- ice: the hero's velocity lerp drops to x0.25 while on a sheet
-    let on = false;
-    if (alive) for (let i = 0; i < hz.nIce; i++) { const s = hz.ice[i]; const dx = px - s.x, dz = pz - s.z; if (dx * dx + dz * dz < s.r * s.r) { on = true; break; } }
-    iceGrip = on ? ICE_GRIP : 1;
-    // ---- monsters keep a little momentum on ice (their slide velocity lerps toward the AI's velocity at ~3/s)
-    const k = 1 - Math.exp(-3 * dt), list = world.enemies;
-    for (let i = 0; i < list.length; i++) {
-      const e = list[i];
-      if (!e.active) continue;
-      const vx = e.vel.x, vz = e.vel.z;
-      let onIce = false;
-      if (!e.boss && !e.mini && e.state !== 'DYING' && e.state !== 'SPAWN' && !isStationary(e.kind)) {
-        for (let j = 0; j < hz.nIce; j++) { const s = hz.ice[j]; const dx = e.pos.x - s.x, dz = e.pos.z - s.z; if (dx * dx + dz * dz < s.r * s.r) { onIce = true; break; } }
-      }
-      if (onIce) {
-        sx[i] += (vx - sx[i]) * k; sz[i] += (vz - sz[i]) * k;
-        e.pos.x += (sx[i] - vx) * dt; e.pos.z += (sz[i] - vz) * dt;
-      } else { sx[i] = vx; sz[i] = vz; }
-    }
     // ---- icicles: telegraph circle, then a crash (damage + chill/freeze), every ~3-5 s near the hero, sometimes in clusters
     if (fighting && alive) {
       icT -= dt;

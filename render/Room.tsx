@@ -39,8 +39,9 @@ import { GB, commitInst, fbm, litMat, mulberry32, vnoise } from './util';
 import { thinArrowGeo } from './arrowGeo';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
-import { applyPathShader, applyLavaShader, lavaTime, pathMask, roomTrail } from './groundPath';
+import { applyPathShader, applyLavaShader, applyIceShader, lavaTime, pathMask, roomTrail } from './groundPath';
 import { lava, lavaAt } from '../engine/lavaFloor';
+import { ice, iceAt } from '../engine/iceFloor';
 import { labelMaterial } from './label';
 import type { QualityCfg } from './quality';
 import { SpecialRooms } from './SpecialRooms';
@@ -410,6 +411,10 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       const hs = shape.maxR + 6, lm = pathMask(lava.discs, -hs, -hs, hs * 2, hs * 2, 8);
       applyLavaShader(m, lm, lava.heavy); pathTex = lm.tex;
     }
+    if (ice.on && style === 'SNOW') {   // Frostpeak slippery ice sheets (engine/iceFloor.ts): glossy pale cyan with cracks and a frosty rim
+      const hs = shape.maxR + 6, im = pathMask(ice.discs, -hs, -hs, hs * 2, hs * 2, 8);
+      applyIceShader(m, im); pathTex = im.tex;
+    }
 
     // ground clutter: pebbles / tufts in the biome's tones (one instanced draw call)
     const N = style === 'MARBLE' ? (shape.kind === 'HALLS' ? 0 : 26) : 45; // sparse clutter (castle halls: none, clean marble)
@@ -434,6 +439,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       const x = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.cos(a) * d, z = isHalls ? (rnd() - 0.5) * 2 * shape.maxR : Math.sin(a) * d;
       if (isHalls && hallsSdf(x, z) < 1.2) continue;
       if (lava.on && lavaAt(x, z)) continue;
+      if (ice.on && iceAt(x, z)) continue;
       if (trailD && trailD.some((d) => (d.x - x) ** 2 + (d.z - z) ** 2 < (d.r + 0.6) ** 2)) continue;
       if (hasLiquid && (inLiquid(x, z, 0.4) || onBridge(x, z, 1.2))) continue;
       o.position.set(x, 0, z);
