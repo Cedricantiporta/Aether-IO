@@ -333,7 +333,7 @@ healing -40%, no EXP; gold + Aether Crystals instead; `combat.towerMode()`):
   `humanBosses.ts`; `render/Bosses2.tsx`, `WarMachine.tsx`, `HumanBosses.tsx`): Greenwood **Elderroot** (Treant), Marble
   Halls **Gorath** (Golem), Desert **The Dune Colossus** (war machine: 5x model scale 20, radius 10, very slow walker, 2x attack areas, fought in a 56 m rounded-square arena with a pulled-back camera), Coral Isles **The Tide Hydra**, Frostpeak
   **Glacius** (Wyrm), Ember **Ignar** (Warlord, a fire version of the Knight: Flame Crescent / Radiant Burst / Blazing Guard / dash+slash, giant fireballs, 360 pillar rings, up to 3 dark knights `BOSS_DKNIGHT`, burn + capped fire trails via `bossFx.firePatch`; Burning Form at 50% hp grows devil wings), Void **Void Herald**; the Greenwood depth-10
-  **Slime King**; **Malakar** (Lich, mini-boss in crypt biomes and the final two-stage fight); humanoid mini bosses Varn /
+  **Slime King**; **Malakar** (Lich, mini-boss in crypt biomes and the final two-stage fight; owner 2026-10-26: procedural toy-style lich in `render/Bosses.tsx buildLich` - flared lathe robe, pauldrons, skull under a violet hood + gold crown, floating hands, crescent staff with a glowing orb; the creature-kit `boss_lich` piece is switched off like Gorath's; Ignar got a brighter palette + flame mane, same spiked silhouette); humanoid mini bosses Varn /
   Sable / Rook; dark hero duels (`darkHero.ts`). Each boss has a ward once per fight at 50% hp, periodic absorb barrier,
   spread-out impact salvos, an arena per biome (`roomgen.BOSS_ARENA_R`, radius 27-39 (Sunscorch square 44), kept small so the hero cannot just run to the edge).
 

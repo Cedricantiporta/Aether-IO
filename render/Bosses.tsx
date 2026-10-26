@@ -2,7 +2,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
-  AdditiveBlending, BufferGeometry, CanvasTexture, Color, Group, IcosahedronGeometry, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, DoubleSide,
+  AdditiveBlending, BufferGeometry, LatheGeometry, SphereGeometry, Vector2, CanvasTexture, Color, Group, IcosahedronGeometry, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, DoubleSide,
 } from 'three';
 import { world } from '../engine/world';
 import type { Enemy } from '../engine/types';
@@ -150,46 +150,86 @@ export function Golem() {
 const abs = Math.abs;
 
 // ====================================================================== LICH
+/** Malakar the Undying (owner 2026-10-26: "round, blobby"): a tall toy-like lich-sorcerer. Flared layered robe (lathe), gold collar fins, big rounded
+ *  pauldrons with bone horns, a skull under a violet hood + spiked crown, floating skeletal hands out of wide tattered sleeves, a crescent-topped staff
+ *  with a glowing orb. Authored ~3.1 tall in the `body` frame (the group floats at `hover`). Arm pivots (+-0.62, 2.0) and the staff hand (0,-1.15,0.1) are unchanged. */
 function buildLich() {
-  const robe = '#3a1f5c', robe2 = '#25123f', bone = '#ece6cc', gold = '#e0b040', purple = '#b050ff';
-  const body = new GB([0.7, 1.15]), glow = new GB([1, 1]);
-  body.cone(0.72, 2.0, 10, [0, 0.9, 0], robe);
-  for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU; body.cone(0.14, 0.55, 4, [cos(a) * 0.66, -0.12, sin(a) * 0.66], robe2, [0, 0, 0], 1); body.cone(0.1, 0.4, 4, [cos(a + 0.2) * 0.5, -0.2, sin(a + 0.2) * 0.5], robe, [Math.PI, 0, 0]); }
-  body.torus(0.5, 0.06, [0, 1.15, 0], gold, [Math.PI / 2, 0, 0], 1, 14);
-  body.sph(0.52, [0, 1.85, 0], robe2, [1.35, 0.55, 1.05], 8);                   // mantle
-  for (const s of [-1, 1]) { body.cone(0.14, 0.6, 4, [s * 0.72, 2.05, -0.05], bone, [0, 0, -s * 0.9]); body.cone(0.1, 0.45, 4, [s * 0.5, 2.15, -0.25], bone, [-0.3, 0, -s * 0.5]); }
-  body.sph(0.3, [0, 2.4, 0.04], bone, [1, 1.05, 1.05], 9);
-  body.box(0.26, 0.1, 0.2, [0, 2.18, 0.14], bone);
-  for (const s of [-1, 1]) body.sph(0.075, [s * 0.11, 2.42, 0.28], '#120818', 1, 6);
-  body.box(0.06, 0.09, 0.05, [0, 2.32, 0.31], '#120818');
-  for (let i = 0; i < 5; i++) { const a = (i - 2) * 0.5; body.cone(0.06, 0.34 + (i === 2 ? 0.14 : 0), 4, [sin(a) * 0.34, 2.72 + (i === 2 ? 0.05 : 0), cos(a) * 0.1 - 0.05], gold, [0, 0, -a * 0.6]); }
-  body.torus(0.31, 0.05, [0, 2.66, 0.0], gold, [Math.PI / 2, 0, 0], 1, 12);
-  for (const s of [-1, 1]) glow.sph(0.06, [s * 0.11, 2.42, 0.31], '#d070ff', 1, 6);
-  glow.ico(0.07, [0, 2.7, 0.3], '#ff60e0', 1, 0);
-  glow.cyl(0.04, 0.04, 0.55, 5, [0, 0.9, 0.55], '#a050ff'); // robe seam glow
+  const robe = '#8d5cf2', robe2 = '#6234c4', robeD = '#43208f', lav = '#cdb0ff', bone = '#fff1d6', gold = '#ffc93c', cyan = '#6af4ff', pink = '#ff6be6';
+  const body = new GB([0.72, 1.12]), glow = new GB([1, 1]);
+  const lathe = (pts: [number, number][], seg = 16) => new LatheGeometry(pts.map(([r, y]) => new Vector2(r, y)), seg);
+  // lower skirt: wide flared bell with a scalloped hem
+  body.add(lathe([[1.08, 0.0], [1.04, 0.12], [0.9, 0.42], [0.7, 0.8], [0.52, 1.15], [0.48, 1.3]], 18), [0, 0.0, 0], [0, 0, 0], 1, robe2);
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * TAU; body.sph(0.21, [cos(a) * 1.02, 0.02, sin(a) * 1.02], robe2, [1, 1.7, 0.42], 7, [0, Math.PI / 2 - a, 0], [0.9, 1.1]); body.sph(0.15, [cos(a + 0.22) * 0.94, 0.12, sin(a + 0.22) * 0.94], robeD, [1, 1.5, 0.4], 6, [0, Math.PI / 2 - a - 0.22, 0]); }
+  body.torus(1.02, 0.045, [0, 0.14, 0], gold, [Math.PI / 2, 0, 0], 1, 24);                     // gold hem band
+  // upper robe: narrower, lighter layer that overlaps the skirt, then the chest narrowing to the neck
+  body.add(lathe([[0.74, 0.55], [0.66, 0.85], [0.5, 1.2], [0.4, 1.5], [0.44, 1.75], [0.5, 1.95], [0.4, 2.12], [0.22, 2.2]], 16), [0, 0, 0], [0, 0, 0], 1, robe);
+  body.torus(0.7, 0.04, [0, 0.62, 0], gold, [Math.PI / 2, 0, 0], 1, 18);                       // trim ring at the overlap
+  // front tabard: a lavender panel from collar to hem with a rune stripe
+  body.cone(0.2, 1.05, 4, [0, 0.82, 0.7], lav, [Math.PI - 0.32, 0, 0], [1, 1, 0.22]);               // lavender ribbon hanging from the sash down the skirt
+  glow.box(0.045, 0.7, 0.03, [0, 0.84, 0.735], cyan, [-0.3, 0, 0]);
+  body.sph(0.1, [0, 1.78, 0.44], gold, [1, 1.1, 0.6], 8); glow.sph(0.062, [0, 1.78, 0.5], pink, 1, 7);   // chest jewel
+  // gold sash + a little skull charm
+  body.torus(0.5, 0.075, [0, 1.3, 0.0], gold, [Math.PI / 2, 0, 0], [1, 1, 1], 18);
+  body.sph(0.13, [0.28, 1.2, 0.42], bone, [1, 1.05, 0.9], 8); glow.sph(0.03, [0.25, 1.22, 0.53], cyan, 1, 5); glow.sph(0.03, [0.32, 1.22, 0.53], cyan, 1, 5);
+  // back cape fin behind the shoulders
+  body.cone(0.55, 1.5, 4, [0, 1.15, -0.55], robeD, [-0.28, Math.PI / 4, 0], [1.15, 1, 0.4]);
+  // standing collar: two gold-trimmed fins swept up behind the head + a gold neck ring
+  for (const s of [-1, 1]) { body.cone(0.2, 0.95, 4, [s * 0.34, 2.45, -0.2], robeD, [-0.15, 0.4 * s, -s * 0.5], [1, 1, 0.4]); body.cone(0.07, 0.8, 4, [s * 0.4, 2.44, -0.18], gold, [-0.15, 0.4 * s, -s * 0.5], [1, 1, 0.4]); }
+  body.torus(0.3, 0.07, [0, 2.2, 0.0], gold, [Math.PI / 2, 0, 0], 1, 16);
+  // pauldrons: big rounded caps with a gold rim and three bone horns
+  for (const s of [-1, 1]) {
+    body.sph(0.36, [s * 0.66, 2.04, 0], robe2, [1.15, 0.7, 1.1], 12);
+    body.torus(0.3, 0.05, [s * 0.66, 1.95, 0], gold, [Math.PI / 2, 0, 0], [1.15, 1.1, 1], 14);
+    body.cone(0.09, 0.42, 5, [s * 0.85, 2.3, 0], bone, [0, 0, -s * 0.65]);
+    body.cone(0.07, 0.3, 5, [s * 0.66, 2.38, 0.14], bone, [0.45, 0, -s * 0.15]);
+    body.cone(0.07, 0.3, 5, [s * 0.62, 2.36, -0.15], bone, [-0.45, 0, -s * 0.15]);
+  }
+  // head: skull + jaw + dark sockets under a violet hood, spiked gold crown
+  const hy = 2.58;
+  body.sph(0.29, [0, hy, 0.05], bone, [1, 1.05, 1.02], 12);
+  body.sph(0.2, [0, hy - 0.2, 0.12], bone, [1, 0.62, 0.95], 10);                               // jaw
+  body.box(0.2, 0.05, 0.05, [0, hy - 0.26, 0.28], '#3a2850');                                   // teeth line
+  for (const s of [-1, 1]) body.sph(0.095, [s * 0.115, hy + 0.02, 0.27], '#241046', [1, 1.15, 0.7], 8);
+  body.tetra(0.045, [0, hy - 0.1, 0.33], '#3a2850', [1, 1.2, 0.6]);                             // nose
+  const hood = new SphereGeometry(0.4, 14, 10, Math.PI / 2 + 0.72, TAU - 1.44, 0, Math.PI * 0.78);   // open to the front (+z)
+  body.add(hood, [0, hy + 0.02, -0.02], [0, 0, 0], [1.02, 1.12, 1.08], robe2);
+  body.cone(0.2, 0.55, 8, [0, hy + 0.22, -0.38], robe2, [-1.15, 0, 0]);                         // droopy hood tip
+  body.torus(0.3, 0.035, [0, hy + 0.2, 0.0], gold, [Math.PI / 2 - 0.12, 0, 0], [1, 1.05, 1], 16);  // crown band
+  for (let i = 0; i < 5; i++) { const a = (i - 2) * 0.52, mid = i === 2; body.cone(0.065, 0.3 + (mid ? 0.16 : 0), 5, [sin(a) * 0.3, hy + 0.34 + (mid ? 0.05 : 0), cos(a) * 0.3 - 0.02], gold, [-0.12, 0, -a * 0.55]); }
+  for (const s of [-1, 1]) glow.sph(0.062, [s * 0.115, hy + 0.025, 0.31], cyan, 1, 7);        // eyes
+  glow.ico(0.05, [0, hy + 0.36, 0.3], pink, 1, 0);                                              // forehead gem
+  // tattered hem wisps that trail below the robe
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU + 0.3; glow.cone(0.04, 0.3, 4, [cos(a) * 0.55, -0.12, sin(a) * 0.55], '#b080ff', [Math.PI, 0, 0]); }
+
+  // arms: pivot at the shoulder. A wide tattered sleeve; the skeletal hand floats just past its cuff
   const arm = (s: number) => {
-    const a = new GB([0.75, 1.1]);
-    a.cone(0.2, 0.9, 7, [0, -0.35, 0], robe, [Math.PI, 0, 0]);
-    a.cyl(0.04, 0.035, 0.5, 5, [0, -0.9, 0], bone);
-    a.sph(0.07, [0, -1.17, 0], bone, 1, 5);
-    for (let i = 0; i < 3; i++) a.cone(0.015, 0.2, 3, [(i - 1) * 0.05, -1.3, 0.05], bone, [0.3, 0, (i - 1) * 0.25]);
-    return a;
+    const a = new GB([0.75, 1.1]), ag = new GB([1, 1]);
+    a.add(lathe([[0.15, 0.04], [0.2, -0.3], [0.3, -0.72], [0.34, -0.9]], 10), [0, 0, 0], [0, 0, 0], 1, robe2);
+    for (let i = 0; i < 6; i++) { const t = (i / 6) * TAU; a.cone(0.09, 0.26, 4, [cos(t) * 0.3, -0.9, sin(t) * 0.3], robeD, [Math.PI, 0, 0]); }
+    a.torus(0.31, 0.045, [0, -0.78, 0], gold, [Math.PI / 2, 0, 0], 1, 12);
+    a.sph(0.09, [0, -1.15, 0.05], bone, [1.2, 0.9, 1], 8);                                       // palm
+    for (let i = 0; i < 4; i++) a.cone(0.02, 0.2, 4, [(i - 1.5) * 0.055, -1.3, 0.1], bone, [0.35, 0, (i - 1.5) * 0.18]);
+    a.cone(0.022, 0.15, 4, [s * -0.1, -1.2, 0.08], bone, [0.3, 0, s * 1.0]);
+    ag.torus(0.13, 0.014, [0, -1.0, 0.04], cyan, [Math.PI / 2, 0, 0], 1, 10);                    // little glow ring where the hand floats
+    return { body: a.build(), glow: ag.build() };
   };
-  const armR = arm(1);
-  // staff in right hand
+  const armL = arm(-1), armR = arm(1);
+  // staff in the right hand: violet shaft, gold bands, a crescent cradle with a big glowing orb, a bone knob below it
   const staff = new GB([0.8, 1.1]), sg = new GB([1, 1]);
-  staff.cyl(0.04, 0.05, 2.6, 6, [0, -1.0, 0.1], '#2a1a30');
-  staff.sph(0.18, [0, 0.38, 0.1], bone, [1, 1.1, 1], 7); for (const s of [-1, 1]) staff.cone(0.05, 0.3, 4, [s * 0.16, 0.5, 0.1], gold, [0, 0, -s * 0.6]);
-  sg.ico(0.14, [0, 0.72, 0.1], '#c070ff', 1, 1);
-  const orb = new GB([1, 1]).ico(0.16, [0, 0, 0], '#c070ff', 1, 1).sph(0.07, [0, 0, 0], '#ffffff', 1, 5).build();
-  const rune = new PlaneGeometry(1, 1); rune.rotateX(-Math.PI / 2);
-  return { body: body.build(), glow: glow.build(), armL: arm(-1).build(), armR: armR.build(), staff: staff.build(), staffGlow: sg.build(), orb };
+  staff.cyl(0.045, 0.055, 3.6, 7, [0, -0.5, 0.1], '#5a2f98');
+  for (const y of [-2.05, 0.2]) staff.torus(0.06, 0.02, [0, y, 0.1], gold, [Math.PI / 2, 0, 0], 1, 8);
+  staff.sph(0.09, [0, 0.85, 0.1], bone, [1, 1.1, 1], 8);
+  staff.torus(0.24, 0.045, [0, 1.45, 0.1], gold, [0, 0, Math.PI * 0.85], 1, 14, Math.PI * 1.3);   // gold crescent cradle (opening up)
+  for (const s of [-1, 1]) staff.cone(0.045, 0.2, 5, [s * 0.2, 1.7, 0.1], gold, [0, 0, -s * 0.2]);
+  sg.sph(0.2, [0, 1.48, 0.1], pink, 1, 10); sg.sph(0.09, [0, 1.48, 0.1], '#ffffff', 1, 6);
+  const orb = new GB([1, 1]).sph(0.14, [0, 0, 0], cyan, 1, 8).sph(0.06, [0, 0, 0], '#ffffff', 1, 5).build();
+  return { body: body.build(), glow: glow.build(), armL: armL.body, armLGlow: armL.glow, armR: armR.body, armRGlow: armR.glow, staff: staff.build(), staffGlow: sg.build(), orb };
 }
 
 export function Lich({ decoy = -1 }: { decoy?: number }) {
   const geo = useMemo(buildLich, []);
   const mats = useMemo(() => {
-    const lit = new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.75, metalness: 0.05, transparent: true });
+    const lit = new MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.62, metalness: 0.02, transparent: true, side: DoubleSide });
     const glow = new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(2, 2, 2), transparent: true });
     const gc = document.createElement('canvas'); gc.width = gc.height = 128; const gx = gc.getContext('2d')!;
     const gr = gx.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, 128, 128);
@@ -199,7 +239,7 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
   const g = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), orbs = useRef<Group>(null!), rune = useRef<Mesh>(null!);
   const S = useRef({ armL: 0, armR: 0, gl: 1, alpha: 1, pitch: 0, runeK: 0 });
   const kb = useRef<Group>(null!), kw = useRef<Group>(null!);
-  const km = useMemo(() => makeBossMats(true), []), rig = useBossRig('boss_lich', km);   // creature kit look (old meshes stay until the kit is in)
+  const km = useMemo(() => makeBossMats(true), []), rig = useBossRig('boss_lich', km, true, false);   // (owner 2026-10-26: the rounded kit body is off - procedural Malakar below)   // creature kit look (old meshes stay until the kit is in)
   const runeGeo = useMemo(() => { const p = new PlaneGeometry(1, 1); p.rotateX(-Math.PI / 2); return p; }, []);
   const runeMat = useMemo(() => {
     const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d')!;
@@ -243,7 +283,7 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
     body.current.rotation.x = s.pitch + 0.08 + Math.min(0.25, Math.hypot(e.vel.x, e.vel.z) * 0.03);
     body.current.rotation.z = sin(T * 1.3) * 0.04;
     aL.current.rotation.x = s.armL; aR.current.rotation.x = s.armR;
-    aL.current.rotation.z = 0.35; aR.current.rotation.z = -0.35;
+    aL.current.rotation.z = -0.3; aR.current.rotation.z = 0.3;   // sleeves swing OUT (the robe is wide)
     mats.glow.color.setScalar(1.2 + s.gl * 1.0 + 0.3 * sin(T * 6));
     mats.lit.opacity = s.alpha; mats.glow.opacity = s.alpha; mats.lit.depthWrite = s.alpha > 0.95;
     mats.aura.opacity = 0.35 * s.alpha;
@@ -252,7 +292,7 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
       const J = rig.J;
       kw.current.scale.setScalar(e.scale / ENEMY_DEFS.BOSS_LICH.scale / sc);
       kb.current.position.y = hover * 0.55; kb.current.rotation.x = body.current.rotation.x; kb.current.rotation.z = body.current.rotation.z;
-      J.armL.rotation.x = s.armL; J.armR.rotation.x = s.armR; J.armL.rotation.z = 0.22; J.armR.rotation.z = -0.22;
+      J.armL.rotation.x = s.armL; J.armR.rotation.x = s.armR; J.armL.rotation.z = -0.22; J.armR.rotation.z = 0.22;
       J.head.rotation.x = sin(T * 1.7) * 0.05 - s.pitch * 0.5; J.head.rotation.y = sin(T * 0.9) * 0.18;
       J.orb.rotation.y = T * orbSpeed; J.orb.position.y = 2.5 + sin(T * 2.1) * 0.15;
       km.glow.color.setScalar(0.9 + s.gl * 0.8 + 0.25 * sin(T * 6));
@@ -285,9 +325,9 @@ export function Lich({ decoy = -1 }: { decoy?: number }) {
         <group ref={body}>
           <mesh geometry={geo.body} material={mats.lit} castShadow />
           <mesh geometry={geo.glow} material={mats.glow} />
-          <group ref={aL} position={[-0.62, 2.0, 0.05]}><mesh geometry={geo.armL} material={mats.lit} castShadow /></group>
+          <group ref={aL} position={[-0.62, 2.0, 0.05]}><mesh geometry={geo.armL} material={mats.lit} castShadow /><mesh geometry={geo.armLGlow} material={mats.glow} /></group>
           <group ref={aR} position={[0.62, 2.0, 0.05]}>
-            <mesh geometry={geo.armR} material={mats.lit} castShadow />
+            <mesh geometry={geo.armR} material={mats.lit} castShadow /><mesh geometry={geo.armRGlow} material={mats.glow} />
             <group position={[0, -1.15, 0.1]} rotation={[0, 0, 0]}><mesh geometry={geo.staff} material={mats.lit} castShadow /><mesh geometry={geo.staffGlow} material={mats.glow} /></group>
           </group>
         </group>
