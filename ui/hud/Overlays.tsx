@@ -114,9 +114,9 @@ export const Vignettes: React.FC = () => {
       e.boxShadow = `inset 0 0 140px 30px rgba(255,20,40,${0.55 * h}), inset 7px 0 50px rgba(0,255,255,${0.35 * h}), inset -7px 0 50px rgba(255,0,60,${0.35 * h})`;
     }
   });
-  useGameEvent('playerHit', () => {
+  useGameEvent('playerHit', (e) => {
     const el = hit.current; if (!el) return;
-    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    el.classList.remove('flash', 'flash-big'); void el.offsetWidth; el.classList.add(e.big ? 'flash-big' : 'flash');
   });
   return (
     <>

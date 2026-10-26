@@ -502,6 +502,8 @@ button.rpg-slot:active:not(:disabled) { transform: translateY(1px); }
 .vignette-hit { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 6rem 1.5rem rgba(220, 20, 20, .8); }
 .vignette-hit.flash { animation: hit-flash .45s ease-out; }
 @keyframes hit-flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.vignette-hit.flash-big { animation: hit-flash-big 1.1s ease-out; background: radial-gradient(ellipse at center, rgba(255, 30, 30, .35) 0%, rgba(255, 20, 20, .6) 100%); }   /* mechanic-check hit (Avalanche / Tidal Wave / ...): the whole screen goes red */
+@keyframes hit-flash-big { 0% { opacity: 1; } 35% { opacity: .85; } 100% { opacity: 0; } }
 
 /* range / toggle */
 .rpg-range { -webkit-appearance: none; appearance: none; width: 100%; height: 1rem; background: transparent; cursor: var(--cur-hand, pointer); }

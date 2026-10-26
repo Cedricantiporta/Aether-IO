@@ -94,12 +94,12 @@ function spawnNum(x: number, y: number, z: number, amount: number, crit: boolean
   }
   if (!allow(amount, crit, toPlayer)) return;
   const n = nums[cursor]; cursor = (cursor + 1) % POOL;
-  n.active = true; n.t = 0; n.dur = crit ? 1.05 : 0.85; n.crit = crit; n.dot = dot; n.kind = kind; n.amount = amount;
+  n.active = true; n.t = 0; n.dur = toPlayer && crit ? 1.5 : crit ? 1.05 : 0.85; n.crit = crit; n.dot = dot; n.kind = kind; n.amount = amount;
   n.x = x + (Math.random() - 0.5) * 0.8; n.y = y + 1.8 + Math.random() * 0.4; n.z = z + (Math.random() - 0.5) * 0.6; n.vx = (Math.random() - 0.5) * 1.2;
   // hazard / DoT ticks on the hero: element-coloured (lava orange, acid / poison green) so the tick reads at a glance
-  let hex = toPlayer && dot ? (kind === 'FIRE' ? 0xff8a2a : kind === 'POISON' ? 0x7dff5a : 0xff6060) : toPlayer ? 0xff4040 : crit ? 0xffd23a : dot && kind === 'PHYSICAL' ? 0xffa13a : dot && kind === 'FIRE' ? 0xff9a3a : COLORS[kind];
+  let hex = toPlayer && crit ? 0xff2020 : toPlayer && dot ? (kind === 'FIRE' ? 0xff8a2a : kind === 'POISON' ? 0x7dff5a : 0xff6060) : toPlayer ? 0xff4040 : crit ? 0xffd23a : dot && kind === 'PHYSICAL' ? 0xffa13a : dot && kind === 'FIRE' ? 0xff9a3a : COLORS[kind];
   _c.setHex(hex); n.r = _c.r; n.gc = _c.g; n.b = _c.b;
-  n.scale = crit ? 1.65 : toPlayer ? (dot ? 1.05 : 1.25) : dot ? 0.7 : amount > 400 ? 1.2 : amount > 100 ? 1.0 : 0.85;
+  n.scale = toPlayer && crit ? 2.5 : crit ? 1.65 : toPlayer ? (dot ? 1.05 : 1.25) : dot ? 0.7 : amount > 400 ? 1.2 : amount > 100 ? 1.0 : 0.85;
   setText(n, amount, crit);
 }
 

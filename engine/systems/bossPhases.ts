@@ -6,7 +6,7 @@
 //   Slime K. SPLIT       he bursts into 5 slimes that run off: kill them in 8 s, survivors merge back and heal him
 //   Gorath   PINBALL     rolls as a boulder along telegraphed lines and bounces off the walls; hit a pillar to crack him
 //   Elderroot SPORES     4 spore pods swell: pop them (touch / hit) before they burst (heals him + poison); roots grab you
-//   Hydra    TIDAL       a wave from one side: hide behind a raised rock (line-of-sight cover) or take 70% max hp + knockback
+//   Hydra    TIDAL       a wave from one side: hide behind a raised rock (line-of-sight cover) or take 90% max hp (critical) + knockback
 //   Ignar    LAVA        the floor is tiles; 4 sweeps (random directions) erupt half the floor each so EVERY tile erupts twice: keep moving
 //   Colossus SAND        a sandstorm from one direction, shifting once: hide behind a pillar / wreck or take ticking damage
 //   Void H.  DARK        lights out: only a lantern round you; telegraphed void hands erupt under you
@@ -71,9 +71,11 @@ const heroSpeed = (): number => useGameStore.getState().stats.moveSpeed * 0.8;
 const rimAt = (a: number, m: number): number => edgeLimit(Math.cos(a) * 10, Math.sin(a) * 10, m);
 const pick = (a: number, b: number): number => a + Math.random() * (b - a);
 
-function hitHero(pct: number, kind: DamageKind, fx: number, fz: number, kb = 0, down = 0): void {
+/** `crit` = a MECHANIC-CHECK hit (CRIT_PCT of max hp; dodge / dash i-frames do not stop it, only the safe spot does; see combat.damagePlayer). */
+const CRIT_PCT = 0.9;
+function hitHero(pct: number, kind: DamageKind, fx: number, fz: number, kb = 0, down = 0, crit = false): void {
   tv.set(fx, 0, fz);
-  damagePlayer(1, { pct, pos: tv, kind, kb, down });
+  damagePlayer(1, { pct, pos: tv, kind, kb, down, crit });
 }
 function banner(kind: string): void {
   const i = INFO[kind];
@@ -244,7 +246,7 @@ function avaHit(e: Enemy): void {
     events.emit('shockwave', { pos: new Vector3(Math.cos(a) * rim, 0, Math.sin(a) * rim), radius: 9, color: 0xe8f8ff });
   }
   if (p.alive && outsideCircles(p.pos.x, p.pos.z, 0.2)) {
-    hitHero(0.75, 'ICE', e.pos.x, e.pos.z, 4, 0.8);
+    hitHero(CRIT_PCT, 'ICE', e.pos.x, e.pos.z, 4, 0.8, true);
     applyPlayerDebuff('SLOW', 3.5, SLOW_BOSS);
   }
   const M = world.minions;
@@ -426,7 +428,7 @@ function tickTidal(e: Enemy, dt: number): void {
     const R = 40, f = bp.wave * R, h = p.pos.x * bp.wx + p.pos.z * bp.wz;
     if (!G.hit && p.alive && f >= h) {
       G.hit = true;
-      if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) hitHero(0.7, 'PHYSICAL', p.pos.x - bp.wx * 6, p.pos.z - bp.wz * 6, 6, 1.0);
+      if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) hitHero(CRIT_PCT, 'PHYSICAL', p.pos.x - bp.wx * 6, p.pos.z - bp.wz * 6, 6, 1.0, true);
       else events.emit('floatText', { pos: p.pos, text: 'SAFE!', color: 0x86efac, scale: 1.0, dy: 2.6 });
     }
     const M = world.minions;
@@ -437,6 +439,8 @@ function tickTidal(e: Enemy, dt: number): void {
   if (bp.t - G.t0 > 0.9) end(e);
 }
 
+// wind runs 2 x 2.6 s = 5.2 s; one hit per SAND_TICK s => ~11 hits of 8.2% = ~90% of max hp if you never find cover (a mechanic check: dash / dodge do not help)
+const SAND_TICK = 0.47, SAND_TICK_PCT = CRIT_PCT / 11;
 const SAND_A = 1.2, SAND_SHIFT = 3.8, SAND_B = 4.6, SAND_END = 7.2;
 function tickSand(e: Enemy, dt: number): void {
   const p = world.player;
@@ -467,8 +471,8 @@ function tickSand(e: Enemy, dt: number): void {
         const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
         if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
       }
-      if (G.tick <= 0) { G.tick = 0.4; hitHero(0.032, 'PHYSICAL', p.pos.x - bp.wx * 5, p.pos.z - bp.wz * 5); }
-    } else if (G.tick <= 0) G.tick = 0.4;
+      if (G.tick <= 0) { G.tick = SAND_TICK; hitHero(SAND_TICK_PCT, 'PHYSICAL', p.pos.x - bp.wx * 5, p.pos.z - bp.wz * 5, 0, 0, true); }
+    } else if (G.tick <= 0) G.tick = SAND_TICK;
   }
   if (bp.t >= SAND_END) end(e);
 }
