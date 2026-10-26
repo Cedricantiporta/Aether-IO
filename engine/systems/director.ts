@@ -740,8 +740,8 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   if (!e) return;
   const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
-  if (showcase.on) { e.maxHp = Math.round(e.maxHp * 2); e.hp = e.maxHp; }   // (owner) the showcase ice dragon: 2x hp
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 3.2); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain
+  if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain (was x3.2 before spawnEnemy's boss HP doubled, 2026-10-26: same total)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;

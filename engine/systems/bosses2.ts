@@ -252,13 +252,15 @@ export function headAnchor(b: Enemy, k: number, out: { x: number; z: number }): 
   out.x = Math.sin(th) * rr; out.z = -Math.cos(th) * rr;
 }
 const ha = { x: 0, z: 0 };
+/** (owner 2026-10-26) heads were squishy: x1.9 of the base head hp (was x0.7 = ~2.7x tougher), armour +50%. (bossMech spare heads: x2.2.) */
+const HEAD_HP_MUL = 1.9;
 /** (Re)grows hydra head k at its rest spot. */
 function growHead(e: Enemy, k: number): void {
   headAnchor(e, k, ha);
   tv.set(ha.x, 0, ha.z);
   const h = spawnEnemy('BOSS_HYDRA_HEAD', tv);
   if (!h) return;
-  h.pattern = k; h.attackCd = 3.2 + k * 1.5; h.maxHp = Math.round(h.maxHp * 0.7); h.hp = h.maxHp;
+  h.pattern = k; h.attackCd = 3.2 + k * 1.5; h.maxHp = Math.round(h.maxHp * HEAD_HP_MUL); h.hp = h.maxHp; h.armor = Math.round(h.armor * 1.5);
   S.heads[k] = h.id; S.lungeT[k] = 0;
 }
 
@@ -283,7 +285,6 @@ function checkPhase2(e: Enemy): void {
 }
 
 export function updateBoss2(e: Enemy, dt: number, dist: number): void {
-  frameDtH = dt;
   if (S.id !== e.id) S.id = e.id; // safety (e.g. hot reload)
   checkPhase2(e);
   const inv = 1 / Math.max(dist, 0.001);
@@ -445,18 +446,19 @@ const H_SPIT = 0, H_SWEEP = 1, H_SLAM = 2, H_SURGE = 3;
 const HYDRA_REGROWS = 4;          // heads that may grow back per fight (was unlimited)
 const HYDRA_REGROW_HEAL = 0.025;  // hp mended per regrown head (was 4%)
 const HYDRA_ORDER = [H_SPIT, H_SWEEP, H_SLAM, H_SPIT, H_SURGE, H_SLAM, H_SWEEP];
-const LUNGE_T = 2.4, LUNGE_HIT = 1.2, LUNGE_HOLD = 1.8;   // whip out (telegraph resolves at LUNGE_HIT), hold, snap back
+const LUNGE_T = 2.4, LUNGE_HIT = 1.2, LUNGE_HOLD = 1.8;
+const slamZone: (Zone | null)[] = [null, null, null, null, null, null, null, null];   // the telegraph of each head's slam (cancelled when that head dies)   // whip out (telegraph resolves at LUNGE_HIT), hold, snap back
 
 LISTS.BOSS_HYDRA = [
   { // Acid Spit: globs lob onto the player's area, each leaving an acid patch.
     name: 'Acid Barrage!', wind: () => 0.9, act: () => 0.5, rec: () => 0.9,
     begin() { /* the globs' own telegraphs appear on fire */ },
     fire(e) {
-      const p = world.player.pos, n = spreadSpots(p.x, p.z, 3 + e.phase, 6.5, 12, 7);   // (spread out)
+      const p = world.player.pos, n = spreadSpots(p.x, p.z, 4 + e.phase, 6.5, 13, 7.5);   // (spread out; owner 2026-10-26: one more glob, bigger pools)
       for (let i = 0; i < n; i++) {
         const x = SPOT_X[i], z = SPOT_Z[i];
-        circle(x, z, 2.7, 1.25, BT.SPIT, pwr(e) * 1.1, 0x9be32a);
-        spawnProp(PROP_GLOB, x, z, 1.25, 0.35, 1.1, 1, e.pos.x, e.pos.z);
+        circle(x, z, 3.3, 1.25, BT.SPIT, pwr(e) * 1.2, 0x9be32a);
+        spawnProp(PROP_GLOB, x, z, 1.25, 0.35, 1.4, 1, e.pos.x, e.pos.z);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
     },
@@ -482,7 +484,7 @@ LISTS.BOSS_HYDRA = [
         let best = -1, bd = 1e9;
         for (let k = 0; k < NH; k++) {
           const id = S.heads[k]; if (id < 0 || S.lungeT[k] > 0) continue;
-          const h = world.enemies[id]; if (!h.active || h.state === 'DYING') continue;
+          const h = world.enemies[id]; if (!h.active || h.state === 'DYING' || h.state === 'SPAWN') continue;   // only living, grown heads bash
           headAnchor(e, k, ha);
           const d = (ha.x - p.x) ** 2 + (ha.z - p.z) ** 2;
           if (d < bd) { bd = d; best = k; }
@@ -491,7 +493,9 @@ LISTS.BOSS_HYDRA = [
         const a = (used / Math.max(1, want)) * 6.283 + Math.random(), r = used === 0 ? 0 : 3.5 + Math.random() * 3;
         tv.set(p.x + world.player.vel.x * 0.45 + Math.sin(a) * r, 0, p.z + world.player.vel.z * 0.45 + Math.cos(a) * r); clampArena(tv, 3);
         S.lungeX[best] = tv.x; S.lungeZ[best] = tv.z; S.lungeT[best] = LUNGE_T;
-        circle(tv.x, tv.z, 3.2, LUNGE_HIT, BT.SURFACE, pwr(e) * 1.2, 0x6b8f5a);
+        const zn = circle(tv.x, tv.z, 3.8, LUNGE_HIT, BT.SURFACE, pwr(e) * 1.3, 0x6b8f5a);
+        if (zn) { zn.life = zn.maxLife = LUNGE_HIT; }   // (boss telegraphs resolve 12% sooner: pin it to the head's arrival)
+        slamZone[best] = zn;
         used++;
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
@@ -519,6 +523,7 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
     if (id < 0) continue;
     const h = world.enemies[id];
     if (h.active && h.state !== 'DYING' && h.kind === 'BOSS_HYDRA_HEAD') continue;
+    cancelSlam(k);   // a severed head leaves no bash behind
     S.heads[k] = -1; S.headsDead++; S.regrowT[k] = e.phase >= 1 ? 10 : 14; S.lungeT[k] = 0;   // it grows back unless the hydra is nearly dead
     e.armor = Math.max(0, e.armor - 7);
     events.emit('floatText', { pos: h.pos, text: 'HEAD SEVERED', color: 0xffd23a, scale: 1.0, dy: 2.4 });
@@ -557,34 +562,62 @@ function wrap(a: number): number {
 }
 
 // --- hydra heads -----------------------------------------------------------------
+/** Removes the pending slam telegraph of head slot k (its head died before the bash landed). */
+function cancelSlam(k: number): void {
+  const zn = slamZone[k]; slamZone[k] = null;
+  if (zn && zn.active && zn.kind === 'TELEGRAPH_CIRCLE' && zn.trick === BT.SURFACE && zn.pos.x === S.lungeX[k] && zn.pos.z === S.lungeZ[k]) zn.active = false;
+}
+
+/** Every frame (enemies.updateEnemies, after the AI pass): places each living head at its rest spot + sway, or on its
+ *  slam path. Runs apart from the head's AI so a stunned / frozen / spawning head still goes exactly where its telegraph
+ *  is (the old bug: bashes landing where no head was). */
+export function tickHydraHeads(dt: number): void {
+  if (S.id < 0) return;
+  const b = world.enemies[S.id];
+  if (!b.active || b.kind !== 'BOSS_HYDRA') return;
+  const list = world.enemies, T = world.time;
+  for (let i = 0; i < list.length; i++) {
+    const h = list[i];
+    if (!h.active || h.kind !== 'BOSS_HYDRA_HEAD' || h.state === 'DYING') continue;
+    const k = h.pattern;
+    headAnchor(b, k, ha);
+    let x = ha.x + Math.sin(T * 0.8 + k * 1.7) * 1.4, z = ha.z + Math.cos(T * 0.6 + k * 2.3) * 1.0;   // swaying
+    if (S.lungeT[k] > 0) {   // whipping out to its slam spot, resting there, snapping back (the body's Head Slam)
+      S.lungeT[k] = Math.max(0, S.lungeT[k] - dt);
+      const t = LUNGE_T - S.lungeT[k];
+      const f = t < LUNGE_HIT ? 1 - Math.pow(1 - t / LUNGE_HIT, 3) : t < LUNGE_HOLD ? 1 : 1 - Math.pow((t - LUNGE_HOLD) / (LUNGE_T - LUNGE_HOLD), 2);
+      x += (S.lungeX[k] - x) * f; z += (S.lungeZ[k] - z) * f;   // (full reach: the head sits exactly on the marked circle)
+      if (t >= LUNGE_HIT && t < LUNGE_HIT + 0.06) events.emit('shake', { amount: 0.3 });
+    }
+    h.pos.set(x, 0, z);
+    h.vel.set(0, 0, 0);
+  }
+}
+
+const HEAD_SPIT_FAN = 0.3;   // radians between the blobs of a head's acid fan
 export function aiHydraHead(e: Enemy): void {
   const b = bossEnemy();
   if (!b || b.kind !== 'BOSS_HYDRA') { poofAdd(e); return; }
   const k = e.pattern;
-  headAnchor(b, k, ha);
-  let x = ha.x + Math.sin(e.animT * 0.8 + k * 1.7) * 1.4, z = ha.z + Math.cos(e.animT * 0.6 + k * 2.3) * 1.0;   // swaying
-  if (S.lungeT[k] > 0) {   // whipping out to its slam spot, resting there, snapping back (the body's Head Slam)
-    S.lungeT[k] = Math.max(0, S.lungeT[k] - frameDtH);
-    const t = LUNGE_T - S.lungeT[k];
-    const f = t < LUNGE_HIT ? 1 - Math.pow(1 - t / LUNGE_HIT, 3) : t < LUNGE_HOLD ? 1 : 1 - Math.pow((t - LUNGE_HOLD) / (LUNGE_T - LUNGE_HOLD), 2);
-    x += (S.lungeX[k] - x) * f * 0.97; z += (S.lungeZ[k] - z) * f * 0.97;
-    if (t >= LUNGE_HIT && t < LUNGE_HIT + 0.06) events.emit('shake', { amount: 0.3 });
-  }
-  e.pos.set(x, 0, z);
-  e.vel.set(0, 0, 0);
+  e.vel.set(0, 0, 0);   // (position: tickHydraHeads)
   e.state = 'CHASE';
   if (e.hideT > 0 && e.hideT < 0.3) e.hideT = 0;
   const p = world.player.pos;
   requestYaw(Math.atan2(p.x - e.pos.x, p.z - e.pos.z));
   if (S.lungeT[k] > 0 || e.attackCd > 0 || !world.player.alive) return;
-  e.attackCd = (9.5 - 1.2 * b.phase) * (0.9 + Math.random() * 0.2);
-  const sx = p.x + (Math.random() - 0.5) * 2.5, sz = p.z + (Math.random() - 0.5) * 2.5;
-  circle(sx, sz, 2.5, 1.3, BT.SPIT, e.projectileDamage * 1.1, 0x9be32a);
-  spawnProp(PROP_GLOB, sx, sz, 1.3, 0.35, 1.0, 1, e.pos.x, e.pos.z);
-  events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 2 });
+  e.attackCd = (8.5 - 1.2 * b.phase) * (0.9 + Math.random() * 0.2);
+  // (owner 2026-10-26) Acid Fan: 3-5 big blobs in a cone toward the hero (one lands on him, the rest bracket him)
+  const dx = p.x + world.player.vel.x * 0.35 - e.pos.x, dz = p.z + world.player.vel.z * 0.35 - e.pos.z;
+  const d = Math.max(6, Math.hypot(dx, dz)), a0 = Math.atan2(dx, dz), n = 3 + Math.min(2, b.phase + (b.hp < b.maxHp * 0.5 ? 1 : 0));
+  for (let i = 0; i < n; i++) {
+    const a = a0 + fan(i, HEAD_SPIT_FAN), r = i === 0 ? d : d + ((i & 2) ? 4.5 : -4.5);
+    tv.set(e.pos.x + Math.sin(a) * r, 0, e.pos.z + Math.cos(a) * r); clampArena(tv, 2);
+    circle(tv.x, tv.z, 3.2, 1.3 + 0.12 * i, BT.SPIT, e.projectileDamage * 1.3, 0x9be32a);   // (staggered landings: a ripple, not one instant)
+    spawnProp(PROP_GLOB, tv.x, tv.z, 1.3 + 0.12 * i, 0.35, 1.4, 1, e.pos.x, e.pos.z);
+  }
+  events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
   stat('HeadSpit');
 }
-let frameDtH = 0.016;
 
 // ============================================================ GLACIUS =========
 // (owner) ROOTED: Glacius is a giant dragon rising out of the far rim of the arena; only his head, neck and front claws show. His head is the
