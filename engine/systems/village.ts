@@ -382,7 +382,14 @@ export function interact(it: Interactable): void {
     else if (it.act === 'npc') openDialogue(it.node);
     else if (it.act === 'gate') {   // adventure; sealed until the King's first task (main story)
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
-      else if (readyForAdventure()) st.startMode('ADVENTURE');   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
+      else if (readyForAdventure()) {   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
+        const pg = st.progress;   // (2026-10-26) say which Ascension this run uses, and that a higher one waits at the tower
+        if (pg.ascensionMax > 0) {
+          const a = Math.min(pg.ascension, pg.ascensionMax);
+          st.addNotification(a > 0 ? `Setting out on Ascension ${a}${pg.ascensionMax > a ? ` (up to ${pg.ascensionMax} unlocked: change it at the Endless Tower)` : ''}.` : `Standard adventure. Ascension ${pg.ascensionMax} is unlocked: pick it at the Endless Tower.`, '#ffd36a', 'SYSTEM');
+        }
+        st.startMode('ADVENTURE');
+      }
     }
     else if (it.act === 'tower') { if (gateFlags.tower) events.emit('openSetOut', { mode: 'TOWER' }); }      // the Endless Tower building (a fallen tree keeps its door shut until the story opens it)
     else if (it.shop) st.openSpecificShop(it.shop);

@@ -37,9 +37,9 @@ import { world, allocEnemyProjectile, allocZone, allocFx } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
-import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
+import { bossHpAt, waveHpMult, towerHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
-import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, levelHpMul, strikeT } from './enemies';
+import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, strikeT } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -80,8 +80,12 @@ const NAMES: Record<HeroClass, string[]> = {
   KNIGHT: ['', 'Holy Wave!', 'Shield Wall!', 'Judgment!', 'Holy Charge!', 'Divine Avatar!'],
   NECROMANCER: ['', 'Raise Dead!', 'Bone Ward!', 'Plague Ground!', 'Soul Step!', 'Bone Golem!'],
 };
-/** The ultimate unlocks below this share of HP. */
-const ULT_HP = 0.6;
+/** The ultimate unlocks below this share of HP (a longer fight: it opens earlier). */
+const ULT_HP = 0.72;
+/** Dark hero HP as a share of the boss HP of the same depth (owner: ~70-90%; the duel is not shortened by the champion-room factor). */
+export const DARK_HERO_HP = 0.8;
+/** (owner 2026-10-26) the longer fight stays busy: every skill comes back in ~60% of the old time, the ultimate in 70%, with a shorter pause between casts. */
+const SKILL_CD_MUL = 0.6, ULT_CD_MUL = 0.7;
 
 // shadow palette (telegraphs / fields): violet base, class accents kept readable
 const C_VIOLET = 0xa04aff, C_ICE = 0x8fd8ff, C_FIRE = 0xff6a3a, C_BLOOD = 0xff3a5a, C_HOLY = 0xe8b8ff, C_BONE = 0xc8b0ff, C_LIGHT = 0xf0e0ff;
@@ -141,7 +145,11 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
   const st = useGameStore.getState();
   const mods = runMods(st.difficulty);
   const wave = world.director.wave;
-  e.maxHp = Math.round(ENEMY_DEFS.DARK_HERO.hp * waveHpMult(wave) * mods.hp * 5 * levelHpMul()); e.hp = e.maxHp;   // (scales with the hero's level too)
+  // (owner 2026-10-26) the champion duel is a real boss-length fight: HP = DARK_HERO_HP (80%) of this depth's biome boss (enemyDefs.bossHpAt),
+  // it has no invulnerable phases but a shield roll below; the Tower family scales it off the hero's power like every boss
+  const lvl = Math.max(1, st.level | 0), asc = st.progress.endings > 0 ? Math.max(0, st.progress.ascensionMax - 1) : 0;
+  const ratio = towerMode() ? towerHpMult(wave, lvl, asc) / waveHpMult(wave) : 1;
+  e.maxHp = Math.round(bossHpAt(wave) * DARK_HERO_HP * ratio * mods.hp * mods.bossHp); e.hp = e.maxHp;
   e.mini = true; e.staggerMax = 80; e.armor = Math.round(e.armor * 1.25);
   rollEliteShield(e);
   e.xp *= 20; e.pattern = 0;
@@ -646,8 +654,8 @@ function finish(e: Enemy): void {
   if (c === 'ARCHER' && k === DASH) { aimAt(e, world.player.pos.x, world.player.pos.z); shoot(e, S.dirX, S.dirZ, 'ARROW', 26, pdmg(e)); darkView.atk++; }
   const rate = S.avatarT > 0 ? 1.5 : 1;
   if (k === SWING) S.cd[0] = CD[c][0] * (0.85 + Math.random() * 0.3) / rate;
-  else S.cd[k] = CD[c][k] * (k === ULT ? 1 : 0.85 + Math.random() * 0.3);
-  S.gap = k === SWING ? 0.15 : RANGED[c] ? 0.9 : 1.0;
+  else S.cd[k] = CD[c][k] * (k === ULT ? ULT_CD_MUL : SKILL_CD_MUL) * (0.85 + Math.random() * 0.3);
+  S.gap = k === SWING ? 0.15 : RANGED[c] ? 0.55 : 0.6;
   if (!RANGED[c]) { if (k !== SWING || ++S.comboN >= 3) { S.comboN = 0; S.backT = k === SWING ? 0.5 : 0.6; } }   // a step back after a skill / a 3-hit combo
   darkView.dash = 0;
   e.pattern = 0; e.vel.set(0, 0, 0);

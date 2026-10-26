@@ -30,7 +30,7 @@ import type {
 } from '../types';
 import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
-  waveHpMult, waveDmgMult, waveSpeedMult, isAquatic,
+  waveHpMult, waveDmgMult, waveSpeedMult, isAquatic, bossHpAt, BOSS_HP_REL, towerHpMult, towerDmgMult,
   optionalForClear,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
@@ -310,22 +310,24 @@ function randomAffix(): EliteAffix {
 }
 
 // ------------------------------------------------------------ spawning --------
-/** Hero-level scaling of every spawned enemy (per level above 1): HP, damage, and xp / gold. */
-const LEVEL_HP = 0.06, LEVEL_DMG = 0.04, LEVEL_REWARD = 0.04;   // (owner 2026-10-25 rebalance: was 10% / 6.5%, which made every level-up harder than the gear it brought)
-/** (owner 2026-10-25) the hero level each biome is built for (biome 1 Lv 8 ... biome 7 Lv 50). */
-export const biomeLevel = (b: number): number => Math.min(50, 8 + 7 * Math.max(0, b));
-/** The level monsters scale with: the hero's own level up to the biome's level, then only 40% of every level above it
- *  (a strong hero still out-levels old biomes; leveling up no longer makes the next biome a wall). */
-export function monsterLevel(): number {
-  const lv = Math.max(1, useGameStore.getState().level | 0), exp = biomeLevel(Math.max(0, Math.min(7, world.room.biome | 0)));
-  return lv <= exp ? lv : exp + 0.4 * (lv - exp);
+/** Reward scaling with the hero's level (xp / gold per kill). Monster STRENGTH no longer follows the hero's level (see levelFx). */
+const LEVEL_REWARD = 0.04;
+/** (owner 2026-10-26 "finishable run" rebalance) Hero level vs monster strength, on top of the depth curve (enemyDefs.waveHpMult):
+ *  - below Lv 10 an ease-in: HP x(0.25 + 0.075 Lv) (Lv 1: a third, Lv 10: full), damage x(0.6 + 0.04 Lv), so a fresh hero is not
+ *    walled by the flatter-but-higher base curve (the old curve scaled every monster with the hero's level instead);
+ *  - Lv 10..30: nothing, levelling just makes you stronger;
+ *  - above Lv 30 a soft floor so early biomes stay worth fighting: +4% HP / +3% damage per level, fading out to nothing by the Void
+ *    (a Lv 50 hero meets x1.8 HP / x1.6 damage in Greenwood, x1.0 in the Void). The Tower family scales off the hero in enemyDefs.towerHpMult. */
+export const lfx = { hp: 1, dmg: 1 };
+export function levelFx(lv: number, biome: number): void {
+  if (lv < 10) { lfx.hp = Math.max(0.3, 0.25 + 0.075 * lv); lfx.dmg = 0.6 + 0.04 * lv; return; }
+  const over = Math.max(0, lv - 30) * Math.max(0, 1 - biome / 6);
+  lfx.hp = 1 + 0.04 * over; lfx.dmg = 1 + 0.03 * over;
 }
 /** Biome bosses hit 15% softer (balance pass: level-8 heroes in shop gear lost 15 of 15 Elderroot fights). */
 const BOSS_ARMOR_MUL = 1.8;
 const BOSS_DMG = 0.6;   // (owner 2026-10-25: bosses hit far too hard next to normal monsters; was 0.85)
 const NORMAL_DMG = 1.6;   // (owner 2026-10-25: normal monsters barely hurt) ordinary monsters x1.6, elites x1.25 on top of their own x1.5
-/** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
-export const levelHpMul = (): number => 1 + LEVEL_HP * (monsterLevel() - 1);
 
 /** Boss / champion pace by biome (first loop only): Greenwood 0.75, biome 2 0.82, biome 3 0.9, later 1 (owner: lower
  *  biomes' bosses cast a bit slower, with longer gaps between skills). <1 slows stateT (wind-ups, attacks) and attackCd. */
@@ -360,22 +362,26 @@ export function spawnEnemy(
   const elite = !boss && (!!opts?.elite || wantsAffix);
   const affix: EliteAffix = elite ? (wantsAffix && opts?.affix ? opts.affix : randomAffix()) : 'NONE';
 
-  // every monster, elite and boss also scales with the hero's level: +10% HP and +6.5% damage per level above 1
-  const lvl = Math.max(1, useGameStore.getState().level | 0), ml = monsterLevel(), lvHp = 1 + LEVEL_HP * (ml - 1), lvDmg = 1 + LEVEL_DMG * (ml - 1);
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
-  const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL;
-  // later biomes breed tougher monsters on top of the depth curve (owner): +12% HP and +10% damage per biome (2026-10-25: HP was +15%)
-  const bi = Math.max(0, Math.min(7, world.room.biome | 0));
-  const biomeHp = 1 + 0.12 * bi, biomeDmg = 1 + 0.1 * bi;
-  const sizeMul = elite ? ELITE_SCALE : 1;
+  // depth curve (enemyDefs) x hero-level ease-in / soft floor (levelFx); the Tower family scales off the hero's power instead
+  const lvl = Math.max(1, useGameStore.getState().level | 0), bi = Math.max(0, Math.min(7, world.room.biome | 0));
+  let hpBase = waveHpMult(wave), dmgBase = waveDmgMult(wave), bossRatio = 1;
+  if (towerMode()) {
+    const pg = useGameStore.getState().progress, asc = pg.endings > 0 ? Math.max(0, pg.ascensionMax - 1) : 0;
+    hpBase = towerHpMult(wave, lvl, asc); dmgBase = towerDmgMult(wave, lvl, asc); bossRatio = hpBase / waveHpMult(wave);
+    lfx.hp = 1; lfx.dmg = 1;
+  } else levelFx(lvl, bi);
+  const hpMul = hpBase * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 1 : 1.4) * lfx.hp;   // normal & elites +40%
+  const dmgMul = dmgBase * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lfx.dmg * ENEMY_DMG_MUL;
   const rewardMul = 1 + 0.05 * (wave - 1);
+  const sizeMul = elite ? ELITE_SCALE : 1;
 
   e.kind = kind;
   e.elite = elite;
   e.affix = affix;
   e.boss = boss;
   e.pos.set(pos.x, 0, pos.z);
-  e.maxHp = Math.round(def.hp * hpMul * biomeHp);   // (owner 2026-10-25: tower archers keep the normal goblin archer HP; only their defense is doubled, combat.ts)
+  e.maxHp = boss ? Math.round(bossHpAt(wave) * (BOSS_HP_REL[kind] ?? 1) * bossRatio * mods.hp * mods.bossHp * lfx.hp)   // biome bosses: fixed pacing table (enemyDefs.BOSS_HP_KNOTS), x Ascension boss hp
+    : Math.round(def.hp * hpMul);   // (owner 2026-10-25: tower archers keep the normal goblin archer HP; only their defense is doubled, combat.ts)
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;
   if (elite && !boss) rollEliteShield(e);
@@ -384,8 +390,8 @@ export function spawnEnemy(
   e.speed = def.speed * waveSpeedMult(wave) * (affix === 'HASTED' ? 1.5 : 1) * mods.speed * (boss ? 1 : MOVE_MUL);   // (owner) ordinary monsters move ~11% faster; bosses keep their pace
   e.radius = def.radius * sizeMul;
   e.scale = def.scale * sizeMul;
-  e.contactDamage = def.contactDamage * dmgMul * biomeDmg;
-  e.projectileDamage = def.projectileDamage * dmgMul * biomeDmg;
+  e.contactDamage = def.contactDamage * dmgMul;
+  e.projectileDamage = def.projectileDamage * dmgMul;
   // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
   e.xp = Math.round(rewardDef.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(rewardDef.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
@@ -450,7 +456,8 @@ export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
   if (e.corrupt) { e.corrupt = false; e.contactDamage /= 2; e.projectileDamage /= 2; e.scale /= 1.3; e.radius /= 1.3; }   // (mini-bosses are never corrupted)
-  e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625 * WIND.miniHp); // mini-bosses: half of the old +25% value
+  e.maxHp = e.boss ? Math.round(e.maxHp * 0.8)   // a boss-kind mini (Malakar in the crypts): 80% of a biome boss
+    : Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625 * WIND.miniHp); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
   rollEliteShield(e);   // (maxHp is final here)
@@ -644,8 +651,14 @@ function aiArcher(e: Enemy): void {
     case 'WINDUP':
       stop(e);
       if (e.stateT >= ARCHER.windup) {
-        tmpV.set(ux, 0, uz);
-        { const k = elemShot(e, 'ARROW'); fireEnemyProjectile(e.pos, tmpV, k, ARCHER.arrowSpeed, e.projectileDamage, { life: 2.5, radius: 0.35 }); }
+        {   // (owner 2026-10-26) later biomes: more arrows per shot instead of fatter archers (Marble/Desert 2 in a narrow fan, Frost and beyond 3); each arrow hits for less
+          const k = elemShot(e, 'ARROW'), bb = world.room.biome | 0, n = bb >= 4 ? 3 : bb >= 2 ? 2 : 1, a0 = Math.atan2(ux, uz), dm = n === 3 ? 0.6 : n === 2 ? 0.75 : 1;
+          for (let i = 0; i < n; i++) {
+            const a = a0 + (i - (n - 1) / 2) * 0.17;
+            tmpV.set(Math.sin(a), 0, Math.cos(a));
+            fireEnemyProjectile(e.pos, tmpV, k, ARCHER.arrowSpeed, e.projectileDamage * dm, { life: 2.5, radius: 0.35 });
+          }
+        }
         e.attackCd = ARCHER.cd * (0.8 + Math.random() * 0.4);
         enter(e, 'RECOVER');
       }

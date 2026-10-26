@@ -6,7 +6,7 @@ import { useGameStore } from '../../store';
 import { useGameEvent } from '../hooks/useEvent';
 import { finishRunVictory } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
-import { ASCENSION_MAX } from '../../ascension';
+import { ASCENSION_MAX, ascRewardText } from '../../ascension';
 import { GameStatus } from '../../types';
 import { storyIdx } from '../../story';
 
@@ -59,6 +59,7 @@ export const EndingScreen: React.FC = () => {
     return null;
   }
   const next = Math.min(ASCENSION_MAX, runInfo.ascension + 1);
+  const payNow = !(useGameStore.getState().progress.ascClaimed ?? []).includes(runInfo.ascension);   // (owner 2026-10-26) the first clear of every Ascension level pays a one-time reward
   const done = () => {
     const first = useGameStore.getState().progress.endings === 0;
     setOpen(false); useGameStore.getState().completeEnding(); finishRunVictory();
@@ -86,7 +87,8 @@ export const EndingScreen: React.FC = () => {
       {step >= STORY.length + 1 && (
         <motion.div className="ending-final" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }}>
           <div className="ending-title">The End</div>
-          <div className="ending-sub">{runInfo.ascension > 0 ? `Ascension ${runInfo.ascension} cleared.` : 'The Void is sealed.'} {next > runInfo.ascension ? `Ascension ${next} awaits at the town gate.` : 'You stand at the peak of Ascension.'}</div>
+          <div className="ending-sub">{runInfo.ascension > 0 ? `Ascension ${runInfo.ascension} cleared.` : 'The Void is sealed.'} {next > runInfo.ascension ? `Ascension ${next} awaits at the Endless Tower, and its first clear pays ${ascRewardText(next)}.` : 'You stand at the peak of Ascension.'}</div>
+          {payNow && <div className="ending-sub" data-testid="ending-reward">First-clear reward, yours on Continue: {ascRewardText(runInfo.ascension)}.</div>}
           <button className="rpg-btn rpg-btn-primary ending-go" onClick={done} data-testid="ending-continue">Continue</button>
         </motion.div>
       )}

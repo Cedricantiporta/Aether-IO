@@ -4,6 +4,7 @@
 import type { HeroClass, Item, Rarity } from './types';
 import { summonPool } from './summonPool';
 import { shardItem } from './shards';
+import type { AscReward } from './ascension';
 
 export const TOWER_STEP = 10;
 type Kind = 'GEAR' | 'PET' | 'SUPPLY' | 'SHARDS';
@@ -58,4 +59,20 @@ export function rollMilestone(floor: number, hero: HeroClass, make: (id: string,
   if (p.extra === 'ANKH') items.push(...make('revive_ankh', 1));
   if (p.extra === 'PET') pick('PET', floor >= 200 ? 'MYTHIC' : 'LEGENDARY');
   return { items, gems };
+}
+
+/** The gear and pets of an Ascension first-clear reward (ascension.ts ASC_REWARDS), rolled for `hero` from the Gem Altar pool (class gear at the
+ *  asked rarity, a weapon first so the hero can use the reward at once). `inst` rolls grade / affixes (store.instantiate). */
+export function rollAscensionItems(r: AscReward, hero: HeroClass, inst: (t: Item) => Item): Item[] {
+  const all = summonPool('GEM', hero), out: Item[] = [];
+  const pick = (pets: boolean, rar: Rarity, weaponFirst: boolean) => {
+    const base = all.filter((i) => (pets ? i.type === 'PET' : i.type !== 'PET'));
+    let pool = base.filter((i) => i.rarity === rar);
+    if (weaponFirst) { const w = pool.filter((i) => i.type === 'WEAPON'); if (w.length) pool = w; }
+    const src = pool.length ? pool : base;
+    if (src.length) out.push(inst(src[Math.floor(Math.random() * src.length)]));
+  };
+  r.gear.forEach((rar, i) => pick(false, rar, i === 0));
+  for (const rar of r.pets) pick(true, rar, false);
+  return out;
 }

@@ -8,7 +8,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { useGameEvent } from '../hooks/useEvent';
-import { ASCENSIONS } from '../../ascension';
+import { ASCENSIONS, ascRewardText } from '../../ascension';
 import { HERO_META } from '../lib/heroes';
 import { useRaf } from '../hooks/useRaf';
 import { world } from '../../engine/world';
@@ -124,6 +124,7 @@ export const SetOutWindow: React.FC = () => {
               {ASCENSIONS.slice(0, Math.max(1, asc)).map((a) => <li key={a.lv} className={a.lv <= asc ? 'on' : ''}><b>{a.lv}</b> {a.name} <span>- {a.hardship}</span></li>)}
             </ul>
             <div className="so-asc-reward">{asc > 0 ? `Rewards: +${Math.round(asc * 12)}% gold, loot luck and xp` : 'No Ascension: the standard adventure.'}</div>
+            <div className="so-asc-reward" data-testid="so-asc-first">{(progress.ascClaimed ?? []).includes(asc) ? `First-clear reward at Ascension ${asc}: claimed.` : `First clear of Ascension ${asc} pays: ${ascRewardText(asc)}.`}</div>
           </>)}
         </div>
       )}

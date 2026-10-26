@@ -6,11 +6,11 @@ import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
 import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost, SHIP_DECKS, deckCards } from './engine/runCards';
-import { ASCENSION_MAX } from './ascension';
+import { ASCENSION_MAX, ascReward, ascRewardText } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey, characters } from './characters';
 import { STORY, STORY_V, sanitizeStory, storyIdx, type StorySave } from './story';
-import { rollMilestone, TOWER_STEP } from './towerRewards';
+import { rollMilestone, rollAscensionItems, TOWER_STEP } from './towerRewards';
 import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './petFusion';
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
@@ -668,6 +668,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   wavesClaimed: Object.fromEntries(ALL_HEROES.map((h) => [h, Array.isArray(p?.wavesClaimed?.[h]) ? (p!.wavesClaimed![h] as unknown[]).map(Number).filter((n) => (WAVE_MILESTONES as readonly number[]).includes(n)) : []])) as Record<HeroClass, number[]>,
   towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
   caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
+  ascClaimed: Array.isArray(p?.ascClaimed) ? [...new Set((p!.ascClaimed as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= ASCENSION_MAX))] : [],
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
@@ -1273,8 +1274,18 @@ export const useGameStore = create<GameState>()((set, get) => {
     completeEnding: () => {   // Malakar defeated: the ending; unlocks the next Ascension level
       const p = get().progress, cleared = runInfo.mode === 'ADVENTURE' ? runInfo.ascension : 0;
       const ascensionMax = Math.min(ASCENSION_MAX, Math.max(p.ascensionMax, cleared + 1));
-      set({ progress: { ...p, endings: p.endings + 1, ascensionMax } });
-      if (ascensionMax > p.ascensionMax) notify(`Ascension ${ascensionMax} unlocked!`, '#ffd36a', 'BOSS');
+      // (owner 2026-10-26) the FIRST clear of every Ascension level pays a big one-time reward (ascension.ts ASC_REWARDS)
+      const claimed = p.ascClaimed ?? [], pay = !claimed.includes(cleared);
+      set({ progress: { ...p, endings: p.endings + 1, ascensionMax, ascClaimed: pay ? [...claimed, cleared] : claimed } });
+      if (ascensionMax > p.ascensionMax) notify(`Ascension ${ascensionMax} unlocked! Its first clear pays: ${ascRewardText(ascensionMax)}.`, '#ffd36a', 'BOSS');
+      if (pay) {
+        const s = get(), r = ascReward(cleared), items = rollAscensionItems(r, s.hero, instantiate);
+        set({ gems: s.gems + r.gems });
+        get().addCrystals(r.crystals);
+        for (const it of items) if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
+        notify(`${cleared > 0 ? `Ascension ${cleared}` : 'Adventure'} first-clear reward!`, '#ffd24a', 'BOSS');
+        feedReward({ gems: r.gems, items });
+      }
     },
     claimTowerMilestone: (floor) => {
       const s = get(), p = s.progress, have = p.towerClaimed[s.hero] ?? [];
