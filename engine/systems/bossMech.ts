@@ -21,23 +21,26 @@ import { damagePlayer, applyPlayerDebuff, SLOW_BOSS, KB, type PlayerDebuff } fro
 import { damageMinion, nearestMinion } from './minions';
 import { spawnEnemy, spawnTelegraphCircle, onEnemyDeath } from './enemies';
 import { spawnHostileZone } from './tricks';
+import { firePatch } from './bossFx';
 import { useGameStore } from '../../store';
 
 interface Mech {
   cc: PlayerDebuff; ccDur: number;      // signature crowd control (quake + crush)
   rain: PlayerDebuff; rainDur: number;  // what a falling impact applies
   rainColor: number; rainWord: string;
+  rainFx: string;                       // 'trick' event kind drawn at each impact (render/TrickFx.tsx RAIN_*)
+  patch: 0 | 1 | 2;                     // what an impact leaves: 0 nothing, 1 short fire patch (FIRE_CAP), 2 brief slow patch
   heal: boolean;
 }
 const MECH: Record<BossKind, Mech> = {
-  BOSS_GOLEM:   { cc: 'STUN', ccDur: 1.0, rain: 'STUN', rainDur: 0.6, rainColor: 0xb0a090, rainWord: 'Rockfall!', heal: false },
-  BOSS_TREANT:  { cc: 'ROOT', ccDur: 1.6, rain: 'POISON', rainDur: 3, rainColor: 0x84cc16, rainWord: 'Thorn rain!', heal: true },
-  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'POISON', rainDur: 4, rainColor: 0x6ad04a, rainWord: 'Acid rain!', heal: true },
-  BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0x8ae0ff, rainWord: 'Hailstorm!', heal: false },
-  BOSS_WARLORD: { cc: 'SILENCE', ccDur: 2.2, rain: 'BURN', rainDur: 3, rainColor: 0xff5a1a, rainWord: 'Meteor shower!', heal: false },
-  BOSS_WARMACH: { cc: 'STUN', ccDur: 1.0, rain: 'BURN', rainDur: 3, rainColor: 0xffa040, rainWord: 'Shelling!', heal: false },
-  BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void rain!', heal: true },
-  BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', heal: true },
+  BOSS_GOLEM:   { cc: 'STUN', ccDur: 1.0, rain: 'STUN', rainDur: 0.4, rainColor: 0xb0a090, rainWord: 'Falling Boulders!', rainFx: 'RAIN_ROCK', patch: 0, heal: false },
+  BOSS_TREANT:  { cc: 'ROOT', ccDur: 1.6, rain: 'POISON', rainDur: 3, rainColor: 0x84cc16, rainWord: 'Thorn Eruption!', rainFx: 'RAIN_THORN', patch: 0, heal: true },
+  BOSS_HYDRA:   { cc: 'SLOW', ccDur: 3, rain: 'SLOW', rainDur: 2, rainColor: 0x3fa8ff, rainWord: 'Water Geysers!', rainFx: 'RAIN_GEYSER', patch: 0, heal: true },
+  BOSS_WYRM:    { cc: 'STUN', ccDur: 1.1, rain: 'SLOW', rainDur: 3, rainColor: 0xbfe8ff, rainWord: 'Falling Icicles!', rainFx: 'RAIN_ICE', patch: 2, heal: false },
+  BOSS_WARLORD: { cc: 'SILENCE', ccDur: 2.2, rain: 'BURN', rainDur: 3, rainColor: 0xff5a1a, rainWord: 'Fire Meteors!', rainFx: 'RAIN_FIRE', patch: 1, heal: false },
+  BOSS_WARMACH: { cc: 'STUN', ccDur: 1.0, rain: 'BURN', rainDur: 3, rainColor: 0xe0c070, rainWord: 'Artillery Barrage!', rainFx: 'RAIN_SAND', patch: 0, heal: false },
+  BOSS_VOID:    { cc: 'SILENCE', ccDur: 2.4, rain: 'BLIND', rainDur: 2.5, rainColor: 0xa060ff, rainWord: 'Void Bolts!', rainFx: 'RAIN_VOID', patch: 0, heal: true },
+  BOSS_LICH:    { cc: 'SILENCE', ccDur: 2.0, rain: 'SLOW', rainDur: 2.5, rainColor: 0x7dd3fc, rainWord: 'Soulfire!', rainFx: 'RAIN_VOID', patch: 0, heal: true },
 };
 
 // ---- tuning
@@ -53,25 +56,26 @@ const WARD_AT = 0.5;    // (owner: once per fight at 50% hp; was at 66% and 33%)
 const BARRIER_CD = [32, 28, 24], BARRIER_HP = [0.05, 0.06, 0.07];   // (owner: less often; was 22 / 20 / 18)
 // damage of the shared layer as multiples of the boss's power (balance pass: 1.1 / 1.3 / 1.6 -> 0.8 / 1.0 / 1.25; this layer
 // sits on top of every boss's own kit and dealt a big share of the hits that killed level-8 heroes at Elderroot)
-const RAIN_DMG = 0.8, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
+const RAIN_DMG = 0.5, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
 
 // ---- strike pool (delayed AoE hits we resolve ourselves so they can carry crowd control and hit minions)
-const MAX_STRIKES = 64;
-const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0, kd: 0 }));
+const MAX_STRIKES = 72, RAIN_LIVE_CAP = 60;   // rain waves never put more than 60 telegraphs up at once
+const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0, kd: 0, th: null as Mech | null, pi: 0 }));
 const tv = new Vector3();
 const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, gapT: 0, healT: 0, healHp0: 0 };
 
 export function resetBossMech(): void {
   S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
   for (const s of strikes) s.on = false;
+  RQ.n = 3; RQ.m = null;
 }
 
 const pwr = (e: Enemy): number => Math.max(e.projectileDamage, e.contactDamage * 0.8, 8);
 const notify = (msg: string, color: string): void => useGameStore.getState().addNotification(msg, color, 'BOSS');
 
-function strike(x: number, z: number, r: number, delay: number, dmg: number, minDmg: number, cc: PlayerDebuff, ccDur: number, color: number, kd = 0): void {
+function strike(x: number, z: number, r: number, delay: number, dmg: number, minDmg: number, cc: PlayerDebuff, ccDur: number, color: number, kd = 0, th: Mech | null = null, pi = 0): void {
   for (const s of strikes) if (!s.on) {
-    s.on = true; s.x = x; s.z = z; s.r = r; s.t = delay; s.dmg = dmg; s.minDmg = minDmg; s.cc = cc; s.ccDur = ccDur; s.kd = kd;
+    s.th = th; s.pi = pi; s.on = true; s.x = x; s.z = z; s.r = r; s.t = delay; s.dmg = dmg; s.minDmg = minDmg; s.cc = cc; s.ccDur = ccDur; s.kd = kd;
     spawnHostileZone('METEOR_SHADOW', x, z, r, delay, 0, color);   // the warning (visual only, fills up; we resolve the hit)
     return;
   }
@@ -85,8 +89,15 @@ function resolve(s: (typeof strikes)[number]): void {
   const p = world.player;
   // impact: a dust ring + scorch every time, a full explosion only on every third (a rain of 25 must not white out)
   tv.set(s.x, 0, s.z);
-  events.emit('shockwave', { pos: tv.clone(), radius: s.r * 1.1, color: 0x8a7a6a });
-  if ((fxN++ % 3) === 0) events.emit('explosion', { pos: tv.clone(), radius: s.r * 0.7, color: 0xa04a1a });
+  const th = s.th;
+  if (th) {   // themed rain impact (boulder / thorn / geyser / icicle / meteor / shell / void): its own VFX, a leftover patch on every other one
+    events.emit('trick', { pos: tv.clone(), kind: th.rainFx, radius: s.r });
+    if (th.patch === 1 && (s.pi & 1) === 0) firePatch(s.x, s.z, s.r * 0.6, 3, Math.max(2, s.dmg * 0.1));
+    else if (th.patch === 2 && (s.pi & 1) === 0) spawnHostileZone('GOO', s.x, s.z, s.r * 0.8, 2.5, 0, 0xbfe8ff);
+  } else {
+    events.emit('shockwave', { pos: tv.clone(), radius: s.r * 1.1, color: 0x8a7a6a });
+    if ((fxN++ % 3) === 0) events.emit('explosion', { pos: tv.clone(), radius: s.r * 0.7, color: 0xa04a1a });
+  }
   const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.5;
   if (p.alive && dx * dx + dz * dz < rr * rr) {
     tv.set(s.x, 0, s.z);
@@ -103,29 +114,61 @@ function resolve(s: (typeof strikes)[number]): void {
 const bigK = (e: Enemy): number => (e.kind === 'BOSS_WARMACH' ? 2 : 1);
 function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
 
-/** Cataclysm: a wide rain of impacts over the arena, aimed bursts on the player and their heading. */
-function rain(e: Enemy, m: Mech): void {
-  const p = world.player, n = 9 + 3 * e.phase, R = arenaR(), dmg = pwr(e) * RAIN_DMG;
-  events.emit('floatText', { pos: e.pos, text: m.rainWord, color: m.rainColor, scale: 1.2, dy: 5 });
-  // impacts are spread out (owner: not bunched up): every centre keeps >= RAIN_GAP from the others, with gaps to walk through
-  rainN = 0; RAIN_GAP = 8.5 * (bigK(e) > 1 ? 1.7 : 1);
-  // aimed: one on the player and one where they are running to
-  place(p.pos.x, p.pos.z, 3.0 * bigK(e), 1.3, dmg, m, true);
-  place(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, 2.8 * bigK(e), 1.6, dmg, m, false);
-  for (let i = 0, tries = 0; i < n && tries < n * 12; tries++) {
-    const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * R;
-    if (place(Math.cos(a) * d, Math.sin(a) * d, (2.6 + Math.random() * 0.8) * bigK(e), 1.1 + Math.random() * 1.1, dmg, m, false)) i++;
-  }
-}
-let RAIN_GAP = 8.5;
+/**
+ * Cataclysm: THREE alternating waves per cast (owner: standing still must get you hit, moving must save you).
+ *  A  a jittered hex lattice of big circles over the whole arena (~38-46% of the floor),
+ *  B  the same lattice shifted onto A's gaps (spawned while A lands, so the freshly exploded A circles are the safe spot),
+ *  C  a cluster on / around the hero (one on them, one where they are running, the rest ringed round them): no camping.
+ * Each wave warns ~1 s. Waves are queued (RQ) and fired from tickBossStrikes; impacts come from the pooled strike list.
+ */
+const RAIN_WAVE_GAP = 0.9, RAIN_WARN = [1.1, 1.0, 0.95];
+const RQ = { n: 3, t: 0, m: null as Mech | null, dmg: 0, big: 1, phase: 0, pi: 0 };
+const rainSeed = { th: 0, ox: 0, oz: 0 };
 const rainX: number[] = [], rainZ: number[] = [];
-let rainN = 0;
-/** One rain impact, unless it would sit closer than RAIN_GAP to one already placed (force: always). */
-function place(x: number, z: number, r: number, t: number, dmg: number, m: Mech, force: boolean): boolean {
-  if (!force) for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < RAIN_GAP * RAIN_GAP) return false;
-  rainX[rainN] = x; rainZ[rainN] = z; rainN++;
-  strike(x, z, r, t, dmg, dmg * 0.6, m.rain, m.rainDur, m.rainColor, force ? 1.0 : 0);   // the meteor aimed at the hero knocks down
-  return true;
+let rainN = 0, liveStrikes = 0;
+function rain(e: Enemy, m: Mech): void {
+  events.emit('floatText', { pos: e.pos, text: m.rainWord, color: m.rainColor, scale: 1.2, dy: 5 });
+  RQ.n = 0; RQ.t = 0; RQ.m = m; RQ.dmg = pwr(e) * RAIN_DMG; RQ.big = bigK(e); RQ.phase = Math.min(2, e.phase | 0); RQ.pi = 0;
+}
+function place(x: number, z: number, r: number, t: number, kd = 0): void {
+  if (liveStrikes >= RAIN_LIVE_CAP) return;
+  liveStrikes++;
+  const m = RQ.m!;
+  strike(x, z, r, t, RQ.dmg, RQ.dmg * 0.6, m.rain, m.rainDur, m.rainColor, kd, m, RQ.pi++);
+}
+function rainWave(w: number): void {
+  const m = RQ.m; if (!m) return;
+  liveStrikes = 0; for (const s of strikes) if (s.on) liveStrikes++;
+  const p = world.player, R = arenaR(), k = RQ.big > 1 ? 1.4 : 1, r = 4.2 * k, tw = RAIN_WARN[w];
+  if (w < 2) {
+    const cover = 0.38 + 0.04 * RQ.phase;
+    const D = r * Math.sqrt(Math.PI / (0.866 * cover));   // lattice spacing that gives that coverage
+    // the lattice is fixed per cast (seeded once in wave 0) so B really is A's gaps
+    if (w === 0) { rainSeed.th = Math.random() * Math.PI; rainSeed.ox = Math.random() * D; rainSeed.oz = Math.random() * D; }
+    const c = Math.cos(rainSeed.th), s = Math.sin(rainSeed.th);
+    const sh = w === 1 ? 1 / 3 : 0;   // B: shifted by (a + b) / 3 = onto the centroids of A's triangles
+    const N = Math.ceil((R + D) / (D * 0.866)) + 1;
+    for (let j = -N; j <= N; j++) for (let i = -N; i <= N; i++) {
+      const lx = (i + j * 0.5 + sh * 1.5) * D + rainSeed.ox, lz = (j * 0.866 + sh * 0.866) * D + rainSeed.oz;
+      const jx = (Math.random() - 0.5) * D * 0.14, jz = (Math.random() - 0.5) * D * 0.14;
+      const x = lx * c - lz * s + jx, z = lx * s + lz * c + jz;
+      if (x * x + z * z <= (R + r * 0.4) * (R + r * 0.4)) place(x, z, r * (0.95 + Math.random() * 0.1), tw);
+    }
+  } else {
+    const n = 9 + RQ.phase;
+    rainN = 0;
+    const put = (x: number, z: number, rr: number, kd: number): boolean => {
+      const d = Math.hypot(x, z); if (d > R) { x *= R / d; z *= R / d; }
+      for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < (r * 0.8) ** 2) return false;
+      rainX[rainN] = x; rainZ[rainN] = z; rainN++; place(x, z, rr, tw, kd); return true;
+    };
+    put(p.pos.x, p.pos.z, r * 0.95, 1.0);   // on the hero (this one already knocked down before the rework)
+    put(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, r * 0.9, 0);   // where they are running to
+    for (let i = 2, tries = 0; i < n && tries < n * 14; tries++) {
+      const a = Math.random() * Math.PI * 2, d = 2.5 + Math.random() * 7 * k;
+      if (put(p.pos.x + Math.cos(a) * d, p.pos.z + Math.sin(a) * d, r * (0.85 + Math.random() * 0.15), 0)) i++;
+    }
+  }
 }
 
 /** Quake: a big ring around the boss carrying its signature crowd control. */
@@ -135,6 +178,7 @@ function quake(e: Enemy, m: Mech): void {
 
 /** Advances the pending impacts (every frame, even while the boss is stunned). */
 export function tickBossStrikes(dt: number): void {
+  if (RQ.m && RQ.n < 3) { RQ.t -= dt; if (RQ.t <= 0) { rainWave(RQ.n++); RQ.t = RAIN_WAVE_GAP; if (RQ.n >= 3) RQ.m = null; } }
   for (const s of strikes) if (s.on) { s.t -= dt; if (s.t <= 0) { s.on = false; resolve(s); } }
 }
 
@@ -216,7 +260,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   }
 
   // cataclysm + quake
-  if (S.rainCd <= 0) { S.rainCd = RAIN_CD[Math.min(2, e.phase)]; S.gapT = 3.4; e.attackCd = Math.max(e.attackCd, 3.0); rain(e, m); }
+  if (S.rainCd <= 0) { S.rainCd = RAIN_CD[Math.min(2, e.phase)]; S.gapT = 4.2; e.attackCd = Math.max(e.attackCd, 3.8); rain(e, m); }
   else if (S.quakeCd <= 0) { S.quakeCd = QUAKE_CD - e.phase; S.gapT = 2.2; e.attackCd = Math.max(e.attackCd, 1.8); quake(e, m); }
   return false;
 }
