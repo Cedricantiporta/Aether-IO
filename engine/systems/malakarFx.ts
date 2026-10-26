@@ -14,7 +14,7 @@ import { Vector3 } from 'three';
 import { world, allocZone } from '../world';
 import { events } from '../events';
 import type { Zone } from '../types';
-import { damagePlayer, applyPlayerDebuff, playerTrickImmune } from './combat';
+import { damagePlayer, applyPlayerDebuff, playerTrickImmune, KB } from './combat';
 import { hooks } from './hooks';
 import { spawnBlackHole, spawnGravityVisual } from './biomeHazards';
 import { bp } from './bossPhaseState';
@@ -141,7 +141,7 @@ function tickGravity(dt: number): void {
       if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
     }
     if (d < GRAV_CORE) {
-      if (p.slowT < 0.3) applyPlayerDebuff('SLOW', 0.3);
+      if (p.slowT < 0.3) applyPlayerDebuff('SLOW', 0.4, 0.6);
       g.tick -= dt;
       if (g.tick <= 0) { g.tick = 0.3; damagePlayer(1, { pct: g.dmg * 0.04 * (1 + 2 * (1 - d / GRAV_CORE)), pos: tmp.set(g.x, 0, g.z), kind: 'MAGIC' }); }   // the closer to the centre the harder
     }
@@ -152,7 +152,7 @@ function tickGravity(dt: number): void {
     events.emit('shockwave', { pos: tmp.set(g.x, 0, g.z), radius: GRAV_CORE * 2.4, color: C_LILAC });
     events.emit('crater', { pos: tmp.set(g.x, 0, g.z), radius: GRAV_CORE * 0.6, color: 0x120620 });
     events.emit('shake', { amount: 0.8 });
-    if (p.alive && (p.pos.x - g.x) ** 2 + (p.pos.z - g.z) ** 2 < (GRAV_CORE + 0.6) ** 2) damagePlayer(1, { pct: g.dmg, pos: tmp.set(g.x, 0, g.z), kind: 'MAGIC' });
+    if (p.alive && (p.pos.x - g.x) ** 2 + (p.pos.z - g.z) ** 2 < (GRAV_CORE + 0.6) ** 2) damagePlayer(1, { pct: g.dmg, pos: tmp.set(g.x, 0, g.z), kind: 'MAGIC', ...KB.SLAM });   // (owner) the gravity core detonation knocks down
   }
 }
 
@@ -183,7 +183,7 @@ function tickMeteors(dt: number): void {
     events.emit('crater', { pos: tmp.set(m.x, 0, m.z), radius: METEOR_R * 0.7, color: 0x120620 });
     events.emit('shake', { amount: 0.35 });
     const dx = p.pos.x - m.x, dz = p.pos.z - m.z, rr = METEOR_R + 0.6;
-    if (p.alive && dx * dx + dz * dz < rr * rr) damagePlayer(1, { pct: m.dmg, pos: tmp.set(m.x, 0, m.z), kind: 'MAGIC' });
+    if (p.alive && dx * dx + dz * dz < rr * rr) damagePlayer(1, { pct: m.dmg, pos: tmp.set(m.x, 0, m.z), kind: 'MAGIC', ...KB.SLAM });   // (owner) meteor impact knocks down
   }
 }
 

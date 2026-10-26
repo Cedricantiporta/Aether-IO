@@ -43,7 +43,7 @@ import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, le
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
-import { towerMode, towerCrystals } from './combat';
+import { towerMode, towerCrystals, SLOW_BOSS, slowHero } from './combat';
 import { spawnHostileZone } from './tricks';
 import { spawnWave, WAVE_FIRE, BT } from './bossFx';
 import { useGameStore, rollDropPlus } from '../../store';
@@ -328,16 +328,16 @@ function push(dx: number, dz: number, dist: number): void {
 }
 function slowPlayer(t: number): void {
   const p = world.player;
-  if (p.slowT < 0.05) applyPlayerDebuff('SLOW', t);
-  else if (!playerTrickImmune()) p.slowT = Math.max(p.slowT, t);
+  if (p.slowT < 0.05) applyPlayerDebuff('SLOW', t * 1.5, SLOW_BOSS);
+  else if (!playerTrickImmune()) slowHero(t * 1.5, SLOW_BOSS);
 }
 function effects(eff: number, dmg: number, x: number, z: number): void {
+  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning slams = knockdown; first, so the stun below does not block it)
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
   if (eff & FREEZE && Math.random() < 0.35) { if (freezePlayer(0.7)) events.emit('floatText', { pos: world.player.pos, text: 'FROZEN', color: 0x8fe4ff, scale: 0.8, dy: 0.8 }); }
   if (eff & SLOW) slowPlayer(2);
   if (eff & BURN) applyPlayerDebuff('BURN', 3, Math.max(2, dmg * 0.1));
   if (eff & POISON) applyPlayerDebuff('POISON', 3, Math.max(2, dmg * 0.1));
-  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning slams = knockdown)
 }
 function fx(kind: string, x: number, z: number, r: number, yaw?: number): void {
   events.emit('darkFx', { pos: fxPos.set(x, 0, z), kind, radius: r, yaw });

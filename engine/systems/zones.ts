@@ -324,7 +324,7 @@ function expire(z: Zone): void {
       break;
     }
     case 'TELEGRAPH_LINE':
-      if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0 });
+      if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
       break;
     default: break;
   }

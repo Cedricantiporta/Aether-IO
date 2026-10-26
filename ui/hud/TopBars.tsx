@@ -50,7 +50,7 @@ const DEBUFFS: { id: string; icon: React.ReactNode; color: string; label: string
   { id: 'poison', icon: <Skull size={14} />, color: '#84cc16', label: 'Poisoned', body: 'Taking poison damage over time.', get: () => world.player.poisonT },
   { id: 'bleed', icon: <Droplet size={14} />, color: '#ef4444', label: 'Bleeding', body: 'Taking bleed damage over time.', get: () => world.player.bleedT },
   { id: 'atkdown', icon: <Swords size={14} />, color: '#cbd5e1', label: 'Weakened', body: 'Your attack is reduced.', get: () => (world.player.buffDmg < 0 ? world.player.buffT : 0) },
-  { id: 'slow', icon: <ChevronsDown size={14} />, color: '#60a5fa', label: 'Slowed', body: 'Movement speed reduced. Dash cleanses it.', get: () => (world.player.slowT > 0 ? world.player.slowT : envSlow < 0.99 ? 0.01 : 0) },
+  { id: 'slow', icon: <ChevronsDown size={14} />, color: '#60a5fa', label: 'Slowed', body: 'Movement speed cut by 45% (60% from bosses). Dash cleanses it. Frost resistance shortens it.', get: () => (world.player.slowT > 0 ? world.player.slowT : envSlow < 0.99 ? 0.01 : 0) },
 ];
 
 /** Debuff icons with remaining-time under the HP strip (compact on phones). */

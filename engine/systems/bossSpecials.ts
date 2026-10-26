@@ -210,7 +210,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
         e.pos.set(tv.x, 0, tv.z);
         const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
         d.dirx = dx / l; d.dirz = dz / l; e.facing = Math.atan2(d.dirx, d.dirz); e.dir.set(d.dirx, 0, d.dirz);
-        spawnTelegraphLine(e.pos.x, e.pos.z, d.dirx, d.dirz, 12, 3.8, 0.5, 0xef4444)!.damage = power(e) * 2.2;
+        { const al = spawnTelegraphLine(e.pos.x, e.pos.z, d.dirx, d.dirz, 12, 3.8, 0.5, 0xef4444)!; al.damage = power(e) * 2.2; al.kb = KB.SLAM.kb; al.down = KB.SLAM.down; }   // (owner) the ambush dash-slash knocks down
         events.emit('trick', { pos: e.pos.clone(), kind: 'SMOKE', radius: 4 });
       }
       if (e.spStep === 2 && t >= 1.4) e.spStep = 3;

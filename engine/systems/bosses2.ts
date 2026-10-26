@@ -856,7 +856,8 @@ LISTS.BOSS_WARLORD = [
         laneTrail(e, S.slashD, 2.4, 3.2);
         const p = world.player;
         if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 2.2) ** 2) {
-          S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
+          S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.SLAM });   // (owner) the Blazing Rush knocks down
+          applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
         }
         if (S.dashT <= 0) {   // arrived: a quick aimed slash
           S.dashPh = 1; stand(e); e.dir.set(ux, 0, uz); S.slashT = 0.34 * fast(e);
@@ -965,8 +966,8 @@ LISTS.BOSS_WARMACH = [
   { // Seismic Stomp: all six legs slam down; shockwaves under each leg and around the hull.
     name: 'Seismic Stomp!', wind: () => 1.2, act: () => 0.3, rec: () => 0.9,
     begin(e) {
-      for (let i = 0; i < 6; i++) { const a = e.facing + (i / 6) * 6.283 + 0.52; spawnTelegraphCircle(e.pos.x + Math.sin(a) * e.radius * 2.0, e.pos.z + Math.cos(a) * e.radius * 2.0, 6.8, 1.1, pwr(e) * 1.4, 0xff7a1a); }
-      spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 5, 1.3, pwr(e) * 1.2, 0xffa040);
+      for (let i = 0; i < 6; i++) { const a = e.facing + (i / 6) * 6.283 + 0.52; stompKd(spawnTelegraphCircle(e.pos.x + Math.sin(a) * e.radius * 2.0, e.pos.z + Math.cos(a) * e.radius * 2.0, 6.8, 1.1, pwr(e) * 1.4, 0xff7a1a)); }
+      stompKd(spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 5, 1.3, pwr(e) * 1.2, 0xffa040));
     },
     fire() { events.emit('shake', { amount: 0.7 }); },
   },
@@ -1017,6 +1018,9 @@ function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
 // ============================================================ VOID HERALD =====
 const V_PORTALS = 0, V_GRAVITY = 1, V_ECHOES = 2;
 const HERALD_ORDER = [V_PORTALS, V_ECHOES, V_GRAVITY, V_PORTALS, V_ECHOES];
+
+/** (owner) the Dune Colossus' stomp knocks the hero down. */
+function stompKd(z: import('../types').Zone | null): void { if (z) { z.kb = KB.SLAM.kb; z.down = KB.SLAM.down; } }
 
 LISTS.BOSS_VOID = [
   { // Rift Portals: portals open around you and fire aimed volleys.

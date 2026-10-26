@@ -399,6 +399,7 @@ export interface PlayerRuntime {
   vitalityT: number;     // barbarian E: heal over time
   earthwall: { active: boolean; pos: Vector3; t: number; radius: number }; // wizard E
   slowT: number;         // player slowed by enemy projectile
+  slowPow: number;       // strength of the current slow (0..1 speed lost); 0 = default (combat.SLOW_HERO)
   hpPotCd: number;
   mpPotCd: number;
   petReviveCd: number;

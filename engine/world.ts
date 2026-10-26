@@ -85,7 +85,7 @@ function makePlayer(): PlayerRuntime {
     earthwall: { active: false, pos: v(), t: 0, radius: 10 },
     stunT: 0, rootT: 0, silenceT: 0, defDownT: 0, blindT: 0,
     burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, bleedT: 0, bleedDps: 0, dotAcc: 0,
-    slowT: 0, hpPotCd: 0, mpPotCd: 0, petReviveCd: 0,
+    slowT: 0, slowPow: 0, hpPotCd: 0, mpPotCd: 0, petReviveCd: 0,
     fireT: 0, levelUpFx: 0, reviveFx: 0,
     anim: { moveBlend: 0, stepPhase: 0, attackT: 0, castT: 0, hurtT: 0, dashing: false },
   };

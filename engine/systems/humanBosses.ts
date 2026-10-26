@@ -18,7 +18,7 @@ import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
-import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, towerMode, towerCrystals, playerTrickImmune } from './combat';
+import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, towerMode, towerCrystals, playerTrickImmune, SLOW_BOSS } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -86,9 +86,9 @@ function shove(dx: number, dz: number, dist: number): void {
   if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
 }
 function effects(eff: number, x: number, z: number): void {
+  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning strikes = knockdown; first, so the stun below does not block it)
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
-  if (eff & SLOW) applyPlayerDebuff('SLOW', 2, 0.4);
-  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning strikes = knockdown)
+  if (eff & SLOW) applyPlayerDebuff('SLOW', 3, SLOW_BOSS);
 }
 function clampIn(out: Vector3, pad = 3): Vector3 {
   const r = Math.hypot(out.x, out.z), lim = edgeLimit(out.x, out.z, pad);
@@ -355,11 +355,11 @@ function release(e: Enemy, px: number, pz: number): void {
       e.pos.x = S.spotX; e.pos.z = S.spotZ; e.hideT = 0;
       tmp2.set(S.spotX, 0, S.spotZ);
       events.emit('explosion', { pos: tmp2.clone(), radius: 3.4, color: C_VIOLET });
-      if (playerIn(S.spotX, S.spotZ, 3.4)) { damagePlayer(P * 1.7, { pos: tmp2, kind: 'PHYSICAL' }); effects(KNOCK | SLOW, S.spotX, S.spotZ); }
+      if (playerIn(S.spotX, S.spotZ, 3.4)) { damagePlayer(P * 1.7, { pos: tmp2, kind: 'PHYSICAL' }); effects(KNOCK | STUN | SLOW, S.spotX, S.spotZ); }   // (owner) the Hexblade's blink strike knocks down
       humanView.atk++;
     } else if (k === 3) {
       const p = world.player;
-      strike(p.pos.x, p.pos.z, 3.2, 0.9, P * 1.2, SLOW, C_VIOLET);
+      strike(p.pos.x, p.pos.z, 3.2, 0.9, P * 1.2, SLOW | STUN | KNOCK, C_VIOLET);   // (owner) the hex aimed at the hero knocks down
       for (let i = 0; i < 4; i++) {
         const a = Math.random() * 6.283, r = 3 + Math.random() * 5;
         tmp.set(p.pos.x + Math.cos(a) * r, 0, p.pos.z + Math.sin(a) * r); clampIn(tmp, 3);
@@ -387,7 +387,7 @@ function release(e: Enemy, px: number, pz: number): void {
       events.emit('lightning', { from: new Vector3(e.pos.x, 1.4, e.pos.z), to: new Vector3(e.pos.x + S.dirX * 36, 1.2, e.pos.z + S.dirZ * 36) });
       events.emit('shake', { amount: 0.3 });
       const rx = px - e.pos.x, rz = pz - e.pos.z, t = rx * S.dirX + rz * S.dirZ, perp = Math.abs(rx * S.dirZ - rz * S.dirX);
-      if (world.player.alive && t > -0.6 && t < 36.6 && perp < 1.5) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }
+      if (world.player.alive && t > -0.6 && t < 36.6 && perp < 1.5) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }   // (owner) the marked shot knocks down
       humanView.atk++;
     }
   }

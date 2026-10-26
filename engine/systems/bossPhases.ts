@@ -19,7 +19,7 @@ import { world } from '../world';
 import { events, type DamageKind } from '../events';
 import { edgeLimit } from '../mapgen';
 import type { Enemy } from '../types';
-import { damagePlayer, applyPlayerDebuff, knockHero, playerTrickImmune } from './combat';
+import { damagePlayer, applyPlayerDebuff, knockHero, playerTrickImmune, SLOW_BOSS, slowHero } from './combat';
 import { damageMinion } from './minions';
 import { spawnEnemy, onEnemyDeath, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { bossStrike, bossPwr } from './bossMech';
@@ -242,7 +242,7 @@ function avaHit(e: Enemy): void {
   }
   if (p.alive && outsideCircles(p.pos.x, p.pos.z, 0.2)) {
     hitHero(0.75, 'ICE', e.pos.x, e.pos.z, 4, 0.8);
-    applyPlayerDebuff('SLOW', 2.5, 0.4);
+    applyPlayerDebuff('SLOW', 3.5, SLOW_BOSS);
   }
   const M = world.minions;
   for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && outsideCircles(m.x, m.z, 0.2)) damageMinion(i, m.maxHp * 0.8); }
@@ -575,7 +575,7 @@ function tickDark(e: Enemy, dt: number): void {
     if (h.t >= h.T) {
       h.on = false;
       events.emit('explosion', { pos: new Vector3(h.x, 0.6, h.z), radius: 3.2, color: 0xa060ff });
-      if (p.alive && (p.pos.x - h.x) ** 2 + (p.pos.z - h.z) ** 2 < 2.7 * 2.7) { hitHero(0.22, 'MAGIC', h.x, h.z, 2.5, 0); applyPlayerDebuff('SLOW', 1.2, 0.3); }
+      if (p.alive && (p.pos.x - h.x) ** 2 + (p.pos.z - h.z) ** 2 < 2.7 * 2.7) { hitHero(0.22, 'MAGIC', h.x, h.z, 2.5, 0); applyPlayerDebuff('SLOW', 1.8, SLOW_BOSS); }
     }
   }
   bp.count = Math.max(0, 8.0 - bp.t);
@@ -643,7 +643,7 @@ export function tickPhase(dt: number): void {
       if (G.stage === 0) { if (bp.t >= 1.0) { G.stage = 1; G.t0 = bp.t; avaPlace(e); bp.floor = 1; bp.count = AVA_COUNT; bp.countMax = AVA_COUNT; events.emit('shake', { amount: 0.4 }); } }
       else if (G.stage === 1) {
         bp.count = Math.max(0, AVA_COUNT - (bp.t - G.t0));
-        const p = world.player; if (p.alive) p.slowT = Math.max(p.slowT, 0.25);   // the cold: ~40% slower while the countdown runs
+        const p = world.player; if (p.alive) slowHero(0.25, SLOW_BOSS);   // the cold: 60% slower while the countdown runs
         if (bp.count <= 0) { G.stage = 2; G.t0 = bp.t; bp.count = -1; avaHit(e); }
       } else if (bp.t - G.t0 > 1.4) end(e);
       break;
