@@ -1,11 +1,11 @@
 // Stationary room hazards / war machines (engine/systems/roomTraps.ts): ballista, catapult + flying boulder, magic tower, fire bars, fire jets,
-// rooting vines, freezing pools, fire / frost breath statues (stone dragon heads on the rim). Destroyed pieces leave rubble; damaged ones show a small HP bar. Toy / cute style: chunky rounded wood and stone, bright glowing parts. Pooled InstancedMeshes written each frame
+// rooting vines, freezing pools, fire / frost breath statues (stone dragon heads on the rim), Void ghost shrines (+ their translucent sheet ghosts) and gravity obelisks. Destroyed pieces leave rubble; damaged ones show a small HP bar. Toy / cute style: chunky rounded wood and stone, bright glowing parts. Pooled InstancedMeshes written each frame
 // from `rt` (tiny counts), culled with inView; flames / embers are FX particles + halos.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BoxGeometry, BufferGeometry, Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial, Sphere, Vector3, type Material } from 'three';
 import { world } from '../engine/world';
-import { rt, BEAM_WARN, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, LASER_WARN, LASER_AIM, LASER_ON, LASER_LEN, LASER_MUZZLE, trapAim, lockedTrap, type TrapObj } from '../engine/systems/roomTraps';
+import { rt, BEAM_WARN, JET_WARN, JET_ON, BAR_LEN, VINE_REST, TOWER_WIND_T, CATAPULT_WIND_T, BOULDER_FLIGHT, STATUE_WARN, STATUE_ON, STATUE_LEN, STATUE_SWEEP, STATUE_MOUTH, statueBeamYaw, LASER_WARN, LASER_AIM, LASER_ON, LASER_LEN, LASER_MUZZLE, trapAim, lockedTrap, GHOST_POOF, type TrapObj } from '../engine/systems/roomTraps';
 import { inView } from './view';
 import { CELL, FX, pushHalo, sparks, chunks, dustPuff, smokePuff, embers, scorch, flashStar } from './fx';
 import { BAR_VS, BAR_FS } from './Enemies';
@@ -163,6 +163,34 @@ export function RoomTraps() {
     const barMesh = new Mesh(bgeo, new ShaderMaterial({ vertexShader: BAR_VS, fragmentShader: BAR_FS, transparent: true, depthTest: false, depthWrite: false }));
     barMesh.frustumCulled = false; barMesh.renderOrder = 60;
     const bars = { mesh: barMesh, geo: bgeo, pos: bPos, d: bD, max: BMAX };
+    // ---- Void ghost shrine: a little lavender stone shrine (two posts, a beam and a peaked roof) with a floating spirit lantern; its ghosts are cute translucent sheet ghosts
+    const shb = new GB([0.88, 1.1]);
+    shb.cyl(1.45, 1.65, 0.5, 10, [0, 0.25, 0], '#b3a6cf'); shb.cyl(1.05, 1.25, 0.4, 10, [0, 0.7, 0], '#d6cdea');
+    for (const x of [-1, 1]) { shb.cyl(0.24, 0.3, 2.3, 8, [x * 0.85, 1.95, 0], '#e6def6'); shb.sph(0.34, [x * 0.85, 3.15, 0], '#cbbfe8', [1, 0.7, 1], 7); }
+    shb.box(2.5, 0.3, 0.55, [0, 3.0, 0], '#9a86cc'); shb.box(2.1, 0.22, 0.5, [0, 2.6, 0], '#b8a8de');
+    shb.cone(1.95, 0.95, 4, [0, 3.6, 0], '#7e6cb8', [0, Math.PI / 4, 0], [1, 1, 0.55]);
+    shb.sph(0.2, [0, 4.15, 0], '#efe4ff', 1, 6);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + 0.5; shb.sph(0.3, [Math.sin(a) * 1.5, 0.3, Math.cos(a) * 1.5], '#c9bde6', [1, 0.7, 1], 6); }
+    const shg = new GB([1, 1]).sph(0.5, [0, 0, 0], '#ffffff', 1, 8).sph(0.28, [0, 0, 0], '#ffffff', 1, 6).build();   // the lantern orb (placed at y ~1.9, pulses)
+    const gGeo = new GB([0.95, 1.05]);
+    gGeo.cone(0.66, 1.15, 10, [0, 0.38, 0], '#e9e0fa', [Math.PI, 0, 0]);                               // the sheet: flares up into the body, a wispy point below
+    gGeo.cone(0.28, 0.8, 6, [0.1, -0.35, -0.12], '#e2d8f6', [Math.PI - 0.5, 0.3, 0.3]);               // a curling wisp tail
+    gGeo.sph(0.62, [0, 1.0, 0], '#f5f0ff', [1, 1.08, 1], 10);                                            // round head
+    for (const x of [-1, 1]) gGeo.sph(0.17, [x * 0.66, 0.68, 0.12], '#efe8fc', [1, 0.8, 1.2], 6);        // little arms
+    for (const x of [-1, 1]) gGeo.sph(0.1, [x * 0.34, 0.86, 0.5], '#f6bfe6', [1.3, 0.7, 0.6], 5);        // blush
+    gGeo.sph(0.075, [0, 0.74, 0.58], '#7a64b8', [1, 1.4, 0.6], 5);                                       // tiny "o" mouth
+    const gEyes = new GB([1, 1]).sph(0.13, [-0.21, 1.06, 0.52], '#ffffff', [1, 1.3, 0.6], 6).sph(0.13, [0.21, 1.06, 0.52], '#ffffff', [1, 1.3, 0.6], 6).build();
+    // ---- Void gravity obelisk: a dark tapered pillar on a stepped base, violet rune bands, a floating crystal; swirling violet rings spin round it
+    const obb = new GB([0.82, 1.1]);
+    obb.cyl(1.6, 1.85, 0.45, 4, [0, 0.22, 0], '#2c2438', [0, Math.PI / 4, 0]); obb.cyl(1.25, 1.45, 0.4, 4, [0, 0.65, 0], '#382e48', [0, Math.PI / 4, 0]);
+    obb.cyl(0.62, 1.0, 4.4, 4, [0, 3.05, 0], '#231c30', [0, Math.PI / 4, 0]);
+    obb.cone(0.7, 0.95, 4, [0, 5.72, 0], '#171120', [0, Math.PI / 4, 0]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU + Math.PI / 4; obb.cone(0.2, 0.8, 4, [Math.sin(a) * 1.55, 0.9, Math.cos(a) * 1.55], '#4a3a68', [Math.cos(a) * 0.3, 0, -Math.sin(a) * 0.3]); }
+    const obg = new GB([1, 1]);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * TAU; for (let k = 0; k < 3; k++) { const y = 1.6 + k * 1.2, w = 0.707 * (1 - 0.38 * (y - 0.85) / 4.4) + 0.04; obg.box(0.12, 0.34, 0.07, [Math.sin(a) * w, y, Math.cos(a) * w], '#ffffff', [0, a, 0]); } }
+    const obc = new GB([1, 1]).octa(0.5, [0, 0, 0], '#ffffff', [0.8, 1.3, 0.8]).build();   // floating crystal over the tip
+    const ringG = new GB([1, 1]).torus(1, 0.075, [0, 0, 0], '#ffffff', [Math.PI / 2, 0, 0], 1, 40).build();
+    const ringDot = new GB([1, 1]).sph(0.2, [1, 0, 0], '#ffffff', 1, 5).sph(0.14, [-1, 0, 0], '#ffffff', 1, 5).sph(0.12, [0, 0, 1], '#ffffff', 1, 5).build();
     const sts = statueGeo('#d8b49e', '#b08a78', '#ee6a3a', '#fff2d8'), stsF = statueGeo('#d6e8f4', '#a2bfd6', '#58b4ec', '#ffffff');
     const S = {
       balBase: mk(bb.build(), lit, 6), balTop: mk(bt.build(), lit, 6), balBolt: mk(bg.build(), glowMat(), 6),
@@ -175,6 +203,12 @@ export function RoomTraps() {
       rubble: mk(rg.build(), lit, 12),
       lzB: mk(lzb.build(), lit, 4), lzH: mk(lzh.build(), lit, 4), lzG: mk(lzg, glowMat({ color: new Color(0.9, 1.9, 2.6) }), 4),
       lzW: mk(stripGeo, flat(new Color(0.5, 1.7, 2.4), 0.6), 4), lzO: mk(lzBoxG, fireM(new Color(0.3, 1.2, 2.2), 0.5), 4), lzI: mk(lzBoxG, fireM(new Color(1.6, 2.2, 2.6), 0.9), 4),
+      shB: mk(shb.build(), lit, 2), shG: mk(shg, glowMat({ color: new Color(1.7, 1.2, 2.6) }), 2),
+      gBody: mk(gGeo.build(), glowMat({ color: new Color(1.08, 1.02, 1.3), transparent: true, opacity: 0.72, depthWrite: false }), 8),
+      gEyes: mk(gEyes, glowMat({ color: new Color(0.6, 1.5, 2.8) }), 8),
+      obB: mk(obb.build(), lit, 2), obG: mk(obg.build(), glowMat({ color: new Color(1.9, 0.7, 2.8) }), 2), obC: mk(obc, glowMat({ color: new Color(2.0, 1.0, 2.8) }), 2),
+      obR: mk(ringG, flat(new Color(1.7, 0.55, 2.7), 0.62), 6), obD: mk(ringDot, flat(new Color(2.4, 1.4, 3.0), 0.9), 6),
+      obF: mk(new CylinderGeometry(1, 1, 0.03, 36), flat(new Color(0.5, 0.15, 0.9), 0.28), 2),
       stB: mk(sts, lit, 3), stE: mk(eyeGeo, glowMat({ color: new Color(2.2, 1.5, 0.3) }), 3), stT: mk(throatGeo, glowMat({ color: new Color(2.6, 1.1, 0.25) }), 3),
       sfB: mk(stsF, lit, 3), sfE: mk(eyeGeo, glowMat({ color: new Color(0.7, 1.9, 2.6) }), 3), sfT: mk(throatGeo, glowMat({ color: new Color(0.6, 1.7, 2.6) }), 3),
       flO: mk(flameGeo, fireM(new Color(1.7, 0.5, 0.1), 0.34), 48), flI: mk(flameGeo, fireM(new Color(1.7, 0.95, 0.3), 0.4), 48),
@@ -182,7 +216,7 @@ export function RoomTraps() {
       wdF: mk(wedgeGeo, wedgeFire, 4), wdI: mk(wedgeGeo, wedgeFrost, 4),
       spF: mk(stripGeo, flat(new Color(1.9, 0.7, 0.25), 0.4), 8), spI: mk(stripGeo, flat(new Color(0.4, 1.4, 2.1), 0.4), 8),
     };
-    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(6), tower: new Int32Array(3), statue: new Int32Array(3), laser: new Int32Array(4), dead: new Uint8Array(16), ver: -1 } };
+    return { S, bars, wedgeFire, wedgeFrost, seen: { siege: new Int32Array(6), tower: new Int32Array(3), statue: new Int32Array(3), laser: new Int32Array(4), shrine: new Int32Array(2), obelisk: new Int32Array(2), dead: new Uint8Array(24), gp: new Uint8Array(8), ver: -1 } };
   }, []);
   const S = X.S;
 
@@ -190,11 +224,11 @@ export function RoomTraps() {
     const t = clock.elapsedTime, dt = Math.min(dtRaw, 0.05);
     const on = world.room.active && rt.on;
     let nBb = 0, nCb = 0, nBo = 0, nTw = 0, nHub = 0, nArm = 0, nJet = 0, nJw = 0, nVn = 0, nPl = 0, nRu = 0, nBar = 0;
-    let nLz = 0, nLw = 0, nLb = 0;
+    let nLz = 0, nLw = 0, nLb = 0, nSh = 0, nGh = 0, nOb = 0, nOr = 0, nOd = 0;
     let nSf = 0, nSi = 0, nFo = 0, nFk = 0, nWf = 0, nWi = 0, nSpf = 0, nSpi = 0;
     if (on) {
       const sn = X.seen;
-      if (sn.ver !== rt.ver) { sn.ver = rt.ver; sn.siege.fill(0); sn.tower.fill(0); sn.statue.fill(0); sn.laser.fill(0); sn.dead.fill(0); }
+      if (sn.ver !== rt.ver) { sn.ver = rt.ver; sn.siege.fill(0); sn.tower.fill(0); sn.statue.fill(0); sn.laser.fill(0); sn.shrine.fill(0); sn.obelisk.fill(0); sn.dead.fill(0); sn.gp.fill(0); }
       const aimed = trapAim.obj ?? lockedTrap();
       for (let i = 0; i < rt.nSiege; i++) {
         const s = rt.siege[i];
@@ -325,6 +359,76 @@ export function RoomTraps() {
           for (let h = 0; h < 3; h++) if (rnd() < dt * 50 * env) { const dd = 2 + rnd() * (LASER_LEN - 4); FX.add.emit(l.x + sx * dd + (rnd() - 0.5) * 0.8, 0.5 + rnd() * 0.9, l.z + cz * dd + (rnd() - 0.5) * 0.8, 0, 0.8, 0, 0.7, 0.2, 0.03, 1.4, 2.0, 2.4, 0.7, CELL.STAR, 0, 1, 0, 3); }
         }
       }
+      for (let i = 0; i < rt.nShrine; i++) {   // Void ghost shrine + its ghosts
+        const q = rt.shrine[i];
+        pieceFx(q, sn.shrine, i, sn.dead, 16 + i, 2.0, 0xb3a6cf, 0xe6def6);
+        if (q.dead) { if (inView(q.x, q.z, 5)) setInst(S.rubble, nRu++, q.x, 0, q.z, i * 2.1 + q.x, 1.25); }
+        else if (inView(q.x, q.z, 7)) {
+          nBar = addBar(X.bars, nBar, q, 5.0, q === aimed);
+          setInst(S.shB, nSh, q.x, 0, q.z, 0.5 + i, 1.15 * (1 + 0.05 * q.flash));
+          const os = 1 + 0.12 * Math.sin(t * 2.4 + i) + 0.2 * q.flash;
+          setInst(S.shG, nSh, q.x, 1.75 + Math.sin(t * 1.7 + i) * 0.12, q.z, t, os, os, os);
+          nSh++;
+          pushHalo(q.x, 1.8, q.z, 3.2 + 0.4 * Math.sin(t * 2.4), 1.3, 0.8, 2.4, 0.5, CELL.GLOW);
+          if (rnd() < dt * 5) FX.add.emit(q.x + (rnd() - 0.5) * 1.6, 0.8, q.z + (rnd() - 0.5) * 1.6, 0, 0.9, 0, 1.4, 0.18, 0.03, 1.5, 0.9, 2.4, 0.7, CELL.STAR, 0, 1, 0, 3);
+        }
+      }
+      for (let i = 0; i < rt.ghost.length; i++) {
+        const g = rt.ghost[i];
+        if (!g.on) {
+          if (g.poof > 0) {   // the shrine broke: one soft poof, the ghost shrinks away
+            if (!sn.gp[i]) { sn.gp[i] = 1; smokePuff(g.x, 1.1, g.z, 5, 0xe6dcff, 1.0, 0.8, 1.0, 1.0, 0.5); sparks(g.x, 1.1, g.z, 8, 0xd8c8ff, 5, 0.2, 0.5, 1.2); flashStar(g.x, 1.2, g.z, 0xe0d0ff, 2.6, 0.25); }
+            const k = g.poof / GHOST_POOF, sc = 1.2 * k;
+            if (nGh < 8) { setInst(S.gBody, nGh, g.x, 1.1 + (1 - k) * 0.8, g.z, 0, sc, sc * (0.6 + 0.4 * k), sc); setInst(S.gEyes, nGh, g.x, 1.1 + (1 - k) * 0.8, g.z, 0, sc, sc, sc); nGh++; }
+          } else sn.gp[i] = 0;
+          continue;
+        }
+        if (!inView(g.x, g.z, 3)) continue;
+        const toP = Math.atan2(world.player.pos.x - g.x, world.player.pos.z - g.z), yaw = g.state === 1 ? Math.atan2(g.dx, g.dz) + Math.PI : toP;   // (drifting off: still looks back at him)
+        const by = 1.25 + Math.sin(t * 2.6 + g.ph * 2) * 0.22, lean = Math.min(0.5, Math.hypot(g.vx, g.vz) * 0.04), sw = Math.sin(t * 5 + g.ph) * 0.12;
+        const spooked = g.state === 1 ? 0.55 + 0.45 * Math.min(1, g.t / 1.2) : 1;   // (after a touch: fades a little, then returns to full)
+        const gs = 1.15 * (g.state === 1 ? 0.92 + 0.08 * spooked : 1);
+        setInst(S.gBody, nGh, g.x, by, g.z, yaw, gs, gs, gs, lean, sw);
+        setInst(S.gEyes, nGh, g.x, by, g.z, yaw, gs, gs, gs, lean, sw);
+        nGh++;
+        pushHalo(g.x, by + 0.6, g.z, 1.6, 1.0, 0.8, 2.0, 0.22 * spooked, CELL.GLOW);
+        if (rnd() < dt * 7) FX.norm.emit(g.x - g.vx * 0.05 + (rnd() - 0.5) * 0.3, by - 0.4, g.z - g.vz * 0.05 + (rnd() - 0.5) * 0.3, -g.vx * 0.08, 0.3, -g.vz * 0.08, 0.7, 0.3, 0.7, 0.85, 0.8, 1.0, 0.35, CELL.SMOKE, -0.1, 1.2);   // wispy trail
+      }
+      for (let i = 0; i < rt.nObelisk; i++) {   // Void gravity obelisk
+        const o = rt.obelisk[i];
+        pieceFx(o, sn.obelisk, i, sn.dead, 20 + i, 2.6, 0x3a3050, 0x6a50a0);
+        if (o.dead) { if (inView(o.x, o.z, 5)) setInst(S.rubble, nRu++, o.x, 0, o.z, i * 1.9 + o.z, 1.3); continue; }
+        if (!inView(o.x, o.z, 9)) continue;
+        nBar = addBar(X.bars, nBar, o, 6.8, o === aimed);
+        const fs = 1 + 0.05 * o.flash, gl = 0.35 + 0.65 * o.glow, pulse = 0.85 + 0.15 * Math.sin(t * 3 + i);
+        setInst(S.obB, nOb, o.x, 0, o.z, 0, 1.15 * fs);
+        const gs = 1.15 * fs * (0.9 + 0.1 * gl * pulse);
+        setInst(S.obG, nOb, o.x, 0, o.z, 0, gs);
+        setInst(S.obC, nOb, o.x, 6.9 + Math.sin(t * 1.8 + i) * 0.2, o.z, t * 1.4, 1.1 * gl, 1.1 * gl, 1.1 * gl);
+        setInst(S.obF, nOb, o.x, 0.07, o.z, 0, 3.3 + 0.25 * Math.sin(t * 2 + i), 1, 3.3 + 0.25 * Math.sin(t * 2 + i));
+        nOb++;
+        // two violet rings swirl at different heights and tilts; a few bright beads ride them
+        const ra = 2.9 + 0.2 * Math.sin(t * 2.2), rb = 2.3 - 0.15 * Math.sin(t * 2.2);
+        setInst(S.obR, nOr, o.x, 3.1 + Math.sin(t * 1.3) * 0.15, o.z, t * 1.6, ra, ra, ra, 0.28 * Math.sin(t * 0.9), 0.22 * Math.cos(t * 0.7));
+        setInst(S.obD, nOd, o.x, 3.1 + Math.sin(t * 1.3) * 0.15, o.z, t * 1.6, ra, ra, ra, 0.28 * Math.sin(t * 0.9), 0.22 * Math.cos(t * 0.7));
+        nOr++; nOd++;
+        setInst(S.obR, nOr, o.x, 4.4 + Math.cos(t * 1.1) * 0.15, o.z, -t * 2.3, rb, rb, rb, -0.35 * Math.cos(t * 0.8), 0.3 * Math.sin(t * 0.6));
+        setInst(S.obD, nOd, o.x, 4.4 + Math.cos(t * 1.1) * 0.15, o.z, -t * 2.3, rb, rb, rb, -0.35 * Math.cos(t * 0.8), 0.3 * Math.sin(t * 0.6));
+        nOr++; nOd++;
+        pushHalo(o.x, 3.4, o.z, 5.5 + 0.6 * pulse, 1.1, 0.35, 2.2, 0.38 * gl, CELL.GLOW);
+        pushHalo(o.x, 0.4, o.z, 5.0, 0.8, 0.25, 1.6, 0.25 * gl, CELL.GLOW);
+        if (o.glow > 0.2) {   // pull streaks: violet lines racing toward the obelisk, both out in the room and right around the hero (so the drag reads from anywhere)
+          if (rnd() < dt * 16) {
+            const a = rnd() * TAU, r = 3.5 + rnd() * 13, sx = o.x + Math.cos(a) * r, sz = o.z + Math.sin(a) * r, sp = 7 + rnd() * 4;
+            FX.add.emit(sx, 0.4 + rnd() * 1.2, sz, -Math.cos(a) * sp, 0, -Math.sin(a) * sp, Math.max(0.3, (r - 1.5) / sp), 0.34, 0.08, 1.6, 0.55, 2.5, 0.75, CELL.STREAK, 0, 0, 0, 0, 3);
+          }
+          if (rnd() < dt * 18) {
+            const hp = world.player.pos, ddx = o.x - hp.x, ddz = o.z - hp.z, dd = Math.hypot(ddx, ddz) || 1, ux = ddx / dd, uz = ddz / dd, sp = 9 + rnd() * 3;
+            const off = (rnd() - 0.5) * 7, sx = hp.x - ux * (1 + rnd() * 4) - uz * off, sz = hp.z - uz * (1 + rnd() * 4) + ux * off;
+            FX.add.emit(sx, 0.3 + rnd() * 1.4, sz, ux * sp, 0, uz * sp, 0.55, 0.3, 0.07, 1.6, 0.55, 2.5, 0.7, CELL.STREAK, 0, 0, 0, 0, 3);
+          }
+        }
+      }
       for (let i = 0; i < rt.nBar; i++) {
         const b = rt.bar[i]; if (!inView(b.x, b.z, BAR_LEN + 2)) continue;
         setInst(S.hub, nHub, b.x, 0, b.z, i, 1.0); setInst(S.hubG, nHub, b.x, 0, b.z, t * 2, 1 + Math.sin(t * 6) * 0.06);
@@ -400,6 +504,8 @@ export function RoomTraps() {
     commitInst(S.vine, nVn); commitInst(S.pool, nPl); commitInst(S.pdisc, nPl);
     commitInst(S.rubble, nRu);
     commitInst(S.lzB, nLz); commitInst(S.lzH, nLz); commitInst(S.lzG, nLz); commitInst(S.lzW, nLw); commitInst(S.lzO, nLb); commitInst(S.lzI, nLb);
+    commitInst(S.shB, nSh); commitInst(S.shG, nSh); commitInst(S.gBody, nGh); commitInst(S.gEyes, nGh);
+    commitInst(S.obB, nOb); commitInst(S.obG, nOb); commitInst(S.obC, nOb); commitInst(S.obF, nOb); commitInst(S.obR, nOr); commitInst(S.obD, nOd);
     commitInst(S.stB, nSf); commitInst(S.stE, nSf); commitInst(S.stT, nSf); commitInst(S.sfB, nSi); commitInst(S.sfE, nSi); commitInst(S.sfT, nSi);
     commitInst(S.flO, nFo); commitInst(S.flI, nFo); commitInst(S.fkO, nFk); commitInst(S.fkI, nFk);
     commitInst(S.wdF, nWf); commitInst(S.wdI, nWi); commitInst(S.spF, nSpf); commitInst(S.spI, nSpi);

@@ -23,8 +23,11 @@ let bufBiomes: number[] = [];
 let dirty = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let hitThisRoom = false;
+let recheck = true;                       // revalidate trial-granted unclaimed achievements once at startup and after each trial
+const RECHECK_IDS = ['rank10', 'rank20', 'mythic', 'warehouse'];
+let wasShowcase = false;
 
-const add = (k: StatKey, n = 1): void => { buf[k] += n; dirty = true; if (!timer) timer = setTimeout(flush, FLUSH_MS); };
+const add = (k: StatKey, n = 1): void => { if (showcase.on) return; buf[k] += n; dirty = true; if (!timer) timer = setTimeout(flush, FLUSH_MS); };
 const reset = (): void => { for (const k of STAT_KEYS) buf[k] = 0; bufBiomes = []; dirty = false; };
 
 const bump = (gs: GoalInst[], buffered: Record<StatKey, number>): GoalInst[] => {
@@ -48,6 +51,7 @@ const hasMythic = (s: ReturnType<typeof useGameStore.getState>): boolean => {
 /** Merges buffered counts into store.meta, rolls day / week goals, and unlocks achievements. Safe to call any time. */
 export function flush(): void {
   if (timer) { clearTimeout(timer); timer = null; }
+  if (showcase.on) return;   // (owner) the trial fight never progresses or unlocks anything; buffered counts wait for the real game
   const s = useGameStore.getState();
   let m: MetaState = rollPeriods(s.meta);
   if (dirty) {
@@ -59,6 +63,11 @@ export function flush(): void {
   }
   // achievements
   const ctx: AchCtx = { meta: m, rank: s.heroRank, mythic: !showcase.on && hasMythic(s), warehouse: s.warehouse.length };   // (the trial's borrowed Mythic set does not count)
+  if (recheck) {   // unlocked-but-unclaimed gear / rank achievements the real character does not meet (granted by the trial's maxed hero) are withdrawn
+    recheck = false;
+    const bad = m.unlocked.filter((id) => RECHECK_IDS.includes(id) && !m.claimed.includes(id) && (() => { const a = ACH_BY_ID[id]; return !!a && a.value(ctx) < a.target; })());
+    if (bad.length) m = { ...m, unlocked: m.unlocked.filter((id) => !bad.includes(id)), title: m.title && bad.includes(m.title) ? null : m.title };
+  }
   const fresh = ACHIEVEMENTS.filter((a) => !m.unlocked.includes(a.id) && a.value(ctx) >= a.target);
   if (fresh.length) m = { ...m, unlocked: [...m.unlocked, ...fresh.map((a) => a.id)] };
   if (m !== s.meta) useGameStore.setState({ meta: m });
@@ -90,6 +99,10 @@ events.on('hub', (e) => {
 // gold spent (any gold drop that is not a warehouse deposit), rank / mythic / warehouse achievements
 let evalTimer: ReturnType<typeof setTimeout> | null = null;
 useGameStore.subscribe((s, prev) => {
+  const trial = wasShowcase || showcase.on;   // (the trial start / restore swaps gold, rank, bag: never counted as spending or progress)
+  if (wasShowcase && !showcase.on) { recheck = true; evalTimer ??= setTimeout(() => { evalTimer = null; flush(); }, 800); }
+  wasShowcase = showcase.on;
+  if (trial) return;
   if (s.meta !== prev.meta && s.meta.unlocked.length < prev.meta.unlocked.length) { reset(); return; }   // profile reset
   if (s.gold < prev.gold && s.warehouseGold === prev.warehouseGold && s.meta === prev.meta) add('spent', prev.gold - s.gold);
   if ((s.heroRank !== prev.heroRank || s.inventory !== prev.inventory || s.warehouse !== prev.warehouse || s.equipment !== prev.equipment) && !evalTimer) {

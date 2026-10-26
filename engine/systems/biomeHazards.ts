@@ -14,7 +14,7 @@ import { onBridge } from '../roomFeatures';
 import { insideShape } from '../roomShape';
 import { isStationary, isSwarm } from '../enemyDefs';
 import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect, type DamageOpts } from './combat';
-import { updateRoomTraps, trapMods } from './roomTraps';
+import { updateRoomTraps, trapMods, obPull } from './roomTraps';
 import { Vector3 } from 'three';
 import { iceAt, ice, ICE_MOB_LERP } from '../iceFloor';
 
@@ -159,6 +159,7 @@ function puff(m: { x: number; z: number; cd: number }): void {
 export function updateBiomeHazards(dt: number): void {
   updateRoomTraps(dt);
   tickBiomeHazards(dt);
+  if (obPull.on) { driftX += obPull.x; driftZ += obPull.z; }   // (Void gravity obelisk: the same drift the black holes use; tickBiomeHazards rewrites it each frame)
   if (ice.on && world.room.active) iceMobs(dt);
   if (trapMods.grip < iceGrip) iceGrip = trapMods.grip;
   if (trapMods.slow < hazSlow) hazSlow = trapMods.slow;

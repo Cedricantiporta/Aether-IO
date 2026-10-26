@@ -13,6 +13,11 @@
 //   ICE LASER  (Frostpeak only) a cute crystal-ice turret: a thin glowing line on the floor toward you (1.0 s, tracks you for the first 0.45 s, then the lane is
 //                locked), then a straight ice beam (1.0 s) down that lane. A hit = ICE damage + FREEZE 1.0 s + a slow after; a dash goes through unharmed.
 //                2.5-3.5 s rest between shots, turrets start staggered. Destructible like the statues. No fire stationaries in Frostpeak.
+//   GHOST SHRINE (Void) a cute lavender shrine that lets 3-4 fast sheet ghosts out. The ghosts are NOT enemies: they are untargetable and unkillable (skills pass through,
+//                no aim / auto-target, never counted for room clear), chase the hero and spook him on touch (short per-ghost hit cooldown, then they drift off and come back).
+//                Breaking the shrine poofs all its ghosts. They only haunt while the room is being fought.
+//   GRAVITY OBELISK (Void) a dark obelisk with a swirling violet ring that drags the hero toward it from ANYWHERE in the room (obPull, read by biomeHazards as drift).
+//                The pull is tied to the hero's walking speed (just under it far away, a bit over it up close): walk away to hold, dash to break free (dash drift x0.2).
 //   BOMB BARRELS clusters of explosive barrels (crates.ts EXPLOSIVE_BARREL: hit one, the chain goes off; hurts monsters AND the hero).
 // Burn / poison ticks hit the hero HERO_DOT_MUL (x4, combat.ts) like every other ticking hazard: hazards here either use `env: true` ticks
 // or apply BURN (whose ticks are multiplied) so the numbers stay consistent.
@@ -35,7 +40,7 @@ import { hz } from './biomeHazards';
 import { Vector3 } from 'three';
 
 export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7, LASER: 8 } as const;
-const NKIND = 9;
+const NKIND = 9;   // (kinds that roll by weight; the Void's shrine / obelisk are placed by their own rule in setupRoomTraps)
 const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0;
 
 export const rt = {
@@ -45,6 +50,11 @@ export const rt = {
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   /** Frostpeak ice-laser turrets: idle (faces you, cd) -> telegraph (floor line, tracks then locks) -> beam -> rest */
   nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
+  /** Void ghost shrine + its ghosts (ghosts are plain pooled visuals + a touch check: never enemies) */
+  nShrine: 0, shrine: Array.from({ length: 2 }, () => ({ x: 0, z: 0, glow: 0, t: 0, nG: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
+  ghost: Array.from({ length: 8 }, () => ({ on: false, own: 0, x: 0, z: 0, vx: 0, vz: 0, state: 0, t: 0, cd: 0, ph: 0, poof: 0, dx: 0, dz: 0 })),
+  /** Void gravity obelisk */
+  nObelisk: 0, obelisk: Array.from({ length: 2 }, () => ({ x: 0, z: 0, glow: 0, t: 0, tick: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.25, flash: 0, hitSeq: 0 })),
   nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
   /** HALLS only: a pillar with 2 - 4 long (7 - 12 m) flame arms that turn round it: idle -> telegraph (floor lines) -> rotating blaze.
    *  The arms are solid: they shove the hero (and monsters) along like a turning barricade. */
@@ -55,6 +65,13 @@ export const rt = {
   /** boulders in flight (catapult): drawn by the renderer, the damage is the floor circle's */
   boulders: Array.from({ length: 6 }, () => ({ on: false, sx: 0, sz: 0, tx: 0, tz: 0, t: 0, T: 1 })),
 };
+/** Obelisk pull on the hero this frame (units / s): biomeHazards adds it to the black-hole drift that player.ts applies (a dash only feels 20% of it). */
+export const obPull = { x: 0, z: 0, on: false };
+/** Ghost numbers: chase speed = hero walk x GHOST_FAST, hit cooldown / drift-off time, touch reach. */
+export const GHOST_FAST = 1.22, GHOST_HIT_CD = 1.3, GHOST_DRIFT = 1.7, GHOST_REACH = 1.05, GHOST_POOF = 0.55, GHOST_DMG = 0.055;
+/** Obelisk pull strength as a fraction of the hero's walk speed: far away / right next to it. The core ring damages while touching. */
+const OB_FAR = 0.9, OB_NEAR = 1.06, OB_RANGE = 32, OB_CORE = 2.4, OB_TICK = 0.5, OB_DMG = 0.035, SHRINE_HP_HITS = 10, OBELISK_HP_HITS = 12;
+const HERO_WALK = 0.8;   // (player.ts MOVE_SPEED_SCALE)
 /** Movement modifiers read by biomeHazards.ts (combined with its own ice / bramble numbers). */
 export const trapMods = { grip: 1, slow: 1 };
 /** Breath statue numbers: telegraph 1.4 s, breath 2.0 s sweeping ~0.5 rad, reach 11.5 m from the mouth, ticks every 0.4 s. */
@@ -89,8 +106,15 @@ export const trapLock = { obj: null as TrapObj | null };
 let curDepth = 0;
 export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && (rt.on || o.proxy) && world.room.active ? o : null; };
 /** i-th live-or-dead stationary across the three pools (no allocation). */
-const trapAt = (i: number): TrapObj => i < rt.nSiege ? rt.siege[i] : i < rt.nSiege + rt.nTower ? rt.tower[i - rt.nSiege] : i < rt.nSiege + rt.nTower + rt.nStatue ? rt.statue[i - rt.nSiege - rt.nTower] : rt.laser[i - rt.nSiege - rt.nTower - rt.nStatue];
-export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser;
+const trapAt = (i: number): TrapObj => {
+  if (i < rt.nSiege) return rt.siege[i]; i -= rt.nSiege;
+  if (i < rt.nTower) return rt.tower[i]; i -= rt.nTower;
+  if (i < rt.nStatue) return rt.statue[i]; i -= rt.nStatue;
+  if (i < rt.nLaser) return rt.laser[i]; i -= rt.nLaser;
+  if (i < rt.nShrine) return rt.shrine[i];
+  return rt.obelisk[i - rt.nShrine];
+};
+export const trapCount = (): number => rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser + rt.nShrine + rt.nObelisk;
 /** Distance from (x,z) to the surface of a piece. */
 export const trapDist = (o: TrapObj, x: number, z: number): number => Math.hypot(o.x - x, o.z - z) - o.rad;
 /** Nearest live stationary whose surface is within maxR of (x,z). */
@@ -133,6 +157,9 @@ function breakPiece(o: TrapObj): void {
   }
   tmp.set(o.x, 0, o.z);
   spawnPickup('XP', tmp, 12 + curDepth * 1.2);
+  for (let k = 0; k < rt.nShrine; k++) if (rt.shrine[k] === o) {   // the shrine's ghosts go with it (a poof)
+    for (const g of rt.ghost) if (g.on && g.own === k) { g.on = false; g.poof = GHOST_POOF; }
+  }
 }
 const hitOne = (o: TrapObj, x: number, z: number, r: number, dmg: number): boolean => {
   if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + o.rad) ** 2) return false;
@@ -165,7 +192,7 @@ export function hitRoomTrapsRing(x: number, z: number, r: number, band: number, 
   return hit;
 }
 /** QA: force these hazard kinds (TRAP.*) into the next room, and the siege weapon kind (0 ballista / 1 catapult). */
-export const dbgTraps = { force: null as number[] | null, siege: -1, depth: -1, noObs: false, statue: -1 /* 0 fire, 1 frost */ };
+export const dbgTraps = { force: null as number[] | null, siege: -1, depth: -1, noObs: false, statue: -1 /* 0 fire, 1 frost */, voidMix: -1 /* Void rooms: 0 none, 1 shrine, 2 obelisk, 3 both */ };
 
 const tmp = new Vector3(), tmpD = new Vector3();
 const colOut: Collider[] = [];
@@ -236,7 +263,8 @@ function placeLaser(i: number, depth: number, more: number, halls: boolean): voi
 
 /** Room entry (director.enterRoom, after setupBiomeHazards). biome: 0 Greenwood, 1 Marble, 2 Desert, 3 Swamp, 4 Frost, 5 Ember, 6 Void; idx: room 0..14. */
 export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void {
-  rt.on = false; rt.nSiege = rt.nTower = rt.nStatue = rt.nLaser = rt.nBar = rt.nBeam = rt.nJet = rt.nVine = rt.nPool = 0;
+  rt.on = false; rt.nShrine = rt.nObelisk = 0; for (const g of rt.ghost) { g.on = false; g.poof = 0; }
+  rt.nSiege = rt.nTower = rt.nStatue = rt.nLaser = rt.nBar = rt.nBeam = rt.nJet = rt.nVine = rt.nPool = 0;
   trapAim.obj = null; trapLock.obj = null;
   for (const b of rt.boulders) b.on = false;
   trapMods.grip = 1; trapMods.slow = 1;
@@ -262,7 +290,7 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
 
   const rnd = Math.random, early = b === 0 && idx < 3;
   // ---- candidate hazard kinds with a weight (0 = not in this biome / depth yet)
-  const w: number[] = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const w: number[] = new Array(NKIND).fill(0);
   w[TRAP.BARREL] = idx >= 2 ? 30 : 0;
   w[TRAP.VINE] = 0;   // (owner 2026-10-24: the grabbing snare plant is gone everywhere)
   w[TRAP.POOL] = b === 4 ? 40 : 0;   // (owner 2026-10-25) frozen pools only in the ice biome (Frostpeak)
@@ -440,7 +468,30 @@ export function setupRoomTraps(biome: number, plan: RoomPlan, idx: number): void
       }
     }
   }
-  rt.on = rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser + rt.nBar + rt.nBeam + rt.nJet + rt.nVine + rt.nPool > 0;
+  // ---- (owner) the Void's own stationaries: ~40% of rooms none, 40% one (random type), 20% both; never more than 2, never in boss rooms
+  if (b === 6 && (plan.type === 'COMBAT' || elite) && !dbgTraps.force) {
+    const roll = dbgTraps.voidMix >= 0 ? [0.1, 0.5, 0.5, 0.95][Math.min(3, dbgTraps.voidMix)] : rnd();
+    let shrine = false, obelisk = false;
+    if (roll >= 0.8) shrine = obelisk = true;
+    else if (roll >= 0.4) { if (dbgTraps.voidMix === 1) shrine = true; else if (dbgTraps.voidMix === 2) obelisk = true; else if (rnd() < 0.5) shrine = true; else obelisk = true; }
+    if (shrine && (spot(1.4, 1.2, 0.55, 0.9, 14) || spot(1.4, 0.8, 0.3, 0.92, 10))) {
+      const k = rt.nShrine++, q = rt.shrine[k];
+      q.x = out[0]; q.z = out[1]; q.glow = 0; q.t = 0; q.nG = rnd() < 0.5 ? 3 : 4;
+      q.maxHp = q.hp = trapHp(SHRINE_HP_HITS, depth); q.dead = false; q.flash = 0; q.hitSeq = 0;
+      keep(q.x, q.z, 3.2); q.col = addTempCollider(q.x, q.z, 1.4, false);
+      for (let g = 0; g < q.nG; g++) {
+        const gh = rt.ghost[k * 4 + g];
+        gh.on = true; gh.own = k; gh.x = q.x; gh.z = q.z; gh.vx = gh.vz = 0; gh.state = 0; gh.t = 0; gh.cd = 1.2 + g * 0.8; gh.ph = (g / q.nG) * 6.283 + rnd(); gh.poof = 0; gh.dx = gh.dz = 0;
+      }
+    }
+    if (obelisk && (spot(1.25, 1.2, 0.5, 0.88, 12) || spot(1.25, 0.8, 0.25, 0.9, 8))) {
+      const o = rt.obelisk[rt.nObelisk++];
+      o.x = out[0]; o.z = out[1]; o.glow = 0; o.t = 0; o.tick = 0;
+      o.maxHp = o.hp = trapHp(OBELISK_HP_HITS, depth); o.dead = false; o.flash = 0; o.hitSeq = 0;
+      keep(o.x, o.z, 3.2); o.col = addTempCollider(o.x, o.z, 1.25, false);
+    }
+  }
+  rt.on = rt.nShrine + rt.nObelisk + rt.nSiege + rt.nTower + rt.nStatue + rt.nLaser + rt.nBar + rt.nBeam + rt.nJet + rt.nVine + rt.nPool > 0;
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -472,7 +523,7 @@ function armShove(p: { x: number; z: number }, r: number, x: number, z: number, 
 
 export function updateRoomTraps(dt: number): void {
   const room = world.room;
-  trapMods.grip = 1; trapMods.slow = 1;
+  trapMods.grip = 1; trapMods.slow = 1; obPull.x = obPull.z = 0; obPull.on = false;
   if (!room.active || !rt.on) return;
   const pl = world.player, alive = pl.alive, px = pl.pos.x, pz = pl.pos.z;
   const fighting = world.director.phase === 'FIGHT';
@@ -632,6 +683,61 @@ export function updateRoomTraps(dt: number): void {
     } else {
       q.t += dt;
       if (q.t >= 0.5) { q.state = 0; q.cd = 3.2 * (1 - 0.05 * q.tier) * (0.85 + Math.random() * 0.4); }   // (owner 2026-10-25: breathes much more often; was 7 s)
+    }
+  }
+
+  // ---- Void ghost shrines: the ghosts circle their shrine while the room is quiet, and haunt the hero during the fight
+  for (let i = 0; i < rt.nShrine; i++) { const q = rt.shrine[i]; q.t += dt; q.glow = Math.max(0, q.glow - dt * 2); }
+  if (rt.nShrine > 0) {
+    const chase = Math.max(7.5, useGameStore.getState().stats.moveSpeed * HERO_WALK * GHOST_FAST);
+    for (let i = 0; i < rt.ghost.length; i++) {
+      const g = rt.ghost[i];
+      if (!g.on) { if (g.poof > 0) g.poof = Math.max(0, g.poof - dt); continue; }
+      const sh = rt.shrine[g.own];
+      g.t += dt; g.cd -= dt;
+      let tx: number, tz: number, sp: number, k: number;
+      if (!fighting || !alive) {   // quiet: lazily orbit the shrine
+        const a = g.ph + g.t * 0.9;
+        tx = sh.x + Math.cos(a) * 2.8; tz = sh.z + Math.sin(a) * 2.8; sp = 3.5; k = 2.5; g.state = 0;
+      } else if (g.state === 1) {   // spooked him: drift off for a moment (away, with a little sway), then come back
+        tx = g.x + g.dx * 5 + Math.sin(g.t * 3 + g.ph) * 1.2; tz = g.z + g.dz * 5 + Math.cos(g.t * 3 + g.ph) * 1.2; sp = chase * 0.55; k = 2.6;
+        if (g.t >= GHOST_DRIFT) { g.state = 0; g.t = 0; }
+      } else {   // chase: head for the hero, weaving a little (sheet ghosts swoop)
+        const dx = px - g.x, dz = pz - g.z, d = Math.hypot(dx, dz) || 1;
+        const sw = Math.sin(g.t * 4.2 + g.ph) * Math.min(1.6, d * 0.2);
+        tx = px - (dz / d) * sw; tz = pz + (dx / d) * sw; sp = g.cd > 0 ? chase * 0.6 : chase; k = 3.4;   // (a fresh ghost floats out slowly first)
+        if (d < GHOST_REACH + 0.5 && pl.dashT <= 0 && g.cd <= 0) {
+          g.cd = GHOST_HIT_CD; g.state = 1; g.t = 0;
+          const ax = -dx / d, az = -dz / d, rot = (Math.random() - 0.5) * 1.6;   // away from the hero, fanned out
+          g.dx = ax * Math.cos(rot) - az * Math.sin(rot); g.dz = ax * Math.sin(rot) + az * Math.cos(rot);
+          damagePlayer(dmgOf(GHOST_DMG), { pos: tmp.set(g.x, 0, g.z), kind: 'MAGIC' });
+          events.emit('floatText', { pos: tmp.set(px, 2.4, pz), text: 'BOO!', color: 0xd8c8ff, scale: 0.85, dy: 1.2 });
+        }
+      }
+      const ex = tx - g.x, ez = tz - g.z, ed = Math.hypot(ex, ez) || 1, kk = Math.min(1, dt * k);
+      const want = Math.min(sp, ed * 3);   // (slows when it reaches its orbit point)
+      g.vx += (ex / ed * want - g.vx) * kk; g.vz += (ez / ed * want - g.vz) * kk;
+      g.x += g.vx * dt; g.z += g.vz * dt;   // ghosts float through everything
+    }
+  }
+
+  // ---- Void gravity obelisks: drag the hero in from anywhere (strength follows his walking speed); a dash feels only a fifth of it
+  for (let i = 0; i < rt.nObelisk; i++) {
+    const o = rt.obelisk[i];
+    o.t += dt;
+    if (o.dead) { o.glow = 0; continue; }
+    const live = fighting && alive;
+    o.glow += ((live ? 1 : 0) - o.glow) * Math.min(1, dt * 3);
+    if (!live) continue;
+    const dx = o.x - px, dz = o.z - pz, d = Math.hypot(dx, dz);
+    if (d < 0.05) continue;
+    const walk = Math.max(6, useGameStore.getState().stats.moveSpeed * HERO_WALK);
+    const s = walk * (OB_FAR + (OB_NEAR - OB_FAR) * (1 - Math.min(1, d / OB_RANGE)));
+    obPull.x += dx / d * s; obPull.z += dz / d * s; obPull.on = true;
+    o.tick -= dt;
+    if (o.tick <= 0 && d < o.rad + OB_CORE && pl.dashT <= 0) {   // crushing core: ticking damage while you are held against it
+      o.tick = OB_TICK;
+      damagePlayer(maxHp() * OB_DMG * scale / DMG_INFLATE, { pos: tmp.set(o.x, 0, o.z), kind: 'MAGIC', env: true });
     }
   }
 
