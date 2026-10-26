@@ -29,7 +29,7 @@ export function applyAcc(final: PlayerStats, acc: FxAcc): void {
 }
 
 /** Human-readable "+x" for a stat effect value. */
-const PCT = new Set<string>(['critRate', 'critDamage', 'dodge', 'cooldownReduction', 'skillDamage', 'lifeSteal', 'minionDmg', 'minionHaste', 'goldFind', 'xpBonus', 'onHitBurnChance', 'onHitSlowChance', 'lowHpHaste', 'dmgReduce', 'manaCostCut', 'berserk', 'stompPower', 'galeWidth', 'backstab', 'axeSize']);
+const PCT = new Set<string>(['critRate', 'critDamage', 'dodge', 'cooldownReduction', 'skillDamage', 'lifeSteal', 'minionDmg', 'minionHaste', 'goldFind', 'xpBonus', 'onHitBurnChance', 'onHitSlowChance', 'lowHpHaste', 'dmgReduce', 'manaCostCut', 'berserk', 'stompPower', 'galeWidth', 'backstab', 'axeSize', 'resPoison', 'resBurn', 'resFrost', 'resProj']);
 export const STAT_NAME: Record<keyof PlayerStats, string> = {
   maxHealth: 'Max Health', maxMana: 'Max Mana', regen: 'HP Regen', manaRegen: 'Mana Regen', moveSpeed: 'Move Speed', damage: 'Damage', fireRate: 'Attack Speed',
   projectileSpeed: 'Projectile Speed', multishot: 'Projectiles', spread: 'Spread', dashCooldown: 'Dash Cooldown', cooldownReduction: 'Cooldown Reduction', magnetRadius: 'Pickup Range',
@@ -38,6 +38,7 @@ export const STAT_NAME: Record<keyof PlayerStats, string> = {
   echoEvery: 'Echo', hawkBonus: 'Arrow Storm Duration', galeWidth: 'Gale Arrow Width', orbBonus: 'Storm Orbs', procHaste: 'Proc Haste', thunderChain: 'Chain Targets', stormBonus: 'Arcane Shield Duration', avatarBonus: 'Divine Avatar Duration', stormTwin: 'Arcane Shield +25%',
   blizzardRadius: 'Blizzard Radius', blizzFreeze: 'Blizzard Freeze', stompRadius: 'Stomp Radius', stompStun: 'Stomp Stun', stompPower: 'Axe Storm Damage',
   dashCharges: 'Dash Charges', lowHpHaste: 'Attack Speed (low HP)', rageBonus: 'Rage Duration', dmgReduce: 'Damage Reduction', manaCostCut: 'Mana Cost Reduction', berserk: 'Damage (low HP)', stunBonus: 'Stun Duration', burnStacks: 'Max Burn Stacks', backstab: 'Backstab Damage', axeCount: 'Axe Storm Axes', axeBounce: 'Axe Storm Ricochets', axeSize: 'Axe Storm Size',
+  resPoison: 'Poison Resistance', resBurn: 'Burn Resistance', resFrost: 'Frost Resistance', resProj: 'Projectile Resistance',
 };
 export function fmtFx(k: keyof PlayerStats, v: number, mul = false): string {
   const sign = v < 0 ? '-' : '+';

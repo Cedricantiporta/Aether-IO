@@ -47,6 +47,10 @@ export const AFFIXES: AffixDef[] = [
   { key: 'range', g: 'atk', label: 'Attack Range',      stat: 'attackRange',     tiers: [0, .6, 1, 1.5, 2.2], weight: 4, cp: 120 },
   { key: 'pierce', g: 'atk', label: 'Projectile Pierce', stat: 'pierceBonus',    tiers: [0, 1, 1, 1, 2], weight: 1.6, cp: 150, fixed: true },
   { key: 'dodge', g: 'def', label: 'Dodge',             stat: 'dodge',           tiers: [0, .01, .015, .022, .03], weight: 7, cp: 600 },
+  { key: 'rpois', g: 'def', label: 'Poison Resistance', stat: 'resPoison',    tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
+  { key: 'rburn', g: 'def', label: 'Burn Resistance',   stat: 'resBurn',      tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
+  { key: 'rfrost', g: 'def', label: 'Frost Resistance', stat: 'resFrost',     tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
+  { key: 'rproj', g: 'def', label: 'Projectile Resistance', stat: 'resProj',  tiers: [0, .03, .05, .07, .10], weight: 3, cp: 900 },
   { key: 'hpr',   g: 'def', label: 'HP Regen',          stat: 'regen',           tiers: [0, .3, .5, .8, 1.2], weight: 7, cp: 80 },
   { key: 'mpr',   g: 'util', label: 'Mana Regen',       stat: 'manaRegen',       tiers: [0, .3, .5, .8, 1.2], weight: 6, cp: 60 },
   { key: 'proj', g: 'atk',  label: 'Projectile',        stat: 'multishot',       tiers: [0, 1, 1, 1, 1], weight: 0,  // retired: extra projectiles come from weapon perks (weaponPerks.ts)

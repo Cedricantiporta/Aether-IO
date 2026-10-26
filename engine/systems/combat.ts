@@ -42,6 +42,7 @@ import { bossWarded } from './bossMech';
 import { hooks } from './hooks';
 import { runCards, cardDamageMul } from '../runCards';
 import { PROJ_RESIST } from '../../dashMods';
+import { procFlags } from './projectiles';   // (Righteous Riposte flag)
 
 /** e.knock is a velocity (units/s) = knockback stat * KNOCK_SCALE, capped; Engine-B decays and scales it. */
 export const KNOCK_SCALE = 12;
@@ -648,6 +649,7 @@ export function playerTrickImmune(): boolean {
 /** A freeze is a stun shown as ice (StatusFx): set by real freezes only, so other stuns (boar knockdown etc.) read as stuns. */
 export const playerFreeze = { until: 0 };
 export function freezePlayer(duration: number): boolean {
+  duration *= 1 - useGameStore.getState().stats.resFrost;   // Frost Resistance shortens freezes
   if (!applyPlayerDebuff('STUN', duration)) return false;
   playerFreeze.until = Math.max(playerFreeze.until, world.time + duration);
   return true;
@@ -655,6 +657,11 @@ export function freezePlayer(duration: number): boolean {
 export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 0): boolean {
   const p = world.player;
   if (playerTrickImmune()) return false;
+  {   // status resistance: burn / poison / slow (and freezes, via freezePlayer) last shorter
+    const rs = useGameStore.getState().stats;
+    const r = type === 'BURN' ? rs.resBurn : type === 'POISON' ? rs.resPoison : type === 'SLOW' ? rs.resFrost : 0;
+    if (r > 0) duration *= 1 - r;
+  }
   const was = type === 'STUN' ? p.stunT : type === 'ROOT' ? p.rootT : type === 'SILENCE' ? p.silenceT : type === 'DEFDOWN' ? p.defDownT : type === 'BLIND' ? p.blindT
     : type === 'BURN' ? p.burnT : type === 'POISON' ? p.poisonT : type === 'BLEED' ? p.bleedT : p.slowT;
   if (was <= 0) statusWord(p.pos, type, true);
@@ -780,7 +787,11 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
   if (debug.god) return;   // debug god mode
-  if (o?.proj) amount *= 1 - PROJ_RESIST[st.hero];   // class projectile resist (Knight 25%, Barbarian 15%, Necromancer 10%)
+  if (o?.proj) amount *= (1 - PROJ_RESIST[st.hero]) * (1 - st.stats.resProj);   // class projectile resist (Knight 25%, Barbarian 15%, Necromancer 10%) x the gear / talent Projectile Resistance
+  {   // damage-type resistances (gear / talents): fire / poison / ice hits, burn / poison ticks included
+    const dk = o?.kind;
+    if (dk === 'FIRE') amount *= 1 - st.stats.resBurn; else if (dk === 'POISON') amount *= 1 - st.stats.resPoison; else if (dk === 'ICE') amount *= 1 - st.stats.resFrost;
+  }
   amount *= DMG_INFLATE;   // (owner) monsters / bosses / hazards hit twice as hard (hero HP is x2 too, store HP_INFLATE)
   const isDot = !!o?.dot;
   if ((isDot || o?.env) && !o?.noDotMul) amount *= HERO_DOT_MUL;   // (owner) ticking damage hurts the hero 4x more
@@ -849,9 +860,10 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
     if (p.aegis <= 0) { p.aegis = 0; p.aegisMax = 0; events.emit('floatText', { pos: p.pos, text: 'SHIELD BROKEN', color: 0x9fdcff, scale: 0.9, dy: 2.6 }); events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0x9fdcff }); }
   }
   p.hp -= toHp;
+  if (!isDot && !o?.env && st.hero === 'KNIGHT' && st.skillLevels.smite > 0 && p.hp > 0) procFlags.smite = st.skillLevels.smite;   // Righteous Riposte (skills.ts)
   if (!isDot) p.anim.hurtT = 1;
   if (!isDot && o && o.pos && (o.kb || o.down) && p.hp > 0) knockHero(o.pos.x, o.pos.z, o.kb ?? 0, o.down ?? 0);
-  if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5);
+  if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5 * (1 - st.stats.resFrost));
   { const tr = o?.tr ?? o?.src?.traits ?? 0; if (!isDot && tr && p.hp > 0) applyTraitHit(tr, o?.pos ?? o?.src?.pos); }
 
   const run = world.run;

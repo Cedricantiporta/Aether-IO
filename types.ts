@@ -103,6 +103,10 @@ export interface PlayerStats {
   dmgReduce: number;        // fraction of damage taken negated
   manaCostCut: number;      // fraction mana cost reduction
   berserk: number;          // +fraction damage below 35% HP
+  resPoison: number;        // fraction less poison damage taken and shorter poison (cap 60%)
+  resBurn: number;          // fraction less fire damage taken and shorter burning (cap 60%)
+  resFrost: number;         // fraction less ice damage taken and shorter slow / freeze (cap 60%)
+  resProj: number;          // extra fraction less damage from enemy projectiles, stacks with the class value (cap 60%)
 }
 
 export interface ItemAffix { key: string; value: number; /** a perfect roll (125% of the tier value): shown in yellow */ perfect?: boolean; /** sealed by a Binding Seal: Reforge Stone / Tempering Oil skip this line */ locked?: boolean }

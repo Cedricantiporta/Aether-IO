@@ -165,9 +165,9 @@ export const SKILLS_INFO = {
     barrier: { name: 'Energy Shield', description: 'Saves you when a hit would drop you below 20% HP: brief invulnerability and a stunning shockwave.', type: 'PASSIVE' },
     
     // Archer Only
-    inspire: { name: 'Inspire', description: 'Passive: every 12s in battle you rally yourself: +25% attack speed and +8% damage for 5s, and your arrows shine white (+4% damage, +0.5s per level).', classType: 'ARCHER', type: 'PASSIVE' },
     burning: { name: 'Burning Arrow', description: 'On-attack: every 6th attack fires a piercing fire arrow that burns (more damage per level). Alternates with Freezing Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
     freezing: { name: 'Freezing Arrow', description: 'On-attack: every 6th attack fires an ice arrow that heavily slows enemies (longer slow per level). Alternates with Burning Arrow.', classType: 'ARCHER', type: 'PASSIVE' },
+    inspire: { name: 'Inspire', description: 'Passive: every 12s in battle you rally yourself: +25% attack speed and +8% damage for 5s, and your arrows shine white (+4% damage, +0.5s per level).', classType: 'ARCHER', type: 'PASSIVE' },
     
     // Wizard Only
     thunder: { name: 'Thundercaller', description: 'On-attack: every Nth magic bolt (12 at Lv1, -1 per level) also releases chain lightning (1 jump + 1 per level, moderate damage).', classType: 'WIZARD', type: 'PASSIVE' },
@@ -177,7 +177,7 @@ export const SKILLS_INFO = {
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
     consecrate: { name: 'Consecration', description: 'Always-on holy aura: once a second it burns every enemy within reach and heals you a little per enemy hit (radius and damage grow per level).', classType: 'KNIGHT', type: 'PASSIVE' },
-    smite: { name: 'Smite', description: 'Passive: every few sword swings, a bolt of holy light strikes your target, dealing heavy damage around it and stunning (damage, radius and stun grow per level; fewer swings needed per level).', classType: 'KNIGHT', type: 'PASSIVE' },
+    smite: { name: 'Righteous Riposte', description: 'Passive: when an enemy hits you, a holy counter-nova bursts around you, damaging and stunning everything close, and a small holy shield wraps you (about every 5 s; stronger, wider and faster to recharge per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     graveCall: { name: 'Grave Call', description: 'Passive: every few soul bolts, a skeleton warrior claws its way up beside your target and fights for 8s (fewer bolts needed and +1s per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
     soulHarvest: { name: 'Soul Harvest', description: 'Passive: every kill near you (or by your minions) restores 0.7% max HP and 2 mana (+0.35% HP and +1 mana per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
     boneArmor: { name: 'Bone Armor', description: 'Passive: each living minion grants 3% damage reduction to you and to your minions (max 30%; +1% per minion per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
@@ -223,7 +223,7 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_warcry', type: 'SKILL_WARCRY', name: 'Warcry', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'BARBARIAN' },
   { id: 'u_holywave', type: 'SKILL_HOLY_WAVE', name: 'Holy Wave', description: 'Active (1) Level Up', rarity: 'RARE', value: 1, classType: 'KNIGHT' },
   { id: 'u_consecrate', type: 'SKILL_CONSECRATE', name: 'Consecration', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
-  { id: 'u_smite', type: 'SKILL_SMITE', name: 'Smite', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
+  { id: 'u_smite', type: 'SKILL_SMITE', name: 'Righteous Riposte', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'KNIGHT' },
   { id: 'u_gravecall', type: 'SKILL_GRAVECALL', name: 'Grave Call', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
   { id: 'u_soulharvest', type: 'SKILL_SOULHARVEST', name: 'Soul Harvest', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
   { id: 'u_bonearmor', type: 'SKILL_BONEARMOR', name: 'Bone Armor', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'NECROMANCER' },
