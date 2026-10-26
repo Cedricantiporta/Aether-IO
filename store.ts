@@ -141,7 +141,7 @@ export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Mat
 /** Passive perk: +1% gold find per rank, capped at +50%. */
 export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * rank);
 /** Items each shop can put on sale (potion shop provisions, buyable pets). */
-export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => (i.type === 'POTION' && !i.id.endsWith('_grand')) || i.id === 'upgrade_core' || i.type === 'REVIVE');
+export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.id === 'upgrade_core' || i.type === 'REVIVE');
 export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly && (p.rarity !== 'EPIC' || p.id === 'pet_wolf')).map((p) => p.id)];
 /** (owner: no more random 'X% off' shop sales) kept as a no-op so old callers still work. */
 export function rollSales(): Record<string, number> { return {}; }
@@ -167,8 +167,10 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
+/** (owner 2026-10-26) the Epic (Grand) potions are sold in the Potion Shop at a steep ~6.7x the Big price (3000); their item price stays 1350 so fusing + selling is no gold loop. */
+export const SHOP_PRICE_OVERRIDE: Record<string, number> = { potion_hp_grand: 3000, potion_mana_grand: 3000 };
 export const shopPrice = (item: { id: string; price: number; type?: string }): number =>
-  Math.max(1, Math.round(item.price * buyMul(item.type) * (1 - saleOf(item))));
+  Math.max(1, Math.round((SHOP_PRICE_OVERRIDE[item.id] ?? item.price) * buyMul(item.type) * (1 - saleOf(item))));
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   COMMON: COLORS.rarityCommon, UNCOMMON: COLORS.rarityUncommon, RARE: COLORS.rarityRare, EPIC: COLORS.rarityEpic,

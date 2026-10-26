@@ -139,6 +139,8 @@ export interface Enemy {
   retreatT: number; packed: boolean; // low-hp back-off (pack behaviour): time left; already used
   /** giant rooted boss (Elderroot / Mire Hydra / Glacius): never walks, pinned at (rootX, rootZ) */
   rooted: boolean; rootX: number; rootZ: number;
+  /** (owner 2026-10-26) Void 'corrupted' monster: ~25% of non-boss Void spawns; 2x damage, 1.3x bigger, dark purple-black tint, black-purple shots */
+  corrupt: boolean;
 }
 
 // ------------------------------------------------------- player projectiles --
@@ -192,6 +194,7 @@ export interface EnemyProjectile {
   slow?: number;         // applies slow to player on hit (0..1)
   debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
+  dark?: boolean;        // fired by a corrupted (Void) monster: drawn black-purple
   owner?: number;        // the shooter's enemy id (-1 = boss script / unknown): the hero hits back at it
 }
 

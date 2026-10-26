@@ -3,6 +3,8 @@ import { BufferGeometry, Euler, Matrix4, Quaternion, Vector3, InstancedMesh } fr
 import type { Enemy, EnemyKind } from '../engine/types';
 import { GB, TAU, clamp, lerp } from './util';
 import { makeBow } from './weapons';
+import { skeletonDef, glowOf } from './skeletonRig';
+import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
 
 export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow' | 'ghost' | 'kit';
 export interface Part { geo: BufferGeometry; mat: MatKey }
@@ -171,38 +173,39 @@ function bat(): ModelDef {
   };
 }
 
-// --------------------------------------------------------------- SKELETON ---
-function skeleton(): ModelDef {
-  const bone = '#ebe5d0', bone2 = '#c9c2a8';
-  const body = new GB([0.85, 1.1]);
-  body.sph(0.2, [0, 1.62, 0], bone, [1, 1.05, 1.05], 8); body.box(0.2, 0.07, 0.17, [0, 1.44, 0.07], bone2);
-  for (const s of [-1, 1]) body.sph(0.065, [s * 0.075, 1.63, 0.17], '#15110e', 1, 6);
-  body.box(0.05, 0.07, 0.04, [0, 1.56, 0.2], '#15110e');
-  body.cyl(0.035, 0.04, 0.6, 5, [0, 1.1, 0], bone2);
-  for (let i = 0; i < 4; i++) body.torus(0.17 - i * 0.012, 0.018, [0, 1.3 - i * 0.12, 0.0], bone, [Math.PI / 2, 0, 0], [1, 0.75, 1], 8);
-  body.box(0.46, 0.05, 0.08, [0, 1.4, 0], bone); body.box(0.3, 0.1, 0.18, [0, 0.76, 0], bone2);
-  body.cyl(0.07, 0.07, 0.5, 6, [-0.09, 1.2, -0.22], '#6a4828', [0.25, 0, 0.1]);
-  for (let i = 0; i < 3; i++) body.box(0.02, 0.02, 0.2, [-0.09 + (i - 1) * 0.03, 1.5, -0.27], '#cfcfc0', [0.25, 0, 0]);
-  const eyes = new GB([1, 1]); for (const s of [-1, 1]) eyes.sph(0.032, [s * 0.075, 1.63, 0.2], '#ff3a2a', 1, 5);
-  const legs = limb(new GB([0.85, 1.1]), 0.76, 0.045, 0.035, bone2).sph(0.06, [0, -0.38, 0.0], bone, 1, 5).box(0.1, 0.05, 0.2, [0, -0.76, 0.05], bone).build();
-  const armR = limb(new GB([0.85, 1.1]), 0.55, 0.035, 0.03, bone2, bone, 0.05).build();
-  const bow = makeBow('#aa2222', 0);
-  const armLb = limb(new GB([0.85, 1.1]), 0.55, 0.035, 0.03, bone2, bone, 0.05);
-  armLb.addColored(bow.body, [0, -0.55, 0], [Math.PI / 2, 0, 0], 0.62);
+// ------------------------------------------- SKELETONS (same models as the necromancer's summons) ---
+/** Hostile skeletons (roster archers, warriors, mages and the dark necromancer's raised dead) wear the exact Raise Dead rigs of
+ *  render/skeletonRig.ts: 'W' sword + shield (melee slash), 'M' robed staff (magic bolt), 'A' hooded bowman (arrows). */
+const SK_ROT = new Float32Array(12);   // (pose scratch: no per-frame allocation)
+function minionSkeleton(v: 'W' | 'M' | 'A'): ModelDef {
+  const d = skeletonDef(v), mage = v === 'M', bow = v === 'A';
+  const order = ['torso', 'head', 'armL', 'armR', 'legL', 'legR'] as const;
+  const piv = [d.hips, d.head, d.armL, d.armR, d.legL, d.legR];
+  const parts: Part[] = [];
+  const glowIdx: number[] = [];   // for each lit part: the index of its glow twin (or -1)
+  for (const k of order) parts.push({ geo: d.geo[k], mat: 'lit' });
+  for (let i = 0; i < order.length; i++) { const g = glowOf.get(d.geo[order[i]]); if (g) { glowIdx[parts.length] = i; parts.push({ geo: g, mat: 'glow' }); } }
   return {
-    parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armR, mat: 'lit' }, { geo: armLb.build(), mat: 'lit' }, { geo: legs, mat: 'lit' }, { geo: legs, mat: 'lit' }],
-    headY: 2.1, shadow: 0.6,
+    parts, headY: 2.1, shadow: 0.6,
     pose(e, P, t) {
-      const ph = t * 5.5, moving = e.state === 'WINDUP' ? 0 : 1;
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : 0;
+      const ph = t * (mage ? 5 : 7), wk = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : 0, busy = e.state === 'WINDUP' || e.state === 'ATTACK' ? 1 : 0;
       const rec = e.state === 'ATTACK' ? clamp(1 - e.stateT / 0.25, 0, 1) : 0;
-      P.body(abs(sin(ph)) * 0.04 * moving, -0.08 * k + rec * -0.1, sin(ph) * 0.03 * moving, 1, 1);
-      P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
-      const raise = max(k, rec * 0.8);
-      P.part(2, 0.26, 1.38, 0, lerp(-sin(ph) * 0.5 * moving, -1.25 - k * 0.45, max(raise, 0)), lerp(0, -0.5, k), 0);
-      P.part(3, -0.26, 1.38, 0, lerp(sin(ph) * 0.5 * moving, -1.5, max(raise, 0)), lerp(0, 0.1, k), 0.05);
-      P.part(4, -0.1, 0.78, 0, -sin(ph) * 0.55 * moving); P.part(5, 0.1, 0.78, 0, sin(ph) * 0.55 * moving);
-      P.glow = 1.2 + k * 3;
+      const mv = 1 - busy, sw = Math.sin(ph);
+      const mw = meleeT[e.id] > 0 ? 1 - meleeT[e.id] / MELEE_WINDUP : 0, st = strikeT[e.id];
+      P.body(abs(Math.cos(ph)) * 0.05 * mv, 0.08 * mv - 0.08 * wk, sw * 0.04 * mv, 1, 1);
+      let aL = -sw * 0.55 * mv, aR = sw * 0.55 * mv, zL = 0.08, zR = -0.08;
+      if (bow) { const hold = max(wk, rec * 0.7); aL = lerp(aL, -1.5, hold); aR = lerp(aR, -1.45, hold); zR = -0.2 - 0.25 * hold; }
+      else if (mage) { aR = lerp(aR, -1.5, max(wk, rec)); }
+      else {   // warrior: sword overhead while winding up (WINDUP or the basic melee), slashing down on the strike; shield up
+        const up = max(wk, mw);
+        aR = lerp(aR, -2.7, up); if (st > 0) aR = lerp(aR, 0.2, st);
+        aL = lerp(aL, -0.9, max(up, st)); zL = lerp(0.08, 0.35, max(up, st));
+      }
+      const R = SK_ROT; R.fill(0);   // [rx, rz] per joint: torso, head, armL, armR, legL, legR
+      R[2] = sin(ph * 0.5) * 0.05 * (1 - mv); R[4] = aL; R[5] = zL; R[6] = aR; R[7] = zR; R[8] = -sw * 0.75 * mv; R[10] = sw * 0.75 * mv;
+      for (let i = 0; i < 6; i++) P.part(i, piv[i][0], piv[i][1], piv[i][2], R[i * 2], 0, R[i * 2 + 1]);
+      for (let j = 6; j < parts.length; j++) { const i = glowIdx[j]; P.part(j, piv[i][0], piv[i][1], piv[i][2], R[i * 2], 0, R[i * 2 + 1]); }
+      P.glow = 1.3 + max(wk, mw) * 2.5;
     },
   };
 }
@@ -1121,12 +1124,12 @@ function wardCrystal(): ModelDef {
 
 let cache: Partial<Record<EnemyKind, ModelDef>> | null = null;
 export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
-  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: skeleton(), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
+  if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: minionSkeleton('A'), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
     SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
     HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal(),
-    SKELETON_WARRIOR: raisedSkeleton('W'), BOSS_DKNIGHT: raisedSkeleton('W'), SKELETON_MAGE: raisedSkeleton('M'), BONE_GOLEM: boneGolem() };
+    SKELETON_WARRIOR: minionSkeleton('W'), BOSS_DKNIGHT: raisedSkeleton('W'), SKELETON_MAGE: minionSkeleton('M'), BONE_GOLEM: boneGolem() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',

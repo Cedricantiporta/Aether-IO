@@ -562,7 +562,7 @@ function release(e: Enemy, px: number, pz: number): void {
     if (k === 1) {
       for (let i = 0; i < S.len; i++) {
         const r3 = Math.random(), kind = r3 < 1 / 3 ? 'SKELETON_WARRIOR' : r3 < 2 / 3 ? 'SKELETON_ARCHER' : 'SKELETON_MAGE';
-        const sk = spawnEnemy(kind, tmp.set(rainX[i], 0, rainZ[i]));
+        const sk = spawnEnemy(kind, tmp.set(rainX[i], 0, rainZ[i]), { fixed: true });
         if (sk) { sk.maxHp = Math.round(sk.maxHp * 0.8); sk.hp = sk.maxHp; sk.xp = 0; sk.gold = 0; }
       }
       events.emit('shockwave', { pos: e.pos, radius: 4, color: C_BONE });

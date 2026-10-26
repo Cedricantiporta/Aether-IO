@@ -1,8 +1,8 @@
 // Biome hazard visuals (engine/systems/biomeHazards.ts): Greenwood brambles / spore mushrooms / poison clouds, Frostpeak ice sheets /
-// icicle telegraphs + falling icicles, Void rifts. Pooled InstancedMeshes, written from `hz` each frame (tiny counts), culled with inView.
+// icicle telegraphs + falling icicles, Void black holes. Pooled InstancedMeshes, written from `hz` each frame (tiny counts), culled with inView.
 import React, { Suspense, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Color, CylinderGeometry, DynamicDrawUsage, InstancedMesh, MeshBasicMaterial, RingGeometry, type BufferGeometry, type Material } from 'three';
+import { Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, MeshBasicMaterial, RingGeometry, type BufferGeometry, type Material } from 'three';
 import { world } from '../engine/world';
 import {
   hz, HZ, HZ_CLOUD_R, HZ_RIFT_PULL_R, HZ_RIFT_CORE_R, ICICLE_WARN_T, ICICLE_STAY_T, CLOUD_LIFE, HZ_SHROOM_CD,
@@ -21,6 +21,7 @@ const flat = (color: Color | string | number, opacity: number): MeshBasicMateria
   new MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, toneMapped: false });
 const PUFFS = 6;
 const ICICLE_H = 3.4;
+const MOTES = 16, CORE_Y = 1.3;
 
 /** Greenwood bramble patches (hz.br) drawn as dense piles of 4-6 overlapping pack bushes (BushBerries / Bush_1-2), 1.4-2.2 m each; rebuilt only when the patch set changes. */
 function BrambleBushes() {
@@ -71,10 +72,14 @@ export function BiomeHazards() {
     for (let i = 0; i < 5; i++) { const a = i * 1.26; ig.box(0.5 + (i % 2) * 0.3, 0.02, 0.025, [Math.cos(a) * 0.4, 0.06, Math.sin(a) * 0.4], '#ffffff', [0, a, 0]); }
     const icg = new GB([1, 1]).cone(0.55, ICICLE_H, 6, [0, 0, 0], '#d8f6ff', [Math.PI, 0, 0]).cone(0.3, 2.2, 5, [0.5, -0.5, 0.1], '#a8e2ff', [Math.PI, 0, 0.12]).build();
     // ---- Void
-    const rgg = new GB([1, 1]);
-    rgg.torus(1.95, 0.1, [0, 0.08, 0], '#c58bff', [Math.PI / 2, 0, 0], 1, 24);
-    rgg.torus(1.35, 0.06, [0, 0.1, 0], '#8a5cff', [Math.PI / 2, 0, 0], 1, 20);
-    for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; rgg.box(1.3, 0.05, 0.1, [Math.cos(a) * 1.0, 0.12, Math.sin(a) * 1.0], '#b070ff', [0, -a - 0.7, 0]); }
+    // black hole (unit = core radius 1): spinning accretion disk (outer violet band + inner orange band, segmented so the spin reads),
+    // a vertical lensing rim facing the camera, and swirl motes that spiral inward.
+    const band = (r0: number, n: number, w: number, c0: string, c1: string) => {
+      const g = new GB([1, 1]);
+      for (let i = 0; i < n; i++) { const a = (i / n) * TAU, r = r0 + (i % 3) * 0.07; g.box(TAU * r0 / n * (1.1 + (i % 2) * 0.5), 0.05, w * (0.7 + (i % 3) * 0.2), [Math.cos(a) * r, 0, Math.sin(a) * r], i % 2 ? c0 : c1, [0, -a - Math.PI / 2, 0]); }
+      return g.build();
+    };
+    const lens = new GB([1, 1]).torus(1.0, 0.045, [0, 0, 0], '#fff2d8', [0, 0, 0], 1, 32).torus(1.12, 0.025, [0, 0, 0], '#ffb060', [0, 0, 0], 1, 32).build();
     const u = (g: BufferGeometry, m: Material, cap: number) => mk(g, m, cap);
     const disc = new CylinderGeometry(1, 1, 0.04, 32);
     return {
@@ -88,15 +93,21 @@ export function BiomeHazards() {
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
       icicle: u(icg, glowMat({ color: new Color(1.1, 1.8, 2.3) }), 10),
       rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 3),
+      rCore: u(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: '#000000', toneMapped: false }), 3),
+      rDiskO: u(band(2.5, 30, 0.7, '#7a3cff', '#c58bff'), glowMat({ color: new Color(1.2, 0.6, 2.0) }), 3),
+      rDiskI: u(band(1.75, 24, 0.45, '#ff8a2a', '#ffd070'), glowMat({ color: new Color(2.2, 1.2, 0.6) }), 3),
+      rLens: u(lens, glowMat({ color: new Color(2.0, 1.6, 1.3), side: DoubleSide }), 3),
+      rMote: u(new IcosahedronGeometry(0.1, 0), glowMat({ color: new Color(1.6, 0.9, 2.2) }), 3 * MOTES),
+      rTel: u(new RingGeometry(0.965, 1, 64).rotateX(-Math.PI / 2), flat(new Color(1.8, 0.7, 2.4), 0.85), 3),
+      rTel2: u(new RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 1.1, 0.4), 0.55), 3),
       rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 3),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
-      rGlow: u(rgg.build(), glowMat({ color: new Color(0.9, 0.35, 1.5) }), 3),   // (a bright violet swirl round the black core)
     };
   }, []);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     const on = world.room.active && hz.kind !== HZ.NONE;
-    let nBr = 0, nMu = 0, nPuff = 0, nRing = 0, nIce = 0, nTel = 0, nIc = 0, nRift = 0;
+    let nBr = 0, nMu = 0, nPuff = 0, nRing = 0, nIce = 0, nTel = 0, nIc = 0, nRift = 0, nMote = 0;
     if (on && hz.kind === HZ.GREEN) {
       // (the bramble patches are drawn as piled pack bushes now: BrambleBushes below; the collider / sting zone is unchanged)
       for (let i = 0; i < hz.nMu; i++) {
@@ -137,21 +148,36 @@ export function BiomeHazards() {
     } else if (on) {
       for (let i = 0; i < hz.nRift; i++) {
         const r = hz.rift[i]; if (!inView(r.x, r.z, HZ_RIFT_PULL_R + 2)) continue;
-        const pulse = 1 + Math.sin(t * 2.2 + i * 2) * 0.05;
+        const pulse = 1 + Math.sin(t * 2.2 + i * 2) * 0.04, rp = HZ_RIFT_PULL_R, yaw = world.camera.yaw;
         setInst(S.rDark, nRift, r.x, 0.05, r.z, 0, HZ_RIFT_CORE_R * 1.25 * pulse, 1, HZ_RIFT_CORE_R * 1.25 * pulse);
-        setInst(S.rField, nRift, r.x, 0.045, r.z, 0, HZ_RIFT_PULL_R, 1, HZ_RIFT_PULL_R);
-        setInst(S.rGlow, nRift++, r.x, 0.0, r.z, -t * 1.4 + i, 0.82 * pulse, 1, 0.82 * pulse);
-        pushHalo(r.x, 0.5, r.z, 4 + Math.sin(t * 2 + i) * 0.4, 0.25, 0.06, 0.45, 0.25, CELL.GLOW);
+        setInst(S.rField, nRift, r.x, 0.045, r.z, 0, rp, 1, rp);
+        // the pull radius is ringed on the floor (a violet line + an inward-marching orange one)
+        setInst(S.rTel, nRift, r.x, 0.08, r.z, 0, rp, 1, rp);
+        const m = 1 - ((t * 0.5 + i * 0.3) % 1);
+        setInst(S.rTel2, nRift, r.x, 0.085, r.z, 0, rp * (0.35 + 0.65 * m), 1, rp * (0.35 + 0.65 * m));
+        setInst(S.rCore, nRift, r.x, CORE_Y, r.z, t * 0.3, 1.25 * pulse);
+        setInst(S.rDiskO, nRift, r.x, CORE_Y - 0.05, r.z, t * 1.3 + i, 1, 1, 1);
+        setInst(S.rDiskI, nRift, r.x, CORE_Y, r.z, -t * 3.1 + i, 1, 1, 1);
+        setInst(S.rLens, nRift, r.x, CORE_Y, r.z, yaw, 1.38 * pulse);
+        for (let q = 0; q < MOTES; q++) {   // swirl motes: spiral in from the rim, faster and smaller as they fall
+          const u = (t * 0.32 + q / MOTES + i * 0.19) % 1, rad = 1.1 + (rp - 1.1) * Math.pow(1 - u, 1.4), ang = q * 2.4 + i + t * 0.8 + u * u * 9;
+          setInst(S.rMote, nMote++, r.x + Math.cos(ang) * rad, 0.25 + (1 - u) * 0.9 + u * (CORE_Y - 0.4), r.z + Math.sin(ang) * rad, 0, 0.5 + (1 - u) * 1.1);
+        }
+        pushHalo(r.x, CORE_Y, r.z, 5.5 + Math.sin(t * 2 + i) * 0.5, 0.5, 0.12, 0.8, 0.3, CELL.GLOW);
+        pushHalo(r.x, CORE_Y, r.z, 3.2, 1.5, 0.7, 0.2, 0.22, CELL.GLOW);
+        nRift++;
       }
     }
     commitInst(S.br, nBr); commitInst(S.stem, nMu); commitInst(S.cap, nMu); commitInst(S.puff, nPuff); commitInst(S.cring, nRing);
     commitInst(S.ice, nIce); commitInst(S.tFill, nTel); commitInst(S.tRing, nTel); commitInst(S.icicle, nIc);
-    commitInst(S.rDark, nRift); commitInst(S.rField, nRift); commitInst(S.rGlow, nRift);
+    commitInst(S.rDark, nRift); commitInst(S.rField, nRift); commitInst(S.rTel, nRift); commitInst(S.rTel2, nRift);
+    commitInst(S.rCore, nRift); commitInst(S.rDiskO, nRift); commitInst(S.rDiskI, nRift); commitInst(S.rLens, nRift); commitInst(S.rMote, nMote);
   });
 
   return (
     <>
-      <primitive object={S.ice} /><primitive object={S.rField} /><primitive object={S.rDark} /><primitive object={S.rGlow} />
+      <primitive object={S.ice} /><primitive object={S.rField} /><primitive object={S.rDark} /><primitive object={S.rTel} /><primitive object={S.rTel2} />
+      <primitive object={S.rCore} /><primitive object={S.rDiskO} /><primitive object={S.rDiskI} /><primitive object={S.rLens} /><primitive object={S.rMote} />
       <primitive object={S.br} /><primitive object={S.stem} /><primitive object={S.cap} />
       <primitive object={S.cring} /><primitive object={S.puff} />
       <primitive object={S.tFill} /><primitive object={S.tRing} /><primitive object={S.icicle} />

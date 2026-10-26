@@ -144,7 +144,7 @@ const DMG_COLOR: Record<DamageKind, number> = {
 };
 const KIND_COLORS: Record<string, [number, number, number]> = {
   SLIME: [0x7ddc3a, 0xb6f26a, 0x7ddc3a], SPLITTER: [0x2fb89a, 0x8f5bd8, 0x2fb89a], GOBLIN: [0x5fa02a, 0x7a4a20, 0xd8c8a0],
-  BAT: [0x4a2a6a, 0x2a1a3a, 0x8a4ab0], SKELETON_ARCHER: [0xe8e0c8, 0xbfb59a, 0xe8e0c8], CULTIST: [0x7a3ab0, 0x3a1a5a, 0xc880ff],
+  BAT: [0x4a2a6a, 0x2a1a3a, 0x8a4ab0], SKELETON_ARCHER: [0xe8e0c8, 0xbfb59a, 0xe8e0c8], SKELETON_WARRIOR: [0xe8e0c8, 0xbfb59a, 0xe8e0c8], SKELETON_MAGE: [0xe8e0c8, 0xbfb59a, 0xe8e0c8], CULTIST: [0x7a3ab0, 0x3a1a5a, 0xc880ff],
   BOMBER: [0xd86a1a, 0x3a2a1a, 0xffb040], BRUTE: [0x8a5a3a, 0x5a3a24, 0xb89a6a], BOSS_GOLEM: [0x8a8f98, 0x5f6a55, 0xffa040], BOSS_LICH: [0x7a3ab0, 0x2a1a3a, 0xd070ff],
   BOSS_TREANT: [0x6b4423, 0x3f8a1c, 0xd8ff5a], BOSS_HYDRA: [0x2f6f3a, 0x1f4a28, 0xb6f06a], BOSS_WYRM: [0x8fd0f0, 0xd6f1ff, 0x7df3ff],
   BOSS_WARLORD: [0x8a2a20, 0x2e2022, 0xff7a1a], BOSS_WARMACH: [0x6e7a45, 0x3a4024, 0xffa040], BOSS_VOID: [0x2a1048, 0x0b0416, 0xc084fc],
@@ -220,7 +220,7 @@ export function VFX() {
       flashStar(e.pos.x, e.pos.y + 1, e.pos.z, 0xffffff, 0.9, 0.12);
       const kc = KIND_COLORS[e.kind];
       if (kc && (e.kind === 'SLIME' || e.kind === 'SPLITTER')) chunks(e.pos.x, e.pos.y + 0.8, e.pos.z, 4, kc[0], kc[1], 5, 0.22);
-      else if (e.kind === 'SKELETON_ARCHER') chunks(e.pos.x, e.pos.y + 1, e.pos.z, 3, kc![0], kc![1], 5, 0.18);
+      else if (e.kind === 'SKELETON_ARCHER' || e.kind === 'SKELETON_WARRIOR' || e.kind === 'SKELETON_MAGE') chunks(e.pos.x, e.pos.y + 1, e.pos.z, 3, kc![0], kc![1], 5, 0.18);
     }));
 
     off.push(on('enemyDeath', (e) => {

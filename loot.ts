@@ -114,6 +114,8 @@ export const LOOT_TABLES: Record<string, string[]> = {
   GOBLIN: ['goblin_ear', 'goblin_fang', 'goblin_totem'],
   BAT: ['bat_wing', 'echo_crystal'],
   SKELETON_ARCHER: ['old_bone', 'cursed_skull', 'bone_crown'],
+  SKELETON_WARRIOR: ['old_bone', 'cursed_skull', 'bone_crown'],   // (roster skeletons roll warrior / archer / mage per spawn)
+  SKELETON_MAGE: ['old_bone', 'cursed_skull', 'bone_crown'],
   CULTIST: ['cultist_rune', 'dark_page', 'forbidden_sigil'],
   BOMBER: ['beetle_shell', 'volatile_gland'],
   BRUTE: ['ogre_tusk', 'brute_knuckle', 'war_banner'],

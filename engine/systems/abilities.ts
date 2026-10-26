@@ -2,7 +2,6 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
-import { inRift } from './biomeHazards';
 import { iceAt } from '../iceFloor';
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
@@ -1281,7 +1280,7 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
 let iceDashTextT = -9;
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
-  if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0 || inRift) return false;   // (owner: a Void rift's pull blocks the dash)
+  if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;   // (a Void black hole's pull is escaped by dashing)
   if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (6)
     return false;
   }

@@ -19,9 +19,7 @@ export const MONSTER_KIT: Partial<Record<EnemyKind, CreatureCfg>> = {
   GOBLIN: { piece: 'goblin', arch: 'biped', gait: 10 },
   GOBLIN_ARCHER: { piece: 'goblin_archer', arch: 'still', lift: 3.15, caster: true },
   BAT: { piece: 'bat', arch: 'fly', flap: 22, amp: 0.8, lift: 1.5 },
-  SKELETON_ARCHER: { piece: 'skeleton_archer', arch: 'biped', caster: true },
-  SKELETON_WARRIOR: { piece: 'skeleton_warrior', arch: 'biped', gait: 10 },
-  SKELETON_MAGE: { piece: 'skeleton_mage', arch: 'biped', caster: true },
+  // (owner 2026-10-26) SKELETON_ARCHER / _WARRIOR / _MAGE are not kit pieces: they use the necromancer's skeleton rigs (render/skeletonRig.ts via enemyModels.ts)
   CULTIST: { piece: 'cultist', arch: 'biped', caster: true, gait: 7 },
   BOMBER: { piece: 'bomber', arch: 'biped', gait: 14 },
   BRUTE: { piece: 'brute', arch: 'biped', gait: 6 },

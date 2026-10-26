@@ -19,6 +19,7 @@ const PET_KEYS = ['PET_FIRE', 'PET_GOLD', 'PET_LIGHT', 'PET_WATER'];   // PET_BO
 import { inView } from './view';
 
 const MAXP = 900, MAXE = 600;
+const DARKABLE: ReadonlySet<string> = new Set(['ARROW', 'POISON_ARROW', 'ORB', 'SLOW_ORB', 'FIRE_BOLT', 'BOLT', 'ICE_SHARD', 'FLAME']);
 const NOISE = `
 float h31(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float vn3(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f*f*(3.0-2.0*f);
@@ -168,6 +169,7 @@ export function Projectiles() {
     const fireBoltG = orbG(0.38, '#ff6a1a', '#fff0a0');
     const boltG = new GB([1, 1]).cone(0.12, 0.9, 5, [0, 0, 0.45], '#fff8c0', [Math.PI / 2, 0, 0]).cone(0.12, 0.9, 5, [0, 0, -0.45], '#8ad0ff', [-Math.PI / 2, 0, 0]).build();
     const iceG = new GB([1, 1]).cone(0.2, 0.9, 5, [0, 0, 0.35], '#d6f6ff', [Math.PI / 2, 0, 0]).cone(0.2, 0.45, 5, [0, 0, -0.1], '#8fd8ff', [-Math.PI / 2, 0, 0]).octa(0.12, [0, 0, 0.75], '#ffffff').build();
+    const darkArrow = arrow('#120818', '#1c0c28', '#2a0f44', '#7a2fd0');
     const pois = arrow('#3a4a22', '#6a8a2a', '#76d33a', '#8aff3a', 1.2);
     const paGeo = pa.build();
     const fireG = new IcosahedronGeometry(0.75, 3);
@@ -215,6 +217,8 @@ export function Projectiles() {
       BIG_FLAME: mk([[orbG(0.42, '#ff6a1a', '#fff0b0'), glow]], 60),   // Ignar's giant fireball (scaled by its radius below)
       FIRE_CRESCENT: mk([[fireCrescG, glow]], 80),
       DARK_CRESCENT: mk([[darkCrescG, glow]], 40),
+      DARK_ORB: mk([[orbG(0.34, '#12051e', '#5a1a9a'), glow]], MAXE),   // (owner 2026-10-26) corrupted Void monsters' shots: black cores, violet rims
+      DARK_ARROW: mk([[darkArrow.body, lit], [darkArrow.glow, glow]], MAXE),
       BALLISTA: mk([[paGeo, glow]], 60),   // (owner) the siege bolt: a smaller Lightpiercer-style white arrow of light
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
@@ -445,12 +449,20 @@ export function Projectiles() {
     for (let n = 0; n < ep.length; n++) {
       const p = ep[n];
       if (!p.active) continue;
-      const ims = sys.E[p.kind]; if (!ims) continue;
+      const dk = p.dark === true && DARKABLE.has(p.kind), ek = dk ? (p.kind === 'ARROW' || p.kind === 'POISON_ARROW' ? 'DARK_ARROW' : 'DARK_ORB') : p.kind;
+      const ims = sys.E[ek]; if (!ims) continue;
       if (!inView(p.pos.x, p.pos.z, 4)) continue;
-      const i = counts['e' + p.kind]++;
+      const i = counts['e' + ek]++;
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);
       const emit = dt > 0;
+      if (dk) {   // corrupted monster's shot: a black core (arrow / orb) with a dim violet glow and a black-violet smoke trail
+        if (ek === 'DARK_ARROW') place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.2);
+        else { const pu = 1 + 0.15 * Math.sin(t * 14 + n); place(ims, i, x, y, z, t * 3, t * 2, 0, pu * (p.kind === 'SLOW_ORB' || p.kind === 'ICE_SHARD' ? 0.9 : 1.1)); }
+        pushHalo(x, y, z, 1.6, 0.55, 0.12, 1.1, 0.4, CELL.GLOW);
+        if (emit && Math.random() < dt * 40) FX.norm.emit(x, y, z, (Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6, 0.45, 0.22, 0.5, 0.12, 0.04, 0.2, 0.6, CELL.SMOKE, -0.2, 1.2);
+        continue;
+      }
       switch (p.kind) {
         case 'ARROW':
           place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.15);

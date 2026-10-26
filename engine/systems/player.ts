@@ -21,7 +21,7 @@ import { dashKey } from '../../abilityDefs';
 import { dashCdMul, dashSpeedMul } from './dashMods';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
-import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
+import { hazSlow, iceGrip, driftX, driftZ, RIFT_DASH_DRIFT } from './biomeHazards';
 import { iceAt, ICE_ACCEL, ICE_FRICTION, ICE_SPEED_MUL } from '../iceFloor';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, roomHalls, type Collider } from '../mapgen';
 import { hallsPush, halls } from '../roomHalls';
@@ -451,7 +451,8 @@ export function updatePlayer(dt: number): void {
   }
   if (abilityState.leapT <= 0) {
     a.dashing = p.dashT > 0;
-    resolveObstacles(p, p.pos.x + (p.vel.x + driftX) * dt, p.pos.z + (p.vel.z + driftZ) * dt);   // (Void gravity flip / rift pull drift)
+    const dm = p.dashT > 0 ? RIFT_DASH_DRIFT : 1;   // (Void black-hole pull drift: a dash still carries the hero out)
+    resolveObstacles(p, p.pos.x + (p.vel.x + driftX * dm) * dt, p.pos.z + (p.vel.z + driftZ * dm) * dt);
   }
 
   // ---- walking crates into pieces

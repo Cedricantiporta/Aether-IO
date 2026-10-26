@@ -41,6 +41,7 @@ import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } fro
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
 import { useGameStore, rollDropPlus } from '../../store';
 import { runMods, veteran, VET } from '../runMods';
+import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
@@ -336,12 +337,19 @@ function bossPace(): number {
 export function rollEliteShield(e: Enemy): void {
   if (Math.random() < 0.3) e.shield = Math.max(e.shield, e.maxHp * (0.5 + Math.random() * 0.5));
 }
+/** Void 'corrupted' share of non-boss spawns. */
+export const CORRUPT_CHANCE = 0.25;
+const VOID_BIOME = 6;   // index into BIOMES (roomDefs.ts)
+/** `fixed`: spawn exactly `kind` (the dark necromancer's raised dead, scripted summons): no skeleton-variant roll, never corrupted. */
 export function spawnEnemy(
-  kind: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix },
+  kind0: EnemyKind, pos: Vector3, opts?: { elite?: boolean; affix?: EliteAffix; fixed?: boolean },
 ): Enemy | null {
   const e = allocEnemy();
   if (!e) return null;
-  const def = ENEMY_DEFS[kind];
+  // (owner 2026-10-26) a roster Skeleton is one of the necromancer's three skeletons, rolled per spawn: warrior (melee slash), archer (arrows), mage (magic bolt)
+  let kind = kind0;
+  if (kind0 === 'SKELETON_ARCHER' && !opts?.fixed) { const r = Math.random(); kind = r < 1 / 3 ? 'SKELETON_WARRIOR' : r < 2 / 3 ? 'SKELETON_ARCHER' : 'SKELETON_MAGE'; }
+  const def = ENEMY_DEFS[kind], rewardDef = ENEMY_DEFS[kind0];
   const d = world.director;
   const wave = d.wave;
   const mods = runMods(useGameStore.getState().difficulty);
@@ -377,11 +385,14 @@ export function spawnEnemy(
   e.contactDamage = def.contactDamage * dmgMul * biomeDmg;
   e.projectileDamage = def.projectileDamage * dmgMul * biomeDmg;
   // XP scales with monster strength: wave growth x tier (elite x5, mini x20 [x4 more in spawnMiniBoss], boss x60).
-  e.xp = Math.round(def.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
-  e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
+  e.xp = Math.round(rewardDef.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
+  e.gold = Math.round(rewardDef.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
   if (boss) e.armor = Math.round(e.armor * BOSS_ARMOR_MUL);   // (owner 2026-10-26) bosses were too easy: +80% defense
   if (kind === 'BOMBER' && world.room.active && world.room.biome >= 3) { e.speed *= 1.45; e.armor = Math.max(e.armor, 45); }   // (owner 2026-10-25) later realms: fast rushing bombers with medium defense
+  // (owner 2026-10-26) The Void breeds corrupted monsters: 2x damage, 1.3x bigger (the shots turn black-purple in render)
+  e.corrupt = !boss && !opts?.fixed && !isStationary(kind) && world.room.active && ((world.room.biome | 0) % BIOMES.length) === VOID_BIOME && Math.random() < CORRUPT_CHANCE;
+  if (e.corrupt) { e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3; }
   e.mini = false;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
   e.dodgeCd = 1 + Math.random() * 2.5;
@@ -426,6 +437,7 @@ let barOwner = -1;
 export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title: string): Enemy | null {
   const e = spawnEnemy(kind, pos, { elite: true });
   if (!e) return null;
+  if (e.corrupt) { e.corrupt = false; e.contactDamage /= 2; e.projectileDamage /= 2; e.scale /= 1.3; e.radius /= 1.3; }   // (mini-bosses are never corrupted)
   e.maxHp = Math.round(e.maxHp / (ELITE_HP * 1.4) * MINI.hpMul * 0.625 * WIND.miniHp); // mini-bosses: half of the old +25% value
   e.hp = e.maxHp;
   e.shield = 0;
@@ -1949,6 +1961,7 @@ export function fireEnemyProjectile(
   p.debuff = opts?.debuff ?? 0;
   p.traits = curTraits;
   p.owner = curShooter;
+  p.dark = curShooter >= 0 && world.enemies[curShooter].corrupt;   // a corrupted monster's shot is black-purple
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
   if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
 }

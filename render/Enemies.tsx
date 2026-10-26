@@ -197,6 +197,7 @@ export function Enemies() {
       const gob = world.roomEvt.obj === 'GOBLIN' && world.roomEvt.enemy === e.id;   // the treasure goblin: gilded and glowing
       if (gob) { const p = 0.85 + 0.15 * Math.sin(t * 6); r = 1.9 * p; g = 1.5 * p; b = 0.35; }
       if (e.id === riruru.id) { r = 0.5; g = 0.75; b = 6.5; }   // (owner cameo) Riruru: the green slime body (#6fc22a) multiplied to a clear sky blue
+      if (e.corrupt) { r *= 0.3; g *= 0.14; b *= 0.42; }   // Void corruption: dark purple-black, like the dark heroes / necromancer summons
       if (e.freezeT > 0) { r *= 0.6; g *= 0.92; b *= 1.4; fl = Math.max(fl, 0.14); }
       if (e.burnT > 0) { const p = 0.5 + 0.5 * Math.sin(t * 14 + i); r *= 1.3; g *= 0.78 + 0.12 * p; b *= 0.55; }
       if (e.poisonT > 0) { r *= 0.72; g *= 1.25; b *= 0.62; }
@@ -206,11 +207,12 @@ export function Enemies() {
       sys.kinds[e.kind]!.flash.array[idx] = fl;
       const gl = poser.glow;
       for (let m = 0; m < K.meshes.length; m++) {
-        if (K.mats[m] === 'glow') K.meshes[m].setColorAt(idx, _c.setRGB(gl * (0.7 + 0.3 * r), gl * (0.7 + 0.3 * g), gl * (0.7 + 0.3 * b)));
+        if (K.mats[m] === 'glow') K.meshes[m].setColorAt(idx, e.corrupt ? _c.setRGB(gl * 0.8, gl * 0.2, gl * 1.4) : _c.setRGB(gl * (0.7 + 0.3 * r), gl * (0.7 + 0.3 * g), gl * (0.7 + 0.3 * b)));
         else if (K.mats[m] === 'ghost') { const f = poser.fade * alpha; K.meshes[m].setColorAt(idx, _c.setRGB(r * f, g * f, b * f)); }
         else K.meshes[m].setColorAt(idx, _c.setRGB(r, g, b));
       }
 
+      if (e.corrupt && dt > 0 && Math.random() < dt * 6) FX.norm.emit(e.pos.x + (Math.random() - 0.5) * s, e.pos.y + 0.3 + Math.random() * 1.4 * s, e.pos.z + (Math.random() - 0.5) * s, 0, 0.9, 0, 0.7, 0.3, 0.7, 0.16, 0.05, 0.28, 0.55, CELL.SMOKE, -0.2, 1.4);   // a trickle of black-violet smoke
       // blob shadow
       if (nSh < MAX) {
         const rr = K.def.shadow * s * 1.5;

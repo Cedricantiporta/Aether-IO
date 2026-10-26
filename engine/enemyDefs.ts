@@ -41,7 +41,7 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 3, gold: 1, cost: 1, minWave: 2, weight: 6, color: 0x7c3aed, knockResist: 0, armor: 0,
   },
   SKELETON_ARCHER: {
-    name: 'Skeleton Archer', hp: 35, speed: 2.2, radius: 0.6, scale: 1, contactDamage: 4, projectileDamage: 10,
+    name: 'Skeleton Archer', hp: 35, speed: 2.2, radius: 0.6, scale: 1.3, contactDamage: 4, projectileDamage: 10,
     xp: 8, gold: 3, cost: 3, minWave: 3, weight: 7, color: 0xe5e7eb, knockResist: 0, armor: 5,
   },
   CULTIST: {
@@ -218,11 +218,11 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   // raised by the Dark Necromancer (systems/darkHero.ts): hostile copies of the necromancer's minions, never rolled in rosters
   SKELETON_WARRIOR: {
-    name: 'Skeleton Warrior', hp: 50, speed: 3.4, radius: 0.6, scale: 1.05, contactDamage: 9, projectileDamage: 0,
+    name: 'Skeleton Warrior', hp: 50, speed: 3.4, radius: 0.6, scale: 1.3, contactDamage: 9, projectileDamage: 0,
     xp: 0, gold: 0, cost: 0, minWave: 99, weight: 0, color: 0xd8d0b8, knockResist: 0.2, armor: 15,
   },
   SKELETON_MAGE: {
-    name: 'Skeleton Mage', hp: 38, speed: 2.2, radius: 0.6, scale: 1.05, contactDamage: 4, projectileDamage: 11,
+    name: 'Skeleton Mage', hp: 38, speed: 2.2, radius: 0.6, scale: 1.3, contactDamage: 4, projectileDamage: 11,
     xp: 0, gold: 0, cost: 0, minWave: 99, weight: 0, color: 0xb08aff, knockResist: 0, armor: 5,
   },
   BONE_GOLEM: {
@@ -313,7 +313,7 @@ export function waveBudget(wave: number): number {
 }
 /** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
 export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
-  GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], MUMMY: [0.35, 10], CINDER_SHAMAN: [0.4, 10], HAUNTED_ARMOR: [0.4, 12], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
+  GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], MUMMY: [0.35, 10], CINDER_SHAMAN: [0.4, 10], HAUNTED_ARMOR: [0.4, 12], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], SKELETON_WARRIOR: [0.35, 10], SKELETON_MAGE: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],
 };
 /** Armor of a spawned enemy: wave growth, elites tougher, bosses toughest. */
 /** (owner) enemies hit harder but are softer: damage x1.25 (enemies.spawnEnemy), armour x0.6. */

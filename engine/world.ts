@@ -37,7 +37,7 @@ function makeEnemy(id: number): Enemy {
     trickCd: 0, trickT: 0, trickKind: 0, bigCd: 0, bigT: 0, bigRec: 0, bigDash: 0, bigKind: 0, slamDmg: 0, slamT: 0, chillStacks: 0, chillT: 0, frostT: 0, spKind: 0, spT: 0, spStep: 0, spCd: 0, decoy: false, hideT: 0, shellT: 0,
     winT: 0, winCd: 0, winPhase: 0, winBusy: false,
     phase: 0, pattern: 0, patternT: 0, angle: 0, pullCount: 0,
-    traits: 0, comboN: 0, comboT: 0, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, retreatT: 0, packed: false, rooted: false, rootX: 0, rootZ: 0,
+    traits: 0, comboN: 0, comboT: 0, dodgeT: 0, dodgeCd: 0, dodgeX: 0, dodgeZ: 0, retreatT: 0, packed: false, rooted: false, rootX: 0, rootZ: 0, corrupt: false,
   };
 }
 
@@ -50,7 +50,7 @@ function makeProjectile(id: number): Projectile {
 }
 
 function makeEnemyProjectile(id: number): EnemyProjectile {
-  return { id, active: false, kind: 'ORB', pos: v(), vel: v(), life: 0, damage: 0, radius: 0.4, homing: 0, slow: 0, debuff: 0 };
+  return { id, active: false, kind: 'ORB', pos: v(), vel: v(), life: 0, damage: 0, radius: 0.4, homing: 0, slow: 0, debuff: 0, dark: false };
 }
 
 function makeZone(id: number): Zone {
@@ -107,7 +107,7 @@ export const world = {
   frame: 0,
   player: makePlayer(),
   // state: 0 FOLLOW, 1 FETCH, 2 ATTACK. carry = PickupKind being carried back (cosmetic), carryT = seconds left.
-  pet: { pos: new Vector3(-1.5, 1, 1.5), facing: 0, attackT: 0, skillT: 0, state: 0, carry: '' as string, carryT: 0, sparkT: 0, atkCd: 0, stage: 1, xpBuf: 0 },
+  pet: { pos: new Vector3(-1.5, 1, 1.5), facing: 0, attackT: 0, skillT: 0, state: 0, carry: '' as string, carryT: 0, sparkT: 0, atkCd: 0, stage: 1, stars: 0, xpBuf: 0 },
 
   enemies: Array.from({ length: MAX_ENEMIES }, (_, i) => makeEnemy(i)),
   projectiles: Array.from({ length: MAX_PROJECTILES }, (_, i) => makeProjectile(i)),

@@ -16,6 +16,8 @@ export const PET_LV_BONUS = 0.05;
 export const PET_STAGE_BONUS = [0, 0, 0.3, 0.75];
 /** Render scale per stage. */
 export const PET_STAGE_SCALE = [1, 1, 1.28, 1.6];
+/** (owner 2026-10-26) a little extra size on top of the evolution scale: +6% per growth stage above I and +4% per ascension star, capped at +45% total. */
+export const petSizeBonus = (stage: number, stars: number): number => 1 + Math.min(0.45, Math.max(0, stage - 1) * 0.06 + stars * 0.04);
 
 export const petLv = (p: Pick<Item, 'petLv'>): number => Math.max(1, Math.min(PET_MAX_LV, Math.floor(p.petLv ?? 1)));
 export const petStage = (p: Pick<Item, 'petStage'>): number => Math.max(1, Math.min(3, Math.floor(p.petStage ?? 1)));

@@ -1,11 +1,10 @@
 // Biome environment hazards for normal combat / elite rooms (no boss arenas, camps, merchants, dreams, towers).
 //   Greenwood (biome index 0): THORN BRAMBLES (light scratch ticks + 30% slow) and SPORE MUSHROOMS (poison cloud when anyone steps near).
 //   Frostpeak (index 4): FALLING ICICLES (the slippery ice floor itself lives in engine/iceFloor.ts; monsters slide there, iceMobs below) (telegraph circle, then a crash).
-//   The Void (index 6): VOID RIFTS (gentle pull, HP drain in the core) and GRAVITY FLIPS (warning, then the whole room drifts one way).
-// All state lives in `hz` (pooled, allocation-free per frame); render/BiomeHazards.tsx draws it, ui/hud/BiomeHazardHud.tsx the flip banner.
-// player.ts reads hazSlow / iceGrip / driftX / driftZ (one frame behind, fine).
+//   The Void (index 6): BLACK HOLES (hz.rift: a violent pull that walking cannot beat - only a dash carries the hero out - plus ticking HP loss while caught).
+// All state lives in `hz` (pooled, allocation-free per frame); render/BiomeHazards.tsx draws it,
+// player.ts reads hazSlow / iceGrip / driftX / driftZ (one frame behind, fine); drift is scaled down while dashing.
 import { world } from '../world';
-import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
 import type { RoomPlan } from '../types';
 import { BIOMES } from '../roomDefs';
@@ -26,9 +25,10 @@ const GREENWOOD = 0, FROSTPEAK = 4, VOID = 6;   // indices into BIOMES (see room
 const BRAMBLE_TICK = 0.5, BRAMBLE_DMG = 0.012, BRAMBLE_SLOW = 0.7, BRAMBLE_HOLD = 0.45;   // 1.2% max HP per tick, 30% slow that lingers 0.45 s
 const SHROOM_TRIGGER = 2.2, SHROOM_CD = 6, CLOUD_R = 2.5, CLOUD_T = 3, CLOUD_TICK = 0.5, CLOUD_HERO = 0.015, CLOUD_MOB = 0.04;
 const ICICLE_WARN = 1.0, ICICLE_R = 1.9, ICICLE_DMG = 0.08, ICICLE_STAY = 0.7;
-const RIFT_PULL_R = 6.5, RIFT_CORE_R = 2.0, RIFT_PULL = 5.0,   // (owner 2026-10-24: bigger, stronger pull)
-  RIFT_TICK = 0.5, RIFT_HERO = 0.02, RIFT_MOB = 0.02;
-const FLIP_WARN = 1.5, FLIP_T = 3, FLIP_SPEED = 3;
+// (owner 2026-10-26) a real black hole: the hero's pull (14 u/s at the rim, 22 at the core) beats any walk speed; only a dash (pull x0.2) gets out.
+const RIFT_PULL_R = 6.5, RIFT_CORE_R = 2.0, RIFT_PULL_MIN = 14, RIFT_PULL_MAX = 22, RIFT_MOB_PULL = 5.0,
+  RIFT_TICK = 0.5, RIFT_HERO = 0.04, RIFT_MOB = 0.02;
+export const RIFT_DASH_DRIFT = 0.2;   // drift multiplier while the hero dashes (player.ts)
 
 export const hz = {
   kind: 0 as number, ver: 0,
@@ -38,17 +38,15 @@ export const hz = {
   nIce: 0, ice: Array.from({ length: 6 }, () => ({ x: 0, z: 0, r: 0 })),
   ic: Array.from({ length: 10 }, () => ({ on: false, x: 0, z: 0, t: 0, hit: false, seed: 0 })),
   nRift: 0, rift: Array.from({ length: 3 }, () => ({ x: 0, z: 0 })),
-  /** gravity flip: state 0 idle, 1 warning, 2 active; (dx, dz) = world push direction (unit) */
-  flip: { state: 0, t: 0, next: 0, dx: 0, dz: 1 },
 };
-export const ICICLE_WARN_T = ICICLE_WARN, ICICLE_STAY_T = ICICLE_STAY, CLOUD_LIFE = CLOUD_T, FLIP_WARN_T = FLIP_WARN, FLIP_ACTIVE_T = FLIP_T;
+export const ICICLE_WARN_T = ICICLE_WARN, ICICLE_STAY_T = ICICLE_STAY, CLOUD_LIFE = CLOUD_T;
 export const HZ_CLOUD_R = CLOUD_R, HZ_RIFT_PULL_R = RIFT_PULL_R, HZ_RIFT_CORE_R = RIFT_CORE_R, HZ_SHROOM_CD = SHROOM_CD;
 
 /** Live modifiers read by player.ts: speed multiplier, velocity-lerp multiplier (1 = normal, <1 = icy), constant drift (units/s). */
 export let hazSlow = 1;
 export let iceGrip = 1;
 export let driftX = 0;
-/** (owner 2026-10-24) the hero stands in a Void rift's pull: dashing is blocked (abilities.ts). */
+/** The hero is caught in a black hole's pull. */
 export let inRift = false;
 export let driftZ = 0;
 
@@ -90,7 +88,6 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   hz.kind = HZ.NONE; hz.nBr = hz.nMu = hz.nIce = hz.nRift = 0;
   for (const c of hz.clouds) c.on = false;
   for (const i of hz.ic) i.on = false;
-  hz.flip.state = 0; hz.flip.t = 0;
   hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; brCd = brHold = riftCd = plRiftCd = 0; icT = 3;
   hz.ver++;
   if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue) return;
@@ -130,9 +127,8 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
       const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1];
       keep(rf.x, rf.z, RIFT_PULL_R);
     }
-    hz.flip.next = 9 + Math.random() * 6;
   }
-  if (kind !== HZ.VOID && kind !== HZ.FROST && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its gravity flips even when no rift fit; no 'hazards here' toast: the owner found them noisy)
+  if (kind !== HZ.VOID && kind !== HZ.FROST && hz.nBr + hz.nMu + hz.nIce === 0) hz.kind = HZ.NONE;   // (the Void keeps its kind even when no black hole fit; no 'hazards here' toast: the owner found them noisy)
 }
 
 // ---------------------------------------------------------------------- tick --
@@ -255,7 +251,7 @@ function tickBiomeHazards(dt: number): void {
       } else if (ic.t >= ICICLE_WARN + ICICLE_STAY) ic.on = false;
     }
   } else {
-    // ---- rifts: a gentle pull inside the pull radius, an HP drain in the core (hero and monsters)
+    // ---- black holes: a violent pull + ticking damage for the hero inside the radius (dash to escape); monsters get a gentle pull and an HP drain in the core
     riftCd -= dt; plRiftCd -= dt; inRift = false;
     const tick = riftCd <= 0; if (tick) riftCd = RIFT_TICK;
     for (let i = 0; i < hz.nRift; i++) {
@@ -263,10 +259,10 @@ function tickBiomeHazards(dt: number): void {
       if (alive) {
         const dx = r.x - px, dz = r.z - pz, d = Math.sqrt(dx * dx + dz * dz);
         if (d < RIFT_PULL_R && d > 0.05) {
-          const s = RIFT_PULL * (1 - d / RIFT_PULL_R);
+          const s = RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d / RIFT_PULL_R);
           dX += dx / d * s; dZ += dz / d * s;
-          inRift = true; world.player.blindT = Math.max(world.player.blindT, 0.35);   // (owner: no dash inside a rift; the vision darkens)
-          if (d < RIFT_CORE_R && plRiftCd <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', dot: true }); }
+          inRift = true;
+          if (plRiftCd <= 0 && pl.dashT <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true }); }   // 4% max HP / 0.5 s while caught (not flagged dot: that would x4, HERO_DOT_MUL)
         }
       }
       world.enemyGrid.query(r.x, r.z, RIFT_PULL_R + 4, ids);
@@ -275,41 +271,9 @@ function tickBiomeHazards(dt: number): void {
         if (!mobOk(e) || e.boss || e.mini || isStationary(e.kind)) continue;
         const dx = r.x - e.pos.x, dz = r.z - e.pos.z, d = Math.sqrt(dx * dx + dz * dz);
         if (d >= RIFT_PULL_R || d < 0.05) continue;
-        const s = RIFT_PULL * 0.8 * (1 - d / RIFT_PULL_R);
+        const s = RIFT_MOB_PULL * (1 - d / RIFT_PULL_R);
         e.pos.x += dx / d * s * dt; e.pos.z += dz / d * s * dt;
         if (tick && d < RIFT_CORE_R) damageEnemy(e, e.maxHp * RIFT_MOB * (e.elite ? 0.5 : 1), riftOpts);
-      }
-    }
-    // ---- gravity flip: warning banner, then the whole room drifts one way (bosses and champions are immune)
-    const f = hz.flip;
-    if (f.state === 0) {
-      if (fighting && alive) {
-        f.next -= dt;
-        if (f.next <= 0) {
-          f.state = 1; f.t = FLIP_WARN;
-          const k = Math.floor(Math.random() * 8), a = k * Math.PI / 4;   // a screen direction (so the banner arrow reads the same), turned into world space
-          const c = Math.cos(world.camera.yaw), s = Math.sin(world.camera.yaw), scx = Math.sin(a), scz = -Math.cos(a);
-          f.dx = scx * c + scz * s; f.dz = -scx * s + scz * c;
-          events.emit('floatText', { pos: pl.pos, text: 'GRAVITY SHIFT!', color: 0xc9a2ff, scale: 1.1, dy: 2.6 });
-        }
-      }
-    } else if (!fighting || !alive) { f.state = 0; f.next = 15 + Math.random() * 5; }
-    else {
-      f.t -= dt;
-      if (f.state === 1 && f.t <= 0) { f.state = 2; f.t = FLIP_T; }
-      else if (f.state === 2) {
-        if (f.t <= 0) { f.state = 0; f.next = 15 + Math.random() * 5; }
-        else {
-          const ramp = Math.min(1, (FLIP_T - f.t) / 0.3, f.t / 0.3);
-          const v = FLIP_SPEED * Math.max(0, ramp);
-          dX += f.dx * v; dZ += f.dz * v;
-          const list = world.enemies, mx = f.dx * v * dt, mz = f.dz * v * dt;
-          for (let i = 0; i < list.length; i++) {
-            const e = list[i];
-            if (!mobOk(e) || e.boss || e.mini || isStationary(e.kind)) continue;
-            e.pos.x += mx; e.pos.z += mz;
-          }
-        }
       }
     }
   }

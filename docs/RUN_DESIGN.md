@@ -53,7 +53,7 @@ what is below. Source of truth: `engine/roomDefs.ts`, `engine/systems/director.t
 
 * Objectives rolled on combat rooms (`systems/roomEvents.ts`): Defend the Totem, Rescue (caged captive), Treasure Goblin, Hunt.
   Twists: Traps, Dark (Shadowcaster), Cursed, Golden. Biome hazards (spikes, quicksand, tide, lava rifts, brambles / spores,
-  ice / icicles, void rifts + gravity flips) are layered on top (`systems/biomeHazards.ts`). Wanderers, an ally fighter
+  ice / icicles, void black holes) are layered on top (`systems/biomeHazards.ts`). Wanderers, an ally fighter
   and the rare Riruru slime appear occasionally.
 * When cleared, 1-3 exit portals (ruined stone arches) appear, each labelled with its reward: upgrade card, gold, Aether
   Crystals, gear, heal, gems, or the room-type icon. Entering a portal (E, or click to walk to it) fades to the next room.

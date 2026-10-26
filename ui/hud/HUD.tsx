@@ -6,7 +6,6 @@ import { RoomPlaque, RoomFade } from './WaveInfo';
 import { BossBar } from './BossBar';
 import { RoomEventHud } from './RoomEventHud';
 import { StageTimer } from './StageTimer';
-import { BiomeHazardHud } from './BiomeHazardHud';
 import { LevelUpBurst } from './LevelUpBurst';
 import { TargetFrame } from './TargetFrame';
 import { Minimap } from './Minimap';
@@ -62,7 +61,6 @@ export const HUD: React.FC = () => {
     <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /><BossBar illusion={0} /><BossBar illusion={1} /></div>
     <RoomEventHud />
     <StageTimer />
-    <BiomeHazardHud />
     <LevelUpBurst />
 
     <Announcer />

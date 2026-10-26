@@ -193,7 +193,7 @@ function quicksandUpdate(z: Zone, dt: number): void {
     if (d2 < rr * rr) {
       envSlow = Math.min(envSlow, 1 - SAND_SLOW);
       const d = Math.sqrt(d2) || 1e-3;
-      if (p.dashT <= 0) { const pull = 2 * (2 + 1.5 * (1 - Math.min(1, d / R))) * dt;   // (owner 2026-10-24: 2x pull on the hero)
+      if (p.dashT <= 0) { const pull = 1.4 * (2 + 1.5 * (1 - Math.min(1, d / R))) * dt;   // (owner 2026-10-26: 30% less than the old 2x)
       if (d > pull) { p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull; } }   // (a dash breaks free)
       if (tick && d < R * SAND_CORE && p.dashT <= 0) damagePlayer(dps * HAZARD_TICK, { pos: z.pos, env: true });
     }
