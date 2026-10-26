@@ -145,7 +145,7 @@ export function Projectiles() {
     const slashRedG = crescent('#ffd0d0', '#ff3a3a', '#ffffff', 4.2, 0.46);   // Legendary sword: crimson
     const slashDarkG = crescent('#3a2440', '#0c060e', '#c060ff', 4.2, 0.48);  // Mythic sword: black with a violet edge
     // Ignar: bold fire crescent (his knight skill) / his dark knights' violet crescent
-    const fireCrescG = crescent('#ffc63a', '#ff7a14', '#fff6c8', 4.4, 0.95);   // (owner: orange-yellow fire)
+    const fireCrescG = crescent('#ff6a5a', '#d01010', '#ffd0c0', 4.4, 0.95);   // (owner 2026-10-26: red fire)
     const darkCrescG = crescent('#7a4ab8', '#1c0e2e', '#e0b0ff', 4.4, 0.95);
     // Bone Spear: a long jagged spear of bone
     const bs = new GB([0.85, 1.1]);
@@ -219,6 +219,7 @@ export function Projectiles() {
       DARK_CRESCENT: mk([[darkCrescG, glow]], 40),
       DARK_ORB: mk([[orbG(0.34, '#12051e', '#5a1a9a'), glow]], MAXE),   // (owner 2026-10-26) corrupted Void monsters' shots: black cores, violet rims
       DARK_ARROW: mk([[darkArrow.body, lit], [darkArrow.glow, glow]], MAXE),
+      MAL_ORB: mk([[new GB([1, 1]).ico(0.34, [0, 0, 0], '#2c0b5e', 1, 1).ico(0.2, [0, 0, 0], '#f6eaff', 1, 0).build(), glow]], MAXE),   // (owner 2026-10-26) Malakar's shots: a bright lilac-white core in a dark violet shell
       BALLISTA: mk([[paGeo, glow]], 60),   // (owner) the siege bolt: a smaller Lightpiercer-style white arrow of light
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
@@ -449,13 +450,22 @@ export function Projectiles() {
     for (let n = 0; n < ep.length; n++) {
       const p = ep[n];
       if (!p.active) continue;
-      const dk = p.dark === true && DARKABLE.has(p.kind), ek = dk ? (p.kind === 'ARROW' || p.kind === 'POISON_ARROW' ? 'DARK_ARROW' : 'DARK_ORB') : p.kind;
+      const dk = p.dark === true && DARKABLE.has(p.kind), mal = dk && (p.kind === 'BOSS_ORB' || p.kind === 'BIG_FLAME'), ek = mal ? 'MAL_ORB' : dk ? (p.kind === 'ARROW' || p.kind === 'POISON_ARROW' ? 'DARK_ARROW' : 'DARK_ORB') : p.kind;
       const ims = sys.E[ek]; if (!ims) continue;
       if (!inView(p.pos.x, p.pos.z, 4)) continue;
       const i = counts['e' + ek]++;
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);
       const emit = dt > 0;
+      if (mal) {   // Malakar's shot: lilac-white core, dark violet shell, a violet halo and a dark smoke + lilac spark trail
+        const pu = (1 + 0.15 * Math.sin(t * 14 + n)) * Math.max(1, p.radius / 0.4) * 1.1;
+        place(ims, i, x, y, z, t * 3, t * 2, 0, pu);
+        pushHalo(x, y, z, 2.6 * Math.max(1, p.radius / 0.6), 1.0, 0.35, 2.2, 0.55, CELL.GLOW);
+        pushHalo(x, y, z, 1.2 * Math.max(1, p.radius / 0.6), 2.0, 1.6, 2.4, 0.8, CELL.GLOW);
+        if (emit && Math.random() < dt * 50 * Math.max(1, p.radius / 0.5)) FX.norm.emit(x + (Math.random() - 0.5) * p.radius, y, z + (Math.random() - 0.5) * p.radius, -vx * 0.04 + (Math.random() - 0.5) * 0.6, 0.2, -vz * 0.04 + (Math.random() - 0.5) * 0.6, 0.55, 0.3, 0.5, 0.16, 0.04, 0.3, 0.65, CELL.SMOKE, -0.2, 1.2);
+        if (emit && Math.random() < dt * 30) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4, 0.4, 0.3, 0.05, 1.7, 1.2, 2.4, 0.8, CELL.STAR, 0, 1, 0, 3);
+        continue;
+      }
       if (dk) {   // corrupted monster's shot: a black core (arrow / orb) with a dim violet glow and a black-violet smoke trail
         if (ek === 'DARK_ARROW') place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.2);
         else { const pu = 1 + 0.15 * Math.sin(t * 14 + n); const big = Math.max(1, p.radius / 0.4); place(ims, i, x, y, z, t * 3, t * 2, 0, pu * big * (p.kind === 'SLOW_ORB' || p.kind === 'ICE_SHARD' ? 0.9 : 1.1)); }
@@ -512,10 +522,10 @@ export function Projectiles() {
         case 'FIRE_CRESCENT': case 'DARK_CRESCENT': {   // a bold flat crescent sweeping along its lane (the knight's skill 1, in fire / shadow)
           const fire = p.kind === 'FIRE_CRESCENT', sc = p.radius / 2.2, lf = 1 + 0.08 * Math.sin(t * 20 + n);
           place(ims, i, x, y, z, Math.atan2(vx, vz), 0, 0, sc * lf, sc, sc);
-          if (fire) pushHalo(x, y, z, 3.6 * sc, 2.6, 1.45, 0.35, 0.55, CELL.GLOW); else pushHalo(x, y, z, 3.2 * sc, 1.2, 0.4, 2.0, 0.45, CELL.GLOW);
+          if (fire) pushHalo(x, y, z, 3.6 * sc, 2.6, 0.45, 0.3, 0.55, CELL.GLOW); else pushHalo(x, y, z, 3.2 * sc, 1.2, 0.4, 2.0, 0.45, CELL.GLOW);
           if (emit && Math.random() < dt * 60) {
             const yw = Math.atan2(vx, vz), o = (Math.random() - 0.5) * 4 * sc;
-            if (fire) FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 1.0 * sc, 0.1, 2.6, 1.3, 0.25, 0.85, CELL.FLAME, -0.5, 0.8);
+            if (fire) FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.8 + Math.random(), -vz * 0.05, 0.5, 1.0 * sc, 0.1, 2.6, 0.5, 0.2, 0.85, CELL.FLAME, -0.5, 0.8);
             else FX.add.emit(x + Math.cos(yw) * o, y, z - Math.sin(yw) * o, -vx * 0.05, 0.5, -vz * 0.05, 0.4, 0.4, 0.05, 1.4, 0.5, 2.2, 0.7, CELL.STAR, 0, 0.3);
           }
           break;

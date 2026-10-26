@@ -50,6 +50,7 @@ import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
 import { resetSpecials, setSlimeKing, initSpecial } from './bossSpecials';
+import { clearMalakarFx } from './malakarFx';
 import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
 import type { Interactable } from './village';
@@ -287,7 +288,7 @@ function clearTransient(): void {
   world.boss.staggered = false;
   world.boss.stagger = 0;
   world.enemyGrid.clear();
-  resetTricks(); resetSpecials(); resetBossFx(); resetBosses2(); resetBossMech();
+  resetTricks(); resetSpecials(); clearMalakarFx(); resetBossFx(); resetBosses2(); resetBossMech();
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {

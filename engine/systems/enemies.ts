@@ -400,13 +400,14 @@ export function spawnEnemy(
   if (!boss) initTrick(e);
   initEliteBig(e);
   e.decoy = false; e.hideT = 0; e.shellT = 0; e.spKind = 0;
+  e.bossAdd = !boss && bossAlive();   // (owner 2026-10-26) a summon in a boss fight: no loot / gold / xp (combat.killEnemy)
   if (boss) initSpecial(e);
   e.state = 'SPAWN';
   e.stateT = 0;
   awake[e.id] = 0; homeOk[e.id] = 0;
   e.winT = 0; e.winCd = WIND.firstMin + Math.random() * (WIND.firstMax - WIND.firstMin); e.winPhase = 0; e.winBusy = false;
   e.phase = 0;
-  e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 3 : 0; // so first boss pattern is index 0
+  e.pattern = kind === 'BOSS_GOLEM' ? 2 : kind === 'BOSS_LICH' ? 2 : 0; // so first boss pattern is index 0
   e.patternT = 0;
   e.angle = 0;
   e.attackCd = boss ? 2.5 : kind === 'BRUTE' ? 2 + Math.random() * 2 : 0.8 + Math.random() * 1.4;

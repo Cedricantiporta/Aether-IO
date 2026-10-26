@@ -121,6 +121,7 @@ export interface Enemy {
   trickCd: number; trickT: number; trickKind: number; // monster signature trick (telegraphed, own cooldown)
   bigCd: number; bigT: number; bigRec: number; bigDash: number; bigKind: number; // elite signature big attack (systems/eliteBig.ts)
   spKind: number; spT: number; spStep: number; spCd: number; // boss / mini-boss signature attack (see bossSpecials.ts)
+  bossAdd: boolean;      // spawned while a boss lived (a summoned add): no gold / xp / loot, only a small chance of an HP / MP orb or potion
   decoy: boolean; hideT: number; shellT: number; // Lich clone, ambush vanish, Shellback shell
   frostT: number;        // chilled by Frost Field / Chain Frost (Archer synergy: Gale Arrow SHATTER +30%)
   chillStacks: number; chillT: number; // Chain Frost chill (15% slow per stack, 4 = freeze)

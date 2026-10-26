@@ -496,6 +496,20 @@ export function killEnemy(e: Enemy): void {
     return;
   }
 
+  if (e.bossAdd && !e.mini) {   // (owner 2026-10-26) summoned adds in a boss fight: no gold / xp / loot, only a small chance of an HP / MP orb or potion
+    e.bossAdd = false;
+    world.run.kills++;
+    if (Math.random() < 0.22) {
+      dropPos.set(e.pos.x + (Math.random() - 0.5), 0, e.pos.z + (Math.random() - 0.5));
+      const r = Math.random();
+      if (r < 0.4) spawnPickup('HEALTH', dropPos, 20);
+      else if (r < 0.7) spawnPickup('MANA', dropPos, Math.max(25, useGameStore.getState().stats.maxMana * 0.2));
+      else spawnPickup('ITEM', dropPos, 0, makeItemById(Math.random() < 0.5 ? 'potion_hp' : 'potion_mana', 1)[0]);
+    }
+    onEnemyDeath(e);
+    events.emit('enemyDeath', { pos: e.pos, kind: e.kind, elite: false, boss: false, scale: e.scale, env: killEnv });
+    return;
+  }
   riruruDied(e);   // (owner cameo) Riruru drops 3 Mana Potions
   const run = world.run;
   run.kills++;
