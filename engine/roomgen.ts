@@ -35,6 +35,16 @@ export function isHallsRoom(biome: number, type: RoomType, seed: number, index: 
   return mulberry32(seed ^ 0x5eed11)() < (BIOMES[biome % BIOMES.length].style === 'MARBLE' ? 1 : 0.92);   // (owner) Marble Halls = every fight room is an indoor castle hall; elsewhere almost every one is chambers + passages
 }
 
+/** RING / hub HALLS layout (owner 2026-10-26: a big middle chamber ringed by sacs, engine/roomHallsGen.ts genRing*): every defend-the-totem / rescue (cage) and treasure room, and ~30% of the other
+ *  kill-all combat rooms (goblin / bounty / no objective). Never elites, bosses, camps, merchants, towers (those are not HALLS rooms, or not combat / treasure). */
+export const RING_KILLALL = 0.3;
+export function isRingRoom(biome: number, type: RoomType, obj: string | undefined, seed: number, index: number): boolean {
+  if (shapeDbg.ring !== null && isHallsRoom(biome, type, seed, index)) return shapeDbg.ring && (type === 'COMBAT' || type === 'TREASURE');
+  if (!isHallsRoom(biome, type, seed, index)) return false;
+  if (type === 'TREASURE' || obj === 'DEFEND' || obj === 'RESCUE') return true;
+  return type === 'COMBAT' && mulberry32(seed ^ 0x71d9a3)() < RING_KILLALL;
+}
+
 /** Stage layout of a room (pure function of biome, type, seed and room index). */
 export function roomLayout(biome: number, type: RoomType, seed: number, index: number): Layout {
   if (runInfo.mode === 'TOWER') return 'PLAIN';
@@ -113,7 +123,7 @@ const rp: [number, number] = [0, 0];
 const pickCaveNode = (r: number, r2: number): CrateKind => (r < 0.015 ? 'LEGEND_VEIN' : r < 0.075 ? 'EPIC_VEIN' : r < 0.205 ? 'RARE_VEIN' : r2 < 0.6 ? 'CRYSTAL' : r2 < 0.8 ? 'ORE' : r2 < 0.9 ? 'GOLD_VEIN' : 'HERB');
 const pickHarvest = (r: number): CrateKind => (r < 0.24 ? 'CRYSTAL' : r < 0.48 ? 'ORE' : r < 0.66 ? 'GOLD_VEIN' : r < 0.82 ? 'HERB' : 'MANA_BLOOM');
 
-export function buildRoom(biome: number, type: RoomType, R: number, seed: number, index = 1, campPath = false): void {
+export function buildRoom(biome: number, type: RoomType, R: number, seed: number, index = 1, campPath = false, obj?: string): void {
   if (campPath && type === 'CAMP' && runInfo.mode !== 'TOWER') { resetFeatures(); feat.layout = 'PLAIN'; buildCampRoom(biome); feat.version++; return; }   // the biome camp: a hand-authored transition path (engine/campPaths.ts)
   if (runInfo.mode !== 'TOWER' && isArenaRoom(type)) { buildArena(biome, type, R, seed); return; }   // duel ring / gatekeeper courtyard / fountain plaza
   const def = biomeOf(biome);
@@ -122,7 +132,7 @@ export function buildRoom(biome: number, type: RoomType, R: number, seed: number
   const fightRoom = !!FIGHT[type];
   buildShape(type, R, seed, {
     weights: fightRoom || type === 'MINIBOSS' ? def.shapes : undefined,
-    long: layout === 'LONG', style: def.style, name: def.name,
+    long: layout === 'LONG', style: def.style, name: def.name, ring: isRingRoom(biome, type, obj, seed, index),
     force: isHallsRoom(biome, type, seed, index) ? 'HALLS' : type === 'BOSS' && def.boss === 'BOSS_WARMACH' ? 'SQUARE' : layout === 'LAKE' && (type === 'COMBAT' || type === 'ELITE') ? pickLakeShape(seed) : undefined,
   });
   const isHalls = shape.kind === 'HALLS';

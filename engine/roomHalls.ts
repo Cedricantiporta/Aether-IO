@@ -45,6 +45,8 @@ export const halls = {
   order: [] as number[],
   /** the procedural generator gave up for this seed and a fixed template was used (stats / QA) */
   fellBack: false,
+  /** RING / hub layout (owner 2026-10-26): chambers[0] is the hub (origin: arrival, station / totem / chest), `order` = the sacs around it; monsters never sleep, bursts spawn in the sacs */
+  ring: false,
   /** points along the passage centre lines (>= 9 m from the start / exit, ~10 m apart): some monsters are placed here (director.pickAnchor) */
   passPts: [] as [number, number][],
   area: 0, extent: 0,
@@ -384,24 +386,25 @@ function genOk(G: GenOut): boolean {
 /** Builds the mask for a room of nominal radius R. Fills `halls` (origin = hub).
  *  ~80% of the rooms (85% in Marble Halls) get a procedural plan (roomHallsGen.ts: random chamber count / size classes / connections), the rest
  *  one of the fixed templates; `force` = 'RANDOM' always generates. A plan the checks reject is regenerated (tighter) up to 40 times, then the template. */
-export function buildHallsLayout(type: string, R: number, seed: number, style: string, name: string, force?: HallsVariant): void {
+export function buildHallsLayout(type: string, R: number, seed: number, style: string, name: string, force?: HallsVariant, ring = false): void {
   void R;
   const rnd = mulberry(seed ^ 0x3c6ef372);
   const marble = style === 'MARBLE';
   const tplVariant = force && force !== 'RANDOM' ? force : pickVariant(style, name, rnd);
   const useGen = force === 'RANDOM' || !force;   // (owner 2026-10-25: maps are linear -> always the procedural chain; the fixed templates remain only as a QA force / last-resort fallback)
-  halls.fellBack = false;
+  halls.fellBack = false; halls.ring = false;
   if (useGen) {
     const count = pickCount(mulberry(seed ^ 0x1b873593), type);   // (chosen once; later attempts lose a chamber when the plan will not fit)
     for (let attempt = 0; attempt < 40; attempt++) {
-      const G = genHalls(mulberry((seed ^ 0x7f4a7c15) + attempt * 0x9e3779b1), type, marble, attempt, Math.max(2, count - (attempt >= 28 ? 2 : attempt >= 16 ? 1 : 0)));
+      const G = genHalls(mulberry((seed ^ 0x7f4a7c15) + attempt * 0x9e3779b1), type, marble, attempt, Math.max(2, count - (attempt >= 28 ? 2 : attempt >= 16 ? 1 : 0)), ring);
       if (!G) continue;
       const I = instFromGen(G);
       rasterise(I, seed);
       finishPoints(I);
       if (!genOk(G)) continue;
-      findPockets();
+      if (G.ring) halls.pockets.length = 0; else findPockets();   // (ring rooms: no dead-end pockets, every sac is a fight chamber)
       findPassPts(I);
+      halls.ring = !!G.ring;
       halls.variant = 'RANDOM';
       halls.on = true; halls.version++;
       return;

@@ -103,6 +103,10 @@ const burstSize = [0, 0, 0, 0, 0, 0, 0, 0];
 // opens only when every monster is down, in the nearest chamber to the hero not used yet (no chamber twice). More monsters overall.
 let sacMode = false, sacCur = -1, sacUsed = 0, sacChain = 0;
 const SAC_MORE = 1.4;
+// (owner 2026-10-26) RING / hub rooms (halls.ring): the hero holds the middle chamber, every spawn group appears in a random sac around it (3 bursts, so several sacs at once and a rotating mix);
+// monsters never sleep there (enemies.ts) and walk to the middle over the nav flow field.
+let ringMode = false, ringLast = -1;
+const RING_MORE = 1.25;
 let anchorX = 0, anchorZ = 0, groupIdx = 0, inGroup = 0;
 let miniPending = false;
 /** Endless Waves stacking (owner): extra bosses beside the wave's boss, and how many mini-bosses a wave brings. */
@@ -317,7 +321,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const seed = daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
   const R = waves.on ? WAVES_ARENA_R : runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);   // (Endless Waves: one boss-size arena)
   const campPath = p.type === 'CAMP' && !p.epilogue && !p.dream && runInfo.mode === 'ADVENTURE';   // the biome camp is a hand-authored transition path (engine/campPaths.ts)
-  buildRoom(b, p.type, R, seed, idx, campPath);
+  buildRoom(b, p.type, R, seed, idx, campPath, p.obj);
   world.room.radius = campPath && camp.cur ? Math.round(camp.cur.len / 2) : R;
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
@@ -498,9 +502,10 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   elites += elites > 0 ? mods.elites : 0;   // Ascension 9: one more elite in elite rooms
   const roomy = feat.layout === 'BIG' ? 1.3 : feat.layout === 'LAKE' || feat.layout === 'RIVER' ? 1.1 : 1;   // big stages hold more monsters
   const tower = runInfo.mode === 'TOWER' ? (daily.on ? 1.5 : waves.on ? waveCrowd(towerFloor) : 2) : 1;   // Endless Tower: twice the monsters per floor (Daily Trial: x1.5)
-  sacMode = shape.kind === 'HALLS' && halls.chambers.length >= 2 && (plan.type === 'COMBAT' || plan.type === 'ELITE' || plan.type === 'TREASURE') && runInfo.mode !== 'TOWER';
+  ringMode = shape.kind === 'HALLS' && halls.ring && halls.order.length >= 3 && (plan.type === 'COMBAT' || plan.type === 'TREASURE') && runInfo.mode !== 'TOWER'; ringLast = -1;
+  sacMode = !ringMode && shape.kind === 'HALLS' && halls.chambers.length >= 2 && (plan.type === 'COMBAT' || plan.type === 'ELITE' || plan.type === 'TREASURE') && runInfo.mode !== 'TOWER';
   sacUsed = 0; sacCur = -1; sacChain = 0;
-  let points = Math.min(waveBudget(depth) * mult * roomy * tower * (sacMode ? SAC_MORE : 1), 160 * tower * (sacMode ? SAC_MORE : 1)) * mods.spawn;
+  let points = Math.min(waveBudget(depth) * mult * roomy * tower * (sacMode ? SAC_MORE : ringMode ? RING_MORE : 1), 160 * tower * (sacMode ? SAC_MORE : ringMode ? RING_MORE : 1)) * mods.spawn;
   // (owner) the first quest, "Trial of the Meadow" (defeat slimes): while it is open the Greenwood packs carry a guaranteed slime group,
   // so it can always be finished in the first rooms of the first run
   const sl = plan.type === 'COMBAT' || plan.type === 'TREASURE' ? slimeQuestLeft() : 0;
@@ -519,6 +524,7 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   for (let i = 0; i < elites; i++) pushGroup(rosterPick(def, 99, 1.5), 1, true);
   // bursts: split the normal units in equal parts; elites join the last burst
   bursts = Math.max(1, Math.min(Math.ceil(nBursts / 2), 2));   // (owner) fewer, bigger groups: 20 enemies = 2 x 10, not 4 x 5
+  if (ringMode) bursts = 3;
   if (sacMode) { bursts = Math.min(halls.chambers.length, burstEnd.length); sacPick(halls.sx, halls.sz); }   // one burst per chamber
   let prev = 0;
   for (let b = 0; b < bursts; b++) {
@@ -683,8 +689,28 @@ function sacAnchor(minPlayerDist: number): boolean {
   return false;
 }
 
+/** RING rooms: a spawn spot inside a random sac (never the same one twice in a row, kept off the hero when possible). */
+function ringAnchor(minPlayerDist: number): boolean {
+  const o = halls.order, pp = world.player.pos;
+  for (let pass = 0; pass < 3; pass++) {
+    const md = pass === 0 ? minPlayerDist : pass === 1 ? minPlayerDist * 0.6 : 0;
+    for (let t = 0; t < 50; t++) {
+      let si = o[Math.floor(Math.random() * o.length)];
+      if (si === ringLast && o.length > 1 && t < 30) si = o[(o.indexOf(si) + 1) % o.length];
+      const c = halls.chambers[si]; if (!c) continue;
+      const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * c[2] * 0.75;
+      const x = c[0] + Math.cos(a) * r, z = c[1] + Math.sin(a) * r;
+      if (!insideShape(x, z, 3) || !isSpawnable(x, z)) continue;
+      if ((x - pp.x) ** 2 + (z - pp.z) ** 2 < md * md) continue;
+      anchorX = x; anchorZ = z; ringLast = si; return true;
+    }
+  }
+  return false;
+}
+
 function pickAnchor(minPlayerDist: number): boolean {
   const pp = world.player.pos;
+  if (ringMode && ringAnchor(minPlayerDist)) return true;
   if (sacMode && shape.kind === 'HALLS') { if (sacAnchor(minPlayerDist)) return true; }
   else if (shape.kind === 'HALLS' && halls.passPts.length && Math.random() < 0.3) {   // (owner) HALLS: some packs wait along the passages (they idle / wander until the hero is near)
     const q = halls.passPts[Math.floor(Math.random() * halls.passPts.length)];

@@ -17,6 +17,8 @@ export interface GenOut {
   start: [number, number]; exit: [number, number]; hub: [number, number]; startIdx: number; exitIdx: number; pocketIdx: number;
   /** visiting order of the chambers (indexes into `blobs`): the chain start -> ... -> exit, a dead-end pocket right after the chamber it hangs off */
   order: number[];
+  /** RING / hub layout (blobs[0] = the hub, `order` = the sacs around it) */
+  ring?: boolean;
 }
 
 /** size class radii (m): small, medium, big */
@@ -111,14 +113,14 @@ function pathClear(c: [number, number][], w: number, blobs: GenBlob[], np: numbe
 }
 
 /** a curved passage between two chambers (control points pulled sideways), or null when it would cut through something */
-function makeCurve(rnd: Rnd, blobs: GenBlob[], np: number, ia: number, ib: number, w: number, others: PathRec[], gs: number): [number, number][] | null {
+function makeCurve(rnd: Rnd, blobs: GenBlob[], np: number, ia: number, ib: number, w: number, others: PathRec[], gs: number, bend = 1): [number, number][] | null {
   const A = blobs[ia], B = blobs[ib], ang = Math.atan2(B.z - A.z, B.x - A.x), ux = Math.cos(ang), uz = Math.sin(ang);
   const p0: [number, number] = [A.x + ux * (dirR(A, ang) - 2.6), A.z + uz * (dirR(A, ang) - 2.6)];
   const p3: [number, number] = [B.x - ux * (dirR(B, ang + Math.PI) - 2.6), B.z - uz * (dirR(B, ang + Math.PI) - 2.6)];
   const len = hyp(p3[0] - p0[0], p3[1] - p0[1]);
   if (len < 3) return null;
   for (let t = 0; t < 5; t++) {
-    const curv = t === 4 ? 0 : (0.08 + rnd() * 0.4) * (rnd() < 0.5 ? -1 : 1), o1 = curv * len * (0.7 + rnd() * 0.6), o2 = curv * len * (rnd() < 0.5 ? -0.7 : 0.9) * (0.5 + rnd() * 0.7);
+    const curv = t === 4 ? 0 : (0.08 + rnd() * 0.4) * bend * (rnd() < 0.5 ? -1 : 1), o1 = curv * len * (0.7 + rnd() * 0.6), o2 = curv * len * (rnd() < 0.5 ? -0.7 : 0.9) * (0.5 + rnd() * 0.7);
     const c: [number, number][] = [p0, [p0[0] + (p3[0] - p0[0]) / 3 - uz * o1, p0[1] + (p3[1] - p0[1]) / 3 + ux * o1], [p0[0] + (p3[0] - p0[0]) * 2 / 3 - uz * o2, p0[1] + (p3[1] - p0[1]) * 2 / 3 + ux * o2], p3];
     void gs;
     if (pathClear(c, w, blobs, np, ia, ib, others, false)) return c;
@@ -185,6 +187,26 @@ function endSpot(G: { blobs: GenBlob[]; edges: [number, number][]; paths: GenPat
 }
 
 // ----------------------------------------------------------------------------- outdoor plan
+/** islands (tree / rock clumps) in every chamber, away from the passage mouths, start, exit and the station area */
+function outdoorIslands(G: GenOut, rnd: Rnd): void {
+  const R = (a: number, b: number): number => a + rnd() * (b - a), blobs = G.blobs, n = blobs.length;
+  const mouths: [number, number][] = []; for (const p of G.paths) mouths.push(p.c[0], p.c[3]);
+  for (let i = 0; i < n; i++) {
+    const B = blobs[i], k = B.cls === 0 ? (rnd() < 0.4 ? 1 : 0) : B.cls === 1 ? Math.floor(rnd() * 3) : 1 + Math.floor(rnd() * 3);
+    for (let m = 0; m < k; m++) {
+      const ir = B.cls === 0 ? R(1.8, 2.3) : B.cls === 1 ? R(2, 3) : R(2.6, 4);
+      for (let t = 0; t < 24; t++) {
+        const a = rnd() * TAU, rr = Math.sqrt(rnd()) * 0.62, lx = Math.cos(a) * rr * B.rx, lz = Math.sin(a) * rr * B.rz;
+        const x = B.x + lx * Math.cos(B.rot) - lz * Math.sin(B.rot), z = B.z + lx * Math.sin(B.rot) + lz * Math.cos(B.rot);
+        if (blobD(B, x, z) > -(ir + 4.2)) continue;
+        if (mouths.some((q) => hyp(q[0] - x, q[1] - z) < ir + 6.5) || hyp(x - G.start[0], z - G.start[1]) < ir + 7 || hyp(x - G.exit[0], z - G.exit[1]) < ir + 7 || hyp(x, z) < ir + 6) continue;
+        if (G.islands.some((q) => hyp(q[0] - x, q[1] - z) < q[2] + ir + 3.4)) continue;
+        G.islands.push([x, z, ir]); break;
+      }
+    }
+  }
+}
+
 function genOutdoor(rnd: Rnd, type: string, attempt: number, count: number): GenOut | null {
   const R = (a: number, b: number): number => a + rnd() * (b - a);
   const n = count, pocket = n >= 4 && rnd() < 0.4 ? n - 1 : -1, m = pocket >= 0 ? n - 1 : n;
@@ -238,22 +260,7 @@ function genOutdoor(rnd: Rnd, type: string, attempt: number, count: number): Gen
   G.start = endSpot(G, si, rnd); G.exit = endSpot(G, ei, rnd);
   shiftAll(G, blobs[hub].x, blobs[hub].z);
   for (const b of blobs) if (hyp(b.x, b.z) + Math.max(b.rx, b.rz) * 1.05 + 3 > 92) return F('o4');
-  // islands (tree / rock clumps), away from the passage mouths, start, exit and the station area
-  const mouths: [number, number][] = []; for (const p of G.paths) mouths.push(p.c[0], p.c[3]);
-  for (let i = 0; i < n; i++) {
-    const B = blobs[i], k = B.cls === 0 ? (rnd() < 0.4 ? 1 : 0) : B.cls === 1 ? Math.floor(rnd() * 3) : 1 + Math.floor(rnd() * 3);
-    for (let m = 0; m < k; m++) {
-      const ir = B.cls === 0 ? R(1.8, 2.3) : B.cls === 1 ? R(2, 3) : R(2.6, 4);
-      for (let t = 0; t < 24; t++) {
-        const a = rnd() * TAU, rr = Math.sqrt(rnd()) * 0.62, lx = Math.cos(a) * rr * B.rx, lz = Math.sin(a) * rr * B.rz;
-        const x = B.x + lx * Math.cos(B.rot) - lz * Math.sin(B.rot), z = B.z + lx * Math.sin(B.rot) + lz * Math.cos(B.rot);
-        if (blobD(B, x, z) > -(ir + 4.2)) continue;
-        if (mouths.some((q) => hyp(q[0] - x, q[1] - z) < ir + 6.5) || hyp(x - G.start[0], z - G.start[1]) < ir + 7 || hyp(x - G.exit[0], z - G.exit[1]) < ir + 7 || hyp(x, z) < ir + 6) continue;
-        if (G.islands.some((q) => hyp(q[0] - x, q[1] - z) < q[2] + ir + 3.4)) continue;
-        G.islands.push([x, z, ir]); break;
-      }
-    }
-  }
+  outdoorIslands(G, rnd);
   return G;
 }
 
@@ -264,19 +271,49 @@ const hit = (a: { x0: number; z0: number; x1: number; z1: number }, b: { x0: num
 const rectOf = (b: GenBlob): { x0: number; z0: number; x1: number; z1: number } => ({ x0: b.x - b.rx, z0: b.z - b.rz, x1: b.x + b.rx, z1: b.z + b.rz });
 
 /** straight lane between facing sides of halls a and b (side s of a faces b), or null */
-function laneBetween(rnd: Rnd, blobs: GenBlob[], np: number, a: number, b: number, s: number, w: number, corrs: Corr[]): Corr | null {
+function laneBetween(rnd: Rnd, blobs: GenBlob[], np: number, a: number, b: number, s: number, w: number, corrs: Corr[], spread = 0.9): Corr | null {
   const A = blobs[a], B = blobs[b], alongX = s < 2, sg = s % 2 === 0 ? 1 : -1;
   let lo: number, hi: number, e0: number, e1: number;
   if (alongX) { lo = Math.max(A.z - A.rz, B.z - B.rz) + 4 + w / 2; hi = Math.min(A.z + A.rz, B.z + B.rz) - 4 - w / 2; e0 = A.x + sg * A.rx; e1 = B.x - sg * B.rx; }
   else { lo = Math.max(A.x - A.rx, B.x - B.rx) + 4 + w / 2; hi = Math.min(A.x + A.rx, B.x + B.rx) - 4 - w / 2; e0 = A.z + sg * A.rz; e1 = B.z - sg * B.rz; }
   if (hi < lo || (e1 - e0) * sg < 8) return F('o5');
-  const lane = lo + (hi - lo) * (0.5 + (rnd() - 0.5) * 0.9);
+  const lane = lo + (hi - lo) * (0.5 + (rnd() - 0.5) * spread);
   const c: Corr = alongX
     ? { x0: Math.min(e0, e1), x1: Math.max(e0, e1), z0: lane - w / 2 - 3, z1: lane + w / 2 + 3, a, b, w, alongX, lane, ea: e0, eb: e1 }
     : { z0: Math.min(e0, e1), z1: Math.max(e0, e1), x0: lane - w / 2 - 3, x1: lane + w / 2 + 3, a, b, w, alongX, lane, ea: e0, eb: e1 };
   for (let k = 0; k < np; k++) if (k !== a && k !== b && hit(c, rectOf(blobs[k]), 3)) return F('o6');
   for (const o of corrs) { if (o.a === a || o.b === a || o.a === b || o.b === b) continue; if (hit(c, o, 2)) return F('o7'); }
   return c;
+}
+
+function corrGeom(corrs: Corr[]): { paths: GenPath[]; arches: [number, number, number][] } {
+  const paths: GenPath[] = [], arches: [number, number, number][] = [];
+  for (const c of corrs) {
+    const sg = c.eb >= c.ea ? 1 : -1, a0 = c.ea - sg * 2, b0 = c.eb + sg * 2;
+    const L = (x0: number, z0: number, x1: number, z1: number): [number, number][] => [[x0, z0], [x0 + (x1 - x0) / 3, z0 + (z1 - z0) / 3], [x0 + (x1 - x0) * 2 / 3, z0 + (z1 - z0) * 2 / 3], [x1, z1]];
+    paths.push({ c: c.alongX ? L(a0, c.lane, b0, c.lane) : L(c.lane, a0, c.lane, b0), w: c.w });
+    const za = c.ea - sg, zb = c.eb + sg, m = Math.max(1, Math.round(Math.abs(zb - za) / 14));
+    for (let k = 0; k <= m; k++) {
+      const t = k / m, d = za + (zb - za) * t, e = k === 0 ? 1 : k === m ? -1 : 0, q = d + e * 1.2 * Math.sign(zb - za);
+      if (c.alongX) arches.push([q, c.lane, Math.PI / 2]); else arches.push([c.lane, q, 0]);
+    }
+  }
+  return { paths, arches };
+}
+
+/** column rows along the long walls (not in doorways / near the start and exit) */
+function castleColumns(G: GenOut): void {
+  const blobs = G.blobs, n = blobs.length, paths = G.paths;
+  const mouths: [number, number][] = []; for (const p of paths) mouths.push(p.c[0], p.c[3]);
+  for (let i = 0; i < n; i++) {
+    const B = blobs[i];
+    if (B.rx < 14) continue;
+    for (const rz of [-1, 1]) for (let x = 8; x <= B.rx - 7; x += 8) for (const sx of [-1, 1]) {
+      const px = B.x + sx * x, pz = B.z + rz * (B.rz - 5);
+      if (mouths.some((q) => hyp(q[0] - px, q[1] - pz) < 6.4) || hyp(px - G.start[0], pz - G.start[1]) < 5 || hyp(px - G.exit[0], pz - G.exit[1]) < 5) continue;
+      G.islands.push([px, pz, 0.85]);
+    }
+  }
 }
 
 function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenOut | null {
@@ -313,17 +350,7 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
   const si = 0, ei = m - 1;
   if (hyp(blobs[si].x - blobs[ei].x, blobs[si].z - blobs[ei].z) < (n === 2 ? 36 : 44)) return F('c3');
   const hub = pickHub(blobs, si, ei, pocket);
-  const paths: GenPath[] = [], arches: [number, number, number][] = [];
-  for (const c of corrs) {
-    const sg = c.eb >= c.ea ? 1 : -1, a0 = c.ea - sg * 2, b0 = c.eb + sg * 2;
-    const L = (x0: number, z0: number, x1: number, z1: number): [number, number][] => [[x0, z0], [x0 + (x1 - x0) / 3, z0 + (z1 - z0) / 3], [x0 + (x1 - x0) * 2 / 3, z0 + (z1 - z0) * 2 / 3], [x1, z1]];
-    paths.push({ c: c.alongX ? L(a0, c.lane, b0, c.lane) : L(c.lane, a0, c.lane, b0), w: c.w });
-    const za = c.ea - sg, zb = c.eb + sg, m = Math.max(1, Math.round(Math.abs(zb - za) / 14));
-    for (let k = 0; k <= m; k++) {
-      const t = k / m, d = za + (zb - za) * t, e = k === 0 ? 1 : k === m ? -1 : 0, q = d + e * 1.2 * Math.sign(zb - za);
-      if (c.alongX) arches.push([q, c.lane, Math.PI / 2]); else arches.push([c.lane, q, 0]);
-    }
-  }
+  const { paths, arches } = corrGeom(corrs);
   const G: GenOut = {
     blobs, paths, edges, castle: true, islands: [], statues: [], arches,
     start: [0, 0], exit: [0, 0], hub: [0, 0], startIdx: si, exitIdx: ei, pocketIdx: pocket, order: chainOrder(m, pocket, pocketParent),
@@ -338,17 +365,8 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
   G.start = spot(si); G.exit = spot(ei);
   shiftAll(G, blobs[hub].x, blobs[hub].z);
   for (const b of blobs) if (hyp(Math.abs(b.x) + b.rx, Math.abs(b.z) + b.rz) + 2 > 96) return F('c4');
+  castleColumns(G);
   const mouths: [number, number][] = []; for (const p of paths) mouths.push(p.c[0], p.c[3]);
-  // column rows along the long walls (not in doorways / near the start and exit), statue spots at free hall ends
-  for (let i = 0; i < n; i++) {
-    const B = blobs[i];
-    if (B.rx < 14) continue;
-    for (const rz of [-1, 1]) for (let x = 8; x <= B.rx - 7; x += 8) for (const sx of [-1, 1]) {
-      const px = B.x + sx * x, pz = B.z + rz * (B.rz - 5);
-      if (mouths.some((q) => hyp(q[0] - px, q[1] - pz) < 6.4) || hyp(px - G.start[0], pz - G.start[1]) < 5 || hyp(px - G.exit[0], pz - G.exit[1]) < 5) continue;
-      G.islands.push([px, pz, 0.85]);
-    }
-  }
   for (let i = 0; i < n && G.statues.length < 2; i++) {
     if (i === si || i === ei || rnd() > 0.35) continue;
     const B = blobs[i], free: number[] = []; for (let s = 0; s < 4; s++) if (!(used[i] & (1 << s))) free.push(s);
@@ -361,7 +379,84 @@ function genCastle(rnd: Rnd, type: string, attempt: number, count: number): GenO
   return G;
 }
 
+// ----------------------------------------------------------------------------- RING / hub plan (owner 2026-10-26)
+/** A big central hub (blobs[0], where the hero arrives and the totem / chest stands) with 4-6 smaller "sacs" in a rough circle around it, each joined to the hub by a short
+ *  spoke and (often) to its neighbours by a narrow ring corridor. Outdoor = round clearings + bezier passages; castle (Marble) = rounded halls N / E / S / W + straight lanes. */
+function genRingOutdoor(rnd: Rnd, attempt: number): GenOut | null {
+  const R = (a: number, b: number): number => a + rnd() * (b - a);
+  const r0 = rnd(), k = Math.max(4, (r0 < 0.3 ? 4 : r0 < 0.72 ? 5 : 6) - (attempt >= 14 ? 1 : 0)), n = k + 1, gs = 1 - Math.min(0.4, attempt * 0.02);
+  const blobs: GenBlob[] = [];
+  const hr = R(16, 19.5);
+  blobs.push({ x: 0, z: 0, rx: hr * (1 + rnd() * 0.15), rz: hr, rot: rnd() * TAU, kid: (rnd() - 0.5) * 0.2, box: 0, cls: 2 });
+  const a0 = rnd() * TAU, angs: number[] = [];
+  for (let i = 0; i < k; i++) {
+    const a = a0 + (i + (rnd() - 0.5) * 0.3) * (TAU / k), cls = rnd() < 0.3 ? 1 : 0, r = cls === 1 ? R(13, 15.5) : R(8.5, 12.5), sq = 1 + rnd() * 0.25;
+    const S: GenBlob = { x: 0, z: 0, rx: r * sq, rz: r, rot: rnd() * TAU, kid: (rnd() - 0.5) * 0.3, box: 0, cls };
+    const dist = dirR(blobs[0], a) + dirR(S, a + Math.PI) + R(7, 11) * gs;
+    S.x = Math.cos(a) * dist; S.z = Math.sin(a) * dist;
+    blobs.push(S); angs.push(a);
+  }
+  for (let i = 1; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const A = blobs[i], B = blobs[j], ak = Math.atan2(B.z - A.z, B.x - A.x);
+    if (hyp(B.x - A.x, B.z - A.z) < dirR(A, ak) + dirR(B, ak + Math.PI) + 7) return F('r1');
+  }
+  const recs: PathRec[] = [], edges: [number, number][] = [];
+  for (let i = 1; i < n; i++) {   // spokes hub -> sac
+    const w = R(6.8, 9), c = makeCurve(rnd, blobs, n, 0, i, w, recs, gs, 0.3);
+    if (!c) return F('r2');
+    const rec: PathRec = { c, w, a: 0, b: i, pts: [] }; samplePath(c, rec.pts); recs.push(rec); edges.push([0, i]);
+  }
+  let rings = 0;
+  for (let i = 1; i < n; i++) {   // ring corridors between neighbouring sacs (about half of them; at least one)
+    const j = i === k ? 1 : i + 1, A = blobs[i], B = blobs[j], ak = Math.atan2(B.z - A.z, B.x - A.x), edge = hyp(B.x - A.x, B.z - A.z) - dirR(A, ak) - dirR(B, ak + Math.PI);
+    if (edge > 26 || (rnd() > 0.55 && !(i === k && rings === 0))) continue;
+    const w = R(5.4, 6.6), c = makeCurve(rnd, blobs, n, i, j, w, recs, gs, 0.5);
+    if (!c) continue;
+    const rec: PathRec = { c, w, a: i, b: j, pts: [] }; samplePath(c, rec.pts); recs.push(rec); edges.push([i, j]); rings++;
+  }
+  // arrival and exit: inside the hub, in the gaps between two spokes (not in a mouth), on opposite sides
+  const gap = (g: number): [number, number] => {
+    const a = (angs[g % k] + angs[(g + 1) % k] + (g % k === k - 1 ? TAU : 0)) / 2, d = dirR(blobs[0], a) * 0.58;
+    return [Math.cos(a) * d, Math.sin(a) * d];
+  };
+  const g0 = Math.floor(rnd() * k), g1 = g0 + Math.max(1, Math.floor(k / 2));
+  const G: GenOut = {
+    blobs, paths: recs.map((r) => ({ c: r.c, w: r.w })), edges, castle: false, islands: [], statues: [], arches: [],
+    start: gap(g0), exit: gap(g1), hub: [0, 0], startIdx: 0, exitIdx: 0, pocketIdx: -1, order: blobs.map((_, i) => i).slice(1), ring: true,
+  };
+  if (hyp(G.start[0] - G.exit[0], G.start[1] - G.exit[1]) < 14) return F('r3');
+  for (const b of blobs) if (hyp(b.x, b.z) + Math.max(b.rx, b.rz) * 1.05 + 3 > 92) return F('r4');
+  outdoorIslands(G, rnd);
+  return G;
+}
+
+function genRingCastle(rnd: Rnd, attempt: number): GenOut | null {
+  const R = (a: number, b: number): number => a + rnd() * (b - a);
+  const gs = 1 - Math.min(0.4, attempt * 0.02), blobs: GenBlob[] = [];
+  blobs.push({ x: 0, z: 0, rx: R(15, 18), rz: R(13, 15.5), rot: 0, kid: 0, box: 4, cls: 2 });
+  const corrs: Corr[] = [], edges: [number, number][] = [], sides = [0, 1, 2, 3];
+  for (const s of sides) {
+    const cls = rnd() < 0.45 ? 1 : 0, H = HALL[cls], P = blobs[0], C: GenBlob = { x: 0, z: 0, rx: R(H[0][0], H[0][1]), rz: R(H[1][0], H[1][1]), rot: 0, kid: 0, box: 4, cls }, sg = s % 2 === 0 ? 1 : -1, gap = R(13, 19) * gs, w = R(7, 9.5);
+    if (s < 2) { C.x = sg * (P.rx + gap + C.rx); C.z = (rnd() - 0.5) * 6; } else { C.z = sg * (P.rz + gap + C.rz); C.x = (rnd() - 0.5) * 6; }
+    blobs.push(C);
+    const cr = laneBetween(rnd, blobs, blobs.length, 0, blobs.length - 1, s, w, corrs, 0.3);
+    if (!cr) return F('rc1');
+    corrs.push(cr); edges.push([0, blobs.length - 1]);
+  }
+  for (let i = 1; i < 5; i++) for (let j = i + 1; j < 5; j++) if (hit(rectOf(blobs[i]), rectOf(blobs[j]), 6)) return F('rc2');
+  const { paths, arches } = corrGeom(corrs);
+  const hx = blobs[0].rx - 8, hz = blobs[0].rz - 8, fl = rnd() < 0.5 ? 1 : -1;
+  const G: GenOut = {
+    blobs, paths, edges, castle: true, islands: [], statues: [], arches,
+    start: [-hx * fl, -hz], exit: [hx * fl, hz], hub: [0, 0], startIdx: 0, exitIdx: 0, pocketIdx: -1, order: [1, 2, 3, 4], ring: true,
+  };
+  for (const b of blobs) if (hyp(Math.abs(b.x) + b.rx, Math.abs(b.z) + b.rz) + 2 > 96) return F('rc4');
+  castleColumns(G);
+  return G;
+}
+
 /** One procedural plan (or null: the caller retries with attempt + 1 and a fresh rnd stream). */
-export function genHalls(rnd: Rnd, type: string, castle: boolean, attempt: number, count: number): GenOut | null {
+export function genHalls(rnd: Rnd, type: string, castle: boolean, attempt: number, count: number, ring = false): GenOut | null {
+  if (ring) return castle ? genRingCastle(rnd, attempt) : genRingOutdoor(rnd, attempt);
   return castle ? genCastle(rnd, type, attempt, count) : genOutdoor(rnd, type, attempt, count);
 }

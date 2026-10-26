@@ -55,7 +55,7 @@ import { dropLoot } from './loot';
 import { towerMode, towerCrystals, dropTable } from './combat';
 import '../lootExtra';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, roomHalls, type Collider } from '../mapgen';
-import { hallsPush, hallsSdf, hallsWall } from '../roomHalls';
+import { halls, hallsPush, hallsSdf, hallsWall } from '../roomHalls';
 import { feat, routeAround, riverD, riverS, hwAt } from '../roomFeatures';
 import { nav, navActive, navTick, navFlow, navClear } from '../roomNav';
 import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
@@ -1623,7 +1623,7 @@ function updateEnemy(e: Enemy): void {
     }
   }
   let asleep = false;
-  if (hallsOn && !e.boss && !e.mini && !still && e.state !== 'SPAWN' && e.id < 512 && !awake[e.id]) {
+  if (hallsOn && !halls.ring && !e.boss && !e.mini && !still && e.state !== 'SPAWN' && e.id < 512 && !awake[e.id]) {   // (RING rooms: monsters never sleep, they stream to the middle)
     const ex = player.pos.x - e.pos.x, ez = player.pos.z - e.pos.z;
     if (ex * ex + ez * ez < HALLS_AGGRO * HALLS_AGGRO || e.hp < e.maxHp || e.hitFlash > 0 || curMin >= 0) {
       awake[e.id] = 1;

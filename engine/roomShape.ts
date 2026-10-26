@@ -29,7 +29,7 @@ export const shape = {
 export const fixed = { on: false, sx: 0, sz: 0, stx: 0, stz: 0, ex: 0, ez: 0, dx: 0, dz: -1 };
 
 /** QA hook: set `dbg.force` to build every following room with that outline (also reachable from tests via import). */
-export const dbg: { force: ShapeKind | null; variant: HallsVariant | null } = { force: null, variant: null };
+export const dbg: { force: ShapeKind | null; variant: HallsVariant | null; ring: boolean | null } = { force: null, variant: null, ring: null };   // (ring: QA force of the RING / hub halls layout)
 
 /** Room types that may roll a HALLS layout (chambers joined by corridors, engine/roomHalls.ts). */
 export const hallsType = (type: string): boolean => type === 'COMBAT' || type === 'ELITE' || type === 'TREASURE';   // (owner 2026-10-24: elites use the connected-rooms layout too) boss / mini-boss / shrine / fountain / merchant / camp rooms keep their own stages
@@ -109,7 +109,7 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 }
 
 /** Builds the outline for a room of nominal radius R (walkable limit ~ R + 1 for a disc). Fills `shape`. */
-export interface ShapeOpts { force?: ShapeKind; weights?: [string, number][]; long?: boolean; style?: string; name?: string }
+export interface ShapeOpts { ring?: boolean; force?: ShapeKind; weights?: [string, number][]; long?: boolean; style?: string; name?: string }
 export function buildShape(type: string, R: number, seed: number, opts?: ShapeOpts): ShapeKind {
   fixed.on = false;
   const rnd = mulberry(seed ^ 0x7f4a7c15);
@@ -123,7 +123,7 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
   if (opts?.force) picked = opts.force;
   const dk = dbg.force === 'HALLS' && !hallsType(type) ? null : dbg.force;   // (HALLS only ever replaces fight rooms)
   const kind = runInfo.mode === 'TOWER' ? 'ROUND' : dk ?? picked;   // tower floors: always a round arena
-  if (kind === 'HALLS') return buildHallsShape(type, R, seed, opts?.style ?? 'GRASS', opts?.name ?? '');
+  if (kind === 'HALLS') return buildHallsShape(type, R, seed, opts?.style ?? 'GRASS', opts?.name ?? '', dbg.ring ?? !!opts?.ring);
   const stretch = opts?.long ? 1 : 0;   // long stages: a much longer hall / oval
   const theta0 = rnd() * TAU;
   let F: Fn, areaK = 1, axis = false;
@@ -180,8 +180,8 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
 
 /** HALLS: builds the walkable mask (engine/roomHalls.ts) and fills `shape` with the star-convex kernel seen from the hub
  *  centre (so any code that still clamps radially with edgeLimit stays inside the open floor of the hub chamber). */
-function buildHallsShape(type: string, R: number, seed: number, style: string, name: string): ShapeKind {
-  buildHallsLayout(type, R, seed, style, name, dbg.variant ?? undefined);
+function buildHallsShape(type: string, R: number, seed: number, style: string, name: string, ring: boolean): ShapeKind {
+  buildHallsLayout(type, R, seed, style, name, ring && !dbg.variant ? 'RANDOM' : dbg.variant ?? undefined, ring);
   const T = shape.table, dA = TAU / SHAPE_N;
   let mn = 1e9;
   for (let i = 0; i < SHAPE_N; i++) {
