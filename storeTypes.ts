@@ -251,6 +251,8 @@ export interface GameState {
   fusePotions: (fromId: string, times?: number) => number;
   /** Pet ascension: consume a same-name duplicate (bag only) for +1 star on the keeper (bag or equipped). */
   ascendPet: (keepId: string, sacId: string) => boolean;
+  /** Gear ascension: consume a same-name, same-rarity duplicate (bag only) for +1 star (+6% base stats) on the keeper (bag or equipped). */
+  ascendGear: (keepId: string, sacId: string) => boolean;
   /** Blacksmith fusion: 5 bag gear pieces of one tier -> a chance at one piece of the next tier (else one of the same tier). */
   fuseItems: (ids: string[]) => { ok: boolean; item: Item } | null;
   /** Blacksmith fusion: 5 shards of one tier -> a chance at one shard of the next tier (else one of the same tier). */

@@ -66,6 +66,7 @@ import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
+import { gearStars, withNextStar, GEAR_MAX_STARS } from './gearStars';
 import { petPower, petStatMul, PET_PCT_STATS, petStars, PET_MAX_STARS } from './petGrowth';
 import { POTION_FUSE_COUNT, POTION_LADDER } from './potionFusion';
 import { emptyNpcQuests, sanitizeNpcQuests, npcQuestStatus, NPC_QUESTS, type NpcQuestSave } from './npcQuests';
@@ -1662,6 +1663,22 @@ export const useGameStore = create<GameState>()((set, get) => {
       notify(`${keep.name} ascended to ${stars} star${stars > 1 ? 's' : ''}!`, '#ffd24a', 'SYSTEM');
       return true;
     },
+    ascendGear: (keepId, sacId) => {   // gear stars: sacrifice a same-name, same-rarity duplicate from the bag (never equipped) for +1 star on the keeper (max 5)
+      const s = get();
+      if (keepId === sacId) return false;
+      const slot = (Object.keys(s.equipment) as (keyof Equipment)[]).find((k) => s.equipment[k]?.id === keepId);
+      const keep = slot ? s.equipment[slot] : s.inventory.find((i) => i.id === keepId);
+      const sac = s.inventory.find((i) => i.id === sacId);
+      if (!keep || !sac || !isGear(keep) || !isGear(sac) || keep.name !== sac.name || keep.rarity !== sac.rarity || gearStars(keep) >= GEAR_MAX_STARS) return false;
+      const next = withNextStar(keep);
+      const inv = s.inventory.filter((i) => i.id !== sacId);
+      if (slot) {
+        const equipment = { ...s.equipment, [slot]: next } as Equipment;
+        set({ inventory: inv, equipment, stats: calc(s.baseStats, equipment) });
+      } else set({ inventory: inv.map((i) => (i.id === keepId ? next : i)) });
+      notify(`${keep.name} ascended to ${gearStars(next)} star${gearStars(next) > 1 ? 's' : ''}!`, '#ffd24a', 'SYSTEM');
+      return true;
+    },
     fuseItems: (ids) => {
       const s = get();
       const items = ids.map((id) => s.inventory.find((i) => i.id === id)).filter((i): i is Item => !!i && isGear(i));
@@ -2103,7 +2120,8 @@ export const useGameStore = create<GameState>()((set, get) => {
             const q = [1, 1, 2, 2, 3, 3, 4, 5][Math.floor(Math.random() * 8)];
             crystalGain += q; results.push(crystalItem(q));
           } else {
-            const pot = makeItemById(Math.random() < 0.5 ? 'potion_hp' : 'potion_mana', 3 + Math.floor(Math.random() * 4))[0];
+            const epic = Math.random() < 0.25;   // (owner) summoned potions are Rare (Big) or Epic (Grand) only, never Common
+            const pot = makeItemById(`potion_${Math.random() < 0.5 ? 'hp' : 'mana'}_${epic ? 'grand' : 'big'}`, 3 + Math.floor(Math.random() * 4))[0];
             if (pot) { results.push(pot); supplies.push(pot); }
           }
           continue;
