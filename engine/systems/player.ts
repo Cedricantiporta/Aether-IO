@@ -401,10 +401,10 @@ export function updatePlayer(dt: number): void {
     else { const dx = clickMoveTo.x - p.pos.x, dz = clickMoveTo.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz); if (d > 0.4) { mx = dx / d; mz = dz / d; ml = 1; if (navActive() && !navClear(p.pos.x, p.pos.z, clickMoveTo.x, clickMoveTo.z) && autoPathDir(p.pos.x, p.pos.z, clickMoveTo.x, clickMoveTo.z, dt)) { mx = pathDir.x; mz = pathDir.z; } } else clickMoveTo.on = false; }
   }
 
-  // ---- auto-chase (AUTO-battle bot only, and only with the 'Auto: chase enemies' setting on; owner 2026-10-25: off by default): no movement input + an enemy inside the chase ring but outside weapon range -> walk toward it.
+  // ---- auto-chase (AUTO-battle bot only, and only with the 'Auto: chase enemies' setting on; owner 2026-10-26: on by default, never in a boss fight): no movement input + an enemy inside the chase ring but outside weapon range -> walk toward it.
   // Manual play never walks by itself: attacks only fire from the attack input.
   autoChase = false;
-  if (ml === 0 && world.autoBattle.on && st.settings.autoChase === true && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
+  if (ml === 0 && world.autoBattle.on && st.settings.autoChase === true && !world.boss.active && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
     const range = heroRange(st);
     const chaseR = range * CHASE_MUL;
     // the targeted enemy (clicked lock, else the auto-aim pick) is always walked to until it is in weapon range
