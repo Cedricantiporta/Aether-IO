@@ -71,7 +71,7 @@ export const AUTO_HORSE_S = 3;
 const insideWalls = (x: number, z: number, m: number): boolean => x > WALL.x0 - m && x < WALL.x1 + m && z > WALL.z0 - m && z < WALL.z1 + m;
 /** Dismount spots (owner: off the horse well before the Adventure Portal: its front and the arch itself, r + 3): the hero is about to press E at the portal / the tower door / the mine mouth (their pills need him on foot). */
 const landingNear = (x: number, z: number, r: number): boolean =>
-  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < (r + 3) * (r + 3) || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
+  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < (r + 3) * (r + 3) || (x - BOSS_PORTAL.front.x) ** 2 + (z - BOSS_PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
 function autoHorse(dt: number, talking: boolean): void {
   const v = world.village, rd = v.ride, p = world.player;
   if (v.area !== 'TOWN') { rd.moveT = 0; return; }
@@ -124,7 +124,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { FILL_COLLIDERS } from '../townFill';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, BOSS_PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
 import { mainNav, npcQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';
@@ -249,7 +249,7 @@ function sleepAtHome(): void {
   }, SLEEP_FADE);
 }
 
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'chest';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'chest' | 'bossportal';
 export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -306,6 +306,7 @@ function scanNearby(): void {
       else push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d);
     }
     d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
+    d = q(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z); if (d < GATE_R * GATE_R) { if (useGameStore.getState().progress.endings > 0) push('E', 'Enter', 'Boss Trials', '', -1, d, 'bossportal', '#c58cff'); else push('E', 'Dormant', 'Boss Trials', '', -1, d, 'bossportal', LOCK_COLOR); }   // (owner 2026-10-26) the purple portal: asleep until the first game clear
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16 && gateFlags.tower) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');   // (closed: the fallen tree's Look pill takes its place)
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
     d = q(CHURCH_DOOR.x, CHURCH_DOOR.z); if (d < CHURCH_DOOR.r * CHURCH_DOOR.r) push('E', 'Enter', 'Chapel', '', -1, d, 'church');
@@ -391,6 +392,7 @@ export function interact(it: Interactable): void {
         st.startMode('ADVENTURE');
       }
     }
+    else if (it.act === 'bossportal') { if (st.progress.endings > 0) events.emit('openBossTrials', {}); else st.addNotification('The purple portal sleeps. Only a hero who has cleared the Void (seen the ending) can wake it.', '#c58cff', 'WARNING'); }
     else if (it.act === 'tower') { if (gateFlags.tower) events.emit('openSetOut', { mode: 'TOWER' }); }      // the Endless Tower building (a fallen tree keeps its door shut until the story opens it)
     else if (it.shop) st.openSpecificShop(it.shop);
     return;

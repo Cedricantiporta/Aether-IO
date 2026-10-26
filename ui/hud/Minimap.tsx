@@ -14,7 +14,7 @@ import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
 import { world, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import {
   GATE, WALL_RUNS, WALL_TOWERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
-  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, TOWER, GRAVEYARD,
+  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, BOSS_PORTAL, TOWER, GRAVEYARD,
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
 import { npcMarkers } from '../../engine/systems/npcQuestLogic';
@@ -314,6 +314,7 @@ export const Minimap: React.FC = () => {
     if (town) {
       gate(ctx, sx(GATE.x), sy(GATE.z), 6 * u, C.gold);
       gate(ctx, sx(PORTAL.front.x), sy(PORTAL.front.z), 6.5 * u, '#9d7cff');
+      gate(ctx, sx(BOSS_PORTAL.front.x), sy(BOSS_PORTAL.front.z), 6 * u, useGameStore.getState().progress.endings > 0 ? '#e052ff' : '#7a6a8a');   // Boss Trials portal (dormant = grey)
       gate(ctx, sx(TOWER.door.x), sy(TOWER.door.z), 5.5 * u, '#c9a6ff');
       gate(ctx, sx(CAVE_DOOR.x), sy(CAVE_DOOR.z), 5.5 * u, '#6fd8f0');
       gate(ctx, sx(CASTLE_DOOR.x), sy(CASTLE_DOOR.z), 4.5 * u, '#e48a7c');

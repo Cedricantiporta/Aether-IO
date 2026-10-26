@@ -61,6 +61,7 @@ export interface GameEvents {
   petBurst: { pos: Vector3; el: number; r: number; tier: number };   // a Legendary / Mythic pet's elemental area burst
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string };
+  openBossTrials: Record<string, never>;      // E at the purple Boss Trials portal (ui/screens/BossTrials.tsx)
   purchase: Record<string, never>;            // something was bought with gold / gems (audio)
   summonCast: Record<string, never>;          // a summon was pulled (audio)
   lootDrop: { pos: Vector3; rarity: Rarity };   // an item landed on the ground (audio: Epic+ chime)

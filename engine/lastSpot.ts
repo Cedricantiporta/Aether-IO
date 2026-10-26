@@ -2,7 +2,7 @@
 // A run (adventure) comes back in front of the adventure portal, the tower modes outside the tower, the mines outside the cave mouth.
 import { activeProfileKey } from '../characters';
 
-export type SpotArea = 'TOWN' | 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME' | 'CAVE' | 'RUN' | 'TOWER';
+export type SpotArea = 'TOWN' | 'CASTLE' | 'CHURCH' | 'TAVERN' | 'HOME' | 'CAVE' | 'RUN' | 'TOWER' | 'BOSS';
 export interface LastSpot { area: SpotArea; x: number; z: number; f: number }
 
 const key = (): string => activeProfileKey() + ':last-spot';

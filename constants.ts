@@ -72,7 +72,7 @@ export const SHOP_POSITIONS: { type: 'SUPPLIES' | 'BLACKSMITH' | 'PETS' | 'ARMOR
     { type: 'WAREHOUSE', position: [16.4, 0, 5.5], rot: -Math.PI / 2, color: '#b08850' },      // item storage (100 slots): market street, cart yard
     { type: 'BLACKSMITH', position: [16.4, 0, -1.5], rot: -Math.PI / 2, color: '#ef4444' },   // the forge yard by the gate
     { type: 'TECH', position: [17.2, 0, 19.8], rot: Math.PI, color: '#5fc8e8' },   // Tech House: beside Madame Zora, same row   // Tech House (permanent upgrades): on the East Rise
-    { type: 'BREWER', position: [-10.2, 0, 106.2], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
+    { type: 'BREWER', position: [-6.4, 0, 107.4], color: '#5fd38a' },   // Elixir Brewer: on the path to the Endless Tower (= townData BREWER_HUT; nature_kit_v1 brewer_hut, door faces south onto the path)
     { type: 'FISH', position: [-52.5, 0, 1], color: '#4fb6d8' },   // Fishmonger's stall on the lakeside beach west of the wall (= engine/beachData FISH_STALL; town_kit_v2 shop_stall_house, front south)
     { type: 'MINE', position: [61.5, 0, 3], color: '#e0a050' },   // Mining Supplies stall in the mining camp at the Crystal Cave (engine/caveData MINE_CAMP), facing the yard
 ];
@@ -304,6 +304,7 @@ export const ITEMS_POOL: Item[] = [
   { id: 'binding_seal', name: 'Binding Seal', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Blacksmith > Reforge: seals one bonus line so Reforge Stones and Tempering Oil skip it. The seal stays on the item (a gear piece keeps at least one open line).' },
   { id: 'augment_rune', name: 'Augment Rune', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1800, level: 1, description: 'Blacksmith > Reforge: adds a new bonus line into an empty slot (blue 1, purple 2, gold 3, mythic 4 slots).' },
   { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'An old reforging tool, no longer used (reroll single lines with a Reforge Stone now). Sell it.' },
+  { id: 'boss_ticket', name: 'Boss Trial Ticket', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Boss Trials (the purple portal on the south-west headland): fight a boss again on a day you already fought it. One ticket per rematch.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' },
 
   // --- WEAPONS (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---

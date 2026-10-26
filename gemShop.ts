@@ -20,6 +20,7 @@ const shard = (r: Rarity, per: number, gems: number): GemOffer =>
 export const GEM_OFFERS: GemOffer[] = [
   { key: 'core', item: tpl('upgrade_core'), gems: 8, max: 50, give: items('upgrade_core') },
   { key: 'core2', item: tpl('upgrade_core_2'), gems: 90, max: 10, give: items('upgrade_core_2') },   // (owner) Refined Core: expensive on purpose
+  { key: 'bossticket', item: tpl('boss_ticket'), gems: 300, max: 10, give: items('boss_ticket') },   // (owner 2026-10-26) a Boss Trials rematch on a boss already fought today (bossTrials.ts)
   { key: 'ankh', item: tpl('revive_ankh'), gems: 25, max: 5, give: items('revive_ankh') },
   { key: 'reforge', item: tpl('reforge_stone'), gems: 30, max: 20, give: items('reforge_stone') },
   { key: 'temper', item: tpl('temper_oil'), gems: 18, max: 20, give: items('temper_oil') },

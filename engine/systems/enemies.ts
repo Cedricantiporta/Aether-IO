@@ -43,6 +43,7 @@ import { useGameStore, rollDropPlus } from '../../store';
 import { runMods, veteran, VET } from '../runMods';
 import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
+import { trial, TRIAL_SCALE_BIOME, TRIAL_DMG, TRIAL_TELE, TRIAL_CD } from '../../bossTrials';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
@@ -264,7 +265,7 @@ const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
 export function spawnTelegraphCircle(
   x: number, z: number, radius: number, life: number, damage: number, color: number,
 ): Zone | null {
-  if (bossTel) { radius *= BOSS_TEL_R; life *= BOSS_TEL_T; }
+  if (bossTel) { radius *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
@@ -280,7 +281,7 @@ export function spawnTelegraphCircle(
 export function spawnTelegraphLine(
   x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
 ): Zone | null {
-  if (bossTel) { width *= BOSS_TEL_R; length *= 1.12; life *= BOSS_TEL_T; }
+  if (bossTel) { width *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1); length *= 1.12 * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
@@ -295,7 +296,7 @@ export function spawnTelegraphLine(
 export function spawnTelegraphCone(
   x: number, z: number, dirX: number, dirZ: number, range: number, half: number, life: number, color: number, trick: number, damage: number,
 ): Zone | null {
-  if (bossTel) { range *= 1.2; half = Math.min(1.5, half * 1.15); life *= BOSS_TEL_T; }
+  if (bossTel) { range *= 1.2 * (trial.on ? TRIAL_TELE : 1); half = Math.min(1.5, half * (trial.on ? 1.15 * TRIAL_TELE : 1.15)); life *= BOSS_TEL_T; }
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_CONE'; zn.hostile = true;
@@ -317,7 +318,7 @@ export const biomeLevel = (b: number): number => Math.min(50, 8 + 7 * Math.max(0
 /** The level monsters scale with: the hero's own level up to the biome's level, then only 40% of every level above it
  *  (a strong hero still out-levels old biomes; leveling up no longer makes the next biome a wall). */
 export function monsterLevel(): number {
-  const lv = Math.max(1, useGameStore.getState().level | 0), exp = biomeLevel(Math.max(0, Math.min(7, world.room.biome | 0)));
+  const lv = Math.max(1, useGameStore.getState().level | 0), exp = biomeLevel(Math.max(0, Math.min(7, (trial.on ? TRIAL_SCALE_BIOME : world.room.biome) | 0)));   // (Boss Trial: Void-level monsters)
   return lv <= exp ? lv : exp + 0.4 * (lv - exp);
 }
 /** Biome bosses hit 15% softer (balance pass: level-8 heroes in shop gear lost 15 of 15 Elderroot fights). */
@@ -366,9 +367,9 @@ export function spawnEnemy(
   const tAsc = towerMode() ? (() => { const pg = useGameStore.getState().progress; return pg.endings > 0 ? Math.max(0, pg.ascensionMax - 1) : 0; })() : 0;
   const towerHp = towerMode() ? 1.6 + 0.15 * tAsc : 1, towerDmg = towerMode() ? 1.4 + 0.1 * tAsc : 1;
   const hpMul = towerHp * waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
-  const dmgMul = towerDmg * waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL;
+  const dmgMul = towerDmg * waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL * (trial.on && boss ? TRIAL_DMG : 1);   // (Boss Trial: bosses hit 25% harder)
   // later biomes breed tougher monsters on top of the depth curve (owner): +12% HP and +10% damage per biome (2026-10-25: HP was +15%)
-  const bi = Math.max(0, Math.min(7, world.room.biome | 0));
+  const bi = Math.max(0, Math.min(7, (trial.on ? TRIAL_SCALE_BIOME : world.room.biome) | 0));
   const biomeHp = 1 + 0.12 * bi, biomeDmg = 1 + 0.1 * bi;
   const sizeMul = elite ? ELITE_SCALE : 1;
   const rewardMul = 1 + 0.05 * (wave - 1);
@@ -1642,7 +1643,7 @@ function updateEnemy(e: Enemy): void {
     // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills
     const pace = (e.boss || e.mini) ? bossPace() : 1;
     e.stateT += dt * pace * qm;
-    if (e.attackCd > 0) e.attackCd -= dt * pace;
+    if (e.attackCd > 0) e.attackCd -= dt * pace * (trial.on && e.boss ? TRIAL_CD : 1);   // (Boss Trial: 15% shorter gaps between boss skills)
     if ((e.boss || e.mini) && e.state !== 'SPAWN' && hasSpecial(e) && (updateSpecial(e, dt) || tryStartSpecial(e, tdist))) { desiredYaw = Math.atan2(tdx, tdz); if (e.spKind !== 0 && e.spKind === 29) desiredYaw = e.facing; }
     else if (e.elite && !e.boss && !e.mini && e.trickT <= 0 && e.state !== 'SPAWN' && hasEliteBig(e.kind) && (updateEliteBig(e, dt) || (e.fearT <= 0 && tryStartEliteBig(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { /* signature big attack (eliteBig.ts) owns the enemy */ }
     else if (!e.boss && e.state !== 'SPAWN' && hasTrick(e.kind) && (updateTrick(e, dt * qm) || (e.fearT <= 0 && tryStartTrick(e, tdist, tdx / Math.max(tdist, 0.001), tdz / Math.max(tdist, 0.001))))) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }

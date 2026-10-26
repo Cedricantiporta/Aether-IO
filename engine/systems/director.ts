@@ -65,6 +65,8 @@ import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from '
 // Daily Trial (dailyChallenge.ts): a short seeded tower-style climb; these hooks only apply while daily.on
 import { daily, dailyPlan, dailyBiome, dailyRoomSeed, dailyDepth, climbTitle, climbFloor, DAILY_FLOORS } from '../../dailyChallenge';
 import { dailyFloorCleared, tickDaily } from './dailyRun';
+import { trialBossCleared, tickTrial } from './trialRun';
+import { trial, TRIAL_SCALE_BIOME } from '../../bossTrials';
 // Endless Waves (endlessWaves.ts): one arena, wave after wave (towerFloor = the wave number); hooks only while waves.on
 import { waves, wavePlan, waveBiome, waveDepth, waveIndex, waveElites, waveCrowd, waveExtraBosses, waveBossMinis, waveMinis, waveMiniElites, WAVE_BREAK, WAVES_ARENA_R } from '../../endlessWaves';
 
@@ -208,6 +210,7 @@ export function startRunRooms(): void {
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
   world.room.fade = 1;
+  if (trial.on) { enterRoom(trial.boss, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // Boss Trial (bossTrials.ts): straight into that biome's boss arena
   if (showcase.on) { enterRoom(SHOWCASE_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // (owner) the new character's fully powered showcase arena (engine/showcase.ts)
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
   if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
@@ -306,6 +309,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (!finalFight) world.boss.final = false;
   depth = runInfo.mode === 'TOWER' ? (daily.on ? dailyDepth(towerFloor) : waves.on ? waveDepth(towerFloor) : 2 + Math.round(towerFloor * 1.5)) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
   if (showcase.on) depth = SHOWCASE_DEPTH;   // a late-biome pack and guardian
+  if (trial.on) depth = depthWave(TRIAL_SCALE_BIOME, BOSS_INDEX);   // Boss Trial: Void-level strength (wave 70)
   const d = world.director, r = world.room;
   const st = useGameStore.getState();
   clearTransient();
@@ -377,7 +381,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -1150,6 +1154,7 @@ function nextWave(): void {
 function onBossCleared(): void {
   const d = dd();
   world.boss.active = false;
+  if (trial.on) { trialBossCleared(); return; }
   if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
     bossRewards(); onCleared(); return;
@@ -1407,7 +1412,7 @@ export function updateDirector(dt: number): void {
   r.fade += Math.sign(r.fadeTarget - r.fade) * Math.min(Math.abs(r.fadeTarget - r.fade), dt / FADE_SECONDS);
 
   if (rewardT >= 0) { rewardT -= dt; if (rewardT < 0) grantReward(rewardKind, rewardBonus); }
-  tickDaily(dt);
+  tickDaily(dt); tickTrial(dt);
   if (waves.on && waves.breakT >= 0 && d.phase === 'CLEARED' && st.status === GameStatus.PLAYING) { waves.breakT -= dt; if (waves.breakT < 0) nextWave(); }
 
   tickStageClock(dt);

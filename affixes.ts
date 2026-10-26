@@ -132,7 +132,7 @@ export function affixAllowed(d: AffixDef, type?: string): boolean {
   if (type === 'BOOTS') return d.g === 'def' || d.key === 'move';
   return d.g === 'def';
 }
-export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, type?: string, skipKeys: readonly string[] = [], count?: number): ItemAffix[] {
+export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, type?: string, skipKeys: readonly string[] = [], count?: number, luck = 1): ItemAffix[] {
   const n = count ?? AFFIX_COUNT[rarity];
   const ri = R_IDX[rarity];
   const pool = AFFIXES.filter((d) => d.weight > 0 && affixAllowed(d, type) && (!d.minRarity || R_IDX[rarity] >= R_IDX[d.minRarity]) && !skipKeys.includes(d.key));
@@ -143,7 +143,7 @@ export function rollAffixList(rarity: Rarity, rng: () => number = Math.random, t
     let r = rng() * total, idx = 0;
     for (; idx < pool.length - 1; idx++) { r -= pool[idx].weight; if (r <= 0) break; }
     const d = pool.splice(idx, 1)[0];
-    out.push(rollAffixValue(d.key, rarity, rng));
+    out.push(rollAffixValue(d.key, rarity, rng, luck));
   }
   if (count === undefined && rarity === 'MYTHIC' && rng() < UNIQUE_CHANCE) {
     const u = UNIQUES[Math.floor(rng() * UNIQUES.length)];
@@ -156,9 +156,9 @@ const GEAR = new Set<string>(['WEAPON', 'HELMET', 'ARMOR', 'GLOVES', 'BOOTS', 'A
 export const canHaveAffixes = (item: Item): boolean => GEAR.has(item.type);
 
 /** Rolls affixes onto a gear item in place (no-op for COMMON / non-gear). Bumps the sell price. */
-export function rollAffixes(item: Item, rng: () => number = Math.random): Item {
+export function rollAffixes(item: Item, rng: () => number = Math.random, luck = 1): Item {
   if (!canHaveAffixes(item)) return item;
-  const list = rollAffixList(item.rarity, rng, item.type);
+  const list = rollAffixList(item.rarity, rng, item.type, [], undefined, luck);
   if (list.length) {
     item.affixes = list;
     item.price = Math.round(item.price * (1 + 0.12 * list.length));
