@@ -46,7 +46,7 @@ export const ItemFuse: React.FC = () => {
   /** plays the fusion cinematic; `fn` performs the fusion at the burst moment (owner: animation + result in the middle) */
   /** plays the fusion cinematic; `fn` performs the fusion(s) at the burst moment (owner: animation + result in the middle) */
   const play = (preview: Item, fn: () => FuseResult[]): void => setCine({ preview, run: () => { const rs = fn(); setLast(rs); return batchOutcome(rs, preview); } });
-  const gear = inventory.filter((i) => isGear(i) && i.type !== 'PET');   // (pets fuse at the Pet Stable; a pet here made the fusion silently refuse)
+  const gear = inventory.filter((i) => isGear(i) && i.type !== 'PET' && !!(FUSE_CHANCE[i.rarity] ?? 0));   // (pets fuse at the Pet Stable; owner: a Mythic showed up greyed with no red frame; top-tier pieces cannot fuse, so they are not listed)
   const picked = sel.map((id) => gear.find((p) => p.id === id)).filter((p): p is Item => !!p);
   const tier = picked[0]?.rarity, kind = picked[0]?.type;
   const up = tier ? nextTier(tier) : null;

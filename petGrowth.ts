@@ -41,14 +41,15 @@ export const PET_PCT_STATS = new Set(['critRate', 'critDamage', 'cooldownReducti
 // ---- Pet stat model (owner 2026-10-26): a pet's `stats` in the catalog are WEIGHTS (1.0 = a full line), not numbers.
 //   value = share(rarity) x weight x growth x (a hero reference stat)       (damage, health, defense, regen, mana regen, attack speed, move speed)
 //   value = absolute cap(stat) x (share(rarity) / Mythic share) x weight x growth   (crit, crit damage, cooldown, dodge, knockback ...)
-// share(rarity) is the line size at max growth (Lv 20, Stage III, 0 stars): Common 4% ... Mythic 19% of the hero's own stat.
-// growth runs 0.5 (Lv 1 Stage I) .. 1.0 (Lv 20 Stage III), +10% per ascension star. Weights are looked up by pet NAME in PETS_POOL,
+// share(rarity) is the line size at max growth (Lv 20, Stage III, 0 stars): Common 10% ... Mythic 47.5% of the hero's own stat.
+// growth runs 0.6 (Lv 1 Stage I) .. 1.0 (Lv 20 Stage III), +10% per ascension star. Weights are looked up by pet NAME in PETS_POOL,
 // so saved pets (whose stored stats come from the old number scale) follow the new model without a migration.
-export const PET_LINE_SHARE: Record<Rarity, number> = { COMMON: 0.04, UNCOMMON: 0.06, RARE: 0.085, EPIC: 0.115, LEGENDARY: 0.15, MYTHIC: 0.19 };
+// (owner 2026-10-26: 4%..19% was 'unimaginably weak'; the reference is the hero BEFORE talents / attributes / % bonuses, so the shares are 2.5x)
+export const PET_LINE_SHARE: Record<Rarity, number> = { COMMON: 0.10, UNCOMMON: 0.15, RARE: 0.21, EPIC: 0.29, LEGENDARY: 0.375, MYTHIC: 0.475 };
 /** Absolute stats at share = Mythic, weight 1, growth 1. */
-export const PET_ABS_MAX: Record<string, number> = { critRate: 0.10, critDamage: 0.40, cooldownReduction: 0.10, dodge: 0.06, knockback: 0.8, skillDamage: 0.15, lifeSteal: 0.01, goldFind: 0.10, xpBonus: 0.10 };
+export const PET_ABS_MAX: Record<string, number> = { critRate: 0.16, critDamage: 0.65, cooldownReduction: 0.15, dodge: 0.09, knockback: 1.2, skillDamage: 0.25, lifeSteal: 0.015, goldFind: 0.16, xpBonus: 0.16 };
 /** Share-of-reference stats: damage / maxHealth / defense / moveSpeed / fireRate use their own reference; regen is % of max HP per second, manaRegen % of max mana per second. */
-const REL_FACTOR: Record<string, number> = { damage: 1, maxHealth: 1, defense: 1, moveSpeed: 0.5, fireRate: 0.6, regen: 0.03, manaRegen: 0.06 };
+const REL_FACTOR: Record<string, number> = { damage: 1, maxHealth: 1, defense: 1, moveSpeed: 0.2, fireRate: 0.25, regen: 0.012, manaRegen: 0.025 };   // (speed / regen lines kept near their old size when the shares went 2.5x)
 /** The hero's stats BEFORE the pet is added (gear + class + talents): kept up to date by store.calculateStats. `hpMul` = the HP inflation shown in game. */
 export const petRef = { damage: 18, maxHealth: 100, defense: 3, maxMana: 100, fireRate: 1.4, moveSpeed: 10, hpMul: 1 };
 const REF_KEY: Record<string, 'damage' | 'maxHealth' | 'defense' | 'moveSpeed' | 'fireRate'> = { damage: 'damage', maxHealth: 'maxHealth', defense: 'defense', moveSpeed: 'moveSpeed', fireRate: 'fireRate' };
@@ -58,10 +59,10 @@ export const petWeights = (p: Pick<Item, 'name' | 'stats'>): Partial<Record<stri
   const t = PETS_POOL.find((q) => q.name === p.name);
   return (t ?? p).stats as Partial<Record<string, number>>;
 };
-/** 0.5 at Lv 1 Stage I -> 1.0 at Lv 20 Stage III (the same raw curve as petPowerAt), x(1 + 10%) per star. */
+/** 0.6 at Lv 1 Stage I -> 1.0 at Lv 20 Stage III (the same raw curve as petPowerAt), x(1 + 10%) per star. */
 export const petStatGrowth = (lv: number, stage: number, stars = 0): number => {
   const raw = 1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage];
-  return (0.5 + 0.5 * (raw - 1) / (PET_LV_BONUS * (PET_MAX_LV - 1) + PET_STAGE_BONUS[3])) * (1 + PET_STAR_BONUS * stars);
+  return (0.6 + 0.4 * (raw - 1) / (PET_LV_BONUS * (PET_MAX_LV - 1) + PET_STAGE_BONUS[3])) * (1 + PET_STAR_BONUS * stars);
 };
 /** Share of the hero's reference stat (0.17 = +17%) for the relative stats, or undefined for absolute ones. */
 export const petStatShare = (p: Item, k: string, lv = petLv(p), stage = petStage(p), stars = petStars(p)): number | undefined => {

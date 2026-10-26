@@ -22,9 +22,12 @@ export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onD
   const ok = out?.success !== false;
   const shown = out?.item ?? item;
   const rc = RARITY_LIGHT[shown.rarity] ?? '#f3dfa6';
-  const close = () => { if (phase === 'result') onDone(); };
+  // (owner: the crafting window closed after every craft) a portal's clicks still bubble through the React tree to the panel's
+  // click-outside-to-close backdrop, so the tap that dismisses the result must stop there
+  const close = (e: React.MouseEvent) => { e.stopPropagation(); if (phase === 'result') onDone(); };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return createPortal(
-    <div className={`fc-root fc-${phase} ${ok ? 'fc-ok' : 'fc-fail'}`} onClick={close} data-testid="forge-cinematic" style={{ ['--rc' as any]: rc }}>
+    <div className={`fc-root fc-${phase} ${ok ? 'fc-ok' : 'fc-fail'}`} onClick={close} onPointerDown={stop} onMouseDown={stop} data-testid="forge-cinematic" style={{ ['--rc' as any]: rc }}>
       <div className="fc-smoke" /><div className="fc-smoke b" />
       <div className="fc-rays" />
       <div className="fc-sparks">{Array.from({ length: 26 }, (_, i) => <i key={i} style={{ ['--a' as any]: `${(i * 137.5) % 360}deg`, ['--d' as any]: `${(i % 7) * 0.09}s`, ['--r' as any]: `${14 + (i * 7) % 22}rem` }} />)}</div>
