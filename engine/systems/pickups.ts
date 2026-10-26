@@ -8,7 +8,9 @@ import { world, allocPickup } from '../world';
 import { edgeLimit, bounds, pushOutOfColliders, roomHalls } from '../mapgen';
 import { events } from '../events';
 import type { PickupKind } from '../types';
-import { hardMul } from '../runMods';
+import { hardMul, runInfo } from '../runMods';
+import { waves } from '../../endlessWaves';
+import { showcase } from '../showcase';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
 import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
@@ -38,7 +40,16 @@ export function resetPickups(): void {
  */
 /** Seconds an item lies on the ground before it vanishes. */
 export const ITEM_DESPAWN = 180;
+/** (owner 2026-10-26) The tower family (Endless Tower, Daily Trial, Endless Waves run as mode 'TOWER'): in-run loot is ONLY gold, hero orbs and Aether Crystals
+ *  (Endless Waves: gold only, no crystals). Every item / shard / gem pickup is dropped here, whatever system asked for it (crates, chests, reward rooms,
+ *  boss rewards, champions...). Items the hero dropped on purpose are never blocked. */
+function towerBlocks(kind: PickupKind, item?: Item): boolean {
+  if (runInfo.mode !== 'TOWER' || !world.room.active || showcase.on) return false;
+  if (kind === 'ITEM') return !(item && droppedItems.has(item.id));
+  return kind === 'SHARD' || kind === 'GEM' || (kind === 'CRYSTAL' && waves.on);
+}
 export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?: Item): void {
+  if (towerBlocks(kind, item)) return;
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);

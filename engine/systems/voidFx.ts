@@ -1,4 +1,4 @@
-// Malakar's violet-and-dark effects (pooled, allocation-free per frame). State lives in `mfx`; render/MalakarFx.tsx draws it.
+// Malakar's violet-and-dark effects (pooled, allocation-free per frame). State lives in `mfx`; render/VoidFx.tsx draws it.
 //   LASERS   a purple telegraph lane, then a visible beam fires along it (hit-test once when it fires, see tickLasers)
 //   GRAVITY  a ~1.5 s indicator at the centre, then a pull across the whole arena (stronger the closer you stand), a damage core
 //            (more damage nearer the middle) and a big final explosion; the black hole itself is biomeHazards' visual (spawnGravityVisual)
@@ -9,7 +9,7 @@
 //   BOMBS    telegraphed circles (mirror spikes, the Find-the-Real-One punish) checked against the hero or the mirror soul
 //   RUNES    a violet rune ring on the floor at every teleport (departure + arrival)
 //   BURNS    short-lived dark patches under his fireballs (few and rare)
-// tickMalakarFx runs from bosses.ts every frame he is alive; clearMalakarFx on room reset.
+// tickVoidFx runs from bosses.ts every frame he is alive; clearVoidFx on room reset.
 import { Vector3 } from 'three';
 import { world, allocZone } from '../world';
 import { events } from '../events';
@@ -352,7 +352,7 @@ function burnPatch(x: number, z: number): void {
 }
 
 /** Room reset / boss gone: drop everything. */
-export function clearMalakarFx(): void {
+export function clearVoidFx(): void {
   for (const b of burns) b.z = null;
   for (const l of mfx.lasers) l.on = false;
   for (const r of mfx.runes) r.on = false;
@@ -363,7 +363,7 @@ export function clearMalakarFx(): void {
   for (const b of mfx.bombs) b.on = false;
 }
 
-export function tickMalakarFx(dt: number): void {
+export function tickVoidFx(dt: number): void {
   const p = world.player;
   tickLasers(dt); tickGravity(dt); tickMeteors(dt); tickHoles(dt); tickEventHorizon(dt); tickMirror(dt); tickBombs(dt);
   for (const r of mfx.runes) if (r.on) { r.t += dt; if (r.t >= r.life) r.on = false; }

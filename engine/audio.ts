@@ -494,7 +494,7 @@ type Theme = 0 | 1 | 2; // village, combat (rooms), boss
 const layerG: (GainNode | null)[] = [null, null, null];
 const layerLvl = [1, 0, 0];
 let musicEnabled = true;
-// (owner) recorded tracks: the town theme, one loop per biome, regular boss fights and the final boss (Malakar). Each slot
+// (owner) recorded tracks: the town theme, one loop per biome, regular boss fights and the final boss (the Void Herald). Each slot
 // plays its file (public/audio/...) when one is listed in RECORDED, else the procedural themes play there. Elements are
 // created lazily (only tracks actually heard are downloaded) and crossfaded in recTick on one bus (music volume).
 export const RECORDED: Partial<Record<string, string>> = {

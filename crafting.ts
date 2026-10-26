@@ -56,10 +56,10 @@ const SLOT_RELIC: Record<CraftSlot, string[]> = {
   weapon: ['ignar_brand', 'glacius_heart'], helmet: ['hydra_fang'], armor: ['glacius_heart'], gloves: ['ignar_brand'],
   boots: ['glacius_heart'], accessory: ['hydra_fang'],
 };
-/** Mythic recipes: only the last biome (the Void Herald's shards + his very rare Void Heart) and, for weapons, Malakar's
+/** Mythic recipes: only the last biome (the Void Herald's shards + his very rare Void Heart) and, for weapons, the Herald's
  *  Soul Ember on top. */
 export const VOID_HEART = 'void_heart';
-/** The last-boss drop every Mythic weapon needs (dropped only when Malakar falls for good, ~5%: director.ts). */
+/** The last-boss drop every Mythic weapon needs (dropped only when the Void Herald falls for good, ~5%: director.ts). */
 export const SOUL_EMBER = 'soul_ember';
 
 /** Material list for one recipe (owner: crafting must be extensive, the top tiers built from very rare boss + deep-mine

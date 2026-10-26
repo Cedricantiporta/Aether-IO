@@ -212,13 +212,13 @@ export interface GameState {
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
   startMode: (mode: 'ADVENTURE' | 'TOWER', startBiome?: number) => void;
-  /** Boss Trials (bossTrials.ts): fight biome `boss` (0..6) alone at Void strength. Free once per boss per local day; a done boss needs a Boss Trial Ticket (consumed here). False = refused (locked / no ticket). */
+  /** Boss Trials (bossTrials.ts): fight biome `boss` (0..6) alone at Void strength. Free until the boss is WON that local day (a death / abandon keeps the try); a won boss needs a Boss Trial Ticket (consumed here). False = refused (locked / no ticket). */
   startBossTrial: (boss: number) => boolean;
   /** The trial boss fell: rolls + banks its Legendary / Mythic piece (bag, else warehouse) and returns it. */
   claimBossTrialLoot: (boss: number) => Item | null;
   sailToIsles: () => boolean;         // the captain's 60 Aether Crystal ticket: an adventure run that opens in the Coral Isles   // start a run in this mode (sets engine runInfo, then startGame)
   setAscension: (lv: number) => void;
-  completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension
+  completeEnding: () => void;                       // the Void Herald defeated: count the ending, unlock the next Ascension
   recordTowerFloor: (floor: number) => boolean;     // true when it is a new best for the hero
   claimTowerMilestone: (floor: number) => boolean;  // Endless Tower: claim the reward of a reached 10th floor (once per class)
   startDaily: () => void;                            // Daily Trial: start today's challenge (dailyChallenge.ts) with the current hero

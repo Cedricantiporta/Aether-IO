@@ -20,8 +20,8 @@ const GENERIC: Record<Milestone, string[]> = {
   mire: ['The wells run clean again!', 'Three heads, and you took them all!', 'The caravans are moving!'],
   frost: ['The passes are thawing!', 'A dragon, slain! A dragon!', 'Summer is back, thanks to you.'],
   cinders: ['The smoke is gone from the east.', 'Ignar is ash!', 'The scouts came home!'],
-  herald: ['The Herald is silent!', 'Only the Void remains...', 'Aether believes in you.'],
-  lich: ['The Font shines again!', 'Malakar is gone!', 'Hero of Aether!', 'Long live the guardian!'],
+  herald: ['The Void\'s champions fall!', 'Only the Herald remains...', 'Aether believes in you.'],
+  lich: ['The Font shines again!', 'The Herald is gone!', 'Hero of Aether!', 'Long live the guardian!'],
 };
 
 /** One-off news an NPC tells the next time you talk after a milestone (falls back to nothing: the normal talk). */
@@ -35,9 +35,9 @@ const NEWS: Record<string, Partial<Record<Milestone, string>>> = {
   Dorn: { golem: 'The veins run clean since Elderroot fell. Good ore again!', frost: 'The passes are open! My lads are digging already.' },
   Lysa: { mire: 'Clean water, fresh herbs! My salves have never been better.', golem: 'The Grove herbs are green again, not violet. You did that.' },
   Hodge: { slimeking: 'Slime reports are drying up. Not complaining! Well. A little.', grove: 'Every hero in the ledger wants to be you. I tell them to queue.' },
-  Wren: { golem: 'Elderroot\'s heartwood was violet. Malakar\'s light, as I feared.', herald: 'The Herald, silenced. Only the Dark Castle remains. Be ready.' },
+  Wren: { golem: 'Elderroot\'s heartwood was violet. Malakar\'s light, as I feared.', herald: 'The champions of the Void, silenced. Only the Dark Castle and the Herald remain. Be ready.' },
   Pip: { slimeking: 'You beat a SLIME KING? Was it squishy? Was it gross? Tell me everything!', golem: 'When I grow up I will fight a tree too. A small one.' },
-  Tilda: { king: 'A guard with the King\'s seal! Prices just went up. Joking! Mostly.', mire: 'The coast road is open again. Spices for everyone!', lich: 'I am selling "I survived Malakar" scarves. Want one? Hero discount.' },
+  Tilda: { king: 'A guard with the King\'s seal! Prices just went up. Joking! Mostly.', mire: 'The coast road is open again. Spices for everyone!', lich: 'I am selling "I survived the Void Herald" scarves. Want one? Hero discount.' },
   Corin: { king: 'The King\'s own seal, eh? Still will not get my cart through that gate. I asked.', golem: 'Roads are quieter since that big tree fell. My wheel thanks you.', frost: 'Ice gone from the north road. Hauling is a joy again. Almost.' },
   Nell: { king: 'Your first trip through the portal! I will wave. Wave back!', slimeking: 'A king made of slime. I drew him in my book. He looks like a pudding with opinions.', golem: 'I wrote a whole page about Elderroot. Mostly about you, actually.', lich: 'My little book is full. The last page is about you.' },
   Sera: { mire: 'Trade is booming since the Hydra fell! Well, my trade. Fresh air is free.' },

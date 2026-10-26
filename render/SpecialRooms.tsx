@@ -180,7 +180,7 @@ function GateLabel({ i }: { i: number }) {
   return (
     <Html position={[0, 7.2, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: done ? '#ffd24a' : g.color }} data-testid={`gate-${i}`}>
-        <span className="pi">{done ? <Unlock size={16} /> : g.id === 'HERALD' ? <Skull size={16} /> : <Flame size={16} />}</span>
+        <span className="pi">{done ? <Unlock size={16} /> : g.id === 'ECHOES' ? <Skull size={16} /> : <Flame size={16} />}</span>
         <span className="pt">{g.name}<small>{done ? 'Cleared · key taken' : g.sub}</small></span>
       </div>
     </Html>
@@ -193,7 +193,7 @@ function CastleLabel() {
     <Html position={[0, 9.5, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
       <div className="portal-tag" style={{ ['--pc' as any]: open ? '#ffd24a' : '#c9a2ff' }} data-testid="castle-tag">
         <span className="pi">{open ? <Unlock size={16} /> : <Lock size={16} />}</span>
-        <span className="pt">The Dark Castle<small>{open ? 'Open · Malakar awaits' : `Sealed · Gate Keys ${keys}/${GATE_KEYS_NEEDED}`}</small></span>
+        <span className="pt">The Dark Castle<small>{open ? 'Open · the Herald awaits' : `Sealed · Gate Keys ${keys}/${GATE_KEYS_NEEDED}`}</small></span>
       </div>
     </Html>
   );

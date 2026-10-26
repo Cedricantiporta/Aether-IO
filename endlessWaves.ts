@@ -2,7 +2,7 @@
 // Endless Waves: survival in one big round arena. Waves spawn one after another (short breather + banner between
 // them), growing in size and strength and mixing the monster pools of more biomes over time. Elites from wave 3,
 // a boss every 5th wave and mini-bosses on 5n+3; deeper waves stack several bosses, minis and elites together.
-// No exits: the run ends on death. Best wave per class + one-time milestone rewards (waves 10/20/30/50).
+// Loot: gold only (pickups.spawnPickup drops every item / shard / gem / crystal pickup in this mode). No exits: the run ends on death. Best wave per class + one-time milestone rewards (waves 10/20/30/50).
 //
 // Pure data + engine run state (no React, no store import). The director drives the waves (towerFloor = wave),
 // the store persists progress.wavesBest / wavesClaimed.
@@ -11,7 +11,7 @@ import type { RoomPlan } from './engine/types';
 import type { Rarity } from './types';
 
 export const WAVES_BIOMES = 7;
-export const WAVE_BREAK = 5;          // seconds of breather between waves
+export const WAVE_BREAK = 2.5;        // seconds of breather between waves (owner 2026-10-26: halved from 5; min ~2 s)
 export const WAVES_ARENA_R = 29;      // boss-room size
 
 /** The Endless Waves run in progress (on = this run is Endless Waves; set at run start). */
@@ -23,7 +23,7 @@ export function disarmWaves(): void { waves.on = false; waves.breakT = -1; }
  *  mini-boss wave, every 3rd otherwise an elite pack with a reward card. */
 export function wavePlan(w: number): RoomPlan {
   if (w % 5 === 0) return { type: 'BOSS', reward: 'NONE' };          // (boss waves: bossRewards incl. a card)
-  if (w % 5 === 3) return { type: 'MINIBOSS', reward: 'ITEM' };
+  if (w % 5 === 3) return { type: 'MINIBOSS', reward: 'GOLD' };   // (Endless Waves pays gold only: no items)
   const card = w % 3 === 0;
   return { type: w >= 3 && w % 3 === 0 ? 'ELITE' : 'COMBAT', reward: card ? 'CARD' : w % 2 ? 'GOLD' : 'NONE' };
 }

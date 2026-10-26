@@ -143,7 +143,7 @@ export const Workshop: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 /** Where a material comes from (owner: hover / tap a material for its details, how many you have, where it drops). */
-const SRC_NAME: Record<string, string> = { ELITE: 'Elite monsters', MALAKAR: 'Malakar, when he falls for good (very rare)', CAVE_DEPTHS: 'Deep veins in the Crystal Cave', ORE: 'Ore veins',
+const SRC_NAME: Record<string, string> = { ELITE: 'Elite monsters', MALAKAR: 'The Void Herald, when he falls for good (very rare)', CAVE_DEPTHS: 'Deep veins in the Crystal Cave', ORE: 'Ore veins',
   CRATE: 'Crates', BARREL: 'Barrels', POT: 'Pots', CHEST: 'Treasure chests', CART: 'Wrecked carts', GRAVE: 'Graves', CRYSTAL: 'Crystal nodes', MINI: 'Champions' };
 const srcName = (k: string): string => SRC_NAME[k] ?? (ENEMY_DEFS as Record<string, { name?: string }>)[k]?.name ?? k.charAt(0) + k.slice(1).toLowerCase().replace(/_/g, ' ');
 const lootInfo = (id: string, have: number): React.ReactNode => {

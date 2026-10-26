@@ -233,20 +233,6 @@ export function BossPhaseFx() {
     }
     commitInst(S.ball, nball); commitInst(S.ballTop, nball);
 
-    // ---- Malakar: the real one's shadow is SOLID, the illusions' flicker
-    let nreal = 0, nfake = 0;
-    if (bp.on && kind === 'REAL') {
-      for (let i = 0; i < world.enemies.length; i++) {
-        const x = world.enemies[i]; if (!x.active || x.state === 'DYING') continue;
-        if (i === bp.id) { setInst(S.realDisc, nreal++, x.pos.x, 0.07, x.pos.z, 0, x.radius * 1.5, 1, x.radius * 1.5); }
-        else if (x.decoy && x.trickKind === 1 && nfake < 4) {
-          const fl = ((t * 9 + i * 1.7) % 1) < 0.55 ? 1 : 0.12;   // flickers
-          setInst(S.fakeDisc, nfake++, x.pos.x, 0.07, x.pos.z, 0, x.radius * 1.5 * fl, 1, x.radius * 1.5 * fl);
-        }
-      }
-    }
-    commitInst(S.realDisc, nreal); commitInst(S.fakeDisc, nfake);
-
     // ---- humans: Varn's giant shield, Sable's footprints
     const sh = S.shield;
     const he = humanView.id >= 0 ? world.enemies[humanView.id] : null;

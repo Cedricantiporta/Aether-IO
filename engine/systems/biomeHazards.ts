@@ -54,7 +54,7 @@ export function spawnBlackHole(x: number, z: number, life: number, follow = 0): 
   r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0; r.s = 1; r.vis = false; r.follow = follow;
   hz.ver++;
 }
-/** A picture-only black hole `scale` times the normal size (Malakar's gravity spell: the pull / damage are applied by malakarFx). */
+/** A picture-only black hole `scale` times the normal size (Malakar's gravity spell: the pull / damage are applied by voidFx). */
 export function spawnGravityVisual(x: number, z: number, life: number, scale: number): void {
   if (hz.nRift >= hz.rift.length) return;
   const r = hz.rift[hz.nRift++];

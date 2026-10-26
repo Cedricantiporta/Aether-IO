@@ -1,7 +1,7 @@
 // ============================================================================
-// The road to Malakar (adventure mode, the last biome): the Void ends in the Gatekeeper's courtyard instead of a boss
+// The road to the Void Herald (adventure mode, the last biome): the Void ends in the Gatekeeper's courtyard instead of a boss
 // door. Five trial gates stand in a ring around it; each trial is 1-2 short rooms and ends in a Gate Key fragment.
-// All five fragments open the sealed Dark Castle, where Malakar waits on the Undying Throne (director.finalFight).
+// All five fragments open the sealed Dark Castle, where the Void Herald waits on the Void Throne (director.finalFight).
 // Pure data + the run's gate state; the director drives the flow, render/SpecialRooms.tsx draws the courtyard.
 // ============================================================================
 import type { RoomPlan, RoomObjective, RoomTwist, RoomType, RewardKind } from './types';
@@ -15,7 +15,7 @@ export const GATES: readonly GateDef[] = [
   { id: 'HORDE', name: 'Gate of the Horde', sub: 'Two waves, then hold the totem', color: '#ef6a5e', steps: [{ type: 'COMBAT', reward: 'CARD' }, { type: 'COMBAT', reward: 'GEMS', obj: 'DEFEND' }] },
   { id: 'THORNS', name: 'Gate of Thorns', sub: 'A spike-trap gauntlet', color: '#f2a93b', steps: [{ type: 'COMBAT', reward: 'GOLD', twist: 'TRAPS' }, { type: 'ELITE', reward: 'CARD', twist: 'TRAPS' }] },
   { id: 'HUNT', name: 'Gate of the Hunt', sub: 'Mark and slay in the dark', color: '#5fd6a0', steps: [{ type: 'COMBAT', reward: 'CARD', obj: 'HUNT', twist: 'DARK' }] },
-  { id: 'HERALD', name: 'Gate of the Herald', sub: 'The Void Herald, Malakar\'s first servant', color: '#ff4d6d', steps: [{ type: 'BOSS', reward: 'NONE' }] },
+  { id: 'ECHOES', name: 'Gate of Echoes', sub: 'Two champions of the Void, the second in the dark', color: '#ff4d6d', steps: [{ type: 'ELITE', reward: 'CARD' }, { type: 'ELITE', reward: 'GEMS', twist: 'DARK' }] },
 ];
 
 /** This run's gate progress. `cur` = the trial being walked (-1 = none). */
@@ -51,6 +51,6 @@ export function gatePos(i: number, out: [number, number]): number {
 
 export const GATEKEEPER_LINES = [
   'Five gates, five trials. Each holds a shard of the key that seals the Dark Castle.',
-  'Bring me all five shards and the castle will open. Malakar waits on his stolen throne.',
+  'Bring me all five shards and the castle will open. The Void Herald waits on the stolen throne.',
   'Rest here between trials; my flame mends what the gates break.',
 ];

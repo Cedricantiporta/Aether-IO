@@ -2,7 +2,7 @@
 // Boss & mini-boss signature attacks (telegraphed, readable, using the player debuffs).
 // Same model as tricks.ts: the caster freezes while a scripted timeline (e.spT) runs; telegraph
 // zones carry the damage / effect. Boss bar shows the ability name while casting.
-//   Gorath   BOULDER PRISON, MAGMA VEINS         Malakar  SOUL CHAINS, DEATH CLONES
+//   Gorath   BOULDER PRISON, MAGMA VEINS         Lich  SOUL CHAINS
 //   Slime King  BELLY FLOP (jump, tracking circle, fast drop), ACID FLOOD (one huge pool), ACID RAIN (many small pools)
 //   Warden   RAISE THE DEAD   Captain AMBUSH   Behemoth PRISM BEAM   Old Tusk STAMPEDE   Shellback TIDAL SHELL
 // ============================================================================
@@ -18,7 +18,7 @@ import { hooks } from './hooks';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
-import { mfx, spawnRune } from './malakarFx';
+import { mfx, spawnRune } from './voidFx';
 import { bp } from './bossPhaseState';
 import { KB } from './combat';
 
@@ -29,7 +29,7 @@ export const SP_NAME: Record<number, string> = {
   21: 'Boulder Prison!', 22: 'Magma Veins!', 23: 'Soul Chains!', 24: 'Death Clones!', 25: 'Raise the Dead!', 26: 'Ambush!', 27: 'Prism Beam!', 28: 'Stampede!', 29: 'Tidal Shell!', 30: 'Belly Flop!', 31: 'Acid Flood!', 32: 'Acid Rain!',
 };
 const LIST: Partial<Record<string, number[]>> = {
-  BOSS_GOLEM: [SP.PRISON, SP.VEINS], BOSS_LICH: [SP.CHAINS, SP.CLONES],
+  BOSS_GOLEM: [SP.PRISON, SP.VEINS], BOSS_LICH: [SP.CHAINS],
   ZOMBIE: [SP.DEAD], BANDIT: [SP.AMBUSH], CRYSTAL_GOLEMITE: [SP.PRISM], BOAR: [SP.STAMPEDE], ROCK_CRAB: [SP.SHELL],
   SPLITTER: [SP.SLAM, SP.FLOOD, SP.SLAM, SP.RAIN],   // only the Slime King (see setSlimeKing)
 };
@@ -72,7 +72,6 @@ export const prism: { zone: import('../types').Zone | null } = { zone: null };
 hooks.onCleanse = () => { if (tether.active) { tether.active = false; events.emit('trick', { pos: world.player.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); } };
 
 export function hasSpecial(e: Enemy): boolean {
-  if (e.kind === 'BOSS_LICH' && world.boss.final) return false;   // (owner 2026-10-26: Malakar's final fight runs his own rotation, one major skill at a time)
   return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId); }
 export function initSpecial(e: Enemy): void { e.spCd = 3.5 + Math.random() * 3; e.spKind = 0; e.spT = 0; e.spStep = 0; }
 
@@ -165,31 +164,6 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
           e.spKind = 0;
         } else if (tether.t > 3.2) { tether.active = false; e.spKind = 0; }
       } else if (e.spStep === 1) e.spKind = 0;
-      break;
-    }
-    case SP.CLONES: {
-      if (world.boss.final) {   // Malakar: real illusions that fight (1 in stage 1 for 10 s, 2 in stage 2 for 20 s)
-        if (e.spStep === 0 && t >= 0.8) {
-          e.spStep = 1;
-          const s2 = world.boss.stage === 2;
-          spawnIllusions(e, s2 ? 2 : 1, s2 ? 40 : 20);   // (1 for 20 s in the first fight, 2 for 40 s once he has risen)
-          events.emit('trick', { pos: e.pos.clone(), kind: 'CLONES', radius: 6 });
-        }
-        if (t >= 1.2) e.spKind = 0;
-        break;
-      }
-      if (e.spStep === 0 && t >= 0.8) {
-        e.spStep = 1;
-        const base = Math.random() * 6.283, real = (Math.random() * 3) | 0;
-        for (let k = 0; k < 3; k++) {
-          const a = base + (k / 3) * 6.283;
-          tv.set(p.pos.x + Math.sin(a) * 11, 0, p.pos.z + Math.cos(a) * 11); clampArena(tv, 4);
-          if (k === real) { e.pos.set(tv.x, 0, tv.z); events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false }); }
-          else spawnDecoy(e, tv.x, tv.z);
-        }
-        events.emit('trick', { pos: e.pos.clone(), kind: 'CLONES', radius: 6 });
-      }
-      if (t >= 1.2) e.spKind = 0;
       break;
     }
     case SP.DEAD: {
@@ -397,32 +371,22 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
   return true;
 }
 
-// ------------------------------------------------------------ Death Clones --
-function spawnDecoy(real: Enemy, x: number, z: number): void {
-  const e = allocEnemy();
-  if (!e) return;
-  e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true;
-  e.pos.set(x, 0, z); e.maxHp = e.hp = 1; e.shield = 0; e.speed = 0;
-  e.radius = real.radius; e.scale = real.scale; e.contactDamage = 0; e.projectileDamage = 0; e.xp = 0; e.gold = 0;
-  e.state = 'CHASE'; e.stateT = 0; e.attackCd = 1 + Math.random(); e.facing = real.facing; e.armor = 0; e.active = true;
-  e.spT = 0;
-  events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
-}
-/** Malakar's illusions: up to 2 copies with his current HP and half his armour. They cast his basic volleys (orb fans and rings) for `life`
- *  seconds, then fade. No rewards. Max 2 at a time. Malakar and every live illusion then teleport ONCE into an even ring round the hero. */
+// ------------------------------------------------------------ Void Herald illusions --
+/** The Void Herald's illusions: up to `max` (4) copies of the boss with his current HP and half his armour. They cast his basic volleys (orb fans and rings)
+ *  for `life` seconds, then fade. No rewards. The Herald and every live illusion then teleport ONCE into an even ring round the hero. */
 export function countIllusions(): number {
   let have = 0;
   for (const o of world.enemies) if (o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') have++;
   return have;
 }
-/** `force` (Find the Real One phase) ignores the 2-copy cap (an old shuffle copy never blocks the phase's fakes); `ring` = also do the teleport. */
-export function spawnIllusions(real: Enemy, n: number, life: number, force = false, ring = true): void {
-  let have = force ? 0 : countIllusions();
-  for (let k = 0; k < n && have < 2; k++, have++) {
+/** `ring` = also do the teleport. */
+export function spawnIllusions(real: Enemy, n: number, life: number, max = 4, ring = true): void {
+  let have = countIllusions();
+  for (let k = 0; k < n && have < max; k++, have++) {
     const e = allocEnemy();
     if (!e) break;
-    e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true; e.bossAdd = false; e.trickKind = 1; e.trickT = life;
-    e.pos.set(real.pos.x, 0, real.pos.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as Malakar's bar, to confuse
+    e.kind = real.kind; e.boss = false; e.elite = false; e.decoy = true; e.bossAdd = false; e.trickKind = 1; e.trickT = life;
+    e.pos.set(real.pos.x, 0, real.pos.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as the Herald's bar, to confuse
     e.shield = 0;
     e.armor = real.armor * 0.5; e.staggerMax = 0; e.stagger = 0; e.staggerT = 0;   // same HP as Malakar, half his defense
     e.speed = real.speed; e.radius = real.radius; e.scale = real.scale;
@@ -432,16 +396,16 @@ export function spawnIllusions(real: Enemy, n: number, life: number, force = fal
   if (ring) ringTeleport(real);
 }
 
-const ringA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
-/** One teleport: Malakar and the live illusions land evenly spaced on a ring (radius ~11) around the hero, random starting angle and order. */
+const ringA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
+/** One teleport: the Herald and the live illusions land evenly spaced on a ring (radius ~12) around the hero, random starting angle and order. */
 function ringTeleport(real: Enemy): void {
   let n = 0; ringA[n++] = real;
-  for (const o of world.enemies) if (n < 3 && o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') ringA[n++] = o;
+  for (const o of world.enemies) if (n < 5 && o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') ringA[n++] = o;
   for (let i = n - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = ringA[i]; ringA[i] = ringA[j]; ringA[j] = x; }   // who stands where is random
   const p = world.player.pos, base = Math.random() * 6.283;
   for (let i = 0; i < n; i++) {
     const o = ringA[i], a = base + (i / n) * 6.283;
-    tv.set(p.x + Math.sin(a) * 11, 0, p.z + Math.cos(a) * 11); clampArena(tv, 4);
+    tv.set(p.x + Math.sin(a) * 12, 0, p.z + Math.cos(a) * 12); clampArena(tv, 4);
     spawnRune(o.pos.x, o.pos.z); spawnRune(tv.x, tv.z);   // departure + arrival circles
     o.pos.set(tv.x, 0, tv.z);
     events.emit('spawn', { pos: o.pos, kind: o.kind, elite: false });
@@ -459,14 +423,8 @@ function updateIllusion(e: Enemy, dt: number): void {
   e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
   e.attackCd -= dt;
   if (e.attackCd <= 0) {
-    if (bp.on && bp.kind === 'REAL') {   // Find the Real One: the fakes cast too (a thin fan of weak orbs: the screen stays busy, the real one's volley is bigger)
-      e.attackCd = 1.7 + Math.random() * 0.6;
-      const b = Math.atan2(ux, uz);
-      for (let i = -1; i <= 1; i++) { tv.set(Math.sin(b + i * 0.3), 0, Math.cos(b + i * 0.3)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', 8, 1, { pct: 0.03, life: 4, radius: 0.55, dark: true }); }
-      return;
-    }
     if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while Malakar runs a major skill
-    e.attackCd = (s2 ? 2.4 : 3.2) + Math.random() * 0.8;
+    e.attackCd = (s2 ? 3.0 : 3.8) + Math.random() * 1.0;   // (4 copies: each one fires a little less often)
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
     if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero
       const b = Math.atan2(ux, uz);
@@ -482,16 +440,7 @@ function updateIllusion(e: Enemy, dt: number): void {
 export function updateDecoy(e: Enemy, dt: number): void {
   e.stateT += dt; e.animT += dt;
   if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
-  if (e.trickKind === 1) { updateIllusion(e, dt); return; }
-  const p = world.player.pos;
-  e.facing = Math.atan2(p.x - e.pos.x, p.z - e.pos.z);
-  e.attackCd -= dt;
-  if (e.attackCd <= 0) {
-    e.attackCd = 1.8 + Math.random();
-    tv.set(Math.sin(e.facing), 0, Math.cos(e.facing));
-    fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', 9, 0, { life: 3, radius: 0.5 }); // harmless fake orb (damage 0)
-  }
-  if (e.stateT > 7.5) { popDecoy(e); }
+  updateIllusion(e, dt);
 }
 export function popDecoy(e: Enemy): void {
   if (!e.active || e.state === 'DYING') return;
