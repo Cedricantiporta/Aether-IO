@@ -571,7 +571,18 @@ const GEAR_PAINT = new Set([
   'archmages_scepter', 'archmages_circlet', 'warlords_greataxe', 'warlords_helm', 'oathbound_blade', 'paladin_greathelm',
   'shadowstep_cowl', 'shadowstep_leathers', 'dragonbone_visage', 'dragonbone_hauberk', 'sovereigns_diadem',
   'sovereigns_mantle', 'sovereigns_orb', 'dragonbone_fang',
+  // (owner 2026-10-26 sheet) set weapons, class-set pieces and the one-look-per-slot wear of the class-agnostic sets
+  'dragonbone_longbow', 'dragonbone_staff', 'dragonbone_cleaver', 'dragonbone_greatsword', 'dragonbone_scepter',
+  'shadowstep_bow', 'shadowstep_wand', 'shadowstep_hatchet', 'shadowstep_blade', 'shadowstep_locket',
+  'sovereigns_arc', 'sovereigns_scepter', 'sovereigns_crusher', 'sovereigns_blade', 'sovereigns_reliquary', 'sovereign_orb',
+  'gale_tunic', 'gale_bracers', 'gale_striders', 'gale_feather', 'archmages_robes', 'archmages_gloves', 'archmages_slippers', 'archmages_sigil',
+  'warlords_plate', 'warlords_gauntlets', 'warlords_greaves', 'warlords_banner', 'oathbound_greathelm', 'oathbound_plate', 'oathbound_sabatons', 'oathbound_seal',
+  'setwear_shadowstep_helmet', 'setwear_shadowstep_armor', 'setwear_shadowstep_gloves', 'setwear_shadowstep_boots',
+  'setwear_dragonbone_helmet', 'setwear_dragonbone_armor', 'setwear_dragonbone_gloves', 'setwear_dragonbone_boots',
+  'setwear_sovereign_helmet', 'setwear_sovereign_armor', 'setwear_sovereign_gloves', 'setwear_sovereign_boots',
 ]);
+/** Class-agnostic sets: one painted look per wear slot for every class's piece (setName -> folder key). */
+const SET_WEAR: Record<string, string> = { Shadowstep: 'shadowstep', Dragonbone: 'dragonbone', 'Aether Sovereign': 'sovereign' };
 const TIER_PREFIX = /^(Worn|Sturdy|Fine|Masterwork|Heroic|Ascendant)\s+/;
 const GEAR_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/gear/';
 /** Item.name is the stable base name (grade / +N / affixes live in separate fields); strip a stray "+N" or grade word defensively. */
@@ -581,6 +592,8 @@ export function gearSlug(item: Item): string | undefined {
   const slug = (n: string) => n.toLowerCase().replace(/['\u2019]/g, '').trim().replace(/\s+/g, '_');
   const s = slug(base);
   if (GEAR_PAINT.has(s)) return s;
+  const sw = item.setName ? SET_WEAR[item.setName] : undefined;
+  if (sw && item.type !== 'WEAPON' && item.type !== 'ACCESSORY') { const k = `setwear_${sw}_${item.type.toLowerCase()}`; if (GEAR_PAINT.has(k)) return k; }
   const t = slug(base.replace(TIER_PREFIX, '')); // class wear carries a tier word: "Worn Bone Crown" -> bone_crown
   if (GEAR_PAINT.has(t)) return t;
   const u = slug(base.replace(TIER_PREFIX, '').replace(/^(shadowstep|dragonbone|sovereign'?s?|gale|archmage'?s|warlord'?s|oathbound)\s+/i, ''));   // per-class set piece: "Shadowstep Ranger Hood" -> ranger_hood
@@ -619,7 +632,7 @@ export const GearImg: React.FC<{ slug: string; size: number | string }> = React.
 GearImg.displayName = 'GearImg';
 
 /** Painted loot / fish icons (public/art/loot|fish/<slug>.webp, sheets B6-B9), slug = lowercased name, no apostrophes, spaces -> _. */
-const LOOT_PAINT = new Set(['abyssal_diamond', 'adamant_ore', 'ancient_acorn', 'ancient_relic', 'bat_wing', 'beetle_shell', 'bone_crown', 'champions_medal', 'cinder_core', 'crown_of_the_mountain', 'cultist_rune', 'cursed_skull', 'dark_tome_page', 'echo_crystal', 'echo_of_ruin', 'elderroot_heartwood', 'elite_trophy', 'goblin_chiefs_totem', 'goblin_ear', 'goblin_fang_necklace', 'golem_heartstone', 'grave_locket', 'heart_of_glacius', 'heart_of_the_void', 'herald_void_shard', 'hydra_fang', 'ignars_brand', 'iron_knuckle', 'lich_phylactery_shard', 'lichs_eye', 'malakars_soul_ember', 'marsh_scale', 'mithril_ore', 'ogre_tusk', 'ogre_war_banner', 'old_bone', 'old_coin_pouch', 'ore_nugget', 'pulsing_jelly_heart', 'raw_gemstone', 'royal_seal', 'rusty_tin_can', 'shimmering_core', 'silver_goblet', 'slime_gel', 'soggy_boot', 'volatile_gland', 'wyrm_frostscale']);
+const LOOT_PAINT = new Set(['forbidden_sigil', 'abyssal_diamond', 'adamant_ore', 'ancient_acorn', 'ancient_relic', 'bat_wing', 'beetle_shell', 'bone_crown', 'champions_medal', 'cinder_core', 'crown_of_the_mountain', 'cultist_rune', 'cursed_skull', 'dark_tome_page', 'echo_crystal', 'echo_of_ruin', 'elderroot_heartwood', 'elite_trophy', 'goblin_chiefs_totem', 'goblin_ear', 'goblin_fang_necklace', 'golem_heartstone', 'grave_locket', 'heart_of_glacius', 'heart_of_the_void', 'herald_void_shard', 'hydra_fang', 'ignars_brand', 'iron_knuckle', 'lich_phylactery_shard', 'lichs_eye', 'malakars_soul_ember', 'marsh_scale', 'mithril_ore', 'ogre_tusk', 'ogre_war_banner', 'old_bone', 'old_coin_pouch', 'ore_nugget', 'pulsing_jelly_heart', 'raw_gemstone', 'royal_seal', 'rusty_tin_can', 'shimmering_core', 'silver_goblet', 'slime_gel', 'soggy_boot', 'volatile_gland', 'wyrm_frostscale']);
 const FISH_PAINT = new Set(['aetherfin_koi', 'crimson_salmon', 'crystal_sturgeon', 'deep_geode', 'ghost_catfish', 'golden_carp', 'lake_perch', 'lake_serpent_eel', 'lanternfish', 'moon_dragon_carp', 'moonlit_bream', 'rainbow_trout', 'reed_gudgeon', 'silver_minnow', 'silver_pike', 'starfire_crystal']);
 const ART_ROOT = ((import.meta as any).env?.BASE_URL as string) || '/';
 function lootArt(item: Item): string | undefined {
