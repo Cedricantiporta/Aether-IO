@@ -15,6 +15,7 @@ import { startPos, stationPos, portalSlot, shortcutSlot } from './roomgen';
 import { mulberry32 } from './mapgen';
 import { hz } from './systems/biomeHazards';
 import { rt } from './systems/roomTraps';
+import { bp } from './systems/bossPhaseState';
 import type { RoomPlan } from './types';
 
 export interface IDisc { x: number; z: number; r: number }
@@ -25,9 +26,9 @@ export const ice = {
   grid: new Uint8Array(0), n: 0, o: 0,
 };
 /** Hero slip numbers (player.ts): velocity lerp rate = 12 * grip per second. Steering on ice: x0.1; letting go: x0.04 (a very long glide); top slide speed x1.25 of walking; no dash on ice (abilities.ts tryDash). */
-export const ICE_ACCEL = 0.1, ICE_FRICTION = 0.04, ICE_SPEED_MUL = 1.25;
+export const ICE_ACCEL = 0.05, ICE_FRICTION = 0.015, ICE_SPEED_MUL = 1.25;   // (owner 2026-10-26 round 2: steering x0.05 = ~1.7 s to turn, letting go x0.015 = ~5.5 s glide)
 /** Monster slide: their slide velocity lerps toward the AI's velocity at this rate per second (normal ground = instant). */
-export const ICE_MOB_LERP = 3;
+export const ICE_MOB_LERP = 1.6;
 
 const kx: number[] = [], kz: number[] = [], kr: number[] = [];
 const keep = (x: number, z: number, r: number): void => { kx.push(x); kz.push(z); kr.push(r); };
@@ -35,6 +36,7 @@ const keep = (x: number, z: number, r: number): void => { kx.push(x); kz.push(z)
 /** O(1): is (x, z) on ice right now (run rooms)? */
 export function iceAt(x: number, z: number): boolean {
   if (!ice.on) return false;
+  if (bp.on && bp.kind === 'AVALANCHE') return false;   // Glacius' Avalanche: the safe circles must be standable, so the floor is plain snow for the phase
   const n = ice.n, i = Math.floor((x + ice.o) / ICE_CELL), j = Math.floor((z + ice.o) / ICE_CELL);
   return i >= 0 && j >= 0 && i < n && j < n && ice.grid[j * n + i] === 1;
 }
@@ -42,7 +44,7 @@ export function iceAt(x: number, z: number): boolean {
 function floorOk(x: number, z: number, r: number, halls: boolean): boolean {
   return halls ? hallsSdf(x, z) >= r + 1.2 : insideShape(x, z, r + 1.0);
 }
-const centreR = (halls: boolean): number => (halls ? 0.1 * world.room.radius : 0.22 * shape.baseR);
+const centreR = (halls: boolean): number => (halls ? 0.06 * world.room.radius : 0.1 * shape.baseR);
 function free(x: number, z: number, r: number, halls: boolean): boolean {
   if (!floorOk(x, z, r * 0.5, halls)) return false;
   if (Math.hypot(x, z) < centreR(halls) + r * 0.9) return false;
@@ -73,14 +75,17 @@ function sheet(out: IDisc[], rnd: () => number, cx: number, cz: number, R0: numb
   return out.length - n0;
 }
 
-export function setupIceFloor(biome: number, plan: RoomPlan, seed: number): void {
+/** `bossIce`: Glacius' arena (BOSS room) gets big slides too. Normal rooms aim for 50-70% of the floor, the boss arena ~50%. */
+export function setupIceFloor(biome: number, plan: RoomPlan, seed: number, bossIce = false): void {
   ice.on = false; ice.coverage = 0; ice.discs = []; ice.ver++;
   if (((biome % 7) + 7) % 7 !== FROST_BIOME) return;
-  if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE' && plan.type !== 'TREASURE') || plan.gate !== undefined || plan.shortcut || plan.epilogue || plan.dream) return;
+  const bossRoom = plan.type === 'BOSS' && bossIce;
+  if (!bossRoom && (plan.type !== 'COMBAT' && plan.type !== 'ELITE' && plan.type !== 'TREASURE')) return;
+  if (plan.gate !== undefined || plan.shortcut || plan.epilogue || plan.dream) return;
   const halls = shape.kind === 'HALLS', rnd = mulberry32(seed ^ 0x1ce5), R = world.room.radius || shape.baseR;
   kx.length = kz.length = kr.length = 0;
   const [sx, sz] = startPos(R), [stx, stz] = stationPos(R), po: [number, number] = [0, 0];
-  keep(sx, sz, 9.5); keep(stx, stz, 6.5);
+  keep(sx, sz, bossRoom ? 7 : 9.5); if (!bossRoom) keep(stx, stz, 6.5);
   for (let i = 0; i < 3; i++) { portalSlot(i, 3, R, po); keep(po[0], po[1], 5.5); }
   for (let i = 0; i < 2; i++) { portalSlot(i, 2, R, po); keep(po[0], po[1], 5.5); }
   shortcutSlot(po); keep(po[0], po[1], 5);
@@ -96,27 +101,33 @@ export function setupIceFloor(biome: number, plan: RoomPlan, seed: number): void
   if (feat.pChest.on) keep(feat.pChest.x, feat.pChest.z, 4);
   for (let i = 0; i < feat.nTowers; i++) keep(feat.tx[i], feat.tz[i], 3.5);
 
-  const discs: IDisc[] = [];
-  const area = halls ? Math.PI * R * R * 0.5 : Math.PI * shape.baseR * shape.baseR;
-  const nSheets = halls ? 4 : Math.max(2, Math.min(5, Math.round(area / 650))), sp: [number, number] = [0, 0];
-  let big = 0;
-  for (let s = 0; s < nSheets + 3 && big < nSheets; s++) {
-    const R0 = halls ? 4.5 + rnd() * 3 : 6.5 + rnd() * 4.5;   // (halls: chamber-sized sheets)
+  // keep adding big irregular sheets (random spots not yet iced) until the target share of the floor is ice
+  const discs: IDisc[] = [], target = bossRoom ? 0.5 : 0.52 + rnd() * 0.16, sp: [number, number] = [0, 0];
+  let big = 0, cov = 0;
+  for (let s = 0; s < 160 && cov < target; s++) {
+    const shrink = s < 25 ? 1 : s < 60 ? 0.7 : 0.5;   // (late tries are smaller sheets that fill the gaps between obstacles)
+    const R0 = (halls ? 4.5 + rnd() * 3.5 : (bossRoom ? 8 : 7) + rnd() * 6) * shrink;   // (halls: chamber-sized sheets)
     let got = false;
-    for (let t = 0; t < 50 && !got; t++) {
+    for (let t = 0; t < 40 && !got; t++) {
       if (halls) { if (!hallsRandomSpot(R0 * 0.55 + 1.3, sp)) break; }
-      else { const a = rnd() * 6.283, d = (0.25 + rnd() * 0.65) * shapeLimit(Math.cos(a), Math.sin(a)); sp[0] = Math.cos(a) * d; sp[1] = Math.sin(a) * d; }
-      if (free(sp[0], sp[1], R0 * 0.75, halls)) got = true;
+      else { const a = rnd() * 6.283, d = Math.sqrt(rnd()) * 0.92 * shapeLimit(Math.cos(a), Math.sin(a)); sp[0] = Math.cos(a) * d; sp[1] = Math.sin(a) * d; }
+      if (cov > 0 && t < 30 && gridHas(sp[0], sp[1])) continue;   // prefer ground that is still bare snow
+      if (free(sp[0], sp[1], R0 * 0.5, halls)) got = true;
     }
     if (!got) continue;
-    if (sheet(discs, rnd, sp[0], sp[1], R0, halls) > (halls ? 4 : 8)) big++;
+    if (sheet(discs, rnd, sp[0], sp[1], R0, halls) > (halls ? 3 : 5)) { big++; cov = buildGrid(discs); }
   }
-  if (big === 0 || discs.length < 10) return;
+  if (big === 0 || discs.length < 10) { ice.coverage = 0; return; }
   ice.discs = discs; ice.on = true;
   buildGrid(discs);
 }
+/** Is the grid (built for the discs so far) already ice here? */
+function gridHas(x: number, z: number): boolean {
+  const n = ice.n, i = Math.floor((x + ice.o) / ICE_CELL), j = Math.floor((z + ice.o) / ICE_CELL);
+  return i >= 0 && j >= 0 && i < n && j < n && ice.grid[j * n + i] === 1;
+}
 
-function buildGrid(discs: IDisc[]): void {
+function buildGrid(discs: IDisc[]): number {
   const hs = shape.maxR + 6, n = Math.ceil((hs * 2) / ICE_CELL);
   if (ice.grid.length < n * n) ice.grid = new Uint8Array(n * n); else ice.grid.fill(0);
   ice.n = n; ice.o = hs;
@@ -136,4 +147,5 @@ function buildGrid(discs: IDisc[]): void {
     tot++; if (g[j * n + i] === 1) c++;
   }
   ice.coverage = tot ? c / tot : 0;
+  return ice.coverage;
 }

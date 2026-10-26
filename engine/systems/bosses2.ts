@@ -15,6 +15,7 @@ import { events } from '../events';
 import type { Enemy, EnemyKind, Zone } from '../types';
 import { isBossAdd } from '../enemyDefs';
 import { edgeLimit } from '../mapgen';
+import { insideShape } from '../roomShape';
 import { useGameStore } from '../../store';
 import { hooks } from './hooks';
 import { damagePlayer, applyPlayerDebuff, KB } from './combat';
@@ -24,7 +25,7 @@ import {
 } from './enemies';
 import {
   BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
-  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch,
+  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw,
 } from './bossFx';
 import { wardedBossId } from './bossMech';
 
@@ -726,9 +727,22 @@ function crescent(e: Enemy, a: number, speed: number, life: number, radius: numb
   tv.set(e.pos.x + dirV.x * 1.6, 1.2, e.pos.z + dirV.z * 1.6);
   fireEnemyProjectile(tv, dirV, 'FIRE_CRESCENT', speed, dmg, { life, radius, debuff: 2 });
 }
-/** Drops fire patches behind a travelling slash / dash: every `step` metres along the lane from (S.sx, S.sz), up to `upTo`. */
-function laneTrail(e: Enemy, upTo: number, step: number, r: number): void {
-  while (S.trailD <= upTo) { firePatch(S.sx + S.sdx * S.trailD, S.sz + S.sdz * S.trailD, r, 2.6, ipwr(e) * 0.1); S.trailD += step; }
+/** Drops fire patches behind a travelling slash / dash: every `step` metres along the lane from (S.sx, S.sz), up to `upTo`.
+ *  `halfW` > 0 (a crescent slash): each row also lays patches ACROSS the arc, `halfW` either side, the outer ones trailing back like the crescent's tips
+ *  (owner 2026-10-26: fire along the whole arc, proportional to the slash size). A dash (halfW 0) keeps its single centre line. */
+function laneTrail(e: Enemy, upTo: number, step: number, r: number, halfW = 0): void {
+  let room = fireRoom();
+  const lat = r * 1.1, nSide = halfW > 0 ? Math.max(1, Math.round(halfW / lat)) : 0, pr = nSide > 0 ? r * 0.82 : r, dmg = ipwr(e) * 0.1;
+  while (S.trailD <= upTo && room > 0) {
+    const d = S.trailD;
+    for (let k = -nSide; k <= nSide && room > 0; k++) {
+      const o = nSide > 0 ? (k / nSide) * halfW : 0, f = d - (nSide > 0 ? (o * o) / (halfW * 2.4) : 0);   // tips lag behind the middle of the arc
+      const x = S.sx + S.sdx * f + S.sdz * o, z = S.sz + S.sdz * f - S.sdx * o;
+      if (!insideShape(x, z, 0.5)) continue;
+      if (firePatchRaw(x, z, pr, 2.6, dmg)) room--;
+    }
+    S.trailD += step;
+  }
 }
 function ipwrNow(): number { const b = bossEnemy(); return b ? ipwr(b) : 10; }
 hooks.fireImpact = (x: number, z: number, r: number): void => {   // a giant fireball ends: a burst and a (capped) fire patch
@@ -811,7 +825,7 @@ LISTS.BOSS_WARLORD = [
       S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
       events.emit('shake', { amount: 0.18 });
     },
-    tick(e, dt) { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 2.6, 3.0); },   // the fire trail follows the crescent (owner 2026-10-26: longer, wider, denser)
+    tick(e, dt) { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 3.6, 3.0, 6.4); },   // the fire trail follows the crescent (owner 2026-10-26: longer, wider, denser)
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
   },
   { // Radiant Burst (knight passive): a fiery burst round him and a ring of crescents, then a fire shield wraps him.
@@ -871,7 +885,7 @@ LISTS.BOSS_WARLORD = [
           S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
           S.dashPh = 2; S.slashT = 0.3; events.emit('shake', { amount: 0.2 });
         }
-      } else { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 2.6, 3.0); S.slashT -= dt; }
+      } else { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 3.6, 3.0, 6.4); S.slashT -= dt; }
     },
     done: () => S.dashPh === 2 && S.slashT <= 0,
     end(e) { stand(e); S.dashPh = 2; },

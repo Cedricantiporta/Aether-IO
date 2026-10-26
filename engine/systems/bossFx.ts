@@ -53,13 +53,20 @@ export function stat(name: string): void { bossStats[name] = (bossStats[name] ??
 const tv = new Vector3();
 
 /** Ignar's fire trails (owner): a FIREPATCH that is skipped once FIRE_CAP patches are alive, so the arena never fills up. */
-export const FIRE_CAP = 40;   // (owner 2026-10-26: Ignar's crescents leave more fire)
-export function firePatch(x: number, z: number, r: number, life: number, dps: number): boolean {
+export const FIRE_CAP = 96;   // (owner 2026-10-26: each crescent leaves a whole field of fire along its arc; zone pool 256)
+/** How many more FIREPATCH zones fit under FIRE_CAP (one pass over the pool; call once per trail batch, not per patch). */
+export function fireRoom(): number {
   let n = 0;
   const zs = world.zones;
   for (let i = 0; i < zs.length; i++) { const q = zs[i]; if (q.active && q.kind === 'FIREPATCH') n++; }
-  if (n >= FIRE_CAP) return false;
+  return FIRE_CAP - n;
+}
+/** A fire patch without the cap check (the caller checked `fireRoom()`). */
+export function firePatchRaw(x: number, z: number, r: number, life: number, dps: number): boolean {
   return spawnHostileZone('FIREPATCH', x, z, r, life, dps, 0xff5a1a) !== null;
+}
+export function firePatch(x: number, z: number, r: number, life: number, dps: number): boolean {
+  return fireRoom() > 0 && firePatchRaw(x, z, r, life, dps);
 }
 
 // ------------------------------------------------------------- spawners ----

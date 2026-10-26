@@ -33,7 +33,7 @@ export const RIFT_DASH_DRIFT = 0.2;   // drift multiplier while the hero dashes 
 export const hz = {
   kind: 0 as number, ver: 0,
   nBr: 0, br: Array.from({ length: 12 }, () => ({ x: 0, z: 0, r: 0, rot: 0 })),
-  nMu: 0, mu: Array.from({ length: 5 }, () => ({ x: 0, z: 0, cd: 0, rot: 0 })),
+  nMu: 0, mu: Array.from({ length: 8 }, () => ({ x: 0, z: 0, cd: 0, rot: 0, auto: 0 })),   // auto > 0: a boss-arena poison plant that puffs by itself every `auto` s
   clouds: Array.from({ length: 8 }, () => ({ on: false, x: 0, z: 0, t: 0, tick: 0, seed: 0 })),
   nIce: 0, ice: Array.from({ length: 6 }, () => ({ x: 0, z: 0, r: 0 })),
   ic: Array.from({ length: 10 }, () => ({ on: false, x: 0, z: 0, t: 0, hit: false, seed: 0 })),
@@ -104,6 +104,26 @@ function spot(rad: number, pad = 1, tries = 60): boolean {
   return false;
 }
 
+export const PLANT_WARN = 1.4;   // a boss-arena poison plant swells + shows its cloud ring this long before it puffs
+/** Elderroot's arena (BOSS room, Greenwood): 6 poison plants round the rim. Each puffs a poison cloud (the room's spore cloud: 2.5 m, 3 s) every 6.5 s, staggered,
+ *  after a 1.4 s swell + ring telegraph. Not destructible, no collider; they stay off the boss's root, the arrival spot and the exits. Call after setupBiomeHazards. */
+export function setupBossPlants(): void {
+  const R = world.room.radius;
+  hz.kind = HZ.GREEN; hz.nBr = hz.nMu = 0; hz.ver++;
+  kx.length = kz.length = kr.length = 0;
+  const [sx0, sz0] = startPos(R), po: [number, number] = [0, 0];
+  keep(sx0, sz0, 7); keep(0, -R * 0.16, 7); keep(0, 0, 5);
+  for (let i = 0; i < 3; i++) { portalSlot(i, 3, R, po); keep(po[0], po[1], 5); }
+  for (let i = 0; i < 2; i++) { portalSlot(i, 2, R, po); keep(po[0], po[1], 5); }
+  for (let i = 0, tries = 0; i < 6 && tries < 40; tries++) {
+    if (!spot(1.1, 6, 12)) continue;
+    const x = spotOut[0], z = spotOut[1];
+    if (Math.hypot(x, z) < R * 0.42) continue;   // out on the sides, the middle stays clear for the fight
+    const m = hz.mu[hz.nMu++]; m.x = x; m.z = z; m.rot = Math.random() * 6.28; m.auto = 6.5; m.cd = 2.5 + i * 1.1;
+    keep(x, z, 1.1); i++;
+  }
+}
+
 /** Room entry (director.enterRoom, after buildRoom): roll this room's hazards. */
 export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   hz.kind = HZ.NONE; hz.nBr = hz.nMu = hz.nIce = hz.nRift = 0;
@@ -135,7 +155,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     }
     for (let i = 0; i < nm && hz.nMu < hz.mu.length; i++) {
       if (!spot(1.1, 3)) continue;
-      const m = hz.mu[hz.nMu++]; m.x = spotOut[0]; m.z = spotOut[1]; m.cd = 1 + Math.random() * 2; m.rot = Math.random() * 6.28;
+      const m = hz.mu[hz.nMu++]; m.x = spotOut[0]; m.z = spotOut[1]; m.cd = 1 + Math.random() * 2; m.rot = Math.random() * 6.28; m.auto = 0;
       keep(m.x, m.z, 1.1);
     }
   } else if (kind === HZ.FROST) {
@@ -205,6 +225,7 @@ function tickBiomeHazards(dt: number): void {
     // ---- spore mushrooms: anyone (hero or monster) steps close -> a poison cloud, then a cooldown
     for (let i = 0; i < hz.nMu; i++) {
       const m = hz.mu[i];
+      if (m.auto > 0) { if (fighting) { m.cd -= dt; if (m.cd <= 0) { puff(m); m.cd = m.auto; } } continue; }   // boss-arena plant: swells for PLANT_WARN s (render), then puffs on its own
       if (m.cd > 0) { m.cd -= dt; continue; }
       let trig = alive && (px - m.x) * (px - m.x) + (pz - m.z) * (pz - m.z) < SHROOM_TRIGGER * SHROOM_TRIGGER;
       if (!trig) {

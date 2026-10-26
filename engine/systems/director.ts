@@ -40,8 +40,8 @@ import { LOOT_BY_ID, lootItem } from '../../loot';
 import { SOUL_EMBER } from '../../crafting';
 const SOUL_EMBER_CHANCE = 0.05;
 import { startRoomEvent, roomEventCleared, resetRoomEvent, freeCaptive, speedWon } from './roomEvents';
-import { setupBiomeHazards } from './biomeHazards';
-import { setupRoomTraps } from './roomTraps';
+import { setupBiomeHazards, setupBossPlants } from './biomeHazards';
+import { setupRoomTraps, setupBossBallistas } from './roomTraps';
 import { setupLavaFloor } from '../lavaFloor';
 import { setupIceFloor } from '../iceFloor';
 import { spawnEnemy, spawnMiniBoss, isSpawnable, poofKind } from './enemies';
@@ -322,8 +322,11 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   startRoomEvent(p);   // objective / twist (roomEvents.ts)
   setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
   setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
-  setupLavaFloor(b, p, seed);   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts)
-  setupIceFloor(b, p, seed);   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
+  const bossK = p.type === 'BOSS' && !finalFight ? (debug.bossOverride || biomeBoss(b)) : '';   // (boss arenas get their biome's hazards: bossArena notes in HANDOFF)
+  if (bossK === 'BOSS_TREANT') setupBossPlants();   // Elderroot: self-puffing poison plants
+  else if (bossK === 'BOSS_GOLEM') setupBossBallistas(b);   // Gorath: ballistas on the sides
+  setupLavaFloor(b, p, seed, bossK === 'BOSS_WARLORD');   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts); Ignar's arena ~40% lava
+  setupIceFloor(b, p, seed, bossK === 'BOSS_WYRM');   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;

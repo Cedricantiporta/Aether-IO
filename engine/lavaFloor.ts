@@ -21,7 +21,7 @@ import type { CaveLayout } from './caveData';
 export interface LDisc { x: number; z: number; r: number }
 export const EMBER_BIOME = 5, CELL = 0.5;
 export const lava = {
-  on: false, heavy: false, ver: 0,
+  on: false, heavy: false, ver: 0, coverage: 0,
   /** normal: the lava discs; heavy: the ROCK discs (lava = the rest of the room) */
   discs: [] as LDisc[],
   grid: new Uint8Array(0), n: 0, o: 0,
@@ -47,21 +47,24 @@ function floorOk(x: number, z: number, r: number): boolean {
   return insideShape(x, z, r + 1.6);
 }
 
-export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number): void {
-  lava.on = false; lava.heavy = false; lava.discs = []; lava.ver++;
+/** `bossLava`: Ignar's arena (BOSS room) gets ~40% lava; normal Ember COMBAT / ELITE rooms aim for 35-50%. */
+export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, bossLava = false): void {
+  lava.on = false; lava.heavy = false; lava.discs = []; lava.ver++; lava.coverage = 0;
   lavaDbg.why = 'biome';
   if (((biome % 7) + 7) % 7 !== EMBER_BIOME) return;
   lavaDbg.why = 'plan';
-  if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue || plan.dream) return;
+  const bossRoom = plan.type === 'BOSS' && bossLava;
+  if ((!bossRoom && plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue || plan.dream) return;
+  boss = bossRoom;
   const halls = shape.kind === 'HALLS', rnd = mulberry32(seed ^ 0x1a7a), R = world.room.radius || shape.baseR;
   const wet = feat.river || feat.rift || feat.nLakes > 0 || hz.nRift > 0;
   kx.length = kz.length = kr.length = 0;
   const [sx, sz] = startPos(R), [stx, stz] = stationPos(R), po: [number, number] = [0, 0];
   const discs: LDisc[] = [];
-  const heavy = !halls && !wet && plan.type === 'COMBAT' && (lavaDbg.heavy < 0 ? rnd() < 0.3 : lavaDbg.heavy === 1);
+  const heavy = !halls && !wet && !bossRoom && plan.type === 'COMBAT' && (lavaDbg.heavy < 0 ? rnd() < 0.15 : lavaDbg.heavy === 1);
   if (heavy) genHeavy(discs, rnd, sx, sz, stx, stz);
   else {
-    keep(sx, sz, 9.5); keep(stx, stz, 6);
+    keep(sx, sz, bossRoom ? 8 : 9.5); if (!bossRoom) keep(stx, stz, 6);
     for (let i = 0; i < 3; i++) { portalSlot(i, 3, R, po); keep(po[0], po[1], 5.5); }
     for (let i = 0; i < 2; i++) { portalSlot(i, 2, R, po); keep(po[0], po[1], 5.5); }
     shortcutSlot(po); keep(po[0], po[1], 5);
@@ -76,15 +79,18 @@ export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number): voi
     for (let i = 0; i < rt.nPool; i++) keep(rt.pool[i].x, rt.pool[i].z, rt.pool[i].r + 1);
     if (feat.pChest.on) keep(feat.pChest.x, feat.pChest.z, 4);
     genStreams(discs, rnd, halls, wet);
+    fillTo(discs, rnd, halls, wet, bossRoom ? 0.4 : 0.36 + rnd() * 0.14);
     lavaDbg.why = 'few:' + discs.length;
     if (discs.length < 12) return;
   }
   lava.discs = discs; lava.heavy = heavy; lava.on = true;
   buildGrid(discs, heavy);
+  lava.coverage = measure();
 }
 
 // ------------------------------------------------------------------------------------------------ normal
-const centreR = (halls: boolean): number => (halls ? 0.12 * world.room.radius : 0.34 * shape.baseR);
+let boss = false;   // true while the generator runs for Ignar's arena
+const centreR = (halls: boolean): number => (halls ? 0.08 * world.room.radius : (boss ? 0.14 : 0.2) * shape.baseR);
 function free(x: number, z: number, r: number, halls: boolean, wet: boolean): boolean {
   if (cv) return caveFree(x, z, r);
   if (!floorOk(x, z, r)) return false;
@@ -140,6 +146,38 @@ function genStreams(out: LDisc[], rnd: () => number, halls: boolean, wet: boolea
   if (!wet) for (let k = 0; k < 2; k++) {
     const a = rnd() * 6.283, d = (0.45 + rnd() * 0.45) * shapeLimit(Math.cos(a), Math.sin(a));
     pool(out, rnd, Math.cos(a) * d, Math.sin(a) * d, 2.0 + rnd() * 1.2, halls, wet);
+  }
+}
+
+/** Share of the room floor that is lava right now in `lava.grid` (normal mode: painted cells; the grid must be built for `discs`). */
+function measure(): number {
+  const n = lava.n, hs = lava.o, g = lava.grid, halls = shape.kind === 'HALLS';
+  let c = 0, tot = 0;
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const x = (i + 0.5) * CELL - hs, z = (j + 0.5) * CELL - hs;
+    if (halls ? hallsSdf(x, z) < 0.5 : !insideShape(x, z, 0.5)) continue;
+    tot++; if (g[j * n + i] === 1) c++;
+  }
+  return tot ? c / tot : 0;
+}
+/** Keeps laying winding streams (wider, longer) with pool blobs at their ends from random bare spots until `target` of the floor is lava. */
+function fillTo(out: LDisc[], rnd: () => number, halls: boolean, wet: boolean, target: number): void {
+  const sp: [number, number] = [0, 0];
+  buildGrid(out, false);
+  let cov = measure();
+  for (let s = 0; s < 140 && cov < target; s++) {
+    let got = false;
+    for (let t = 0; t < 40 && !got; t++) {
+      if (halls) { if (!hallsRandomSpot(3, sp)) break; }
+      else { const a = rnd() * 6.283, d = Math.sqrt(rnd()) * 0.93 * shapeLimit(Math.cos(a), Math.sin(a)); sp[0] = Math.cos(a) * d; sp[1] = Math.sin(a) * d; }
+      if (t < 30 && gridAt(lava, sp[0], sp[1])) continue;   // start on bare rock
+      if (free(sp[0], sp[1], s < 50 ? 1.8 : 1.1, halls, wet)) got = true;
+    }
+    if (!got) continue;
+    stream(out, rnd, sp[0], sp[1], rnd() * 6.283, 24 + rnd() * 26, (s < 50 ? 1.5 : 1.2) + rnd() * 0.9, halls, wet, 0);
+    if (rnd() < 0.5) pool(out, rnd, sp[0], sp[1], 2.4 + rnd() * 1.6, halls, wet);   // (a pool where the stream starts too)
+    buildGrid(out, false);
+    cov = measure();
   }
 }
 
