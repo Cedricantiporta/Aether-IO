@@ -66,7 +66,8 @@ import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
-import { petPower, petStatMul, PET_PCT_STATS } from './petGrowth';
+import { petPower, petStatMul, PET_PCT_STATS, petStars, PET_MAX_STARS } from './petGrowth';
+import { POTION_FUSE_COUNT, POTION_LADDER } from './potionFusion';
 import { emptyNpcQuests, sanitizeNpcQuests, npcQuestStatus, NPC_QUESTS, type NpcQuestSave } from './npcQuests';
 import { availableQuestIds } from './questSeen';
 import { isDashMod, type DashMod } from './dashMods';
@@ -139,7 +140,7 @@ export const rankXpNeeded = (r: number): number => Math.round(400 * Math.pow(Mat
 /** Passive perk: +1% gold find per rank, capped at +50%. */
 export const goldFindMul = (rank: number): number => 1 + Math.min(0.5, 0.01 * rank);
 /** Items each shop can put on sale (potion shop provisions, buyable pets). */
-export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => i.type === 'POTION' || i.id === 'upgrade_core' || i.type === 'REVIVE');
+export const SUPPLY_STOCK = ITEMS_POOL.filter((i) => (i.type === 'POTION' && !i.id.endsWith('_grand')) || i.id === 'upgrade_core' || i.type === 'REVIVE');
 export const SHOP_STOCK_IDS: string[][] = [SUPPLY_STOCK.map((i) => i.id), PETS_POOL.filter((p) => !p.summonOnly && (p.rarity !== 'EPIC' || p.id === 'pet_wolf')).map((p) => p.id)];
 /** (owner: no more random 'X% off' shop sales) kept as a no-op so old callers still work. */
 export function rollSales(): Record<string, number> { return {}; }
@@ -1628,6 +1629,38 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ inventory: inv });
       notify(ok ? `Fusion succeeded: ${item.name}!` : `Fusion failed... ${item.name} remains.`, ok ? '#ffd24a' : '#c8c0b0', 'SYSTEM');
       return { ok, item };
+    },
+    fusePotions: (fromId, times = 1) => {   // 3 of a tier -> 1 of the next (potionFusion.ts), small gold cost, always succeeds
+      const step = POTION_LADDER[fromId];
+      if (!step) return 0;
+      let done = 0;
+      for (let n = 0; n < times; n++) {
+        const s = get();
+        const have = s.inventory.filter((i) => i.id === fromId || (i.type === 'POTION' && i.name === step.fromName)).reduce((a, i) => a + (i.quantity || 1), 0);
+        if (have < POTION_FUSE_COUNT || s.gold < step.gold) break;
+        for (let k = 0; k < POTION_FUSE_COUNT; k++) get().consumeItem((i) => i.type === 'POTION' && i.name === step.fromName);
+        set({ gold: get().gold - step.gold });
+        for (const it of makeItemById(step.toId, 1)) get().addItemToInventory(it);
+        done++;
+      }
+      if (done) notify(`Fused ${done} ${ITEMS_POOL.find((i) => i.id === step.toId)?.name ?? 'potion'}!`, '#ffd24a', 'SYSTEM');
+      return done;
+    },
+    ascendPet: (keepId, sacId) => {   // pet stars: sacrifice a same-name duplicate (never the equipped one) for +1 star on the keeper (max 5)
+      const s = get();
+      if (keepId === sacId) return false;
+      const keepEq = s.equipment.pet?.id === keepId;
+      const keep = keepEq ? s.equipment.pet : s.inventory.find((i) => i.id === keepId && i.type === 'PET');
+      const sac = s.inventory.find((i) => i.id === sacId && i.type === 'PET');
+      if (!keep || !sac || keep.name !== sac.name || petStars(keep) >= PET_MAX_STARS) return false;
+      const stars = petStars(keep) + 1;
+      const inv = s.inventory.filter((i) => i.id !== sacId);
+      if (keepEq) {
+        const equipment = { ...s.equipment, pet: { ...keep, petStars: stars } } as Equipment;
+        set({ inventory: inv, equipment, stats: calc(s.baseStats, equipment) });
+      } else set({ inventory: inv.map((i) => (i.id === keepId ? { ...i, petStars: stars } : i)) });
+      notify(`${keep.name} ascended to ${stars} star${stars > 1 ? 's' : ''}!`, '#ffd24a', 'SYSTEM');
+      return true;
     },
     fuseItems: (ids) => {
       const s = get();

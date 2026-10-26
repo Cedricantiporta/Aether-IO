@@ -14,7 +14,7 @@ import { emptyAffixSlots } from '../../reforge';
 import { gradeLabel, gradeOf, isGraded } from '../../grade';
 import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
-import { petPower, petStatMul, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
+import { petPower, petStatMul, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -147,6 +147,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
           <div className="tt-sep" />
           <div className="tt-row"><span style={{ color: petStage(item) > 1 ? '#7a2ec2' : undefined, fontWeight: 800 }}>{PET_STAGE_LABEL[petStage(item)]} · Lv {petLv(item)}/{petLvCap(petStage(item))}</span>
             <span className="muted">{petLv(item) >= petLvCap(petStage(item)) ? (petStage(item) < 3 ? 'Ready to evolve' : 'MAX') : `${petXp(item)}/${petXpNeed(petLv(item))} XP`}</span></div>
+          {petStars(item) > 0 && <div className="tt-row"><span style={{ color: '#e0a800', fontWeight: 800 }} data-testid="pet-stars-tip">{'★'.repeat(petStars(item))}{'☆'.repeat(5 - petStars(item))}</span><span className="muted">+{petStars(item) * 10}% power</span></div>}
           <div className="muted text-[.68rem]">Health / damage / defense and skill power x{pm.toFixed(2)} · % stats x{petStatMul(item, 'critRate').toFixed(2)}</div>
         </div>
       )}
