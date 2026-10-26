@@ -87,6 +87,9 @@ export function mineBridgeDeckY(z: number): number {
  *  reappears after a run (a little further down the road, looking at it). Nothing stands in the plaza any more. */
 export const PORTAL_S = 0.9;
 export const PORTAL = { x: 5, z: 155.4, r: 4.4, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = the arch's road-side edge PORTAL.z - (3.06 + 1.3) m)
+/** (owner 2026-10-26) the Boss Trials portal on the headland added at the south-west coast of the outskirts (ISLAND_BOXES [-64, -10, 0, 166]): the same kit `adventure_portal`, tinted purple. Dormant until the first game clear.
+ *  Like the Adventure Portal it faces NORTH (ry = PI), down its dirt path (the Brewer's lane, bending south from (-34, 114)): `front` = where the hero stands (E, minimap), `out` = where he reappears after a trial. */
+export const BOSS_PORTAL = { x: -40, z: 152, r: 4.4, ry: Math.PI, front: { x: -40, z: 147.6 }, out: { x: -40, z: 145.2 } };
 /** First arrival of a session (new game / boot, not coming back from a run): the middle of the town plaza, in front of the castle road. */
 export const PLAZA_ARRIVAL = { x: 0, z: 7.6 };   // (south of the plaza fountain)
 /** (owner 2026-10-25) the fountain in the middle of the plaza (render/PlazaFountain: two-tier storybook fountain; collider r). */
@@ -100,7 +103,7 @@ export const STABLE = { x: 14, z: 43, w: 10, d: 6, paddock: { x0: 8.8, x1: 21.5,
 /** Fenced wheat field in front of the gate (outside the walls), east of the road beside the barn (the gap in its fence faces the road). */
 export const FARM = { x: 18, z: 94, hw: 7, hd: 6 };   // east of the road, beside the barn (cows graze just east of it)
 /** The Elixir Brewer's hut (the shop itself is SHOP_POSITIONS 'BREWER' in constants.ts): out in the west meadow, west of the road, door facing it. */
-export const BREWER_HUT = { x: -10.2, z: 106.2, rot: 0 };   // (owner: near the Adventure Portal; west of the mainland road. nature_kit_v1 'brewer_hut', door faces south onto the tower path)
+export const BREWER_HUT = { x: -6.4, z: 107.4, rot: 0 };   // (owner: near the Adventure Portal; west of the mainland road. nature_kit_v1 'brewer_hut', door faces south onto the tower path)
 /** Farm buildings outside the gate (barn: cows graze beside it; coop: egg nests in front). */
 export const BARN = { x: 41.5, z: 96.8, s: 0.85 };   // nature_kit_v1 'barn' (front = south onto the farm yard), east column of the farm clearing
 export const FARMHOUSE = { x: 31, z: 96.2, s: 0.85 };   // nature_kit_v1 'farmhouse', west column (Hollis lives here)
@@ -119,7 +122,7 @@ export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 /** The Endless Tower: a tall stone tower in the forecourt west of the road (door faces the road, +x). */
 /** The Endless Tower: deep in the south-west forest at the end of a long, narrow clearing (owner: deeper in), on a raised
  *  knoll (townLift TOWER_KNOLL). The Elixir Brewer keeps her hut on the path just before it. */
-export const TOWER_PATH_Z = 112;   // the Brewer's lane: the short woodland path west from the road along this z (it no longer reaches the tower)
+export const TOWER_PATH_Z = 113.6;   // the Brewer's lane: the short woodland path west from the road along this z (it no longer reaches the tower)
 /** (owner 2026-10-24) the Tower stands deeper in the forest, east of the Adventure Portal's clearing, at the end of its own dirt path that branches off the forest road to the RIGHT (east); door faces north
  *  onto that path's last stretch: door = where the hero stands to go in, `out` = where he reappears after a run. */
 export const TOWER = { x: 31, z: 168, r: 3.9, ry: Math.PI, door: { x: 31, z: 161.3 }, out: { x: 31, z: 158.7 } };   // nature_kit_v1 'endless_tower' (its front is local +z, turned by ry)
@@ -146,6 +149,7 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Adventure Portal)
   [-18, -10, 28, 168],   // (owner) the forest road south past the hamlets to the Adventure Portal's clearing
   [0, 0, 52, 186],       // (owner 2026-10-24) deeper forest south-east of the portal clearing: the Endless Tower's own clearing at the end of its east branch
+  [-64, -10, 0, 166],   // (owner 2026-10-26) the south-west headland: fills the notch west of the forest road + the coast south of the lake (Boss Trials plaza, BOSS_PORTAL)
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
 
@@ -462,7 +466,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
-  { x1: 0, z1: TOWER_PATH_Z, x2: -21, z2: TOWER_PATH_Z, w: 1.8 },   // the Brewer's lane (a narrow woodland path west from the road to her door and the turn-around beyond it)
+  { x1: 0, z1: TOWER_PATH_Z, x2: -17, z2: TOWER_PATH_Z, w: 3.4, dirt: true }, { x1: -17, z1: TOWER_PATH_Z, x2: -34, z2: TOWER_PATH_Z + 0.4, w: 3.4, dirt: true },   // the Brewer's lane (owner 2026-10-26: wider + longer dirt path west from the road past her door, then on south-west to the Boss Trials plaza)
+  { x1: -34, z1: TOWER_PATH_Z + 0.4, x2: -37.5, z2: 130, w: 3.2, dirt: true }, { x1: -37.5, z1: 130, x2: BOSS_PORTAL.front.x, z2: BOSS_PORTAL.front.z - 0.4, w: 3.2, dirt: true },
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.front.x, z2: PORTAL.front.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal's clearing (the old tower spot)
   // (owner 2026-10-24) the Endless Tower's own dirt path: branches off the forest road to the right (east) and winds deeper into the forest to the tower's door
@@ -663,7 +668,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else if (h.kit?.startsWith('vh_')) { const sw = Math.abs(Math.sin(h.rot)) > 0.7; houseRing(c, h.x, h.z, (sw ? h.d : h.w) / 2, (sw ? h.w : h.d) / 2); } else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
   c.push([TOWER.x, TOWER.z - 0.3, TOWER.r]);
-  { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z - 0.7 * k, 0.9 * k]); }   // the adventure_portal kit piece (turned to face north): the stone arch + its base, a wall across the clearing
+  { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z - 0.7 * k, 0.9 * k]); for (let i = -2; i <= 2; i++) c.push([BOSS_PORTAL.x + i * 1.5 * k, BOSS_PORTAL.z - 0.7 * k, 0.9 * k]); }   // (the Boss Trials portal: the same piece)   // the adventure_portal kit piece (turned to face north): the stone arch + its base, a wall across the clearing
   for (const m of PLAZA_STATUES) c.push([m.x, m.z, m.r]);
   for (const m of HORSE_STATUES) c.push([m.x, m.z, m.r]);   // the horse statues (pedestal 1.4 m wide)
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
@@ -787,7 +792,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = RIVER.x0; x <= RIVER.x1; x += 6) c.push([x, (RIVER.z0 + RIVER.z1) / 2, 9]);
   for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([TOWER.x, TOWER.z, 13], [TOWER.x, TOWER.z - 6, 9]);   // the tower clearing
-  c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
+  c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6], [BOSS_PORTAL.x, BOSS_PORTAL.z, 9], [BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
   c.push([BREWER_HUT.x, BREWER_HUT.z, 7.5]);   // the brewer's yard
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);

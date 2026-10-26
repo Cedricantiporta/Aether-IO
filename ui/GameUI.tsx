@@ -28,6 +28,7 @@ import { GameOver } from './screens/GameOver';
 import { AnkhPrompt } from './screens/AnkhPrompt';
 import { ShipDecks } from './screens/ShipDecks';
 import { SetOutWindow } from './screens/SetOut';
+import { BossTrialsWindow } from './screens/BossTrials';
 import { ShowcaseLauncher, ShowcaseOverlay } from './screens/Showcase';
 import { DailyPopup } from './screens/DailyPopup';
 import { EndingScreen } from './screens/Ending';
@@ -102,6 +103,7 @@ export const GameUI: React.FC = () => {
       {status === GameStatus.PLAYING && <AnkhPrompt />}
       {status === GameStatus.PLAYING && <ShipDecks />}
       {village && <SetOutWindow />}
+      {village && <BossTrialsWindow />}
       {village && <ShowcaseLauncher />}
       {village && <DailyPopup />}
       {inGame && <ShowcaseOverlay />}

@@ -21,7 +21,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]>; /** crystal cave: lantern upgrade level (0..6) and the deepest floor ever reached */ caveLantern?: number; caveBest?: number; /** biomes whose boss was beaten at least once (index % BIOMES.length): they get a boss shortcut door in later runs */ biomesDone?: number[]; /** the 'a shortcut opens' notice was shown once */ shortcutSeen?: boolean; /** Ascension levels (0..10) whose one-time first-clear reward was already paid (ascension.ts ASC_REWARDS) */ ascClaimed?: number[]; /** Mining Pickaxe tier (toolTiers.ts PICKAXES, 0 Common .. 5 Mythic) */ pickTier?: number }
+export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]>; /** crystal cave: lantern upgrade level (0..6) and the deepest floor ever reached */ caveLantern?: number; caveBest?: number; /** biomes whose boss was beaten at least once (index % BIOMES.length): they get a boss shortcut door in later runs */ biomesDone?: number[]; /** the 'a shortcut opens' notice was shown once */ shortcutSeen?: boolean; /** Ascension levels (0..10) whose one-time first-clear reward was already paid (ascension.ts ASC_REWARDS) */ ascClaimed?: number[]; /** Mining Pickaxe tier (toolTiers.ts PICKAXES, 0 Common .. 5 Mythic) */ pickTier?: number; /** Boss Trials (bossTrials.ts): the local day key (YYYY-MM-DD) each biome boss (key = biome index) was last fought; once per day unless a ticket is used */ trialDay?: Record<string, string> }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; // FISH = the Fishmonger on the beach; MINE = Mining Supplies at the cave camp; MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | 'tool';
@@ -212,6 +212,10 @@ export interface GameState {
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
   startMode: (mode: 'ADVENTURE' | 'TOWER', startBiome?: number) => void;
+  /** Boss Trials (bossTrials.ts): fight biome `boss` (0..6) alone at Void strength. Free once per boss per local day; a done boss needs a Boss Trial Ticket (consumed here). False = refused (locked / no ticket). */
+  startBossTrial: (boss: number) => boolean;
+  /** The trial boss fell: rolls + banks its Legendary / Mythic piece (bag, else warehouse) and returns it. */
+  claimBossTrialLoot: (boss: number) => Item | null;
   sailToIsles: () => boolean;         // the captain's 60 Aether Crystal ticket: an adventure run that opens in the Coral Isles   // start a run in this mode (sets engine runInfo, then startGame)
   setAscension: (lv: number) => void;
   completeEnding: () => void;                       // Malakar defeated: count the ending, unlock the next Ascension

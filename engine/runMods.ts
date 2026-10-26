@@ -6,10 +6,10 @@ import type { Difficulty } from '../storeTypes';
 import { dailyMods } from '../dailyChallenge';
 import { showcase, SHOWCASE_HP_MUL } from './showcase';
 
-export type RunMode = 'ADVENTURE' | 'TOWER';
-/** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; '': the plaza). */
+export type RunMode = 'ADVENTURE' | 'TOWER' | 'BOSS_TRIAL';
+/** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; 'BOSS': at the Boss Trials portal; '': in front of the Adventure Portal). BOSS_TRIAL = one biome boss alone at Void strength (bossTrials.ts). */
 /** startBiome: the biome an ADVENTURE run opens in (0; the captain's ship to the Coral Isles sets 3). */
-export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false, /** this run is on Hard mode (set at run start; better gold / XP / drop and card odds) */ hard: false };
+export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER' | 'BOSS', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false, /** this run is on Hard mode (set at run start; better gold / XP / drop and card odds) */ hard: false };
 
 /** (owner 2026-10-26) The ship start: the run opens in a calm camp where Captain Rhea waits. `lock`: the exit portals stay shut until the hero
  *  has chosen a deck (4 cards per skipped biome, `skipped`); `open`: the deck window is showing; `onChosen`: the director opens the portals. */

@@ -15,6 +15,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
+import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, rollTrialRarity, rollTrialPlus, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
 import { runInfo, hardMul, phaseOfTime, shipState, shipDeckChosen, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
@@ -459,7 +460,7 @@ const addCores = (inv: Item[], n: number): Item[] => {
   return [...inv, { ...tpl, id: uid('it'), stats: {}, quantity: n }];
 };
 
-export const instantiate = (template: Item, grade?: import('./types').ItemGrade): Item => rollGrade(rollAffixes({
+export const instantiate = (template: Item, grade?: import('./types').ItemGrade, luck = 1): Item => rollGrade(rollAffixes({
   ...template,
   level: isGear(template) || template.type === 'PET' ? template.level : 1,
   id: uid('it'),
@@ -468,7 +469,7 @@ export const instantiate = (template: Item, grade?: import('./types').ItemGrade)
   affixes: undefined,
   grade: undefined,
   quantity: 1,
-}), Math.random, GRADE_DROP_ODDS, grade);   // gear rolls LOW / MID / HIGH grade (grade.ts)
+}, Math.random, luck), Math.random, GRADE_DROP_ODDS, grade);   // gear rolls LOW / MID / HIGH grade (grade.ts)
 
 const mutableStatKeys = (stats: Partial<PlayerStats>): (keyof PlayerStats)[] => Object.keys(stats) as (keyof PlayerStats)[];
 /** One +level on a gear item, the same step as a blacksmith upgrade (+10% of the base per level up to +4, then +25%; % stats a third as fast). */
@@ -684,6 +685,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
   ascClaimed: Array.isArray(p?.ascClaimed) ? [...new Set((p!.ascClaimed as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= ASCENSION_MAX))] : [],
   pickTier: pickTierOf(p?.pickTier),
+  trialDay: p?.trialDay && typeof p.trialDay === 'object' ? Object.fromEntries(Object.entries(p.trialDay).filter(([k, v]) => /^[0-6]$/.test(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) : {},
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
@@ -1276,7 +1278,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       return true;
     },
     startMode: (mode: RunMode, startBiome = 0) => {
-      disarmDaily(); disarmWaves();
+      disarmDaily(); disarmWaves(); disarmTrial();
       runInfo.mode = mode; runInfo.back = mode === 'TOWER' ? 'TOWER' : ''; runInfo.startBiome = mode === 'ADVENTURE' ? startBiome : 0;
       set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;
@@ -1315,7 +1317,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     // ---- Daily Trial (dailyChallenge.ts): a seeded tower-style run; rewards once per day, retries chase the best score
     startDaily: () => {
       const today = dayKey(), p = get().progress, d = p.daily;
-      disarmWaves(); armDaily(dailyFor(today));
+      disarmWaves(); disarmTrial(); armDaily(dailyFor(today));
       runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
       set({ difficulty: 'NORMAL', progress: { ...p, daily: d.day === today ? { ...d, tries: d.tries + 1 } : { ...d, day: today, best: 0, tries: 1 } } });   // same rules for everyone
       get().startGame();
@@ -1336,9 +1338,41 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       return { rewarded: first, newBest: r.score > prevBest };
     },
+    // ---- Boss Trials (bossTrials.ts): one biome boss alone at Void strength, once per boss per local day (a Boss Trial Ticket buys a rematch)
+    startBossTrial: (boss) => {
+      const s = get(), p = s.progress;
+      if (p.endings <= 0 || !(boss >= 0 && boss < TRIAL_BOSSES.length) || showcase.on) return false;
+      const today = trialDayKey(), done = trialFought(p.trialDay, boss, today);
+      let inventory = s.inventory;
+      if (done) {   // already fought today: a ticket pays for the rematch (consumed now, win or lose)
+        const k = inventory.findIndex((i) => i.type === 'LOOT' && i.name === TICKET_NAME);
+        if (k < 0) { notify('You already fought this boss today. A Boss Trial Ticket (Gem Shop) buys a rematch.', '#ff8a80', 'WARNING'); return false; }
+        const t = inventory[k], q = (t.quantity || 1) - 1;
+        inventory = q > 0 ? inventory.map((it, j) => (j === k ? { ...it, quantity: q } : it)) : inventory.filter((_, j) => j !== k);
+      }
+      disarmDaily(); disarmWaves(); armTrial(boss);
+      runInfo.mode = 'BOSS_TRIAL'; runInfo.back = 'BOSS'; runInfo.startBiome = 0; runInfo.ascension = 0; runInfo.dream = false;
+      set({ inventory, difficulty: 'NORMAL', progress: { ...p, trialDay: { ...(p.trialDay ?? {}), [String(boss)]: today } } });
+      get().startGame();
+      return true;
+    },
+    claimBossTrialLoot: (boss) => {
+      const s = get(), row = TRIAL_BOSSES[boss]; if (!row) return null;
+      const slotType = { boots: 'BOOTS', gloves: 'GLOVES', armor: 'ARMOR', helmet: 'HELMET', accessory: 'ACCESSORY', weapon: 'WEAPON', pet: 'PET' }[row.slot];
+      const mk = (r: Rarity): Item[] => (row.slot === 'pet' ? PETS_POOL.filter((i) => i.rarity === r) : ITEMS_POOL.filter((i) => i.type === slotType && !i.retired && i.id !== PICKAXE_ID && i.rarity === r && canUseClass(i, s.hero)));
+      const first = rollTrialRarity();
+      let pool = mk(first); if (!pool.length) pool = mk(first === 'MYTHIC' ? 'LEGENDARY' : 'MYTHIC');
+      if (!pool.length) return null;
+      let it = instantiate(pool[Math.floor(Math.random() * pool.length)], undefined, TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
+      if (isGear(it)) for (let k = rollTrialPlus(); k > 0; k--) it = plusOne(it);
+      if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
+      notify(`Boss Trial reward: ${it.name}${it.level > 1 ? ` +${it.level - 1}` : ''}!`, it.rarity === 'MYTHIC' ? '#ff6ad5' : '#ffb13b', 'BOSS');
+      feedReward({ items: [it] });
+      return it;
+    },
     // ---- Endless Waves (endlessWaves.ts): one arena, wave after wave until death
     startWaves: () => {
-      disarmDaily(); armWaves();
+      disarmDaily(); disarmTrial(); armWaves();
       runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = 'TOWER';
       set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });
       get().startGame();
@@ -1351,7 +1385,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const ov = buildShowcaseOverlay(hero, s.classProg[hero] ?? freshClass(hero, INITIAL_SKILLS), instantiate, plusOne, uid);
       showcase.on = true; resetShowcase();
       const char = activeChar(); if (char) consumeShowcase(char.id);   // (once per character, even if the page is refreshed mid-fight)
-      disarmDaily(); disarmWaves();
+      disarmDaily(); disarmWaves(); disarmTrial();
       runInfo.mode = 'TOWER'; runInfo.ascension = 0; runInfo.back = ''; runInfo.startBiome = 0; runInfo.dream = false;
       set({
         difficulty: 'NORMAL',

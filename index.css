@@ -3964,3 +3964,22 @@ select.dbg-in option { background: #2a2a32; color: #fff; }
 .shipdeck-front ul { margin: 0; padding: .4rem 0 0; list-style: none; font-size: .85rem; line-height: 1.45; border-top: 1px dashed rgba(255, 246, 224, .25); }
 .shipdeck-front li { display: flex; justify-content: space-between; gap: 8px; }
 .shipdeck-front li b { color: #ffe9a8; }
+
+/* ---- Boss Trials window (ui/screens/BossTrials.tsx): soft, toy-like, purple */
+.bt-root { display: flex; flex-direction: column; gap: .6rem; padding-top: .4rem; }
+.bt-intro { font-size: .76rem; line-height: 1.4; color: var(--text-dim); text-align: center; }
+.bt-intro b { color: #e7c8ff; }
+.bt-tickets { text-align: center; font-size: .78rem; color: #e7c8ff; }
+.bt-tickets span { font-size: .66rem; color: var(--text-dim); }
+.bt-list { display: flex; flex-direction: column; gap: .4rem; max-height: min(52vh, 26rem); overflow-y: auto; padding: .1rem; }
+.bt-row { display: flex; align-items: center; gap: .65rem; padding: .35rem .6rem; border-radius: 1rem; background: linear-gradient(180deg, rgba(120, 80, 170, .35), rgba(60, 36, 92, .45)); border: 2px solid rgba(197, 140, 255, .55); box-shadow: 0 2px 0 rgba(30, 14, 50, .5); }
+.bt-row.done { opacity: .72; border-color: rgba(150, 130, 170, .4); }
+.bt-ico { width: 2.3rem; height: 2.3rem; flex: none; display: grid; place-items: center; font-size: 1.5rem; border-radius: 50%; background: rgba(255, 255, 255, .14); }
+.bt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; text-align: left; gap: .05rem; }
+.bt-main b { color: #fff; font-size: .9rem; line-height: 1.15; }
+.bt-main span { font-size: .66rem; color: var(--text-dim); }
+.bt-main em { font-style: normal; font-size: .72rem; color: #ffe08a; }
+.bt-main em i { font-style: normal; color: #fff; }
+.bt-act { flex: none; min-width: 5.2rem; text-align: center; }
+.bt-wait { font-size: .66rem; line-height: 1.25; color: #cdbfe0; }
+.compact .bt-main b { font-size: 1rem; } .compact .bt-main span, .compact .bt-main em, .compact .bt-intro, .compact .bt-wait { font-size: .82rem; }

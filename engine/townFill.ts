@@ -18,7 +18,7 @@
 import { HORSE_STATUES } from './qtVillage';
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
-  PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
+  PORTAL, BOSS_PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
   SIDE_GATES, PARK_EAST,
 } from './townData';
 import { TOWN_CHESTS } from './townChests';
@@ -97,7 +97,7 @@ for (const [x, z] of NESTS) resv(x, z, 2.2);
 // (owner) the animal pen stays clear of decor (animals wander it; the entrance must stay open)
 for (let x = ANIMAL_PEN.x0 + 1; x < ANIMAL_PEN.x1; x += 2.5) for (let z = ANIMAL_PEN.z0 - 1; z < ANIMAL_PEN.z1; z += 2.5) resv(x, z, 2.2);
 for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
-resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3); resv(PORTAL.out.x, PORTAL.out.z, 3);
+resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3); resv(PORTAL.out.x, PORTAL.out.z, 3); resv(BOSS_PORTAL.x, BOSS_PORTAL.z, 5.5); resv(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 3); resv(BOSS_PORTAL.out.x, BOSS_PORTAL.out.z, 3);
 for (const h of HORSE_STATUES) resv(h.x, h.z, 2.4);   // (the horse statues by the portal)
 resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOWER.x, TOWER.z, TOWER.r + 2); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
@@ -137,7 +137,7 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   if (x > RIVER.x0 - 2 && x < RIVER.x1 + 2 && z > riverBank(x, 0) - 1.4 && z < riverBank(x, 1) + 1.4) return true;
   if (inCampYard(x, z, 1) || inCaveClear(x, z, 1)) return true;
   if (Math.hypot(x - TOWER.x, z - TOWER.z) < TOWER_KNOLL.r + 1) return true;
-  if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6) return true;   // (the portal's clearing)
+  if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6 || Math.hypot(x - BOSS_PORTAL.x, z - BOSS_PORTAL.z) < 8) return true;   // (the portal's clearing)
   return false;
 }
 /** Free for a prop of radius r that also keeps `gap` from every earlier fill placement. */
@@ -266,6 +266,7 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 // ---- the plaza (owner 2026-10-24: the Adventure Portal left it, the paved disc is open): four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
 // ---- the Adventure Portal (kit v3, scale PORTAL_S, front north, down the forest road) stands in the forest clearing south of the walls, where the Endless Tower used to be
 put('adventure_portal', PORTAL.x, PORTAL.z, PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);
+put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);   // (owner 2026-10-26: the Boss Trials portal on the south-west headland; Town.tsx tints it purple)
 {
   const D = PLAZA_DECOR;
   for (const m of PLAZA_STATUES) put('statue_hero', m.x, m.z, 0, m.s, m.s, m.s, D.statueY);
@@ -390,7 +391,8 @@ grove(Z(0, 125, 20, 3), 6, [BUSHES(3), OAKS(1, [0.7, 0.9]), PINES(1)], 308, 0.8)
 // ================================================================ OUTSIDE: THE TOWER ROAD (a forest on both sides, the road itself stays open; the Endless Tower stands at its end)
 grove(Z(-7, 148, 13, 18), 24, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 401, 0.7, 2.4);
 grove(Z(17, 148, 11, 18), 18, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 402, 0.7, 2.4);
-grove(Z(5, 161, 15, 8), 22, [PINES(4), OAKS(3), BUSHES(2)], 403, 0.7, 2.4);   // (owner 2026-10-24) the Adventure Portal's back: a thick wall of trees behind it
+grove(Z(5, 161, 15, 8), 22, [PINES(4), OAKS(3), BUSHES(2)], 403, 0.7, 2.4);
+grove(Z(-40, 160, 15, 4), 16, [PINES(4), OAKS(3), BUSHES(2)], 407, 0.7, 2.4);   // (owner 2026-10-26) a screen of trees behind the Boss Trials portal   // (owner 2026-10-24) the Adventure Portal's back: a thick wall of trees behind it
 grove(Z(5, 172, 20, 8), 18, [PINES(4), OAKS(2), BUSHES(2)], 405, 0.7, 2.4);
 // ---- the Endless Tower's own clearing (east, deeper): forest round its back and sides, its dirt path stays open
 grove(Z(31, 176, 20, 8), 20, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 406, 0.7, 2.4);
