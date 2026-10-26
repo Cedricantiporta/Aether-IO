@@ -4,11 +4,11 @@ import { useRaf } from '../hooks/useRaf';
 import { shipState } from '../../engine/runMods';
 import { SHIP_DECKS, deckRecipe, deckRarityMix } from '../../engine/runCards';
 import { useGameStore } from '../../store';
-import { cardArtUrl } from '../components/UpgradeIcons';
+const DECK_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/decks/';
 
 const DECK_COLOR: Record<string, string> = { OFFENSE: '#ff8a6a', DEFENSE: '#6fb7ff', BALANCED: '#8fd96a', STRATEGIST: '#b99bff', RESOURCEFUL: '#ffcf5a' };
-/** the painted card art that stands for each deck (ui/components/UpgradeIcons cardArtUrl) */
-const DECK_ART: Record<string, string> = { OFFENSE: 'DAMAGE', DEFENSE: 'DEFENSE', BALANCED: 'HEALTH', STRATEGIST: 'COOLDOWN', RESOURCEFUL: 'POTION_CD' };
+/** (owner 2026-10-26) painted deck cards: public/art/decks/<deck>.webp fronts + back.webp (the ship's-wheel card back) */
+const deckFront = (id: string): string => `${DECK_URL}${id.toLowerCase()}.webp`;
 const RARITY_NAMES = ['Common', 'Rare', 'Epic', 'Legendary'];
 
 /** Captain Rhea's deck window (the ship start): five ready-made card decks, one tap gives the whole set. */
@@ -33,9 +33,12 @@ export const ShipDecks: React.FC = () => {
                 const c = DECK_COLOR[d.id] ?? '#6fd0e0';
                 return (
                   <button key={d.id} className="shipdeck" onClick={() => choose(d.id)} data-testid={`deck-${d.id}`} style={{ ['--dc' as any]: c }}>
-                    <span className="shipdeck-back b3" /><span className="shipdeck-back b2" />
+                    <span className="shipdeck-stack">
+                      <img className="shipdeck-card back b3" src={`${DECK_URL}back.webp`} alt="" draggable={false} />
+                      <img className="shipdeck-card back b2" src={`${DECK_URL}back.webp`} alt="" draggable={false} />
+                      <img className="shipdeck-card front" src={deckFront(d.id)} alt="" draggable={false} />
+                    </span>
                     <span className="shipdeck-front">
-                      <span className="shipdeck-art" style={{ backgroundImage: `url(${cardArtUrl(DECK_ART[d.id] ?? 'DAMAGE')})` }} />
                       <span className="shipdeck-name">{d.name}</span>
                       <span className="shipdeck-flav">{d.flavour}</span>
                       <ul>
