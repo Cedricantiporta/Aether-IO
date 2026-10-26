@@ -123,8 +123,8 @@ function usePotion(health: boolean): boolean {
   const item = st.consumeItem((i) =>
     i.type === 'POTION' && i.level <= st.level && (i.name.indexOf('Health') !== -1) === health && (i.name.indexOf('Health') !== -1 || i.name.indexOf('Mana') !== -1));
   if (!item) return false;
-  // (owner) a flat amount: 100 HP / MP (Big potions 200, Grand 400), Tech House Potion Brewing on top
-  const amt = ((item.restoreAmount || 50) >= 100 ? 400 : (item.restoreAmount || 50) >= 75 ? 200 : 100) * (1 + 0.12 * techLv(st.tech, 'potion')) * (1 + runCards.potionBonus);
+  // (owner) a flat amount: 100 HP / MP (Big potions 250, Grand 500), Tech House Potion Brewing on top
+  const amt = ((item.restoreAmount || 50) >= 100 ? 500 : (item.restoreAmount || 50) >= 75 ? 250 : 100) * (1 + 0.12 * techLv(st.tech, 'potion')) * (1 + runCards.potionBonus);
   if (health) { healPlayer(amt); p.hpPotCd = potionCooldown(); }
   else { p.mana = Math.min(st.stats.maxMana, p.mana + amt); p.mpPotCd = potionCooldown(); }
   return true;

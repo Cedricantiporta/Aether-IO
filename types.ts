@@ -145,6 +145,7 @@ export interface Item {
   petLv?: number;    // pet growth (see petGrowth.ts): level 1-20, xp into the level, evolution stage 1-3 (all default to 1 / 0 / 1)
   petXp?: number;
   petStage?: number;
+  stars?: number;     // gear ascension stars 0..5 (+6% base stats each, folded into stats at ascend time; missing = 0; gearStars.ts)
   petStars?: number;  // pet ascension stars 0..5 (+10% pet power each; missing = 0)
   
   grade?: ItemGrade;       // gear only: LOW / MID (default / old saves) / HIGH (grade.ts)

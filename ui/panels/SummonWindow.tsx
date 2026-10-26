@@ -87,7 +87,7 @@ export const SummonWindow: React.FC = () => {
                   {gem && (   /* (owner) the Gem Altar gives Aether Crystals (1-5) or 3-6 potions instead of shards */
                     <div className="sw-tier" style={{ ['--rc' as any]: '#b98cff' }}>
                       <div className="sw-tier-h">Aether Crystals 1-5 · Potions 3-6<i>3</i></div>
-                      <div className="sw-tier-row">{[crystalItem(5), ...makeItemById('potion_hp', 6), ...makeItemById('potion_mana', 6)].map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
+                      <div className="sw-tier-row">{[crystalItem(5), ...makeItemById('potion_hp_big', 6), ...makeItemById('potion_mana_big', 6), ...makeItemById('potion_hp_grand', 6), ...makeItemById('potion_mana_grand', 6)].map((it) => <ItemSlot key={it.id} item={it} size="3.2rem" iconSize="76%" tooltip="buy" compare={false} />)}</div>
                     </div>
                   )}
                   {PREVIEW_ORDER.filter((r) => r !== 'COMMON').map((r) => {

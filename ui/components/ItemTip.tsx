@@ -14,6 +14,7 @@ import { emptyAffixSlots } from '../../reforge';
 import { gradeLabel, gradeOf, isGraded } from '../../grade';
 import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
+import { gearStars, GEAR_MAX_STARS, GEAR_STAR_BONUS } from '../../gearStars';
 import { petPower, petStatMul, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
@@ -61,6 +62,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
       <div className="tt-name" data-rt={item.rarity}>
         {petDisplayName(item)}{item.level > 1 && isGear(item) && <span className="ml-1" style={{ color: '#a85d00' }}>+{item.level - 1}</span>}
         {isGear(item) && item.type !== 'PET' && isGraded(item) && <span className={`tt-grade ${gradeOf(item) === 'HIGH' ? 'is-high' : gradeOf(item) === 'LOW' ? 'is-low' : ''}`} data-testid="grade-tag">{gradeLabel(item)}</span>}
+        {isGear(item) && item.type !== 'PET' && gearStars(item) > 0 && <span className="ml-1" style={{ color: '#e0a800', fontWeight: 800 }} data-testid="gear-stars-tip" title={`+${Math.round(gearStars(item) * GEAR_STAR_BONUS * 100)}% base stats`}>{'★'.repeat(gearStars(item))}{'☆'.repeat(GEAR_MAX_STARS - gearStars(item))}</span>}
       </div>
       <div className="tt-sub">
         {TYPE_LABEL[item.type]}
