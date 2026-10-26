@@ -18,7 +18,7 @@ import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { liveStep } from '../../questUnlocks';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, bossHpAt, bossLevelMul, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
@@ -525,19 +525,12 @@ function rollPack(mult: number, elites: number, nBursts: number): void {
   }
 }
 
-/** (owner 2026-10-26 "finishable run" rebalance) Later biomes are harder through more bodies, not fatter ones: an ordinary combat room brings an elite
- *  escort with a chance that grows with the biome (Greenwood 4%, Marble 11% ... Void 46%) and from the Ember Wastes on a second one 30% of the time. */
-function adventureElites(): number {
-  const b = Math.max(0, Math.min(6, biome | 0));
-  return (Math.random() < 0.04 + 0.07 * b ? 1 : 0) + (b >= 5 && Math.random() < 0.3 ? 1 : 0);
-}
-
 function rollRoomSpawns(type: RoomType): void {
   miniHuman = '';
   const def = biomeOf(biome);
   const eliteN = (base: number, per: number) => Math.min(5, base + Math.floor(depth / per));
   switch (type) {
-    case 'COMBAT': rollPack(0.62, waves.on ? waveElites(towerFloor) : runInfo.mode === 'ADVENTURE' ? adventureElites() : 0, depth < 3 ? 2 : 3); break;
+    case 'COMBAT': rollPack(0.62, waves.on ? waveElites(towerFloor) : 0, depth < 3 ? 2 : 3); break;
     case 'ELITE': rollPack(0.3, eliteN(2, 14), 2); break;
     case 'TREASURE': rollPack(0.4, 0, 2); break;
     case 'MINIBOSS': {
@@ -712,7 +705,7 @@ function activeMarkers(): number {
 function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag: number): void {
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
-  if (tag === 3) { spawnDarkHero(duelCls, x, z); return; }   // dark hero duels: HP set in darkHero.spawnDarkHero (80% of the biome boss)
+  if (tag === 3) { const e = spawnDarkHero(duelCls, x, z); if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; } return; }   // dark hero duels are champions too
   if (tag === 5) {   // humanoid mini boss: champion hp factor like a guardian (-25% more in the depth-10 pre-boss)
     const e = spawnHumanBoss(miniHuman || 'VARN', x, z);
     if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP * (prebossRoom ? 0.75 : 1)); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }
@@ -724,7 +717,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(bossHpAt(10 * (biome + 1)) * 0.3 * m.hp * m.bossHp * bossLevelMul(useGameStore.getState().level | 0)); e.hp = e.maxHp;   // 30% of the biome boss's HP (2026-10-26 rebalance; was half of the old Elderroot formula)
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5 * 1.5); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% twice (owner)
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
       { const f = 100 / (100 + e.armor); e.armor = Math.round(100 / (1 - 1.5 * (1 - f)) - 100); }   // +50% damage reduction (owner)
@@ -748,7 +741,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.0); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain: two stages of ~60 s + ~75 s for a Lv 30 hero (stage 1 = 100% of the Void boss's HP table value (owner: was 60%, 'almost 3-hit'), stage 2 +25%)
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain (was x3.2 before spawnEnemy's boss HP doubled, 2026-10-26: same total)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;

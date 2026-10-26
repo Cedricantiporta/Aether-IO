@@ -37,9 +37,9 @@ import { world, allocEnemyProjectile, allocZone, allocFx } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
-import { bossHpAt, bossLevelMul, waveHpMult, towerHpMult } from '../enemyDefs';
+import { ENEMY_DEFS, waveHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
-import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, strikeT } from './enemies';
+import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, levelHpMul, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, strikeT } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -82,8 +82,8 @@ const NAMES: Record<HeroClass, string[]> = {
 };
 /** The ultimate unlocks below this share of HP (a longer fight: it opens earlier). */
 const ULT_HP = 0.72;
-/** Dark hero HP as a share of the boss HP of the same depth (owner: ~70-90%; the duel is not shortened by the champion-room factor). */
-export const DARK_HERO_HP = 0.8;
+/** Dark hero HP multiplier on top of the old 5x-elite formula (owner: they died in seconds next to bosses). */
+export const DARK_HERO_HP = 3;
 /** (owner 2026-10-26) the longer fight stays busy: every skill comes back in ~60% of the old time, the ultimate in 70%, with a shorter pause between casts. */
 const SKILL_CD_MUL = 0.6, ULT_CD_MUL = 0.7;
 
@@ -145,11 +145,8 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
   const st = useGameStore.getState();
   const mods = runMods(st.difficulty);
   const wave = world.director.wave;
-  // (owner 2026-10-26) the champion duel is a real boss-length fight: HP = DARK_HERO_HP (80%) of this depth's biome boss (enemyDefs.bossHpAt),
-  // it has no invulnerable phases but a shield roll below; the Tower family scales it off the hero's power like every boss
-  const lvl = Math.max(1, st.level | 0), asc = st.progress.endings > 0 ? Math.max(0, st.progress.ascensionMax - 1) : 0;
-  const ratio = towerMode() ? towerHpMult(wave, lvl, asc) / waveHpMult(wave) : bossLevelMul(lvl);
-  e.maxHp = Math.round(bossHpAt(wave) * DARK_HERO_HP * ratio * mods.hp * mods.bossHp); e.hp = e.maxHp;
+  // (owner 2026-10-26 'dark heroes die in seconds next to bosses') x DARK_HERO_HP on the old elite-based formula (scales with the hero's level too)
+  e.maxHp = Math.round(ENEMY_DEFS.DARK_HERO.hp * waveHpMult(wave) * mods.hp * 5 * DARK_HERO_HP * levelHpMul()); e.hp = e.maxHp;
   e.mini = true; e.staggerMax = 80; e.armor = Math.round(e.armor * 1.25);
   rollEliteShield(e);
   e.xp *= 20; e.pattern = 0;

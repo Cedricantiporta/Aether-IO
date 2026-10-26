@@ -32,11 +32,8 @@ what is below. Source of truth: `engine/roomDefs.ts`, `engine/systems/director.t
   and the Font dreams (HANDOFF 3.4).
 * After a boss: boss loot + cards, then ONE big portal to the next biome. There is no return-to-town choice; the run ends on
   death (or "abandon run" from the pause menu / teleport offers).
-* Difficulty depth: `depthWave(biome, index)` feeds `waveHpMult` / `waveDmgMult` / `waveBudget` (boss room of biome b = wave 10*(b+1); boss HP from
-  `bossHpAt`). The curve is flat on purpose (HP x3.1 .. x15.9 over the run) and tuned so a Lv 30 hero in Epic +5 gear finishes the run: normal rooms
-  ~11 s (Greenwood) .. ~36 s (Void), bosses ~25-90 s. Monsters no longer scale with the hero's level (ease-in below Lv 10, soft floor above Lv 30:
-  `enemies.levelFx`); later biomes add density (more points, an elite-escort chance of 4% .. 46% per combat room, archers fire 2-3 arrows) and Ascension
-  1-10 (each first clear pays a one-time reward) carries strong heroes further. Model and numbers: HANDOFF 3.10.
+* Difficulty depth: `depthWave(biome, index)` feeds `waveHpMult` / `waveDmgMult` / `waveBudget` (boss room of biome b = wave 10*(b+1)); monsters
+  also scale with the hero's level (`enemies.monsterLevel`). Ascension 1-10 stacks hardships, and each first clear pays a one-time reward. HANDOFF 3.10.
 
 ## Room types
 | Type | Content | Clear condition |

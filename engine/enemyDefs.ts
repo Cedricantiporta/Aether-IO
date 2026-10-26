@@ -290,62 +290,27 @@ export const WEAK_KINDS: readonly EnemyKind[] = ['SLIME', 'GOBLIN', 'BAT'];
 export const SPAWN_TIME = 0.35;        // seconds ordinary enemies take to rise
 export const BOSS_SPAWN_TIME = 1.6;   // bosses rise slower
 
-/** (owner 2026-10-26 "finishable run" rebalance; numbers from the hero-power model in docs/HANDOFF 3.10) Enemy strength grows with DEPTH only
- *  (wave 1..70 across the 7 biomes, boss room of biome b = wave 10 (b + 1)); the hero's level no longer scales monsters except the
- *  low-level ease-in and the high-level soft floor in enemies.ts. The curve is deliberately flat: a Lv 30 hero with Epic +5 gear and a
- *  few run cards clears a normal room in ~10 s (Greenwood) .. ~35 s (Void); later biomes get harder through density, elites, patterns.
- *  HP x3.1 at the first room .. x15.9 at the last (a ~5x climb), damage x1.65 .. x5.1. Beyond wave 70 (Endless Tower) the curves keep going. */
 export function waveHpMult(wave: number): number {
-  const w = Math.max(1, wave);
-  return 3.0 + 0.10 * w + 0.0012 * w * w;
+  // (owner 2026-10-25 rebalance) flatter at the top: each biome start is ~1.5-2x the one before (was ~2-2.5x from biome 3 on)
+  const w = wave - 1;
+  return 1 + 0.22 * w + 0.005 * w * w;
 }
 export function waveDmgMult(wave: number): number {
-  const w = Math.max(1, wave), m = 1.6 + 0.05 * w;
-  // gentler onboarding: waves 1-5 hit for 75%..95% (a Lv 1 Wizard has 30 HP: three goblin arrows)
-  return w <= 5 ? m * (0.75 + 0.05 * (w - 1)) : m;
+  // quadratic like HP (was linear 1 + 0.07w: depth 60 hit only 5x while the hero's HP / defense kept growing, so late
+  // biomes felt easier). Depth 10 ~1.9x, 30 ~5.1x, 60 ~17.8x.
+  const w = Math.max(0, wave - 1), m = 1 + 0.07 * w + 0.0035 * w * w;
+  // gentler onboarding (balance pass, like waveBudget): waves 1-5 hit for 75%..95%. Fresh Lv 1 heroes used to die in the
+  // 3rd-6th room (a Wizard has 30 HP: three goblin arrows).
+  return wave <= 5 ? m * (0.75 + 0.05 * (Math.max(1, wave) - 1)) : m;
 }
 export function waveSpeedMult(wave: number): number {
   return Math.min(1.5, 1 + 0.0075 * (wave - 1));
 }
-/** Total spawn budget points for a wave (before difficulty multiplier; a combat room takes 62% of it). Density is the main late-game
- *  lever: a first-room pack is ~12 points (3-4 monsters), the Void packs ~130 points (30+ monsters over two bursts). */
+/** Total spawn budget points for a wave (before difficulty multiplier). */
 export function waveBudget(wave: number): number {
-  const w = Math.max(1, wave);
-  const pts = w <= 5 ? 12 + 5.5 * (w - 1) : 34 + 1.6 * (w - 5);   // points a combat room (x0.62) gets
-  return pts / 0.62;
+  const base = 18 + wave * 6 + Math.pow(wave, 1.35) * 2;
+  return wave <= 5 ? base * (0.7 + 0.06 * (wave - 1)) : base; // gentler onboarding: waves 1-5 at 70%..94%
 }
-/** Boss HP (before difficulty / Ascension) of the boss room of biome 1..7 = wave 10..70, for a Lv 30 hero with Epic +5 gear: a ~25 s (Elderroot) .. ~90 s (Void Herald)
- *  fight (boss armour and the invulnerable phases included). Replaces the old def.hp x waveHpMult formula so every biome boss lands on
- *  the same pacing whatever its base `hp` says. Between / beyond the knots it is linear (Endless Tower reaches wave 100+). */
-export const BOSS_HP_KNOTS = [6000, 8500, 14500, 17500, 20500, 23000, 27000] as const;
-export function bossHpAt(wave: number): number {
-  const k = BOSS_HP_KNOTS, w = Math.max(1, wave);
-  let v: number;
-  if (w <= 10) v = k[0] - ((k[1] - k[0]) / 10) * (10 - w);
-  else if (w >= 70) v = k[6] + ((k[6] - k[5]) / 10) * (w - 70);
-  else { const i = Math.floor(w / 10) - 1, t = (w - (i + 1) * 10) / 10; v = k[i] + (k[i + 1] - k[i]) * t; }
-  return Math.max(3000, v);
-}
-/** (owner 2026-10-26 "I almost 3-hit Malakar") bosses, dark heroes and the Slime King keep up with a strong hero: above Lv 30 their HP
- *  grows x1.083 per level (Lv 40 x2.2, Lv 50 x5.0; hero DPS grows ~x7.9 over that span, so levelling still makes boss fights shorter,
- *  just never trivial). Not used in the Tower family (it already scales off the hero). */
-export const bossLevelMul = (lv: number): number => (lv <= 30 ? 1 : Math.exp(0.08 * (lv - 30)));
-/** Per-boss HP trim on top of bossHpAt (the war machine is a slow giant with the heaviest armour). */
-export const BOSS_HP_REL: Partial<Record<EnemyKind, number>> = { BOSS_WARMACH: 1.1 };
-
-/** Endless Tower family (Tower / Daily Trial / Endless Waves): enemies scale off the HERO's power, because the tower opens after a first
- *  clear. `lv` = hero level (power ~ x1.11 per level: 7.9x between Lv 30 and 50 in the hero model), `asc` = highest cleared Ascension.
- *  floor ~ (wave - 2) / 1.5 (Tower depth = 2 + 1.5 floor). Strength relative to the hero is 0.4 on floor 1 and 1.2 on floor 17: a Lv 50
- *  well-geared hero feels the tower around floor 15-20, a Lv 30 hero around floor 10. Never softer than the normal depth curve. */
-export const towerStrength = (wave: number): number => 0.35 + 0.05 * Math.max(0, (wave - 2) / 1.5);
-const heroPow = (lv: number): number => Math.exp(0.095 * (Math.max(1, Math.min(50, lv)) - 30));
-export function towerHpMult(wave: number, lv: number, asc: number): number {
-  return Math.max(waveHpMult(wave), waveHpMult(70) * towerStrength(wave) * Math.pow(heroPow(lv), 0.9) * (1 + 0.1 * asc));
-}
-export function towerDmgMult(wave: number, lv: number, asc: number): number {
-  return Math.max(waveDmgMult(wave), waveDmgMult(70) * towerStrength(wave) * heroPow(lv) * (1 + 0.06 * asc));
-}
-
 /** Kinds that carry coins (humanoids + Lich). Others drop loot items only. [chance per kill, coin value]. */
 export const GOLD_DROPPERS: Partial<Record<EnemyKind, readonly [number, number]>> = {
   GOBLIN: [0.30, 10], GOBLIN_ARCHER: [0.4, 10], SHIELDBEARER: [0.4, 10], BANDIT: [0.35, 10], MUMMY: [0.35, 10], CINDER_SHAMAN: [0.4, 10], HAUNTED_ARMOR: [0.4, 12], CULTIST: [0.40, 10], SKELETON_ARCHER: [0.35, 10], SKELETON_WARRIOR: [0.35, 10], SKELETON_MAGE: [0.35, 10], BRUTE: [0.60, 12], ZOMBIE: [0.45, 10],

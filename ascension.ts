@@ -1,40 +1,37 @@
 // Ascension: after the ending (Malakar defeated) the hero can climb Ascension levels 1..10. Every level stacks one more
 // hardship on top of the chosen difficulty and pays more (gold / loot luck / rank xp). Unlocked one level per clear, and the FIRST
 // clear of every level pays a big one-time reward (ASC_REWARDS below: gems, Aether Crystals, Legendary / Mythic gear, pets).
-//
-// Balance (2026-10-26 "finishable run" rebalance, see docs/HANDOFF 3.10): the base game (Ascension 0) is tuned for a Lv 30 hero in Epic +5 gear.
-// Hero power grows ~x1.11 per level / gear tier, so the ladder is what keeps strong heroes busy: every step is a meaningful bump (never a wall:
-// the player picks the level) and Ascension 10 (HP x2.7, damage x4.5, bosses x4.6, +25% monsters, more elites) is aimed at a Lv 45-50 hero.
+
 import type { Rarity } from './types';
 
 export interface AscensionLevel { lv: number; name: string; hardship: string }
 export const ASCENSION_MAX = 10;
 export const ASCENSIONS: AscensionLevel[] = [
-  { lv: 1, name: 'Tempered', hardship: 'Enemies have +25% health' },
-  { lv: 2, name: 'Bloodied', hardship: 'Enemies deal +30% damage' },
-  { lv: 3, name: 'Swarming', hardship: '+12% more enemies per room, +10% health' },
-  { lv: 4, name: 'Parched', hardship: 'All healing is 20% weaker, enemies deal +25% damage' },
-  { lv: 5, name: 'Tyrants', hardship: 'Bosses have +30% health, enemies +15% health' },
-  { lv: 6, name: 'Relentless', hardship: 'Enemies move 8% faster and deal +25% damage' },
-  { lv: 7, name: 'Ironhide', hardship: 'Enemies have another +30% health' },
-  { lv: 8, name: 'Merciless', hardship: 'Enemies deal another +50% damage' },
-  { lv: 9, name: 'Champions', hardship: 'Elite rooms bring one more elite, enemies +15% health and +10% damage' },
-  { lv: 10, name: 'Apotheosis', hardship: 'Bosses +30% health, +12% more enemies, enemies +15% health and +35% damage' },
+  { lv: 1, name: 'Tempered', hardship: 'Enemies have +20% health' },
+  { lv: 2, name: 'Bloodied', hardship: 'Enemies deal +15% damage' },
+  { lv: 3, name: 'Swarming', hardship: '+15% more enemies per room' },
+  { lv: 4, name: 'Parched', hardship: 'All healing is 25% weaker' },
+  { lv: 5, name: 'Tyrants', hardship: 'Bosses have +25% health' },
+  { lv: 6, name: 'Relentless', hardship: 'Enemies move 8% faster' },
+  { lv: 7, name: 'Ironhide', hardship: 'Enemies have another +20% health' },
+  { lv: 8, name: 'Merciless', hardship: 'Enemies deal another +15% damage' },
+  { lv: 9, name: 'Champions', hardship: 'Elite rooms bring one more elite' },
+  { lv: 10, name: 'Apotheosis', hardship: 'Bosses +25% health, +15% more enemies' },
 ];
 export interface AscMods { hp: number; dmg: number; spawn: number; heal: number; bossHp: number; speed: number; elites: number; reward: number }
 /** Cumulative modifiers of Ascension `lv` (0 = none). `reward` multiplies gold / loot luck / rank xp. */
 export function ascensionMods(lv: number, out: AscMods): AscMods {
   out.hp = 1; out.dmg = 1; out.spawn = 1; out.heal = 1; out.bossHp = 1; out.speed = 1; out.elites = 0;
-  if (lv >= 1) out.hp *= 1.25;
-  if (lv >= 2) out.dmg *= 1.3;
-  if (lv >= 3) { out.spawn *= 1.12; out.hp *= 1.1; }
-  if (lv >= 4) { out.heal *= 0.8; out.dmg *= 1.25; }
-  if (lv >= 5) { out.bossHp *= 1.3; out.hp *= 1.15; }
-  if (lv >= 6) { out.speed *= 1.08; out.dmg *= 1.25; }
-  if (lv >= 7) out.hp *= 1.3;
-  if (lv >= 8) out.dmg *= 1.5;
-  if (lv >= 9) { out.elites += 1; out.hp *= 1.15; out.dmg *= 1.1; }
-  if (lv >= 10) { out.bossHp *= 1.3; out.spawn *= 1.12; out.hp *= 1.15; out.dmg *= 1.35; }
+  if (lv >= 1) out.hp *= 1.2;
+  if (lv >= 2) out.dmg *= 1.15;
+  if (lv >= 3) out.spawn *= 1.15;
+  if (lv >= 4) out.heal *= 0.75;
+  if (lv >= 5) out.bossHp *= 1.25;
+  if (lv >= 6) out.speed *= 1.08;
+  if (lv >= 7) out.hp *= 1.2;
+  if (lv >= 8) out.dmg *= 1.15;
+  if (lv >= 9) out.elites += 1;
+  if (lv >= 10) { out.bossHp *= 1.25; out.spawn *= 1.15; }
   out.reward = 1 + 0.12 * lv;
   return out;
 }
