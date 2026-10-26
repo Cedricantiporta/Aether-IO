@@ -217,7 +217,7 @@ export function allocProjectile(): Projectile | null {
 export function allocEnemyProjectile(): EnemyProjectile | null {
   const p = grab(world.enemyProjectiles, 'ep');
   if (!p) return null;
-  p.homing = 0; p.slow = 0; p.radius = 0.4; p.debuff = 0;
+  p.homing = 0; p.slow = 0; p.radius = 0.4; p.debuff = 0; p.pct = 0;
   return p;
 }
 

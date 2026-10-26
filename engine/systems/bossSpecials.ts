@@ -19,6 +19,7 @@ import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 import { mfx, spawnRune } from './malakarFx';
+import { bp } from './bossPhaseState';
 import { KB } from './combat';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
@@ -409,9 +410,14 @@ function spawnDecoy(real: Enemy, x: number, z: number): void {
 }
 /** Malakar's illusions: up to 2 copies with his current HP and half his armour. They cast his basic volleys (orb fans and rings) for `life`
  *  seconds, then fade. No rewards. Max 2 at a time. Malakar and every live illusion then teleport ONCE into an even ring round the hero. */
-export function spawnIllusions(real: Enemy, n: number, life: number): void {
+export function countIllusions(): number {
   let have = 0;
   for (const o of world.enemies) if (o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') have++;
+  return have;
+}
+/** `force` (Find the Real One phase) ignores the 2-copy cap (an old shuffle copy never blocks the phase's fakes); `ring` = also do the teleport. */
+export function spawnIllusions(real: Enemy, n: number, life: number, force = false, ring = true): void {
+  let have = force ? 0 : countIllusions();
   for (let k = 0; k < n && have < 2; k++, have++) {
     const e = allocEnemy();
     if (!e) break;
@@ -423,7 +429,7 @@ export function spawnIllusions(real: Enemy, n: number, life: number): void {
     e.contactDamage = 0; e.projectileDamage = real.projectileDamage; e.xp = 0; e.gold = 0;
     e.state = 'CHASE'; e.stateT = 0; e.attackCd = 2 + Math.random(); e.facing = real.facing; e.active = true; e.spT = 0; e.pattern = 0;
   }
-  ringTeleport(real);
+  if (ring) ringTeleport(real);
 }
 
 const ringA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
@@ -453,6 +459,12 @@ function updateIllusion(e: Enemy, dt: number): void {
   e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
   e.attackCd -= dt;
   if (e.attackCd <= 0) {
+    if (bp.on && bp.kind === 'REAL') {   // Find the Real One: the fakes cast too (a thin fan of weak orbs: the screen stays busy, the real one's volley is bigger)
+      e.attackCd = 1.7 + Math.random() * 0.6;
+      const b = Math.atan2(ux, uz);
+      for (let i = -1; i <= 1; i++) { tv.set(Math.sin(b + i * 0.3), 0, Math.cos(b + i * 0.3)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', 8, 1, { pct: 0.03, life: 4, radius: 0.55, dark: true }); }
+      return;
+    }
     if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while Malakar runs a major skill
     e.attackCd = (s2 ? 2.4 : 3.2) + Math.random() * 0.8;
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;

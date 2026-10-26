@@ -1961,7 +1961,7 @@ const ELEM_DMG: Partial<Record<EnemyProjectileKind, 'FIRE' | 'ICE' | 'POISON' | 
 const ENEMY_ARROW_SPEED = 0.8;
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
-  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number; dark?: boolean; trail?: number },
+  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number; dark?: boolean; trail?: number; pct?: number },
 ): void {
   const p = allocEnemyProjectile();
   if (!p) return;
@@ -1980,6 +1980,7 @@ export function fireEnemyProjectile(
   p.traits = curTraits;
   p.owner = curShooter;
   p.dark = opts?.dark ?? (curShooter >= 0 && world.enemies[curShooter].corrupt);
+  p.pct = opts?.pct ?? 0;
   p.trail = opts?.trail ?? 0; p.trailT = 0;   // a corrupted monster's shot is black-purple
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
   if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
@@ -2108,7 +2109,7 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : null) });   // (owner) rocks knock you down
+        damagePlayer(p.damage, { ...(p.pct ? { pct: p.pct } : null), pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : null) });   // (owner) rocks knock you down
         if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));

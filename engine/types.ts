@@ -197,6 +197,7 @@ export interface EnemyProjectile {
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
   trail?: number;        // > 0: leaves a burning ground patch every `trail` seconds (Malakar's fireballs)
   trailT?: number;
+  pct?: number;          // > 0: the hit costs this share of the hero's MAX hp (Malakar's major skills; damagePlayer `pct`)
   dark?: boolean;        // fired by a corrupted (Void) monster: drawn black-purple
   owner?: number;        // the shooter's enemy id (-1 = boss script / unknown): the hero hits back at it
 }
