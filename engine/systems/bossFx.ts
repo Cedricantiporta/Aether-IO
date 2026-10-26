@@ -9,7 +9,7 @@ import { world } from '../world';
 import { events } from '../events';
 import { Vector3 } from 'three';
 import type { Zone } from '../types';
-import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer, KB } from './combat';
+import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer, KB, SLOW_BOSS } from './combat';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
@@ -117,7 +117,7 @@ export function addChill(n: number): void {
   const p = world.player;
   if (!p.alive || chill.immuneT > 0) return;
   chill.stacks += n; chill.t = 0;
-  applyPlayerDebuff('SLOW', 1.2);
+  applyPlayerDebuff('SLOW', 1.2 * 1.5, SLOW_BOSS);
   events.emit('floatText', { pos: p.pos, text: chill.stacks >= 4 ? 'FROZEN' : `CHILL x${chill.stacks}`, color: 0x8fe4ff, scale: 0.8, dy: 0.8 });
   events.emit('trick', { pos: p.pos.clone(), kind: 'CHILL', radius: 2 });
   if (chill.stacks >= 4) {
@@ -169,7 +169,7 @@ export function resolveBossZone(z: Zone): void {
       const hit = inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux);
       if (z.trick === BT.SWEEP) {
         if (hit && p.alive) {
-          damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.HEAVY });   // shoved away (eased, collides)
+          damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM });   // (owner) the tail sweep knocks down
           applyPlayerDebuff('STUN', 0.5);
         }
         events.emit('trick', { pos: z.pos.clone(), kind: 'TAIL_SWEEP', radius: z.radius });
@@ -186,7 +186,7 @@ export function resolveBossZone(z: Zone): void {
     case BT.SPIKES: {
       // damage now; spikes erupt in sequence for the visual
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(2); applyPlayerDebuff('SLOW', 3); }
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE', ...KB.SLAM }); addChill(2); applyPlayerDebuff('SLOW', 3 * 1.5, SLOW_BOSS); }   // (owner) ice spikes launch the hero: knockdown
       for (let d = 1.5, i = 0; d < z.length; d += 2.4, i++) spawnProp(PROP_ICE, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.035, 1.3, 1.1 + (i % 3) * 0.2, 3.2 + (i % 2) * 1.2);
       events.emit('trick', { pos: z.pos.clone(), kind: 'ICE_SPIKES', radius: z.radius });
       break;
@@ -196,7 +196,7 @@ export function resolveBossZone(z: Zone): void {
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.8, color: 0xbfe8ff });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x16303f });
       addShake(0.7);
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3 * 1.5, SLOW_BOSS); }
       diveLanded(z.pos.x, z.pos.z);
       break;
     case BT.PILLAR:
@@ -213,7 +213,7 @@ export function resolveBossZone(z: Zone): void {
       addShake(0.4);
       break;
     case BT.SHELL:   // the Dune Colossus' mortar shell: a sand blast and a crater, no fire left behind
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.5); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.5 * 1.5, SLOW_BOSS); }
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.4, color: 0xd9b36a });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x5a4220 });
       addShake(0.15);
@@ -239,7 +239,7 @@ export function resolveBossZone(z: Zone): void {
       break;
     case BT.LASH: {   // Elderroot's branch: a thick lash along a lane (shoves a little, slows)
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH }); applyPlayerDebuff('SLOW', 1.2); }
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('SLOW', 1.2 * 1.5, SLOW_BOSS); }   // (owner) Elderroot's branch sweep knocks down
       for (let d = 2, i = 0; d < z.length; d += 3, i++) spawnProp(PROP_ROOT, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.03, 0.7, 0.9 + (i % 3) * 0.12, 2.0);
       events.emit('shake', { amount: 0.12 });
       break;
@@ -274,11 +274,11 @@ export function updateBossFx(dt: number): void {
     const d = Math.hypot(pa.x - w.x, pa.z - w.z);
     if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && p.air < 0.5) {
       w.hit = true;
-      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...KB.PUSH });
-      if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0);
+      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...(w.kind === WAVE_VOID || w.kind === WAVE_TIDE ? KB.SLAM : KB.PUSH) });   // (owner) the gravity push and the tidal surge knock down
+      if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS);
       if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
       if (w.kind === WAVE_FROST) addChill(1);
-      if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6);
+      if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6 * 1.5, SLOW_BOSS);
     }
   }
 
@@ -357,7 +357,7 @@ export function updateBossFx(dt: number): void {
       const d = Math.hypot(pa.x - arena.cx, pa.z - arena.cz);
       if (d > arena.r) {
         damagePlayer(Math.max(6, world.boss.maxHp * 0.0022), { pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true, noDotMul: true });
-        applyPlayerDebuff('SLOW', 0.6);
+        applyPlayerDebuff('SLOW', 0.6 * 1.5, SLOW_BOSS);
         if (world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: p.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
       }
     }

@@ -661,6 +661,15 @@ export function playerTrickImmune(): boolean {
   return !p.alive || p.invulnT > 0 || (p.dashIframes && (p.dashT > 0 || p.anim.dashing));
 }
 
+/** (owner) Hero slow strength = share of move speed lost. Normal monsters / projectiles / traps 45%, bosses 60% (was a flat 40% for everything). */
+export const SLOW_HERO = 0.45;
+export const SLOW_BOSS = 0.6;
+/** Direct slow (no debuff word / immunity): used by hit-with-slow paths. */
+export function slowHero(dur: number, pow = SLOW_HERO): void {
+  const p = world.player;
+  p.slowPow = p.slowT > 0 ? Math.max(p.slowPow, pow) : pow;
+  p.slowT = Math.max(p.slowT, dur);
+}
 /** Applies a monster-trick debuff to the player. Dash/i-frames ignore it. Returns true when applied. */
 /** A freeze is a stun shown as ice (StatusFx): set by real freezes only, so other stuns (boar knockdown etc.) read as stuns. */
 export const playerFreeze = { until: 0 };
@@ -691,7 +700,11 @@ export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 
     case 'BURN': p.burnT = Math.max(p.burnT, duration); p.burnDps = Math.max(p.burnDps, value); break;
     case 'POISON': p.poisonT = Math.max(p.poisonT, duration); p.poisonDps = Math.max(p.poisonDps, value); break;
     case 'BLEED': p.bleedT = Math.max(p.bleedT, duration); p.bleedDps = Math.max(p.bleedDps, value); break;
-    case 'SLOW': p.slowT = Math.max(p.slowT, duration); break;
+    case 'SLOW': {   // (owner) stronger slows: `value` = share of speed lost (default SLOW_HERO), the strongest live slow wins
+      const pow = Math.min(0.75, value > 0 ? value : SLOW_HERO);
+      p.slowPow = p.slowT > 0 ? Math.max(p.slowPow, pow) : pow;
+      p.slowT = Math.max(p.slowT, duration); break;
+    }
   }
   combatStats.debuffs[type] = (combatStats.debuffs[type] ?? 0) + 1;
   events.emit('playerDebuff', { type, duration });
@@ -702,7 +715,7 @@ export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 
 /** Hook so boss specials can react to a dash (Soul Chains break). */
 export function cleansePlayer(): void {
   const p = world.player;
-  p.rootT = 0; p.slowT = 0;
+  p.rootT = 0; p.slowT = 0; p.slowPow = 0;
   hooks.onCleanse();
 }
 
@@ -756,7 +769,7 @@ export function knockHero(fromX: number, fromZ: number, force: number, downSec =
   if (unstoppable) { force *= 0.35; downSec = 0; }
   else if (p.arcane > 0 || p.aegis > 0) force *= 0.7;
   { const cc = useGameStore.getState().stats.resCC; if (cc > 0) { force *= 1 - cc; downSec *= 1 - cc; } }   // CC Resistance: shorter knockdown, shorter push
-  if (downSec > 0 && p.knockImmuneT > 0) { downSec = 0; force *= 0.5; }   // no chain knockdowns
+  if (downSec > 0 && (p.knockImmuneT > 0 || p.stunT > 0 || p.rootT > 0)) { downSec = 0; force *= 0.5; }   // no chain knockdowns; already stunned / frozen / rooted: only the push
   force = Math.min(KB_MAX, force);
   if (force < 0.05 && downSec <= 0) return;
   let dx = p.pos.x - fromX, dz = p.pos.z - fromZ;
@@ -781,18 +794,18 @@ export const HERO_DOT_MUL = 4;
  *  cast), knockdown. Each has a chance or short duration so a pack of them stays fair. */
 let hindGuard = -10;
 /** Slow / root on the hero with diminishing returns: right after one the next root is skipped and slows are cut short, so the hero is never perma-rooted. */
-function hinder(type: 'SLOW' | 'ROOT', dur: number): void {
+function hinder(type: 'SLOW' | 'ROOT', dur: number, pow = 0): void {
   const now = world.time;
   if (now < hindGuard) { if (type === 'ROOT') return; dur *= 0.4; }
-  if (applyPlayerDebuff(type, dur)) hindGuard = Math.max(hindGuard, now + dur + (type === 'ROOT' ? 3 : 1));
+  if (applyPlayerDebuff(type, dur, pow)) hindGuard = Math.max(hindGuard, now + dur + (type === 'ROOT' ? 3 : 1));
 }
-function applyTraitHit(tr: number, from?: Vector3): void {
+function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
   const p = world.player, wave = world.director.wave;
   if (tr & TR.POISON) applyPlayerDebuff('POISON', 4, 1 + wave * 0.3);
   if (tr & TR.DEF_BREAK) applyPlayerDebuff('DEFDOWN', 5);
   if (tr & TR.ATK_BREAK && !playerTrickImmune()) { p.buffDmg = Math.min(p.buffDmg, -0.25); p.buffT = Math.max(p.buffT, 6); events.emit('floatText', { pos: p.pos, text: 'WEAKENED', color: 0xcbd5e1, scale: 0.9, dy: 2.6 }); }
-  if (tr & TR.SLOW) hinder('SLOW', 1.5);
-  if (tr & TR.HIND_SLOW) hinder('SLOW', 1.1);
+  if (tr & TR.SLOW) hinder('SLOW', 2.5, boss ? SLOW_BOSS : SLOW_HERO);
+  if (tr & TR.HIND_SLOW) hinder('SLOW', boss ? 2.4 : 1.8, boss ? SLOW_BOSS : SLOW_HERO);
   if (tr & TR.HIND_ROOT) hinder('ROOT', 0.8);
   if (tr & TR.STUN && Math.random() < 0.3) applyPlayerDebuff('STUN', 0.8);
   if (!from) return;
@@ -882,8 +895,8 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   if (!isDot && !o?.env && st.hero === 'KNIGHT' && st.skillLevels.smite > 0 && p.hp > 0) procFlags.smite = st.skillLevels.smite;   // Righteous Riposte (skills.ts)
   if (!isDot) p.anim.hurtT = 1;
   if (!isDot && o && o.pos && (o.kb || o.down) && p.hp > 0) knockHero(o.pos.x, o.pos.z, o.kb ?? 0, o.down ?? 0);
-  if (o?.slow && o.slow > 0) p.slowT = Math.max(p.slowT, 1.5 * (1 - st.stats.resFrost));
-  { const tr = o?.tr ?? o?.src?.traits ?? 0; if (!isDot && tr && p.hp > 0) applyTraitHit(tr, o?.pos ?? o?.src?.pos); }
+  if (o?.slow && o.slow > 0) slowHero(2 * (1 - st.stats.resFrost), o.src?.boss ? SLOW_BOSS : SLOW_HERO);   // (owner) 2 s (was 1.5), 45% / boss 60%
+  { const tr = o?.tr ?? o?.src?.traits ?? 0; if (!isDot && tr && p.hp > 0) applyTraitHit(tr, o?.pos ?? o?.src?.pos, !!o?.src?.boss); }
 
   const run = world.run;
   run.damageTaken += reduced;

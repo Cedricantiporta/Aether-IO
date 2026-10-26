@@ -24,7 +24,9 @@ export const TR = {
 } as const;
 
 /** Innate movement hindrance: telegraphed / heavy attackers of these kinds slow (or root) the hero for ~1 s on hit. */
-const INNATE_SLOW: ReadonlySet<EnemyKind> = new Set<EnemyKind>(['YETI', 'MUMMY', 'HAUNTED_ARMOR', 'SPORECAP', 'FROST_WISP', 'BRUTE', 'ZOMBIE', 'BOAR']);
+const INNATE_SLOW: ReadonlySet<EnemyKind> = new Set<EnemyKind>(['YETI', 'MUMMY', 'HAUNTED_ARMOR', 'SPORECAP', 'FROST_WISP', 'BRUTE', 'ZOMBIE', 'BOAR',
+  // (owner) more slowers: mud / slime (sticky goo), pond crab (mud), mage-type casters (chilling / hexing bolts), the void eye (gravity)
+  'SLIME', 'SPLITTER', 'ROCK_CRAB', 'SKELETON_MAGE', 'CULTIST', 'VOID_EYE']);
 const INNATE_ROOT: ReadonlySet<EnemyKind> = new Set<EnemyKind>(['SCORPION', 'VOID_STALKER', 'SHIELDBEARER', 'WRAITH', 'CINDER_SHAMAN']);
 export function innateHinder(kind: EnemyKind, elite: boolean, boss: boolean, rng: () => number = Math.random): number {
   let m = 0;

@@ -157,7 +157,7 @@ export function resolveEliteBig(z: Zone): void {
       events.emit('shake', { amount: 0.5 });
       break;
     case EB.CONE:
-      if (p.alive && inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.PUSH });
+      if (p.alive && inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.HEAVY });
       tv.set(z.pos.x + z.dir.x * z.radius * 0.5, 0, z.pos.z + z.dir.z * z.radius * 0.5);
       events.emit('trick', { pos: tv.clone(), kind: 'TAIL_SWEEP', radius: z.radius });
       events.emit('shake', { amount: 0.35 });

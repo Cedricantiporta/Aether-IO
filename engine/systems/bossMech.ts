@@ -17,7 +17,7 @@ import type { Enemy } from '../types';
 import { hooks } from './hooks';
 import { bp, phaseImmune } from './bossPhaseState';
 import type { BossKind } from '../enemyDefs';
-import { damagePlayer, applyPlayerDebuff, type PlayerDebuff } from './combat';
+import { damagePlayer, applyPlayerDebuff, SLOW_BOSS, KB, type PlayerDebuff } from './combat';
 import { damageMinion, nearestMinion } from './minions';
 import { spawnEnemy, spawnTelegraphCircle, onEnemyDeath } from './enemies';
 import { spawnHostileZone } from './tricks';
@@ -57,7 +57,7 @@ const RAIN_DMG = 0.8, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
 
 // ---- strike pool (delayed AoE hits we resolve ourselves so they can carry crowd control and hit minions)
 const MAX_STRIKES = 64;
-const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0 }));
+const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0, kd: 0 }));
 const tv = new Vector3();
 const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, gapT: 0, healT: 0, healHp0: 0 };
 
@@ -69,9 +69,9 @@ export function resetBossMech(): void {
 const pwr = (e: Enemy): number => Math.max(e.projectileDamage, e.contactDamage * 0.8, 8);
 const notify = (msg: string, color: string): void => useGameStore.getState().addNotification(msg, color, 'BOSS');
 
-function strike(x: number, z: number, r: number, delay: number, dmg: number, minDmg: number, cc: PlayerDebuff, ccDur: number, color: number): void {
+function strike(x: number, z: number, r: number, delay: number, dmg: number, minDmg: number, cc: PlayerDebuff, ccDur: number, color: number, kd = 0): void {
   for (const s of strikes) if (!s.on) {
-    s.on = true; s.x = x; s.z = z; s.r = r; s.t = delay; s.dmg = dmg; s.minDmg = minDmg; s.cc = cc; s.ccDur = ccDur;
+    s.on = true; s.x = x; s.z = z; s.r = r; s.t = delay; s.dmg = dmg; s.minDmg = minDmg; s.cc = cc; s.ccDur = ccDur; s.kd = kd;
     spawnHostileZone('METEOR_SHADOW', x, z, r, delay, 0, color);   // the warning (visual only, fills up; we resolve the hit)
     return;
   }
@@ -90,8 +90,8 @@ function resolve(s: (typeof strikes)[number]): void {
   const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.5;
   if (p.alive && dx * dx + dz * dz < rr * rr) {
     tv.set(s.x, 0, s.z);
-    damagePlayer(s.dmg, { pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL' });
-    if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? 0.4 : 0);
+    damagePlayer(s.dmg, { pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL', ...(s.kd > 0 ? { kb: KB.SLAM.kb, down: s.kd } : null) });   // (owner) the quake ring and the aimed meteor knock the hero down
+    if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? SLOW_BOSS : 0);
   }
   if (s.minDmg > 0) {
     const M = world.minions;
@@ -124,13 +124,13 @@ let rainN = 0;
 function place(x: number, z: number, r: number, t: number, dmg: number, m: Mech, force: boolean): boolean {
   if (!force) for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < RAIN_GAP * RAIN_GAP) return false;
   rainX[rainN] = x; rainZ[rainN] = z; rainN++;
-  strike(x, z, r, t, dmg, dmg * 0.6, m.rain, m.rainDur, m.rainColor);
+  strike(x, z, r, t, dmg, dmg * 0.6, m.rain, m.rainDur, m.rainColor, force ? 1.0 : 0);   // the meteor aimed at the hero knocks down
   return true;
 }
 
 /** Quake: a big ring around the boss carrying its signature crowd control. */
 function quake(e: Enemy, m: Mech): void {
-  strike(e.pos.x, e.pos.z, e.radius + (6 + e.phase * 1.5) * bigK(e), 1.15, pwr(e) * QUAKE_DMG, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a);
+  strike(e.pos.x, e.pos.z, e.radius + (6 + e.phase * 1.5) * bigK(e), 1.15, pwr(e) * QUAKE_DMG, pwr(e) * 1.5, m.cc, m.ccDur, 0xffd24a, 1.0);
 }
 
 /** Advances the pending impacts (every frame, even while the boss is stunned). */

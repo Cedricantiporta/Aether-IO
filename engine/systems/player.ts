@@ -11,7 +11,7 @@ import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target';
 import { trapAim, lockedTrap, nearestTrap, trapDist, type TrapObj } from './roomTraps';
-import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode } from './combat';
+import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
@@ -234,7 +234,7 @@ export function updatePlayer(dt: number): void {
   p.invulnT = tickDown(p.invulnT, dt);
   p.rageT = tickDown(p.rageT, dt);
   p.titanT = tickDown(p.titanT, dt);
-  p.slowT = tickDown(p.slowT, dt);
+  p.slowT = tickDown(p.slowT, dt); if (p.slowT <= 0) p.slowPow = 0;
   p.hpPotCd = tickDown(p.hpPotCd, dt);
   p.mpPotCd = tickDown(p.mpPotCd, dt);
   p.petReviveCd = tickDown(p.petReviveCd, dt);
@@ -442,7 +442,7 @@ export function updatePlayer(dt: number): void {
     p.dashT -= dt;
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
-    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow * dashSpeedMul();
+    const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 1 - (p.slowPow > 0 ? p.slowPow : SLOW_HERO) : 1) * envSlow * hazSlow * dashSpeedMul();
     // Frostpeak ice floor (iceFloor.ts): momentum. Steering blends the velocity in at x0.1, letting go bleeds it off at x0.04 (a very long glide).
     const onIce = iceAt(p.pos.x, p.pos.z), grip = onIce ? Math.min(iceGrip, ml > 0 ? ICE_ACCEL : ICE_FRICTION) : iceGrip;
     const lerpK = 1 - Math.exp(-12 * dt * grip), tgtSpd = onIce ? speed * ICE_SPEED_MUL : speed;   // (ice: the slide tops out 25% above walking)

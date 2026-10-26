@@ -898,7 +898,7 @@ function miniSlam(e: Enemy): boolean {
   }
   if (e.angle > 0) e.angle -= frameDt;
   else if (tdist < MINI.slamR + 3 && (e.state === 'CHASE' || e.state === 'KITE')) {
-    spawnTelegraphCircle(e.pos.x, e.pos.z, MINI.slamR, MINI.slamWindup, e.contactDamage * 2, 0xfbbf24);
+    { const mz = spawnTelegraphCircle(e.pos.x, e.pos.z, MINI.slamR, MINI.slamWindup, e.contactDamage * 2, 0xfbbf24); if (mz) { mz.kb = KB.SLAM.kb; mz.down = KB.SLAM.down; } }   // (owner) the mini-boss slam knocks the hero down
     e.pattern = MINI.slamFlag; enter(e, 'WINDUP'); stop(e);
     return true;
   }
@@ -1098,7 +1098,8 @@ function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; re
       setVel(e, tdx * inv, tdz * inv, e.speed);
       if (e.attackCd <= 0 && tdist < P.range + e.radius) {
         e.dir.set(tdx * inv, 0, tdz * inv);
-        spawnTelegraphCircle(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach, P.r, P.windup, dmg, color);
+        const fz = spawnTelegraphCircle(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach, P.r, P.windup, dmg, color);
+        if (fz) { if (e.kind === 'HAUNTED_ARMOR') { fz.kb = KB.SLAM.kb; fz.down = KB.SLAM.down; } else if (e.elite || e.mini) fz.kb = KB.PUSH.kb; }   // (owner) the haunted greatsword knocks down; elite / mini cleaves shove
         enter(e, 'WINDUP'); stop(e);
       }
   }
@@ -1201,7 +1202,8 @@ function aiYeti(e: Enemy): void {
   aiBrute(e, YETI_P);
   if (e.state === 'RECOVER' && e.phase === 0) {   // the charge ends in a ground slam
     e.phase = 1;
-    spawnTelegraphCircle(e.pos.x + e.dir.x * 1.2, e.pos.z + e.dir.z * 1.2, 3.4, 0.45, e.contactDamage * 1.2, 0xbfe8ff);
+    const yz = spawnTelegraphCircle(e.pos.x + e.dir.x * 1.2, e.pos.z + e.dir.z * 1.2, 3.4, 0.45, e.contactDamage * 1.2, 0xbfe8ff);
+    if (yz) { yz.kb = KB.SLAM.kb; yz.down = KB.SLAM.down; }   // (owner) the yeti's ground slam knocks down
     spawnHostileZone('GOO', e.pos.x, e.pos.z, 3.2, 3, 0, 0xbfe8ff);   // packed snow slows
   } else if (e.state !== 'RECOVER') e.phase = 0;
 }
@@ -1497,7 +1499,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   const grab = e.kind === 'ZOMBIE';
   const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
   const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : big ? KB.FLINCH : null) });
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.2 ? KB.PUSH : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits shove now and then
   if (charge) {
     world.player.slowT = Math.max(world.player.slowT, 0.6);
     if (world.player.downT > 0) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });
@@ -2110,7 +2112,7 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { ...(p.pct ? { pct: p.pct } : null), pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : null) });   // (owner) rocks knock you down
+        damagePlayer(p.damage, { ...(p.pct ? { pct: p.pct } : null), pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : p.kind === 'BIG_FLAME' ? KB.SLAM : null) });   // (owner) rocks knock you down
         if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));

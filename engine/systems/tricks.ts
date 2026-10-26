@@ -162,7 +162,7 @@ export function resolveTrick(z: Zone): void {
       if (inside(z)) hit = applyPlayerDebuff('DEFDOWN', 5);
       break;
     case TRICK.STOMP:
-      if (inside(z)) { damagePlayer(power * 1.1, { pos: z.pos, kind: 'PHYSICAL', ...KB.HEAVY }); hit = applyPlayerDebuff('STUN', 0.8); }
+      if (inside(z)) { damagePlayer(power * 1.1, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); hit = applyPlayerDebuff('STUN', 0.8); }   // (owner) stomps knock down
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius, color: 0xef4444 });
       events.emit('shake', { amount: 0.3 });
       break;
