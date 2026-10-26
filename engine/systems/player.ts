@@ -22,7 +22,7 @@ import { dashCdMul, dashSpeedMul } from './dashMods';
 import { breakCrate } from './crates';
 import { envSlow } from './zones';
 import { hazSlow, iceGrip, driftX, driftZ } from './biomeHazards';
-import { iceAt, ICE_ACCEL, ICE_FRICTION } from '../iceFloor';
+import { iceAt, ICE_ACCEL, ICE_FRICTION, ICE_SPEED_MUL } from '../iceFloor';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, roomHalls, type Collider } from '../mapgen';
 import { hallsPush, halls } from '../roomHalls';
 import { sacWalkGoal } from './director';
@@ -443,11 +443,11 @@ export function updatePlayer(dt: number): void {
     p.vel.set(p.dashDir.x * DASH_SPEED, 0, p.dashDir.z * DASH_SPEED);
   } else {
     const speed = stats.moveSpeed * MOVE_SPEED_SCALE * (a.attackT > 0.3 || a.castT > 0.3 ? ATTACK_MOVE_MUL : 1) * dailyMods.playerSpeed * (p.titanT > 0 ? 1.15 : 1) * (p.slowT > 0 ? 0.6 : 1) * envSlow * hazSlow * dashSpeedMul();
-    // Frostpeak ice floor (iceFloor.ts): momentum. Steering only blends the velocity in at x0.18 of normal, letting go bleeds it off at x0.07 (a long glide).
-    const grip = iceAt(p.pos.x, p.pos.z) ? Math.min(iceGrip, ml > 0 ? ICE_ACCEL : ICE_FRICTION) : iceGrip;
-    const lerpK = 1 - Math.exp(-12 * dt * grip);
-    p.vel.x += (mx * speed - p.vel.x) * lerpK;
-    p.vel.z += (mz * speed - p.vel.z) * lerpK;
+    // Frostpeak ice floor (iceFloor.ts): momentum. Steering blends the velocity in at x0.1, letting go bleeds it off at x0.04 (a very long glide).
+    const onIce = iceAt(p.pos.x, p.pos.z), grip = onIce ? Math.min(iceGrip, ml > 0 ? ICE_ACCEL : ICE_FRICTION) : iceGrip;
+    const lerpK = 1 - Math.exp(-12 * dt * grip), tgtSpd = onIce ? speed * ICE_SPEED_MUL : speed;   // (ice: the slide tops out 25% above walking)
+    p.vel.x += (mx * tgtSpd - p.vel.x) * lerpK;
+    p.vel.z += (mz * tgtSpd - p.vel.z) * lerpK;
   }
   if (abilityState.leapT <= 0) {
     a.dashing = p.dashT > 0;

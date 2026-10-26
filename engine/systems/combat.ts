@@ -661,6 +661,7 @@ export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 
     const rs = useGameStore.getState().stats;
     const r = type === 'BURN' ? rs.resBurn : type === 'POISON' ? rs.resPoison : type === 'SLOW' ? rs.resFrost : 0;
     if (r > 0) duration *= 1 - r;
+    if ((type === 'STUN' || type === 'ROOT') && rs.resCC > 0) duration *= 1 - rs.resCC;   // CC Resistance: stuns (fear / freeze too) and roots last shorter
   }
   const was = type === 'STUN' ? p.stunT : type === 'ROOT' ? p.rootT : type === 'SILENCE' ? p.silenceT : type === 'DEFDOWN' ? p.defDownT : type === 'BLIND' ? p.blindT
     : type === 'BURN' ? p.burnT : type === 'POISON' ? p.poisonT : type === 'BLEED' ? p.bleedT : p.slowT;
@@ -738,6 +739,7 @@ export function knockHero(fromX: number, fromZ: number, force: number, downSec =
   const unstoppable = p.guardT > 0 || p.avatarT > 0 || p.titanT > 0 || p.ultT > 0 || p.radiant > 0 || p.whirlT > 0 || boneArmorMul() <= 0.8;
   if (unstoppable) { force *= 0.35; downSec = 0; }
   else if (p.arcane > 0 || p.aegis > 0) force *= 0.7;
+  { const cc = useGameStore.getState().stats.resCC; if (cc > 0) { force *= 1 - cc; downSec *= 1 - cc; } }   // CC Resistance: shorter knockdown, shorter push
   if (downSec > 0 && p.knockImmuneT > 0) { downSec = 0; force *= 0.5; }   // no chain knockdowns
   force = Math.min(KB_MAX, force);
   if (force < 0.05 && downSec <= 0) return;

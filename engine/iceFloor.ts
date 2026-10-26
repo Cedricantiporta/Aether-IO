@@ -1,7 +1,7 @@
 // ============================================================================
 // Frostpeak ice floors (owner-approved mock "ice_mock.png"). COMBAT / ELITE / TREASURE rooms of the ice biome (index 4) get a few BIG irregular sheets of
 // slippery ice on the floor (lobed blobs of discs, like the lava pools of lavaFloor.ts); the rest of the floor stays normal snow (no small patches).
-//   - the hero keeps his momentum on a sheet (player.ts: x0.18 acceleration while steering, x0.07 friction while letting go; a dash slides on),
+//   - the hero keeps his momentum on a sheet (player.ts: x0.1 acceleration while steering, x0.04 friction while letting go, x1.25 top speed; no dash while standing on ice),
 //   - walking monsters slide a bit (biomeHazards.ts iceMobs; bosses / minis / flyers-as-stationaries excluded),
 //   - the arrival spot, exits, station / chests, the centre, placed stationaries, frozen pools and liquids stay ice-free.
 // One generator, deterministic per room seed: discs -> a 0.5 m Uint8Array grid (O(1) `iceAt`), rebuilt once per room in director.enterRoom; the renderer
@@ -24,8 +24,8 @@ export const ice = {
   discs: [] as IDisc[],
   grid: new Uint8Array(0), n: 0, o: 0,
 };
-/** Hero slip numbers (player.ts): velocity lerp rate = 12 * grip per second. Steering on ice: x0.18; letting go: x0.07 (a long glide). */
-export const ICE_ACCEL = 0.18, ICE_FRICTION = 0.07;
+/** Hero slip numbers (player.ts): velocity lerp rate = 12 * grip per second. Steering on ice: x0.1; letting go: x0.04 (a very long glide); top slide speed x1.25 of walking; no dash on ice (abilities.ts tryDash). */
+export const ICE_ACCEL = 0.1, ICE_FRICTION = 0.04, ICE_SPEED_MUL = 1.25;
 /** Monster slide: their slide velocity lerps toward the AI's velocity at this rate per second (normal ground = instant). */
 export const ICE_MOB_LERP = 3;
 

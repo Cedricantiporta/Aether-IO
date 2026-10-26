@@ -3,6 +3,7 @@
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
 import { inRift } from './biomeHazards';
+import { iceAt } from '../iceFloor';
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
@@ -1277,10 +1278,15 @@ function orbZap(o: { x: number; y: number; z: number }, a: typeof abilityState):
 
 // ============================================================ dash entry =====
 /** Space: spends a dash charge and performs the class dash (Shadow Roll / Blink Nova / Shoulder Charge). */
+let iceDashTextT = -9;
 export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0 || inRift) return false;   // (owner: a Void rift's pull blocks the dash)
   if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (6)
+    return false;
+  }
+  if (iceAt(p.pos.x, p.pos.z)) {   // (owner 2026-10-26) Frostpeak ice: too slippery to dash
+    if (world.time - iceDashTextT > 1) { iceDashTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'Too slippery to dash!', color: 0xbfe8ff, scale: 0.8, dy: 2.6 }); }
     return false;
   }
   if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }

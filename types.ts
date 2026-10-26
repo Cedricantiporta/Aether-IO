@@ -106,6 +106,7 @@ export interface PlayerStats {
   resPoison: number;        // fraction less poison damage taken and shorter poison (cap 60%)
   resBurn: number;          // fraction less fire damage taken and shorter burning (cap 60%)
   resFrost: number;         // fraction less ice damage taken and shorter slow / freeze (cap 60%)
+  resCC: number;            // fraction shorter stun / root / fear / freeze-stun / knockdown on the hero and shorter knockback (cap 60%)
   resProj: number;          // extra fraction less damage from enemy projectiles, stacks with the class value (cap 60%)
 }
 

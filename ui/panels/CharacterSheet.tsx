@@ -52,7 +52,7 @@ export const CharacterSheet: React.FC = () => {
   const extra: [string, string][] = ([
     ['Life steal', stats.lifeSteal, pct], ['Thorns', stats.thorns, (v: number) => v.toFixed(0)], ['Gold find', stats.goldFind, pct], ['XP gain', stats.xpBonus, pct],
     ['Extra pierce', stats.pierceBonus, (v: number) => `+${v}`], ['Burn on hit', stats.onHitBurnChance, pct], ['Slow on hit', stats.onHitSlowChance, pct],
-    ['Damage reduction', stats.dmgReduce, pct], ['Poison resist', stats.resPoison, pct], ['Burn resist', stats.resBurn, pct], ['Frost resist', stats.resFrost, pct], ['Echo shot', stats.echoEvery, (v: number) => `every ${v}`], ['Extra dashes', stats.dashCharges, (v: number) => `+${v}`],
+    ['Damage reduction', stats.dmgReduce, pct], ['Poison resist', stats.resPoison, pct], ['Burn resist', stats.resBurn, pct], ['Frost resist', stats.resFrost, pct], ['CC resist', stats.resCC, pct], ['Echo shot', stats.echoEvery, (v: number) => `every ${v}`], ['Extra dashes', stats.dashCharges, (v: number) => `+${v}`],
   ] as [string, number, (v: number) => string][]).filter(([, v]) => v > 0).map(([l, v, f]) => [l, f(v)]);
   const sets = activeSets(equipment);
   return (

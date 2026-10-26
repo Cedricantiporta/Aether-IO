@@ -50,6 +50,7 @@ export const AFFIXES: AffixDef[] = [
   { key: 'rpois', g: 'def', label: 'Poison Resistance', stat: 'resPoison',    tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
   { key: 'rburn', g: 'def', label: 'Burn Resistance',   stat: 'resBurn',      tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
   { key: 'rfrost', g: 'def', label: 'Frost Resistance', stat: 'resFrost',     tiers: [0, .05, .08, .12, .17], weight: 3, cp: 400 },
+  { key: 'rcc',   g: 'def', label: 'CC Resistance',     stat: 'resCC',        tiers: [0, .05, .08, .12, .17], weight: 3, cp: 700 },
   { key: 'rproj', g: 'def', label: 'Projectile Resistance', stat: 'resProj',  tiers: [0, .03, .05, .07, .10], weight: 3, cp: 900 },
   { key: 'hpr',   g: 'def', label: 'HP Regen',          stat: 'regen',           tiers: [0, .3, .5, .8, 1.2], weight: 7, cp: 80 },
   { key: 'mpr',   g: 'util', label: 'Mana Regen',       stat: 'manaRegen',       tiers: [0, .3, .5, .8, 1.2], weight: 6, cp: 60 },

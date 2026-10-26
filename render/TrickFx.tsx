@@ -162,29 +162,32 @@ function useHeroColor(): [number, number, number] {
 
 /** Temporary crystal wall segments raised by Crystal Golemites (Colliders live in engine/mapgen). */
 import React, { useMemo } from 'react';
-import { Color, DodecahedronGeometry, DynamicDrawUsage, InstancedMesh, MeshStandardMaterial, Object3D, OctahedronGeometry } from 'three';
+import { Color, DodecahedronGeometry, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, MeshStandardMaterial, Object3D, OctahedronGeometry } from 'three';
 
 export function CrystalWalls() {
   const sys = useMemo(() => {
     const mk = (g: any, m: any) => { const im = new InstancedMesh(g, m, 80); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(DynamicDrawUsage); return im; };
     const crystal = mk(new OctahedronGeometry(1, 0), new MeshStandardMaterial({ color: new Color(0xe879f9), emissive: new Color(0x8a2be2), emissiveIntensity: 0.9, roughness: 0.25, metalness: 0.3, transparent: true, opacity: 0.92 }));
+    // Frostpeak (biome 4): the same wall reads as pale, glassy ICE blocks (soft chunky icosahedra) instead of violet gems; other biomes keep the violet crystal
+    const ice = mk(new IcosahedronGeometry(1, 0), new MeshStandardMaterial({ color: new Color(0xd6f2ff), emissive: new Color(0x7fc8f0), emissiveIntensity: 0.35, roughness: 0.12, metalness: 0.05, flatShading: true, transparent: true, opacity: 0.8 }));
     const rock = mk(new DodecahedronGeometry(1, 0), new MeshStandardMaterial({ color: new Color(0x8a7a66), roughness: 0.95, flatShading: true }));
-    return { crystal, rock, o: new Object3D() };
+    return { crystal, ice, rock, o: new Object3D() };
   }, []);
   useFrame(() => {
-    const { crystal, rock, o } = sys;
-    let nc = 0, nr = 0;
+    const { crystal, ice, rock, o } = sys;
+    const frost = (((world.room.biome % 7) + 7) % 7) === 4;
+    let nc = 0, nr = 0, ni = 0;
     for (const w of world.walls) {
       if (!w.active) continue;
       const rise = Math.min(1, w.t / 0.25), fade = Math.min(1, (w.life - w.t) / 0.5);
       const h = (w.rock ? 3.0 : 3.4) * rise * (0.6 + 0.4 * fade);
-      const im = w.rock ? rock : crystal;
-      const n = w.rock ? nr : nc;
+      const im = w.rock ? rock : frost ? ice : crystal;
+      const n = w.rock ? nr : frost ? ni : nc;
       o.position.set(w.x, h * 0.5, w.z); o.rotation.set(0, w.rot, 0); o.scale.set(w.r * 0.95, h * 0.5, w.r * 0.95); o.updateMatrix(); im.setMatrixAt(n, o.matrix);
       o.position.set(w.x + Math.cos(w.rot) * 0.6, h * 0.3, w.z + Math.sin(w.rot) * 0.6); o.rotation.set(0.25, w.rot + 1, 0.2); o.scale.set(w.r * 0.55, h * 0.3, w.r * 0.55); o.updateMatrix(); im.setMatrixAt(n + 1, o.matrix);
-      if (w.rock) nr += 2; else nc += 2;
+      if (w.rock) nr += 2; else if (frost) ni += 2; else nc += 2;
     }
-    commitInst(crystal, nc); commitInst(rock, nr);
+    commitInst(crystal, nc); commitInst(ice, ni); commitInst(rock, nr);
   });
-  return <><primitive object={sys.crystal} /><primitive object={sys.rock} /></>;
+  return <><primitive object={sys.crystal} /><primitive object={sys.ice} /><primitive object={sys.rock} /></>;
 }
