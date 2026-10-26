@@ -162,7 +162,7 @@ function raiseWard(e: Enemy, m: Mech): void {
       const w = spawnEnemy(kind === 'GUARD' ? m.guard! : 'BOSS_CRYSTAL', tv);
       if (!w) continue;
       if (kind !== 'GUARD') { w.maxHp = Math.round(e.maxHp * (near ? 0.03 : 0.035)); w.hp = w.maxHp; }
-      else { w.maxHp = Math.round(w.maxHp * 1.2); w.hp = w.maxHp; }
+      else { w.maxHp = Math.round(w.maxHp * (w.kind === 'BOSS_HYDRA_HEAD' ? 2.2 : 1.2)); w.hp = w.maxHp; }   // (spare Hydra heads: as tough as the front ones, owner 2026-10-26)
       if (w.kind === 'BOSS_HYDRA_HEAD') { w.pattern = HEAD_SLOTS[i]; w.attackCd = 3 + i; }   // spare heads sit behind / beside the 3 front heads
       S.wards.push(w.id);
     }

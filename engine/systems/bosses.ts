@@ -27,6 +27,7 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
+import { bossWarded } from './bossMech';
 import { spawnIllusions } from './bossSpecials';
 
 const dirV = new Vector3();
@@ -59,7 +60,7 @@ function syncHud(e: Enemy): void {
   const names = BOSS_NAMES[e.kind as BossKind];
   b.active = e.state !== 'DYING';
   b.name = names.name;
-  if (!b.final) b.title = e.kind === 'BOSS_WARLORD' && bossView.enraged ? 'The Burning Form' : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
+  if (!b.final) b.title = e.kind === 'BOSS_WARLORD' && bossView.enraged ? 'The Burning Form' : e.kind === 'BOSS_HYDRA' && bossWarded(e) ? 'IMMUNE - slay the spare heads!' : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
   b.hp = e.hp;
   b.maxHp = e.maxHp;
   b.phase = e.phase;

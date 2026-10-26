@@ -45,7 +45,7 @@ import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { addChill } from './bossFx';
-import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead } from './bosses2';
+import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { towerMode, towerCrystals, dropTable } from './combat';
@@ -318,6 +318,7 @@ export function monsterLevel(): number {
   return lv <= exp ? lv : exp + 0.4 * (lv - exp);
 }
 /** Biome bosses hit 15% softer (balance pass: level-8 heroes in shop gear lost 15 of 15 Elderroot fights). */
+const BOSS_ARMOR_MUL = 1.8;
 const BOSS_DMG = 0.6;   // (owner 2026-10-25: bosses hit far too hard next to normal monsters; was 0.85)
 const NORMAL_DMG = 1.6;   // (owner 2026-10-25: normal monsters barely hurt) ordinary monsters x1.6, elites x1.25 on top of their own x1.5
 /** HP multiplier from the hero's level (for spawns that set their own HP, e.g. the dark hero). */
@@ -351,7 +352,7 @@ export function spawnEnemy(
 
   // every monster, elite and boss also scales with the hero's level: +10% HP and +6.5% damage per level above 1
   const lvl = Math.max(1, useGameStore.getState().level | 0), ml = monsterLevel(), lvHp = 1 + LEVEL_HP * (ml - 1), lvDmg = 1 + LEVEL_DMG * (ml - 1);
-  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 1.8 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then +80% (owner) (x Ascension boss hp)
+  const hpMul = waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
   const dmgMul = waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL;
   // later biomes breed tougher monsters on top of the depth curve (owner): +12% HP and +10% damage per biome (2026-10-25: HP was +15%)
   const bi = Math.max(0, Math.min(7, world.room.biome | 0));
@@ -379,6 +380,7 @@ export function spawnEnemy(
   e.xp = Math.round(def.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(def.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
+  if (boss) e.armor = Math.round(e.armor * BOSS_ARMOR_MUL);   // (owner 2026-10-26) bosses were too easy: +80% defense
   if (kind === 'BOMBER' && world.room.active && world.room.biome >= 3) { e.speed *= 1.45; e.armor = Math.max(e.armor, 45); }   // (owner 2026-10-25) later realms: fast rushing bombers with medium defense
   e.mini = false;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
@@ -1861,6 +1863,7 @@ export function updateEnemies(dt: number): void {
     if (e.active && !isDying(e) && !optionalForClear(e.kind)) alive++;   // (owner 2026-10-25) tower archers / hydras / gargoyles are optional: they never hold up the room clear
   }
   world.director.aliveCount = alive;
+  tickHydraHeads(dt);   // Hydra heads: slam lunges + sway run here so a stunned / frozen head still goes where its telegraph is
   tickHumanBoss(dt);   // humanoid mini boss: boss bar, strikes, traps, banner / ward
   tickDarkHero(dt);   // dark hero champion: its shots, fields, delayed strikes (run even while it is staggered)
 
