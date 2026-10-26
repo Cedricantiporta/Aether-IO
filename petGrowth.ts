@@ -19,6 +19,9 @@ export const PET_STAGE_SCALE = [1, 1, 1.28, 1.6];
 
 export const petLv = (p: Pick<Item, 'petLv'>): number => Math.max(1, Math.min(PET_MAX_LV, Math.floor(p.petLv ?? 1)));
 export const petStage = (p: Pick<Item, 'petStage'>): number => Math.max(1, Math.min(3, Math.floor(p.petStage ?? 1)));
+export const PET_MAX_STARS = 5;
+export const PET_STAR_BONUS = 0.1;
+export const petStars = (p: Pick<Item, 'petStars'>): number => Math.max(0, Math.min(PET_MAX_STARS, Math.floor(p.petStars ?? 0)));
 export const petXp = (p: Pick<Item, 'petXp'>): number => Math.max(0, p.petXp ?? 0);
 
 /** XP needed to go from level `lv` to `lv + 1`: 60 * lv^1.5 (Lv1->2 = 60, Lv9->10 = 1620, Lv19->20 = 4970). */
@@ -27,8 +30,8 @@ export const petXpNeed = (lv: number): number => Math.round(60 * Math.pow(Math.m
 export const petLvCap = (stage: number): number => (stage >= 3 ? PET_MAX_LV : PET_EVOLVE_LV[stage] ?? PET_MAX_LV);
 
 /** Multiplier on the pet's base stats AND pet skill power. 1.0 at Lv 1 stage 1; Lv 20 stage 3 = 2.7. */
-export const petPowerAt = (lv: number, stage: number): number => 1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage];
-export const petPower = (p: Item): number => (p.type === 'PET' ? petPowerAt(petLv(p), petStage(p)) : 1);
+export const petPowerAt = (lv: number, stage: number, stars = 0): number => (1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage]) * (1 + PET_STAR_BONUS * stars);
+export const petPower = (p: Item): number => (p.type === 'PET' ? petPowerAt(petLv(p), petStage(p), petStars(p)) : 1);
 /** (owner balance) percentage stats a pet gives (crit, cooldown, dodge, speed ...) count half and grow at a quarter of the
  *  flat-stat rate: a maxed Mythic pet no longer hands out +54% crit. Flat stats (damage, health, defense, regen) use petPower. */
 export const PET_PCT_STATS = new Set(['critRate', 'critDamage', 'cooldownReduction', 'dodge', 'moveSpeed', 'skillDamage', 'lifeSteal', 'fireRate', 'goldFind', 'xpBonus', 'multishot']);

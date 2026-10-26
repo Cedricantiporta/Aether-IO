@@ -6,7 +6,7 @@ import { Lock } from './GoldIcons';
 import type { Item } from '../../types';
 import { ItemIcon } from './ItemIcon';
 import { isGear, MAX_ITEM_LEVEL } from '../lib/game';
-import { petLv, petStage } from '../../petGrowth';
+import { petLv, petStage, petStars } from '../../petGrowth';
 import { tip } from './Tooltip';
 import { ItemTip } from './ItemTip';
 import { useGameStore } from '../../store';
@@ -58,6 +58,7 @@ export const ItemSlot: React.FC<Props> = ({
         : emptyLabel ? <span className="rpg-label !text-[.55rem] opacity-70 text-center leading-tight">{emptyLabel}</span> : fluid ? <span className="slot-plus-faint">+</span> : null}
       {item && q > 1 && <span className="slot-qty">{q}</span>}
       {item && item.type === 'PET' && tooltip !== 'buy' && <span className="slot-plus" data-testid="pet-lv-badge" style={petStage(item) > 1 ? { color: petStage(item) > 2 ? '#d8a8ff' : '#ffe08a' } : undefined}>Lv {petLv(item)}</span>}
+      {item && item.type === 'PET' && tooltip !== 'buy' && petStars(item) > 0 && <span data-testid="pet-stars" style={{ position: 'absolute', left: 3, bottom: 1, fontSize: '.6rem', lineHeight: 1, color: '#ffc928', textShadow: '0 1px 0 rgba(0,0,0,.35)', pointerEvents: 'none' }}>{'★'.repeat(petStars(item))}</span>}
       {locked && <span className="slot-lock"><Lock size={14} /></span>}
       {sale ? <span className="slot-sale" data-testid="sale-tag">-{Math.round(sale * 100)}%</span> : null}
       {sale && oldPrice !== undefined ? <span className="slot-old">{oldPrice.toLocaleString()}</span> : null}

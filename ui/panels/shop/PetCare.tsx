@@ -6,7 +6,7 @@ import { Button } from '../../components/Button';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import {
-  petLv, petStage, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
+  petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
   PET_SHARD_XP, petEats, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV,
 } from '../../../petGrowth';
 import { feedLoot, feedShards, evolvePet, lootFoodXp, canAffordEvolve } from '../../../petActions';
@@ -26,8 +26,8 @@ export const PetCare: React.FC = () => {
   const atCap = lv >= cap;
   const evolving = petCanEvolve(pet);
   const nextLv = atCap ? lv : lv + 1;
-  const cur = petPowerAt(lv, st);
-  const nxt = evolving ? petPowerAt(lv, st + 1) : petPowerAt(nextLv, st);
+  const cur = petPowerAt(lv, st, petStars(pet));
+  const nxt = evolving ? petPowerAt(lv, st + 1, petStars(pet)) : petPowerAt(nextLv, st, petStars(pet));
   const keys = Object.keys(pet.stats ?? {}) as (keyof PlayerStats)[];
   const food = inv.filter((i) => lootFoodXp(i) > 0 && petEats(pet, i.rarity));   // (owner) tiered feeding
   const cost = PET_EVOLVE_COST[st];

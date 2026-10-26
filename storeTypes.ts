@@ -247,6 +247,10 @@ export interface GameState {
   buyItem: (item: Item, quantity?: number) => boolean;
   /** Pet fusion: 5 bag pets of one tier -> a chance at one pet of the next tier (else one of the same tier). */
   fusePets: (ids: string[]) => { ok: boolean; item: Item } | null;
+  /** Potion fusion: 3 potions of `fromId` -> 1 of the next tier for gold (x `times`); returns how many fusions happened. */
+  fusePotions: (fromId: string, times?: number) => number;
+  /** Pet ascension: consume a same-name duplicate (bag only) for +1 star on the keeper (bag or equipped). */
+  ascendPet: (keepId: string, sacId: string) => boolean;
   /** Blacksmith fusion: 5 bag gear pieces of one tier -> a chance at one piece of the next tier (else one of the same tier). */
   fuseItems: (ids: string[]) => { ok: boolean; item: Item } | null;
   /** Blacksmith fusion: 5 shards of one tier -> a chance at one shard of the next tier (else one of the same tier). */

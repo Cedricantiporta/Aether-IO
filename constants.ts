@@ -291,7 +291,10 @@ export const ITEMS_POOL: Item[] = [
   // BIG POTIONS
   { id: 'potion_hp_big', name: 'Big Health Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 HP. Only works at 70% HP or lower.' },
   { id: 'potion_mana_big', name: 'Big Mana Potion', type: 'POTION', stats: {}, restoreAmount: 75, rarity: 'RARE', price: 450, level: 1, description: 'Restores 200 Mana. Only works at 70% Mana or lower.' },
-  
+  // GRAND POTIONS (potion fusion: 3 Big -> 1 Grand at the Blacksmith > Fuse tab)
+  { id: 'potion_hp_grand', name: 'Grand Health Potion', type: 'POTION', stats: {}, restoreAmount: 100, rarity: 'EPIC', price: 1350, level: 1, description: 'Restores 400 HP. Only works at 70% HP or lower.' },
+  { id: 'potion_mana_grand', name: 'Grand Mana Potion', type: 'POTION', stats: {}, restoreAmount: 100, rarity: 'EPIC', price: 1350, level: 1, description: 'Restores 400 Mana. Only works at 70% Mana or lower.' },
+
   { id: 'upgrade_core', name: 'Upgrade Core', type: 'CORE', stats: {}, rarity: 'EPIC', price: 1000, level: 1, description: 'Tier I core: the Blacksmith upgrades Common, Rare and Epic gear with these.' },
   // (owner: tiered cores) higher upgrades need higher-tier cores: fuse 5 into 1 of the next tier (Blacksmith > Shards) or win them from bosses
   { id: 'upgrade_core_2', name: 'Refined Core', type: 'CORE', stats: {}, rarity: 'LEGENDARY', price: 6000, level: 1, description: 'Tier II core: upgrades Legendary and Mythic gear. Fuse 5 Upgrade Cores, or win one from a boss.' },

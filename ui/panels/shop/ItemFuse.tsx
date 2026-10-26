@@ -7,6 +7,7 @@ import { ItemSlot } from '../../components/ItemSlot';
 import { FUSE_COUNT, FUSE_CHANCE, nextItemTier as nextTier } from '../../../petFusion';
 import { RARITY_COLOR, isGear } from '../../lib/game';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
+import { PotionFuse } from './PotionFuse';
 import type { Item, Rarity } from '../../../types';
 
 const cap = (r: string) => r.charAt(0) + r.slice(1).toLowerCase();
@@ -112,6 +113,7 @@ export const ItemFuse: React.FC = () => {
             dim={(!!tier && (p.rarity !== tier || p.type !== kind)) || !(FUSE_CHANCE[p.rarity] ?? 0)} onClick={() => toggle(p)} />
         )) : <div className="rpg-label">No gear in your bag.</div>}
       </div>
+      <PotionFuse />
       {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Fusion Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
