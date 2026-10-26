@@ -37,6 +37,14 @@ export function TrickFx() {
         case 'BOAR_KNOCKDOWN': dustPuff(p.x, p.z, 8, 1.2, 0xc9a97a, 2); sparks(p.x, 1, p.z, 10, 0xfde68a, 6, 0.2, 0.4, 2); break;
         case 'BOMBER_PATCH': splat(p.x, p.z, r * 1.8, 0x2a1a10, 5, 0.6); break;
         case 'ACID': splat(p.x, p.z, r * 2.2, 0x9be32a, 6, 0.8); smokePuff(p.x, 0.5, p.z, 8, 0xa8e03a, 2, 1, 1.4, r * 0.5, 0.4); break;
+        // boss cataclysm impacts (bossMech.ts rain, ~40 per cast: keep each one light)
+        case 'RAIN_ROCK': dustPuff(p.x, p.z, 5, 1.4, 0xb8a888, r * 0.6); chunks(p.x, 0.5, p.z, 7, 0x8a7a68, 0x4a4036, r * 0.8, 0.3); ringBurst(p.x, 0.3, p.z, 0xb0a090, 0.5, r, 0.4, 1.6); DECALS.add(p.x, p.z, r * 0.9, r * 0.9, 3, 0.05, 0.04, 0.03, 0.35, CELL.CRACK); break;
+        case 'RAIN_THORN': dustPuff(p.x, p.z, 4, 1.0, 0x6a8a3a, r * 0.5); chunks(p.x, 0.5, p.z, 7, 0x6b4423, 0x3a2410, r * 0.7, 0.26); sparks(p.x, 0.8, p.z, 8, 0x9be32a, 7, 0.22, 0.4, 2); ringBurst(p.x, 0.3, p.z, 0x84cc16, 0.5, r, 0.4, 1.6); break;
+        case 'RAIN_GEYSER': sparks(p.x, 0.6, p.z, 14, 0xbfe8ff, 9, 0.24, 0.5, 2.4, 0, 1, 0, 0.6); glowPuff(p.x, 1.2, p.z, 0x3fa8ff, r * 1.2, 0.35, 1.6, 0.7); ringBurst(p.x, 0.3, p.z, 0x7dd3fc, 0.5, r, 0.45, 1.8); break;
+        case 'RAIN_ICE': sparks(p.x, 0.8, p.z, 12, 0xe0f4ff, 8, 0.22, 0.45, 2); chunks(p.x, 0.6, p.z, 6, 0xbfe8ff, 0x3f86b8, r * 0.8, 0.26); ringBurst(p.x, 0.3, p.z, 0xbfe8ff, 0.5, r, 0.45, 1.8); break;
+        case 'RAIN_FIRE': glowPuff(p.x, 1, p.z, 0xff7a1a, r * 1.8, 0.4, 1.8, 0.8); sparks(p.x, 0.8, p.z, 10, 0xff9a30, 9, 0.26, 0.45, 2.2); ringBurst(p.x, 0.3, p.z, 0xff5a1a, 0.5, r, 0.4, 1.8); break;
+        case 'RAIN_SAND': dustPuff(p.x, p.z, 8, 1.8, 0xe0c070, r * 0.7); sparks(p.x, 0.7, p.z, 8, 0xf5e0a0, 8, 0.22, 0.4, 2); ringBurst(p.x, 0.3, p.z, 0xe0c070, 0.5, r, 0.4, 1.6); break;
+        case 'RAIN_VOID': flashStar(p.x, 1.2, p.z, 0xd8b4fe, r * 0.9, 0.3); sparks(p.x, 0.8, p.z, 10, 0xa060ff, 8, 0.24, 0.45, 2); ringBurst(p.x, 0.3, p.z, 0xa060ff, 0.5, r, 0.45, 1.8); break;
         case 'BOSS_CAST': ringBurst(p.x, 0.3, p.z, 0xffe9a0, 1, 9, 0.6, 2); glowPuff(p.x, 2, p.z, 0xffd070, 6, 0.5, 1.8, 0.8); break;
         case 'PRISON': dustPuff(p.x, p.z, 12, 2, 0xb08a5a, 8); chunks(p.x, 0.5, p.z, 24, 0x8a6a4a, 0x4a3a2a, 10, 0.4); break;
         case 'VEINS': for (let i = 0; i < 3; i++) ringBurst(p.x, 0.3, p.z, 0xff6a1a, 2, 14 + i * 8, 0.6, 1.8); break;
