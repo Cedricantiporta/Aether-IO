@@ -18,6 +18,8 @@ import { DailyCard, useDailyDay } from './DailyCard';
 import { WavesCard } from './WavesCard';
 import { UNLOCK_LV } from '../../unlocks';
 import { Waves } from '../components/GoldIcons';
+import { CoopLobby, lobbyInput } from './CoopLobby';
+import { useCoop } from '../../net/coopStore';
 
 type Mode = 'ADVENTURE' | 'TOWER';
 
@@ -40,6 +42,7 @@ export const SetOutWindow: React.FC = () => {
   const claimTower = useGameStore((s) => s.claimTowerMilestone);   // (hooks before the early return)
   const day = useDailyDay();
   const level = useGameStore((s) => s.level);
+  const coopGuest = useCoop((s) => s.role === 'guest' && s.state === 'connected');   // a co-op guest never sets out: the host does
   if (!open) return null;
   const dailyLocked = level < UNLOCK_LV.DAILY, wavesLocked = level < UNLOCK_LV.WAVES;   // (unlocks.ts)
   const dailyDot = !dailyLocked && progress.daily.claimed !== day;   // today's reward still open
@@ -57,9 +60,9 @@ export const SetOutWindow: React.FC = () => {
   const ms: { floor: number; state: 'claim' | 'locked' }[] = [];
   for (let f = TOWER_STEP; f <= reachedTop; f += TOWER_STEP) if (!claimed.includes(f)) ms.push({ floor: f, state: 'claim' });
   for (let k = 1; k <= 3; k++) ms.push({ floor: reachedTop + k * TOWER_STEP, state: 'locked' });
-  const go = () => { if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode); };
+  const go = () => { if (coopGuest && mode === 'ADVENTURE' && tab === 'RUN') return; if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode); };
   return (
-    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width={mode === 'TOWER' ? 'min(56rem, calc(100vw - 1.5rem))' : '24rem'} z={160} onClose={() => setOpen(false)} onConfirm={go}>
+    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width={mode === 'TOWER' ? 'min(56rem, calc(100vw - 1.5rem))' : '24rem'} z={160} onClose={() => setOpen(false)} onConfirm={() => { if (lobbyInput.submit) lobbyInput.submit(); else go(); }}>
       {/* (owner) the tower hub is wide: the tabs are a column on the left, the page on the right */}
       <div className={mode === 'TOWER' ? 'so-split' : ''}>
       {mode === 'TOWER' && (
@@ -84,6 +87,7 @@ export const SetOutWindow: React.FC = () => {
           <span>Seven realms, seven guardians, and the Undying Throne at the end of the Void.</span>
           <em>{progress.endings > 0 ? `Ending seen ${progress.endings}x` : 'Ending not yet seen'}</em>
         </div>}
+        {mode === 'ADVENTURE' && <CoopLobby />}
         {mode === 'TOWER' && <div className="so-card on" data-testid="so-tower">
           <Castle size={26} />
           <b>Endless Tower</b>
@@ -128,7 +132,7 @@ export const SetOutWindow: React.FC = () => {
           </>)}
         </div>
       )}
-      <Button className="w-full mt-3" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked} onClick={go} data-testid="so-go">{featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
+      <Button className="w-full mt-3" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked || (coopGuest && mode === 'ADVENTURE' && tab === 'RUN')} onClick={go} data-testid="so-go">{coopGuest && mode === 'ADVENTURE' && tab === 'RUN' ? 'Waiting for the host' : featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
       </div>
       </div>
     </Modal>

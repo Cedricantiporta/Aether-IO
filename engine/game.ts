@@ -1,4 +1,5 @@
 import { CAM_PITCH0 } from './world';
+import { coopTick } from '../net/coop';
 import { resetBossMech } from './systems/bossMech';
 import { PLAZA, TOWER, PORTAL, PLAZA_ARRIVAL } from './townData';
 import { runInfo } from './runMods';
@@ -201,6 +202,7 @@ const TOWN_DAY_SEC = 960;
 let prevStatus: GameStatus | null = null;
 export function updateGame(rawDt: number): void {
   if (dreamFx.busy) blockInput();   // (the wake-up fade: no input)
+  coopTick();   // online co-op: send my position, interpolate the partner (net/coop.ts; a no-op when not in a session)
   watchRank();
   tickFeel(rawDt);
   const status = useGameStore.getState().status;

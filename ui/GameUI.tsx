@@ -47,6 +47,7 @@ import { TodoInTown } from './screens/TodoInTown';
 import { SellDialog, BuyDialog, GlobalConfirm, SummonReveal } from './panels/Dialogs';
 import { TooltipLayer, hideTip } from './components/Tooltip';
 import { FishingHud } from './hud/FishingHud';
+import { CoopHud } from './hud/CoopHud';
 
 const HUD_STATUSES = new Set<GameStatus>([GameStatus.PLAYING, GameStatus.PAUSED, GameStatus.LEVEL_UP, GameStatus.INVENTORY, GameStatus.SHOP]);
 
@@ -89,6 +90,7 @@ export const GameUI: React.FC = () => {
       {(village || inGame) && <Dialogue />}
       {village && <TownFade />}
       {village && <FishingHud />}
+      {(village || inGame) && <CoopHud />}
       {(village || inGame) && <CurrencyFloat />}
       {(village || inGame) && <UpgradeNotice />}
       <AnimatePresence>
