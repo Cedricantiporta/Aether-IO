@@ -521,6 +521,25 @@ function armShove(p: { x: number; z: number }, r: number, x: number, z: number, 
   p.x = nx; p.z = nz;
 }
 
+/** Gorath's arena (BOSS room, Marble Halls): 4 ballistas on the left / right sides, facing in. Same weapon as the run rooms (telegraphed orange lane, tracks then locks,
+ *  one fast bolt; staggered, so the lanes cross the arena every few seconds). Sturdy (3x the usual hits to break). Call after setupRoomTraps. */
+export function setupBossBallistas(biome: number): void {
+  const R = world.room.radius, depth = biome * 15 + 14;
+  scale = Math.min(1.45, 0.82 + 0.011 * depth); curDepth = depth; siegeLong = false;
+  rt.nSiege = 0;
+  const sides: [number, number][] = [[-1, -0.3], [1, -0.3], [-1, 0.3], [1, 0.3]];
+  for (let i = 0; i < sides.length && rt.nSiege < rt.siege.length; i++) {
+    let k = 0.88, x = sides[i][0] * R * k, z = sides[i][1] * R;
+    while (k > 0.5 && !insideShape(x, z, 3.2)) { k -= 0.04; x = sides[i][0] * R * k; }
+    if (!insideShape(x, z, 3.2)) continue;
+    const s = rt.siege[rt.nSiege++];
+    s.kind = 0; s.x = x; s.z = z; s.yaw = Math.atan2(-x, -z); s.state = 0; s.t = 0; s.cd = 5 + i * 2.2; s.locked = false; s.fired = false; s.tier = 1;
+    s.maxHp = s.hp = trapHp(SIEGE_HP_HITS * 3, depth); s.dead = false; s.flash = 0; s.hitSeq = 0;
+    s.col = addTempCollider(s.x, s.z, 1.7, false);
+  }
+  rt.on = rt.nSiege > 0; rt.ver++;
+}
+
 export function updateRoomTraps(dt: number): void {
   const room = world.room;
   trapMods.grip = 1; trapMods.slow = 1; obPull.x = obPull.z = 0; obPull.on = false;

@@ -7,6 +7,7 @@ import { useGameStore } from '../../store';
 import { events } from '../events';
 import { isAquatic, isStationary } from '../enemyDefs';
 import { lava, lavaAt } from '../lavaFloor';
+import { bp } from './bossPhaseState';
 import { feat, riverD, riverS, hwAt } from '../roomFeatures';
 import type { Zone } from '../types';
 import {
@@ -359,7 +360,7 @@ let lavaT = 0;
 /** Ember lava floor (lavaFloor.ts): walkable; the hero is slowed and burns unless dashing, monsters burn a little. O(1) grid lookups. */
 function lavaUpdate(dt: number): void {
   const p = world.player;
-  if (p.alive && p.dashT <= 0 && lavaAt(p.pos.x, p.pos.z)) {
+  if (p.alive && p.dashT <= 0 && !(bp.on && bp.kind === 'LAVA') && lavaAt(p.pos.x, p.pos.z)) {   // (Ignar's Floor is Lava: only the eruption tiles hurt, a cool tile is safe wherever it sits)
     envSlow = Math.min(envSlow, 0.7);
     if (p.burnT <= 0.5) applyPlayerDebuff('BURN', 3, 8 + world.director.wave * 1.2);
   }

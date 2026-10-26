@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { Color, CylinderGeometry, DoubleSide, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, MeshBasicMaterial, RingGeometry, type BufferGeometry, type Material } from 'three';
 import { world } from '../engine/world';
 import {
-  hz, HZ, HZ_CLOUD_R, HZ_RIFT_PULL_R, HZ_RIFT_CORE_R, ICICLE_WARN_T, ICICLE_STAY_T, CLOUD_LIFE, HZ_SHROOM_CD,
+  hz, HZ, HZ_CLOUD_R, HZ_RIFT_PULL_R, HZ_RIFT_CORE_R, ICICLE_WARN_T, ICICLE_STAY_T, CLOUD_LIFE, HZ_SHROOM_CD, PLANT_WARN,
 } from '../engine/systems/biomeHazards';
 import { inView } from './view';
 import { CELL, pushHalo } from './fx';
@@ -84,10 +84,10 @@ export function BiomeHazards() {
     const disc = new CylinderGeometry(1, 1, 0.04, 32);
     return {
       br: u(bg.build(), litMat({ roughness: 0.9 }), 12),
-      stem: u(sg.build(), litMat({ roughness: 0.8 }), 5),
-      cap: u(cg.build(), glowMat({ color: new Color(1.1, 1.9, 1.5) }), 5),
+      stem: u(sg.build(), litMat({ roughness: 0.8 }), 8),
+      cap: u(cg.build(), glowMat({ color: new Color(1.1, 1.9, 1.5) }), 8),
       puff: u(puffG, flat('#7ad84a', 0.3), 8 * PUFFS),
-      cring: u(disc, flat('#6fd04a', 0.16), 8),
+      cring: u(disc, flat('#6fd04a', 0.16), 16),
       ice: u(ig.build(), litMat({ roughness: 0.12, metalness: 0.25 }), 6),
       tFill: u(disc, flat(new Color(1.0, 1.7, 2.2), 0.3), 10),
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
@@ -112,13 +112,21 @@ export function BiomeHazards() {
       // (the bramble patches are drawn as piled pack bushes now: BrambleBushes below; the collider / sting zone is unchanged)
       for (let i = 0; i < hz.nMu; i++) {
         const m = hz.mu[i]; if (!inView(m.x, m.z, 4)) continue;
+        if (m.auto > 0) {   // boss-arena poison plant: grows while it charges, swells + shows the cloud ring in the last PLANT_WARN s, then puffs
+          const warn = clamp(1 - m.cd / PLANT_WARN, 0, 1), sc = (0.85 + 0.2 * (1 - m.cd / m.auto) + 0.4 * warn) * 1.3 * (1 + warn * Math.sin(t * 22) * 0.06);
+          setInst(S.stem, nMu, m.x, 0, m.z, m.rot, sc, sc, sc);
+          setInst(S.cap, nMu++, m.x, 0, m.z, m.rot, sc, sc, sc);
+          if (warn > 0 && nRing < 16) setInst(S.cring, nRing++, m.x, 0.06, m.z, 0, HZ_CLOUD_R * (0.4 + 0.6 * warn), 1, HZ_CLOUD_R * (0.4 + 0.6 * warn));
+          pushHalo(m.x, 1.1, m.z, 3.2 + warn * 3, warn > 0 ? 1.9 : 0.3, warn > 0 ? 1.2 : 1.5, 0.4, 0.3 + warn * 0.45, CELL.GLOW);
+          continue;
+        }
         const ready = m.cd <= 0, pulse = ready ? 1 + Math.sin(t * 3 + i) * 0.07 : 0.7;   // recharging: shrunken
         setInst(S.stem, nMu, m.x, 0, m.z, m.rot, 1.3, 1.3, 1.3);
         setInst(S.cap, nMu++, m.x, 0, m.z, m.rot, 1.3 * pulse, 1.3 * pulse * (ready ? 1 : 0.8), 1.3 * pulse);
         if (ready) pushHalo(m.x, 1.1, m.z, 3.2 + Math.sin(t * 3 + i) * 0.4, 0.3, 1.5, 0.9, 0.55, CELL.GLOW);
         else if (m.cd > HZ_SHROOM_CD - 0.5) pushHalo(m.x, 1.0, m.z, 4, 0.3, 1.5, 0.9, 0.4, CELL.GLOW);
       }
-      for (let i = 0; i < hz.clouds.length && nRing < 8; i++) {
+      for (let i = 0; i < hz.clouds.length && nRing < 16; i++) {
         const c = hz.clouds[i]; if (!c.on || !inView(c.x, c.z, 6)) continue;
         const grow = clamp((CLOUD_LIFE - c.t) / 0.4, 0, 1), fade = clamp(c.t / 0.6, 0, 1), k = grow * (0.6 + 0.4 * fade);
         setInst(S.cring, nRing++, c.x, 0.06, c.z, 0, HZ_CLOUD_R * k, 1, HZ_CLOUD_R * k);
