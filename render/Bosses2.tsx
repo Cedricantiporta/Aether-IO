@@ -140,7 +140,7 @@ function buildWyrm(): Rig {
 
 /** Ignar: a tall, spiked demon-knight. Tapered plate torso (6 sides), spiked pauldrons, long swept horns, a slit-eyed helm, tattered cape blades, a serrated flame blade. */
 function buildWarlord(): Rig {
-  const dark = '#2e2022', iron = '#4a3a3e', red = '#8a2a20', glowC = '#ff7a1a', gold = '#c8a050', steel = '#cfd2d8';
+  const dark = '#5a3442', iron = '#85626e', red = '#e4562c', glowC = '#ff8a22', gold = '#ffc84a', steel = '#f2f6fc';   // (owner 2026-10-26: brighter, toy-like - same spiked silhouette)
   const body = new GB([0.72, 1.12]), glow = new GB([1, 1]);
   for (const s of [-1, 1]) {
     limb(body, [s * 0.38, 0.05, 0.05], [s * 0.4, 0.6, 0], 0.3, 0.3, 6, dark); limb(body, [s * 0.4, 0.6, 0], [s * 0.38, 1.15, 0], 0.3, 0.24, 6, dark);
@@ -158,10 +158,11 @@ function buildWarlord(): Rig {
   body.cyl(1.0, 0.8, 0.85, 6, [0, 2.1, 0.04], red, [0, 0, 0], [1, 1, 0.8]);                                  // red breastplate
   spike(body, [0, 2.3, 0.62], [0, 1.65, 0.95], 0.22, 4, iron, [1, 1, 0.6]);                                   // keel ridge
   body.cyl(0.5, 0.82, 0.8, 6, [0, 0.95, 0], dark); body.cyl(0.85, 0.85, 0.16, 6, [0, 1.2, 0], '#1a1214');     // hips + belt
-  lump(body, 0.4, [0, 2.95, 0.03], dark, [0.85, 1.15, 1]);                                                   // helm
+  lump(body, 0.46, [0, 2.97, 0.03], dark, [0.9, 1.15, 1.05]);                                                   // helm
   limb(body, [0, 2.9, 0.15], [0, 2.75, 0.62], 0.3, 0.12, 5, iron, [0.9, 0.8, 1]);                            // long visor / muzzle
-  blade(body, [0, 3.15, -0.05], [0, 3.95, -0.55], 0.12, 0.05, '#c8472a');                                    // crest fin
-  for (let i = 0; i < 4; i++) { const x = (i - 1.5) * 0.3; spike(body, [x, 1.9, -0.45], [x * 1.2, 0.2 - (i % 2) * 0.4, -0.7], 0.2, 4, '#5a1410', [1, 1, 0.3]); }   // tattered cape blades
+  blade(body, [0, 3.15, -0.05], [0, 3.95, -0.55], 0.12, 0.05, '#ff5a2a');
+  for (let i = -2; i <= 2; i++) blade(glow, [i * 0.1, 3.3, -0.2], [i * 0.2, 4.2 - Math.abs(i) * 0.3, -0.55], 0.09, 0.04, i % 2 ? '#ffd070' : '#ff7a1a');   // flame mane on the helm                                    // crest fin
+  for (let i = 0; i < 4; i++) { const x = (i - 1.5) * 0.3; spike(body, [x, 1.9, -0.45], [x * 1.2, 0.2 - (i % 2) * 0.4, -0.7], 0.2, 4, '#b23418', [1, 1, 0.3]); }   // tattered cape blades
   spike(body, [0, 2.7, -0.4], [0, 2.9, -1.0], 0.12, 4, iron);
   for (let i = 0; i < 4; i++) glow.box(0.07, 0.5, 0.03, [(i - 1.5) * 0.28, 1.85 + (i % 2) * 0.12, 0.5], glowC, [0, 0, (i - 1.5) * 0.18]);   // chest cracks
   for (const s of [-1, 1]) glow.octa(0.13, [s * 0.17, 3.0, 0.5], '#ffd070', [1.7, 0.3, 0.6], [0, 0, -s * 0.35]);   // narrow slanted eye slits
@@ -433,3 +434,4 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 export function Bosses2() {
   return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /><BossWard /></>);
 }
+export const __builders = { buildTreant, buildHydra, buildWyrm, buildWarlord, buildVoid };
