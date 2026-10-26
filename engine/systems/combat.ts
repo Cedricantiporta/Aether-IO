@@ -391,7 +391,6 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
-  if (e.decoy && e.trickKind === 1 && bp.on && bp.kind === 'REAL') { if (!o.dot) hooks.phaseHit(e); return; }   // Find the Real One: a fake pops
   if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
   let blockBackstab = false;
   if (!o.dot && e.kind === 'SHIELDBEARER') {   // braced shield: frontal hits deal 0 (BLOCKED); from behind / the side they bypass it for +50%

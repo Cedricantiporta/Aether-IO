@@ -53,20 +53,20 @@ export const CHAPTERS: LoreChapter[] = [
     'At the end he kept his prisoners alive. Roan likes to think that was the captain, still in there, giving orders.',
   ] },
   { id: 'herald', title: 'VIII. The Void Herald', unlock: { kind: 'boss', boss: 'BOSS_VOID', hint: 'Defeat the guardian of the Void.' }, text: [
-    'Not a guardian at all: a thing Malakar made out of ten years of grief, to stand at the door of his throne.',
+    'Not a guardian at all: a thing made out of Malakar\'s ten years of grief, to stand at the door of his throne. The last guardian of the Void.',
     'When it came apart, the Font flickered back home, bright enough that the whole village woke. Somewhere ahead, a throne room waited, and in it, a jar of light.',
   ] },
-  { id: 'throne', title: 'IX. The Undying Throne', unlock: { kind: 'ending' }, text: [
-    'Malakar fell, and the shard he held for ten years rolled across the throne room floor and broke open.',
+  { id: 'throne', title: 'IX. The Void Throne', unlock: { kind: 'ending' }, text: [
+    'The Herald fell, and the shard Malakar held for ten years rolled across the throne room floor and broke open.',
     'What came out of it was a girl, who spoke to you as if she had done this many times before. Then the Font pulled you home, and by morning she was a dream.',
-    'Malakar is never quite gone. Neither is she. Something beneath the Font makes sure of both.',
+    'The grief of Malakar is never quite gone. Neither is she. Something beneath the Font makes sure of both.',
   ] },
   { id: 'tower', title: 'X. The Endless Tower', unlock: { kind: 'ending' }, text: [
     'The first guardians built a tower outside the gate to train in. It had nine floors when they finished it.',
     'Nobody has counted them since the Font was made whole. Every guardian who climbs it swears it is taller than the day before. Tobin says it is built from everything the Font ever left behind.',
   ] },
   { id: 'echoes', title: 'XI. Echoes', unlock: { kind: 'ascension' }, text: [
-    'Every echo of Malakar you put out is a little quieter than the last, and a little sadder.',
+    'Every echo of the Herald you put out is a little quieter than the last, and a little sadder.',
     'They are not him. They are the Hollow beneath the Font wearing his face, and he sits down there in the dark beside it, so it gnaws on him instead of on Aether.',
   ] },
 ];

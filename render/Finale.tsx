@@ -1,4 +1,4 @@
-// Malakar's finale (engine/systems/director.ts `finale`): while he speaks his last words his essence lingers as a column
+// The Void Herald's finale (engine/systems/director.ts `finale`): while he speaks his last words his essence lingers as a column
 // of violet soulfire where he fell; then it gutters, shrinks and bursts (the bursts are director events).
 import { useFrame } from '@react-three/fiber';
 import { finale } from '../engine/systems/director';

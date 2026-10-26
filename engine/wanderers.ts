@@ -54,7 +54,7 @@ export const WANDERERS: readonly WandererDef[] = [
       0: ['Easy! I am a scout from Aether Village. Or I was, before the forest swallowed my patrol.', 'I have more potions than sense left. Take some; you will put them to better use.'],
       2: ['The sand eats tracks faster than I can read them. Something huge walks under the dunes. Stay clear of the deep sand.', 'Here, take my spare flasks.'],
       3: ['I swam here. Do not ask. The crabs here pinch, the pirates pinch harder, and the Hydra eats both.', 'Take these, they are only a little salty.'],
-      6: ['I followed a light into the Void and could not find the way back. If you reach Malakar, end it for all of us.', 'Take these. I will not be needing them.'],
+      6: ['I followed a light into the Void and could not find the way back. If you reach the Herald, end it for all of us.', 'Take these. I will not be needing them.'],
     },
     offer: 'Take the supplies' },
   // (owner: anime cameo) a black-clad dual-wielding swordsman (Riruru the slime is a monster: systems/riruru.ts)

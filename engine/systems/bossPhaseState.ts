@@ -3,7 +3,7 @@
 // Every boss has its own mechanic (`bp.kind`): at set HP thresholds it turns invulnerable (bubble + banner) and runs it, then
 // becomes vulnerable again on its own.
 export type PhaseKind =
-  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'LAVA' | 'SAND' | 'DARK' | 'REAL';
+  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'LAVA' | 'SAND' | 'DARK';
 
 /** A prop / circle on the floor: safe circles (Avalanche), rocks and pillars (cover / pinball), pods (Spore Garden). */
 export interface PhaseProp { x: number; z: number; r: number; /** free value: pod swell 0..1, pillar hp... */ h: number; on: boolean }
@@ -44,7 +44,7 @@ export const bp = {
   hands: Array.from({ length: MAX_HANDS }, (): PhaseHand => ({ x: 0, z: 0, t: 0, T: 1, on: false })),
   /** Pinball: the boss is a boulder (rolling) + crack time left */
   ball: false, crackT: 0, spin: 0, rx: 0, rz: 1,
-  /** Find the Real One: the id of the real Malakar (his shadow is solid, the illusions' flicker) */
+  /** (unused since Malakar lost his illusions) */
   realId: -1,
   /** seconds since the last phase ended (props linger / shrink for a moment) */
   tail: 9,

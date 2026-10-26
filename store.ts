@@ -15,7 +15,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, rollTrialRarity, rollTrialPlus, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
+import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, TRIAL_BONUS_ITEM, rollTrialRarity, rollTrialPlus, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
 import { runInfo, hardMul, phaseOfTime, shipState, shipDeckChosen, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
@@ -1289,7 +1289,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const p = get().progress;
       set({ progress: { ...p, ascension: Math.max(0, Math.min(p.ascensionMax, lv)) } });
     },
-    completeEnding: () => {   // Malakar defeated: the ending; unlocks the next Ascension level
+    completeEnding: () => {   // the Void Herald defeated: the ending; unlocks the next Ascension level
       const p = get().progress, cleared = runInfo.mode === 'ADVENTURE' ? runInfo.ascension : 0;
       const ascensionMax = Math.min(ASCENSION_MAX, Math.max(p.ascensionMax, cleared + 1));
       // (owner 2026-10-26) the FIRST clear of every Ascension level pays a big one-time reward (ascension.ts ASC_REWARDS)
@@ -1345,15 +1345,15 @@ export const useGameStore = create<GameState>()((set, get) => {
       if (p.endings <= 0 || !(boss >= 0 && boss < TRIAL_BOSSES.length) || showcase.on) return false;
       const today = trialDayKey(), done = trialFought(p.trialDay, boss, today);
       let inventory = s.inventory;
-      if (done) {   // already fought today: a ticket pays for the rematch (consumed now, win or lose)
+      if (done) {   // already WON today (loot received): a ticket pays for the rematch (consumed now, win or lose)
         const k = inventory.findIndex((i) => i.type === 'LOOT' && i.name === TICKET_NAME);
-        if (k < 0) { notify('You already fought this boss today. A Boss Trial Ticket (Gem Shop) buys a rematch.', '#ff8a80', 'WARNING'); return false; }
+        if (k < 0) { notify('You already won this trial today. A Boss Trial Ticket (Gem Shop) buys a rematch.', '#ff8a80', 'WARNING'); return false; }
         const t = inventory[k], q = (t.quantity || 1) - 1;
         inventory = q > 0 ? inventory.map((it, j) => (j === k ? { ...it, quantity: q } : it)) : inventory.filter((_, j) => j !== k);
       }
       disarmDaily(); disarmWaves(); armTrial(boss);
       runInfo.mode = 'BOSS_TRIAL'; runInfo.back = 'BOSS'; runInfo.startBiome = 0; runInfo.ascension = 0; runInfo.dream = false;
-      set({ inventory, difficulty: 'NORMAL', progress: { ...p, trialDay: { ...(p.trialDay ?? {}), [String(boss)]: today } } });
+      set({ inventory, difficulty: 'NORMAL' });   // (the day is only marked on a WIN, see claimBossTrialLoot: a death / abandon keeps today's try)
       get().startGame();
       return true;
     },
@@ -1361,14 +1361,22 @@ export const useGameStore = create<GameState>()((set, get) => {
       const s = get(), row = TRIAL_BOSSES[boss]; if (!row) return null;
       const slotType = { boots: 'BOOTS', gloves: 'GLOVES', armor: 'ARMOR', helmet: 'HELMET', accessory: 'ACCESSORY', weapon: 'WEAPON', pet: 'PET' }[row.slot];
       const mk = (r: Rarity): Item[] => (row.slot === 'pet' ? PETS_POOL.filter((i) => i.rarity === r) : ITEMS_POOL.filter((i) => i.type === slotType && !i.retired && i.id !== PICKAXE_ID && i.rarity === r && canUseClass(i, s.hero)));
-      const first = rollTrialRarity();
-      let pool = mk(first); if (!pool.length) pool = mk(first === 'MYTHIC' ? 'LEGENDARY' : 'MYTHIC');
-      if (!pool.length) return null;
-      let it = instantiate(pool[Math.floor(Math.random() * pool.length)], undefined, TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
-      if (isGear(it)) for (let k = rollTrialPlus(); k > 0; k--) it = plusOne(it);
-      if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
-      notify(`Boss Trial reward: ${it.name}${it.level > 1 ? ` +${it.level - 1}` : ''}!`, it.rarity === 'MYTHIC' ? '#ff6ad5' : '#ffb13b', 'BOSS');
-      feedReward({ items: [it] });
+      const roll = (): Item | null => {
+        const first = rollTrialRarity();
+        let pool = mk(first); if (!pool.length) pool = mk(first === 'MYTHIC' ? 'LEGENDARY' : 'MYTHIC');
+        if (!pool.length) return null;
+        let it = instantiate(pool[Math.floor(Math.random() * pool.length)], undefined, TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
+        if (isGear(it)) for (let k = rollTrialPlus(); k > 0; k--) it = plusOne(it);
+        if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
+        notify(`Boss Trial reward: ${it.name}${it.level > 1 ? ` +${it.level - 1}` : ''}!`, it.rarity === 'MYTHIC' ? '#ff6ad5' : '#ffb13b', 'BOSS');
+        return it;
+      };
+      const it = roll(); if (!it) return null;
+      const extra = Math.random() < TRIAL_BONUS_ITEM ? roll() : null;   // (owner 2026-10-26) a win = 1 item + a 50% chance of a 2nd one of the boss's slot
+      feedReward({ items: extra ? [it, extra] : [it] });
+      // the daily lock applies only now: loot received (a death / abandon never used the try)
+      const p = get().progress;
+      set({ progress: { ...p, trialDay: { ...(p.trialDay ?? {}), [String(boss)]: trialDayKey() } } });
       return it;
     },
     // ---- Endless Waves (endlessWaves.ts): one arena, wave after wave until death
