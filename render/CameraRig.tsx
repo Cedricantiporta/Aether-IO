@@ -1,3 +1,4 @@
+import { bp } from '../engine/systems/bossPhaseState';
 import { useRef } from 'react';
 import { liftAt } from './lift';
 import { currentTarget } from '../engine/systems/combat';
@@ -156,6 +157,11 @@ export function CameraRig() {
       for (; n < 2; n++) world.illusionBars[n].active = false;
     }
 
+    // ---- Lights Out (Void Herald phase): where the Herald is on screen, the darkness keeps a dim hole round it
+    {
+      const m = bp.dark && bp.id >= 0 ? world.enemies[bp.id] : null;
+      if (m && m.active && m.state !== 'DYING') { _d.set(m.pos.x, 2.2, m.pos.z).project(cam); bp.dOn = _d.z < 1; bp.dsx = (_d.x * 0.5 + 0.5) * window.innerWidth; bp.dsy = (-_d.y * 0.5 + 0.5) * window.innerHeight; } else bp.dOn = false;
+    }
     // ---- darkness twist: where the Shadowcaster is on screen (the overlay lights a small hole around it)
     {
       const R = world.roomEvt, m = R.darkId >= 0 ? world.enemies[R.darkId] : null;

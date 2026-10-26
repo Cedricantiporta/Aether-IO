@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, Color, FrontSide, Mesh, ShaderMaterial } from 'three';
 import { world } from '../engine/world';
 import { wardedBossId } from '../engine/systems/bossMech';
+import { bp } from '../engine/systems/bossPhaseState';
 
 /** The shield sphere around a warded (immune) boss, or a boss holding a damage shield (e.shield): fresnel rim + slow rising hex-like bands, pulses while it holds. */
 export function BossWard() {
@@ -22,6 +23,8 @@ export function BossWard() {
     let id = wardedBossId();
     if (id < 0) for (let i = 0; i < world.enemies.length; i++) { const x = world.enemies[i]; if (x.active && x.boss && !x.decoy && x.shield > 1 && x.kind !== 'SPLITTER') { id = i; break; } }   // (owner) no bubble on the Slime King (SPLITTER) - its shield shows on the boss bar; other shielded bosses with a damage shield (Slime King's 30%) shows the sphere too
     const e = id >= 0 ? world.enemies[id] : null;
+    if (bp.on && bp.immune) mat.uniforms.uC.value.setHex(bp.color).multiplyScalar(1.15);   // the phase's own glow colour
+    else mat.uniforms.uC.value.setRGB(0.5, 0.75, 1.0);
     const on = !!e && e.active && e.state !== 'DYING';
     mat.uniforms.uA.value = on ? Math.min(1, mat.uniforms.uA.value + dt * 3) : Math.max(0, mat.uniforms.uA.value - dt * 4);
     m.current.visible = mat.uniforms.uA.value > 0.01;

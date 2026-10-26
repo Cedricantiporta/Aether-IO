@@ -725,7 +725,6 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     }
     if (e && prebossRoom) { e.maxHp = Math.round(e.maxHp * 0.75); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // depth-10 pre-boss: -25% hp
     else if (e && !waves.on && !miniIsBoss) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }   // champion rooms (owner: -30%)
-    if (e && prebossKing) e.shield = Math.round(e.maxHp * 0.3);   // Slime King: a shield worth 30% of its max HP (boss bar shows it)
     if (e) {
       events.emit('bossSpawn', { name: miniName, title: miniTitle });
       events.emit('shake', { amount: 0.3 });

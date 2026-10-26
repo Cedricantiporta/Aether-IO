@@ -39,6 +39,7 @@ export function resetSpecials(): void { for (const k in specialStats) delete spe
 /** The Meadow's depth-10 Slime King (a giant mini-boss SPLITTER): the only splitter with specials. */
 let slimeKingId = -1;
 export function setSlimeKing(id: number): void { slimeKingId = id; }
+export function isSlimeKing(e: Enemy): boolean { return e.id === slimeKingId && e.kind === 'SPLITTER'; }
 // Belly Flop timeline (s): crouch, leap out of sight, hang while the circle hunts you, lock, slam down fast.
 const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.62, end: 4.3, h: 24, r: 5.2 };   // (owner: slower drop 0.62 s, smaller circle 5.2)
 /** Height of an enemy in a Belly Flop (enemies.ts writes it to pos.y; > 2 = airborne: untouchable, no contact). */

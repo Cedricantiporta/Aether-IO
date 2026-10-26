@@ -39,6 +39,7 @@ import { spawnPickup, dropCrystals } from './pickups';
 import { onEnemyDeath, crabArmor, shieldBlock, bossAlive, SHIELD_BACKSTAB_MULT, WINDED_DMG_MULT } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
+import { bp } from './bossPhaseState';
 import { hooks } from './hooks';
 import { runCards, cardDamageMul } from '../runCards';
 import { PROJ_RESIST } from '../../dashMods';
@@ -390,7 +391,8 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
-  if (e.boss && bossWarded(e)) { if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
+  if (e.decoy && e.trickKind === 1 && bp.on && bp.kind === 'REAL') { if (!o.dot) hooks.phaseHit(e); return; }   // Find the Real One: a fake pops
+  if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
   let blockBackstab = false;
   if (!o.dot && e.kind === 'SHIELDBEARER') {   // braced shield: frontal hits deal 0 (BLOCKED); from behind / the side they bypass it for +50%
     const sb = o.fromX !== undefined ? shieldBlock(e, o.fromX, o.fromZ!) : shieldBlock(e, world.player.pos.x, world.player.pos.z);
@@ -435,7 +437,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!o.dot && o.source !== 'PET') { dealt *= comboMul(); registerHit(); }
   if (o.source === 'PLAYER') dealt *= cardDamageMul(e);   // special cards: Afflictor / Giant Slayer / Executioner / First Strike
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
-  if (e.boss) dealt *= hooks.damageMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
+  if (e.boss) dealt *= hooks.damageMul(e) * hooks.phaseMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
   else if (e.decoy && e.trickKind === 1) dealt *= 3;   // Malakar's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
                                                        // kept hitting them and half the bot fights never finished)
@@ -798,7 +800,7 @@ function applyTraitHit(tr: number, from?: Vector3): void {
   else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
 }
 
-export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number }): void {
+export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
@@ -842,7 +844,8 @@ export function damagePlayer(amount: number, o?: { pos?: Vector3; kind?: DamageK
   const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
-  const reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
+  let reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
+  if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
     triggerBarrier(barrier);

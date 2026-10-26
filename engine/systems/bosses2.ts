@@ -169,10 +169,11 @@ interface Atk {
   windTick?(e: Enemy): void;
 }
 const LISTS: Partial<Record<EnemyKind, Atk[]>> = {};
-const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.3, BOSS_HYDRA: 2.1, BOSS_WYRM: 1.9, BOSS_WARLORD: 1.2, BOSS_WARMACH: 1.6, BOSS_VOID: 1.7 };
+const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.5, BOSS_HYDRA: 2.3, BOSS_WYRM: 2.1, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.9, BOSS_VOID: 1.9 };
 
 function cdFor(e: Enemy): number {
-  return (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.5 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1);
+  // (balance pass 2026-10-26: Burning Form 0.5 -> 0.65 and a floor of 1.5 s so major attacks never chain back to back)
+  return Math.max(1.5, (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.65 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1));
 }
 
 /** (owner) Ignar's Burning Form: wind-ups, telegraphs and recoveries take 70% of the time. */

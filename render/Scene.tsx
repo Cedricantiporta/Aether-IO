@@ -2,6 +2,7 @@ import { HomeInterior } from './HomeInterior';
 import { RoomEvents } from './RoomEvents';
 import { BiomeHazards } from './BiomeHazards';
 import { MalakarFx } from './MalakarFx';
+import { BossPhaseFx } from './BossPhaseFx';
 import { RoomTraps } from './RoomTraps';
 import { GiantBosses } from './GiantBosses';
 import { Minions } from './Minions';
@@ -147,6 +148,7 @@ export function Scene() {
           <RoomEvents />
           <BiomeHazards />
           <MalakarFx />
+          <BossPhaseFx />
           <RoomTraps />
           <Minions />
           <Projectiles />

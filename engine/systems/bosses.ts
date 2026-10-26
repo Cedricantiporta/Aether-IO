@@ -28,6 +28,7 @@ import {
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
 import { bossWarded } from './bossMech';
+import { bp } from './bossPhaseState';
 import { spawnIllusions } from './bossSpecials';
 import { mfx, queueLaser, queueMeteor, queueHole, gravityBegin, gravityBusy, meteorsBusy, holesBusy, spawnRune, tickMalakarFx, setTrailDamage } from './malakarFx';
 
@@ -39,7 +40,7 @@ const SLAM = 0, RING = 1, CHARGE = 2;
 // lich (the ordinary Lich loops SPIRAL, FAN, BLINK; Malakar has no summons at all, owner 2026-10-26)
 const SPIRAL = 0, FAN = 1, BLINK = 2;
 
-const GOLEM_CD = [2.4, 1.8, 1.3];
+const GOLEM_CD = [3.0, 2.4, 1.9];   // (balance pass 2026-10-26: breather gaps between Gorath's major attacks, was 2.4 / 1.8 / 1.3)
 const LICH_CD = [1.6, 1.2, 0.9];
 const CHARGE_DUR = 0.7;
 const BLINK_OUT = 0.5;
@@ -61,7 +62,7 @@ function syncHud(e: Enemy): void {
   const names = BOSS_NAMES[e.kind as BossKind];
   b.active = e.state !== 'DYING';
   b.name = names.name;
-  if (!b.final) b.title = e.kind === 'BOSS_WARLORD' && bossView.enraged ? 'The Burning Form' : e.kind === 'BOSS_HYDRA' && bossWarded(e) ? 'IMMUNE - slay the spare heads!' : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
+  if (!b.final) b.title = e.kind === 'BOSS_WARLORD' && bossView.enraged ? 'The Burning Form' : bossWarded(e) ? `INVULNERABLE - ${bp.name}` : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
   b.hp = e.hp;
   b.maxHp = e.maxHp;
   b.phase = e.phase;
@@ -78,7 +79,7 @@ function checkPhase(e: Enemy): void {
     ph === 1 ? `${BOSS_NAMES[e.kind as BossKind].name} grows furious!` : `${BOSS_NAMES[e.kind as BossKind].name} is ENRAGED!`,
     '#ef4444', 'BOSS',
   );
-  e.attackCd = Math.min(e.attackCd, 0.8);
+  e.attackCd = Math.min(Math.max(e.attackCd, 1.4), 1.6);   // (balance pass: a breather after the roar, was <= 0.8 s)
   // golem: next pattern is a slam; lich: next pattern is a summon
   if (e.state === 'CHASE' && !isBoss2(e.kind)) e.pattern = e.kind === 'BOSS_GOLEM' ? CHARGE : BLINK;
 }

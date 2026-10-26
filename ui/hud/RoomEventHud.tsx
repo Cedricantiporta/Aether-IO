@@ -5,6 +5,7 @@ import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 import { OBJ_NAME, TWIST_NAME, TWIST_DESC } from '../../engine/roomDefs';
 import { useGameStore } from '../../store';
+import { bp } from '../../engine/systems/bossPhaseState';
 
 export const RoomEventHud: React.FC = () => {
   const box = useRef<HTMLDivElement>(null), title = useRef<HTMLDivElement>(null), line = useRef<HTMLDivElement>(null);
@@ -12,15 +13,17 @@ export const RoomEventHud: React.FC = () => {
   const sig = useRef(''), maskSig = useRef('-');
   useRaf(() => {
     const e = world.roomEvt, live = world.room.active;
-    const darkOn = live && e.twist === 'DARK' && !e.lifted && world.director.phase === 'FIGHT';
+    const bd = bp.dark && bp.on;   // the Void Herald's Lights Out phase
+    const darkOn = bd || (live && e.twist === 'DARK' && !e.lifted && world.director.phase === 'FIGHT');
+    const eOn = bd ? bp.dOn : e.dOn, esx = bd ? bp.dsx : e.dsx, esy = bd ? bp.dsy : e.dsy;
     if (dark.current) {
       dark.current.style.opacity = darkOn ? '1' : '0';
       // the Shadowcaster stays faintly visible: a second hole in the darkness mask around it
-      const ms = darkOn && e.dOn ? `${Math.round(e.dsx)},${Math.round(e.dsy)}` : '';
+      const ms = darkOn && eOn ? `${Math.round(esx)},${Math.round(esy)}` : '';
       if (ms !== maskSig.current) {
         maskSig.current = ms;
         const hero = 'radial-gradient(circle at 50% 56%, transparent 14%, rgba(0,0,0,.9) 34%, #000 60%)';
-        const m = ms ? `${hero}, radial-gradient(circle 9vmin at ${Math.round(e.dsx)}px ${Math.round(e.dsy)}px, rgba(0,0,0,.25) 30%, #000 100%)` : hero;
+        const m = ms ? `${hero}, radial-gradient(circle 9vmin at ${Math.round(esx)}px ${Math.round(esy)}px, rgba(0,0,0,.25) 30%, #000 100%)` : hero;
         const st = dark.current.style as CSSStyleDeclaration & { webkitMaskImage: string; webkitMaskComposite: string };
         st.maskImage = m; st.webkitMaskImage = m;
         st.maskComposite = 'intersect'; st.webkitMaskComposite = 'source-in';

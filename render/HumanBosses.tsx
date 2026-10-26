@@ -83,7 +83,7 @@ function HumanModel({ kind }: { kind: HumanKind }) {
     const s = S.current, m = s.mixer, g = root.current; if (!m || !g) return;
     const e = world.enemies[humanView.id];
     const on = !!e && e.active && e.kind === 'HUMAN_BOSS';
-    g.visible = on && e.hideT <= 0;
+    g.visible = on && e.hideT <= 0 && !(humanView.vanish > 0);
     if (!on) return;
     const paused = useGameStore.getState().status === GameStatus.PAUSED;
     const dt = paused ? 0 : Math.min(dt0, 0.05), t = state.clock.elapsedTime;

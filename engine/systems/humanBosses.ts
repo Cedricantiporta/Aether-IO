@@ -2,12 +2,13 @@
 // Humanoid mini bosses: a NEW kind of guardian (enemy kind 'HUMAN_BOSS'), hero-sized KayKit characters with boss skills.
 //   VARN  'Captain Varn, the Ironwall'  (shield knight)  Shield Wall (blocks FRONTAL hits, open from behind / the sides),
 //         Shield Bash (telegraphed line charge + knockback), Ground Slam (telegraphed circle), sword swings; at 50% HP
-//         raises a targetable Bulwark Banner: while it stands he takes 75% less damage.
+//         raises a giant SHIELD TURN (8 s: invulnerable from the front, he turns slowly - get behind him).
 //   SABLE 'Sable, the Hexblade'  (dark mage-duelist)     Arcane Ward (absorb bubble with its own HP, re-cast every ~20 s,
 //         breaking it staggers her), Blink Strike (vanishes, reappears behind the hero after a telegraph), Hex Circles
-//         (delayed AoE circles), Shadow Bolt volleys.
+//         (delayed AoE circles), Shadow Bolt volleys; at 50% HP she VANISHES for 8 s (only footprints show; any hit reveals her).
 //   ROOK  'Rook, the Huntmaster' (ranger)                Shadow-roll dodge (leaves a trap), Volley (telegraphed cone), Snare
-//         Traps (visible floor traps that root), calls a hound, Marked Shot (charged telegraphed line that tracks you).
+//         Traps (visible floor traps that root), calls a hound, Marked Shot (charged telegraphed line that tracks you); at 50% HP he cloaks at the arena edge (8 s: untouchable)
+//         and sows the floor with SNARE TRAPS while firing Marked Shots.
 // One humanoid boss exists at a time: per-fight memory lives in the module object `S`; strikes / traps tick in
 // tickHumanBoss() (also while staggered). Render: render/HumanBosses.tsx reads `humanView` / `humanTraps`.
 // They are minis (e.mini = true) so the stagger bar and the WINDED free-hit windows of enemies.ts apply: every skill ends in
@@ -26,6 +27,7 @@ import { BT } from './bossFx';
 import { useGameStore, rollDropPlus } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { edgeLimit } from '../mapgen';
+import { bp } from './bossPhaseState';
 
 export type HumanKind = 'VARN' | 'SABLE' | 'ROOK';
 export const HUMAN_KINDS: readonly HumanKind[] = ['VARN', 'SABLE', 'ROOK'];
@@ -44,7 +46,9 @@ const BANNER = 5;     // Varn
 const MARKED = 5;     // Rook
 
 /** Read by render/HumanBosses.tsx. atk / cast are pulse counters (a change = play the one-shot). */
-export const humanView = { id: -1, kind: 'VARN' as HumanKind, atk: 0, cast: 0, wall: 0, ward: 0, charge: 0, enraged: 0, bannerId: -1, roll: 0 };
+export const humanView = { id: -1, kind: 'VARN' as HumanKind, atk: 0, cast: 0, wall: 0, ward: 0, charge: 0, enraged: 0, bannerId: -1, roll: 0, turn: 0, vanish: 0, hunt: 0 };
+/** Sable's footprints while vanished (render/BossPhaseFx.tsx): age counts up, a pad fades after ~3.5 s. */
+export const humanFoot = Array.from({ length: 12 }, () => ({ x: 0, z: 0, age: 99 }));
 /** Snare traps on the floor: arm = seconds until armed. */
 export interface HumanTrap { active: boolean; x: number; z: number; arm: number; life: number; r: number }
 export const humanTraps: HumanTrap[] = Array.from({ length: 10 }, () => ({ active: false, x: 0, z: 0, arm: 0, life: 0, r: 1.7 }));
@@ -55,6 +59,7 @@ const S = {
   t: 0, wind: 0, act: 0, dirX: 0, dirZ: 1, tick: 0, flag: false, inv: 0, blockText: 0,
   wallT: 0, lockYaw: 0, bannerId: -1, bannerDone: false, bannerArmed: false,
   wardUp: false, spotX: 0, spotZ: 0, houndId: -1, volley: 0,
+  turnT: 0, turnYaw: 0, vanishT: 0, footT: 0, footN: 0, huntT: 0,
   markZ: null as ReturnType<typeof spawnTelegraphLine>,
 };
 const tmp = new Vector3(), tmp2 = new Vector3(), dirV = new Vector3();
@@ -154,6 +159,8 @@ function resetFight(): void {
   for (const p of pend) p.active = false;
   for (const t of humanTraps) t.active = false;
   humanView.wall = 0; humanView.ward = 0; humanView.charge = 0; humanView.enraged = 0; humanView.bannerId = -1; humanView.roll = 0;
+  S.turnT = 0; S.vanishT = 0; S.huntT = 0; humanView.turn = 0; humanView.vanish = 0; humanView.hunt = 0;
+  for (const f of humanFoot) f.age = 99;
 }
 
 function aliveId(id: number): boolean { const w = id >= 0 ? world.enemies[id] : null; return !!w && w.active && w.state !== 'DYING'; }
@@ -195,7 +202,28 @@ export function humanBossDied(e: Enemy): void {
 hooks.humanMul = (e: Enemy, fx: number, fz: number): number => {
   if (e.id !== S.id) return 1;
   if (S.inv > 0) return 0;
+  if (S.kind === 'ROOK' && S.huntT > 0) {   // cloaked at the arena edge
+    if (world.time - S.blockText > 0.6) { S.blockText = world.time; events.emit('floatText', { pos: e.pos, text: 'CLOAKED', color: 0xbef264, scale: 0.9, dy: 2.4 }); }
+    return 0;
+  }
   let m = 1;
+  if (S.kind === 'SABLE' && S.vanishT > 0) {   // any hit reveals her
+    S.vanishT = 0; humanView.vanish = 0;
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 5, color: 0xc9a2ff });
+    events.emit('floatText', { pos: e.pos, text: 'REVEALED!', color: 0xe9d5ff, scale: 1.2, dy: 3.2 });
+    m *= 1.25;
+  }
+  if (S.kind === 'VARN' && S.turnT > 0) {   // Shield Turn: the whole front is a wall, the back takes +50%
+    const dx = fx - e.pos.x, dz = fz - e.pos.z, l = Math.hypot(dx, dz) || 1;
+    const fwd = (dx * Math.sin(e.facing) + dz * Math.cos(e.facing)) / l;
+    if (fwd > 0.1) {
+      e.hitFlash = Math.max(e.hitFlash, 0.25);
+      if (world.time - S.blockText > 0.35) { S.blockText = world.time; events.emit('floatText', { pos: e.pos, text: 'BLOCKED', color: 0xc8d4e6, scale: 0.9, dy: 2.4 }); events.emit('projectileImpact', { pos: e.pos, kind: 'ENEMY' }); }
+      return 0;
+    }
+    m *= 1.5;
+    if (world.time - S.blockText > 0.5) { S.blockText = world.time; events.emit('floatText', { pos: e.pos, text: 'EXPOSED BACK!', color: 0xffc23a, scale: 1.0, dy: 2.3 }); }
+  }
   if (S.kind === 'VARN') {
     if (S.wallT > 0 && e.state === 'ATTACK' && e.pattern === 1 && e.staggerT <= 0) {
       const dx = fx - e.pos.x, dz = fz - e.pos.z, l = Math.hypot(dx, dz) || 1;
@@ -258,8 +286,8 @@ function addTrap(x: number, z: number, arm: number): void {
 function wants(k: number, d: number): boolean {
   switch (S.kind) {
     case 'VARN': return k === 1 ? d < 10 : k === 2 ? d > 4 && d < 16 : k === 3 ? d < 7.5 : false;
-    case 'SABLE': return k === 1 ? true : k === 2 ? d > 3 : k === 3 ? d < 24 : k === 4 ? d < 22 : false;
-    default: return k === 1 ? d < 5.5 : k === 2 ? d < 20 : k === 3 ? d < 22 : k === 4 ? !aliveId(S.houndId) : k === MARKED ? d > 6 && d < 30 : false;
+    case 'SABLE': return k === 1 ? false : k === 2 ? d > 3 && S.vanishT <= 0 : k === 3 ? d < 24 : k === 4 ? d < 22 : false;
+    default: if (S.huntT > 0) return k === MARKED; return k === 1 ? d < 5.5 : k === 2 ? d < 20 : k === 3 ? d < 22 : k === 4 ? !aliveId(S.houndId) : k === MARKED ? d > 6 && d < 30 : false;
   }
 }
 /** Cooldown (s) after skill k. */
@@ -273,6 +301,7 @@ function cdOf(k: number): number {
 
 function begin(e: Enemy, k: number, px: number, pz: number): void {
   aimAt(e, px, pz);
+  if (S.kind === 'VARN' && S.turnT > 0) { S.dirX = Math.sin(S.turnYaw); S.dirZ = Math.cos(S.turnYaw); }   // Shield Turn: he swings where his shield points
   e.pattern = k; enter(e, 'WINDUP'); e.vel.set(0, 0, 0);
   S.t = 0; S.tick = 0; S.flag = false; S.volley = 0;
   const P = pw(e), dx = S.dirX, dz = S.dirZ;
@@ -410,7 +439,7 @@ function finish(e: Enemy): void {
   if (S.kind === 'VARN' && k === 1) { S.wallT = 0; humanView.wall = 0; }
   if (S.kind === 'ROOK' && k === 1) { aimAt(e, world.player.pos.x, world.player.pos.z); shoot(e, S.dirX, S.dirZ, 'ARROW', 24, pw(e) * 0.6); humanView.atk++; }
   const rate = e.phase > 0 && !(S.kind === 'SABLE' && k === 1) ? 1.4 : 1;
-  S.cd[S.kind === 'VARN' && k === SWING ? 0 : k] = cdOf(k) * (0.85 + Math.random() * 0.3) / rate;
+  S.cd[S.kind === 'VARN' && k === SWING ? 0 : k] = (S.huntT > 0 && k === MARKED ? 1.6 : cdOf(k) * (0.85 + Math.random() * 0.3) / rate);
   S.gap = 0.9; e.pattern = 0; e.vel.set(0, 0, 0);
   enter(e, 'RECOVER'); S.t = 0;
 }
@@ -450,6 +479,61 @@ function callHound(e: Enemy): void {
   humanView.atk++;
 }
 
+// ------------------------------------------------------------- phases (50% hp) ----
+function phaseBanner(name: string, sub: string, color: number): void {
+  bp.name = name; bp.sub = sub; bp.color = color; bp.bannerT = 3.4;
+  useGameStore.getState().addNotification(`${name}! ${sub}`, '#' + color.toString(16).padStart(6, '0'), 'BOSS');
+}
+/** Enrage moment: Varn raises the giant Shield Turn, Sable vanishes, Rook cloaks and sows the floor with traps. */
+function startHumanPhase(e: Enemy): void {
+  if (S.kind === 'VARN') {
+    S.turnT = 8; S.turnYaw = e.facing; humanView.turn = 1;
+    phaseBanner('SHIELD TURN', 'His front is a wall - get BEHIND him!', 0xc8d4e6);
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 6, color: 0xc8d4e6 });
+  } else if (S.kind === 'SABLE') {
+    S.vanishT = 8; S.footT = 0; S.footN = 0; humanView.vanish = 1;
+    for (const f of humanFoot) f.age = 99;
+    phaseBanner('VANISH', 'Follow her footprints - a hit reveals her!', 0xc9a2ff);
+    events.emit('explosion', { pos: e.pos.clone(), radius: 4, color: C_VIOLET });
+  } else {
+    S.huntT = 8.5; humanView.hunt = 1;
+    phaseBanner('SNARE FIELD', 'The Huntmaster is cloaked - weave round the traps!', 0xbef264);
+    // to the arena edge, opposite the hero
+    const p = world.player, dx = -p.pos.x, dz = -p.pos.z, l = Math.hypot(dx, dz) || 1, lim = edgeLimit(dx, dz, 4);
+    tmp.set((dx / l) * lim, 0, (dz / l) * lim);
+    blinkFx('ROLL', e.pos.x, e.pos.z, 2, tmp.x, tmp.z);
+    e.pos.set(tmp.x, 0, tmp.z); e.vel.set(0, 0, 0);
+    for (const t of humanTraps) t.active = false;
+    let n = 0;
+    for (let tries = 0; n < 8 && tries < 80; tries++) {
+      const a = Math.random() * 6.283, rim = edgeLimit(Math.cos(a) * 10, Math.sin(a) * 10, 5) * (0.2 + Math.random() * 0.7);
+      const x = Math.cos(a) * rim, z = Math.sin(a) * rim;
+      if (Math.hypot(x - p.pos.x, z - p.pos.z) < 4.5) continue;
+      let ok = true;
+      for (const t of humanTraps) if (t.active && Math.hypot(t.x - x, t.z - z) < 6) { ok = false; break; }
+      if (!ok) continue;
+      addTrap(x, z, 1.0 + n * 0.12); n++;
+    }
+    S.cd[MARKED] = 1.2; S.gap = 0.8;
+  }
+}
+function tickHumanPhase(e: Enemy, dt: number): void {
+  if (S.turnT > 0) {
+    S.turnT -= dt;
+    if (S.turnT <= 0) { humanView.turn = 0; events.emit('floatText', { pos: e.pos, text: 'SHIELD DOWN', color: 0xc8d4e6, scale: 1.1, dy: 3 }); }
+  }
+  if (S.vanishT > 0) {
+    S.vanishT -= dt; S.footT -= dt;
+    if (S.footT <= 0) { S.footT = 0.35; const f = humanFoot[S.footN++ % humanFoot.length]; f.x = e.pos.x; f.z = e.pos.z; f.age = 0; }
+    if (S.vanishT <= 0) { humanView.vanish = 0; events.emit('shockwave', { pos: e.pos.clone(), radius: 5, color: 0xc9a2ff }); events.emit('floatText', { pos: e.pos, text: 'SHE APPEARS', color: 0xe9d5ff, scale: 1.1, dy: 3 }); }
+  }
+  for (const f of humanFoot) if (f.age < 90) f.age += dt;
+  if (S.huntT > 0) {
+    S.huntT -= dt;
+    if (S.huntT <= 0) { humanView.hunt = 0; events.emit('shockwave', { pos: e.pos.clone(), radius: 7, color: 0xbef264 }); events.emit('floatText', { pos: e.pos, text: 'HUNT OVER', color: 0xd9f99d, scale: 1.1, dy: 3 }); e.staggerT = Math.max(e.staggerT, 1.4); }
+  }
+}
+
 // ------------------------------------------------------------- AI ------------
 /** Per-frame AI (called from enemies.runAI). (px, pz) = the hero, d = distance to it. */
 export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: number): void {
@@ -460,7 +544,7 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
     e.phase = 1; world.boss.phase = 1; humanView.enraged = 1;
     events.emit('bossPhase', { phase: 1 });
     events.emit('floatText', { pos: e.pos, text: 'ENRAGED', color: 0xff3a5a, scale: 1, dy: 2.4 });
-    if (kind === 'VARN') S.bannerArmed = true;
+    startHumanPhase(e);
   }
   const rate = e.phase > 0 ? 1.4 : 1;
   for (let i = 0; i < S.cd.length; i++) if (S.cd[i] > 0) S.cd[i] -= dt * (kind === 'SABLE' && i === 1 ? 1 : rate);
@@ -475,7 +559,7 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
         const z = S.markZ;
         if (z && z.active && z.kind === 'TELEGRAPH_LINE') { z.dir.set(S.dirX, 0, S.dirZ); z.pos.set(e.pos.x, 0, e.pos.z); }
       }
-      requestYaw(Math.atan2(S.dirX, S.dirZ));
+      requestYaw(kind === 'VARN' && S.turnT > 0 ? S.turnYaw : Math.atan2(S.dirX, S.dirZ));
       if (!(kind === 'VARN' && e.pattern === SWING)) humanView.charge = Math.min(1, S.t / Math.max(0.1, S.wind));
       if (S.t >= S.wind) release(e, px, pz);
       return;
@@ -493,7 +577,7 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
   // ---- pick a skill
   if (S.gap <= 0 && world.player.alive) {
     if (kind === 'VARN' && S.bannerArmed && !S.bannerDone) { S.bannerArmed = false; begin(e, BANNER, px, pz); return; }
-    const n = kind === 'VARN' ? 3 : kind === 'SABLE' ? 4 : 5;
+    const n = kind === 'VARN' ? (S.turnT > 0 ? 0 : 3) : kind === 'SABLE' ? 4 : 5;
     for (let j = 0; j < n; j++) {
       const k = ((j + (world.frame % n)) % n) + 1;   // rotate the check order so no skill starves
       if (S.cd[k] <= 0 && wants(k, d)) { begin(e, k, px, pz); return; }
@@ -503,6 +587,16 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
   // ---- move + basic attack
   const inv = 1 / Math.max(0.001, d);
   const ux = (px - e.pos.x) * inv, uz = (pz - e.pos.z) * inv;
+  if (kind === 'VARN' && S.turnT > 0) {   // Shield Turn: he advances where his shield points and turns slowly (1.2 rad/s)
+    if (e.state !== 'CHASE') enter(e, 'CHASE');
+    let da = Math.atan2(ux, uz) - S.turnYaw; da = Math.atan2(Math.sin(da), Math.cos(da));
+    S.turnYaw += Math.max(-1.2 * dt, Math.min(1.2 * dt, da));
+    if (d > 2.6) e.vel.set(Math.sin(S.turnYaw) * e.speed * 0.7, 0, Math.cos(S.turnYaw) * e.speed * 0.7); else e.vel.set(0, 0, 0);
+    requestYaw(S.turnYaw);
+    if (world.player.alive && S.cd[0] <= 0 && d < 4.3) begin(e, SWING, px, pz);
+    return;
+  }
+  if (kind === 'ROOK' && S.huntT > 0) { if (e.state !== 'KITE') enter(e, 'KITE'); e.vel.set(0, 0, 0); requestYaw(Math.atan2(ux, uz)); return; }   // cloaked: he stays put
   if (kind === 'VARN') {
     if (e.state !== 'CHASE') enter(e, 'CHASE');
     if (d > 2.3) e.vel.set(ux * e.speed, 0, uz * e.speed); else e.vel.set(0, 0, 0);
@@ -546,6 +640,7 @@ export function tickHumanBoss(dt: number): void {
   if (S.inv > 0) S.inv -= dt;
   if (e.hideT > 0 && !(e.state === 'WINDUP' && e.pattern === 2 && S.kind === 'SABLE')) e.hideT = 0;   // (only Blink Strike vanishes)
   tickPending(dt);
+  tickHumanPhase(e, dt);
 
   // Sable: the ward broke -> she is staggered (a window to punish)
   if (S.kind === 'SABLE' && S.wardUp && e.shield <= 1) {

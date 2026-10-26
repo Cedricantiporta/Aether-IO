@@ -45,6 +45,8 @@ import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
+import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
+import { bp } from './bossPhaseState';
 import { addChill } from './bossFx';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -74,7 +76,7 @@ const ELITE_AFFIXES: readonly EliteAffix[] = ['HASTED', 'VAMPIRIC', 'FROZEN', 'V
 
 // (owner: basic / elite monsters cast their telegraphed attacks faster - every windup below is x0.8 of its old value)
 /** Chance that a monster spawned while a biome boss lives (= one of its summons) gets a 50%-HP shield. */
-const BOSS_ADD_SHIELD_CHANCE = 0.35;
+const BOSS_ADD_SHIELD_CHANCE = 0.15;   // (balance pass 2026-10-26: was 0.35, shielded adds stalled boss fights)
 /** A biome boss is alive (discrete spawns only: a short scan, no per-frame cost). */
 export function bossAlive(): boolean { for (const o of world.enemies) if (o.active && o.boss && o.state !== 'DYING') return true; return false; }
 /** Elite HP multiplier (owner: -30%, was 4). */
@@ -1628,9 +1630,11 @@ function updateEnemy(e: Enemy): void {
   const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
   const tg = isTreasureGoblin(e);   // (owner: the treasure goblin flees at a steady, readable speed: no dodge dash / flank / retreat)
   const dodging = ENEMY_DODGE && !tg && !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
-  if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
+  if (bp.on && phaseOwns(e)) { desiredYaw = phaseDrive(e, dt); }   // an invulnerable phase runs this enemy (boss / its slimes / spare heads)
+  else if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
   else if (dodging) { /* velocity set by tickDodge */ }   // free-hit window: stands there panting (no attacks, no new casts)
-  else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }   // healing channel: the boss stands still
+  else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }
+  else if (e.mini && e.kind === 'SPLITTER' && e.state !== 'SPAWN' && (hooks.phaseCheck(e), false)) { /* the Slime King's phase starts here */ }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {
     // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills
     const pace = (e.boss || e.mini) ? bossPace() : 1;
@@ -1833,6 +1837,7 @@ export function updateEnemies(dt: number): void {
   pz = player.pos.z;
   frameDt = dt;
   tickBossStrikes(dt);
+  tickPhase(dt);
   if (world.boss.abilityT > 0) world.boss.abilityT -= dt;
   frameDecay = Math.pow(0.85, dt * 60);
   frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - dt) * 2);
