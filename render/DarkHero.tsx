@@ -10,7 +10,7 @@ import {
   RingGeometry, SphereGeometry, TorusGeometry, Vector3,
 } from 'three';
 import { world } from '../engine/world';
-import { darkView, DARK_CLASSES, darkShots, darkOrbs, SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH, SHOT_CLEAVE } from '../engine/systems/darkHero';
+import { darkViews, DARK_MAX, DARK_CLASSES, darkShots, darkOrbs, SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH, SHOT_CLEAVE } from '../engine/systems/darkHero';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
@@ -33,7 +33,8 @@ function weapon(cls: HeroClass) {
   return cls === 'ARCHER' ? makeBow(accent, 3) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(cls === 'NECROMANCER' ? '#b04aff' : accent, 3) : cls === 'KNIGHT' ? makeSword(accent, 3) : makeAxe(accent, 3);
 }
 
-function DarkHeroModel({ cls }: { cls: HeroClass }) {
+function DarkHeroModel({ cls, slot }: { cls: HeroClass; slot: number }) {
+  const darkView = darkViews[slot];   // (one record per dark hero: engine/systems/darkHero.ts)
   const ch = useCharacterInstance(CHAR[cls]);
   const clips = useClips();
   const root = useRef<Group>(null!), body = useRef<Group>(null!), aura = useRef<Mesh>(null!), eyes = useRef<Group>(null!), guard = useRef<Mesh>(null!), spinRing = useRef<Mesh>(null!);
@@ -270,8 +271,8 @@ const TRAIL: Record<number, [number, number, number]> = {
 
 /** The champion's skill shots, the dark barbarian's thrown axes (enemy projectiles of kind AXE) and the Storm Orbs. */
 function DarkFx() {
-  const N = 3, NS = 8;
-  const axeRef = useRef<InstancedMesh>(null!), glowRef = useRef<InstancedMesh>(null!), orbRef = useRef<InstancedMesh>(null!), ring = useRef<Mesh>(null!);
+  const N = 3 * DARK_MAX, NS = 24;
+  const axeRef = useRef<InstancedMesh>(null!), glowRef = useRef<InstancedMesh>(null!), orbRef = useRef<InstancedMesh>(null!), rings = useRef<Mesh[]>([]);
   const res = useMemo(() => {
     const w = makeAxe('#ff2a4a', 3);
     const geos = shotGeos();
@@ -352,27 +353,34 @@ function DarkFx() {
       if (dt > 0 && Math.random() < 0.5) FX.add.emit(darkOrbs.x[i], 1.6, darkOrbs.z[i], (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, 0.2, 0.4, 0.05, 1.6, 1.4, 3, 0.9, CELL.STAR);
     }
     commitInst(om, darkOrbs.n);
-    const e = world.enemies[darkView.id];
-    ring.current.visible = darkView.orbR > 0 && !!e && e.active;
-    if (ring.current.visible) { ring.current.position.set(e.pos.x, 0.08, e.pos.z); res.ringMat.opacity = 0.25 + Math.sin(t * 8) * 0.08; }
+    for (let k = 0; k < DARK_MAX; k++) {
+      const V = darkViews[k], e = world.enemies[V.id], rg = rings.current[k];
+      if (!rg) continue;
+      rg.visible = V.orbR > 0 && !!e && e.active;
+      if (rg.visible) { rg.position.set(e.pos.x, 0.08, e.pos.z); res.ringMat.opacity = 0.25 + Math.sin(t * 8) * 0.08; }
+    }
   });
   return (
     <>
       <instancedMesh ref={axeRef} args={[res.body, res.mat, N]} frustumCulled={false} castShadow />
       <instancedMesh ref={glowRef} args={[res.glow, res.glowMat, N]} frustumCulled={false} />
-      <instancedMesh ref={orbRef} args={[res.orbGeo, res.orbMat, 3]} frustumCulled={false} />
-      <mesh ref={ring} geometry={res.ringGeo} material={res.ringMat} visible={false} renderOrder={3} />
+      <instancedMesh ref={orbRef} args={[res.orbGeo, res.orbMat, 3 * DARK_MAX]} frustumCulled={false} />
+      {Array.from({ length: DARK_MAX }, (_, k) => <mesh key={k} ref={(o) => { if (o) rings.current[k] = o; }} geometry={res.ringGeo} material={res.ringMat} visible={false} renderOrder={3} />)}
       <primitive object={res.group} />
     </>
   );
 }
 
+/** One dark hero slot: 0 = nobody, else class index + 1 (re-mounts the model when a different class rises there). */
+function DarkSlot({ slot }: { slot: number }) {
+  const k = useWorldCounter(() => { const V = darkViews[slot], e = world.enemies[V.id]; return V.id >= 0 && e && e.active && e.kind === 'DARK_HERO' ? DARK_CLASSES.indexOf(V.cls) + 1 : 0; });
+  return k > 0 ? <Suspense fallback={null}><DarkHeroModel key={k} cls={DARK_CLASSES[k - 1]} slot={slot} /></Suspense> : null;
+}
+
 export function DarkHeroes() {
-  // 0 = none, else class index + 1 (re-mounts the model when a different class rises)
-  const k = useWorldCounter(() => { const e = world.enemies[darkView.id]; return darkView.id >= 0 && e && e.active && e.kind === 'DARK_HERO' ? DARK_CLASSES.indexOf(darkView.cls) + 1 : 0; });
   return (
     <>
-      {k > 0 && <Suspense fallback={null}><DarkHeroModel key={k} cls={DARK_CLASSES[k - 1]} /></Suspense>}
+      {Array.from({ length: DARK_MAX }, (_, k) => <DarkSlot key={k} slot={k} />)}
       <DarkFx />
     </>
   );

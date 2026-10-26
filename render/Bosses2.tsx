@@ -211,6 +211,36 @@ function buildDevilWing(): { skin: BufferGeometry; bones: BufferGeometry } {
   return { skin, bones: bn.build() };
 }
 
+/** The Void Herald's final-form wings: VERY big jagged void wings (plane xy, root at the shoulder, reaching out along +x; mirror for the left one).
+ *  Near-black violet membrane torn into long ragged blades between seven bony fingers, glowing violet edge spikes and a spiked arm bone. */
+function buildVoidWing(): { skin: BufferGeometry; bones: BufferGeometry; glow: BufferGeometry } {
+  const S: V3 = [0, 0, 0], E: V3 = [1.5, 2.6, 0], W: V3 = [3.6, 3.7, 0], B: V3 = [0.2, -2.6, 0];
+  const T: V3[] = [[5.4, 7.2, 0], [7.6, 5.7, 0], [9.0, 3.2, 0], [9.2, 0.3, 0], [8.0, -2.4, 0], [5.9, -4.6, 0], [3.0, -5.0, 0]];
+  const cut = (a: V3, b: V3, k: number): V3 => [(a[0] + b[0]) / 2 + (W[0] - (a[0] + b[0]) / 2) * k, (a[1] + b[1]) / 2 + (W[1] - (a[1] + b[1]) / 2) * k, 0.06];   // deep ragged scallop between two finger tips
+  const ring: V3[] = [];
+  for (let i = 0; i < T.length; i++) { ring.push(T[i]); const nx = i + 1 < T.length ? T[i + 1] : B; ring.push(cut(T[i], nx, 0.62 + 0.1 * (i % 2))); }
+  ring.push(B);
+  const pos: number[] = [], col: number[] = [];
+  const c1 = new Color('#4a1d7a'), c2 = new Color('#0e0420'), tmp = new Color();
+  const vtx = (v: V3) => { pos.push(v[0], v[1], v[2]); const d = Math.hypot(v[0] - W[0], v[1] - W[1]) / 7.5; tmp.copy(c1).lerp(c2, Math.min(1, d * d + 0.1)); col.push(tmp.r, tmp.g, tmp.b); };
+  for (let i = 0; i < ring.length - 1; i++) { vtx(W); vtx(ring[i]); vtx(ring[i + 1]); }
+  vtx(W); vtx(B); vtx(S);
+  const skin = new BufferGeometry();
+  skin.setAttribute('position', new Float32BufferAttribute(pos, 3)); skin.setAttribute('color', new Float32BufferAttribute(col, 3)); skin.computeVertexNormals();
+  const bn = new GB([0.85, 1.1]), gl = new GB([1, 1]), bone = '#1c0a30', edge = '#c084fc';
+  limb(bn, S, E, 0.34, 0.24, 5, bone); limb(bn, E, W, 0.24, 0.18, 5, bone);
+  for (const t of T) {
+    limb(bn, W, t, 0.14, 0.05, 5, bone);
+    const dx = t[0] - W[0], dy = t[1] - W[1], l = Math.hypot(dx, dy);
+    spike(gl, t, [t[0] + dx / l * 1.1, t[1] + dy / l * 1.1, 0], 0.1, 4, edge);                       // glowing blade tip
+  }
+  for (let i = 1; i < ring.length - 1; i += 2) { const c = ring[i], dx = c[0] - W[0], dy = c[1] - W[1], l = Math.hypot(dx, dy); spike(gl, c, [c[0] + dx / l * 0.5, c[1] + dy / l * 0.5, 0], 0.05, 4, '#e9d5ff'); }   // the little jags between the fingers
+  spike(bn, [S[0], S[1], 0], [-0.2, 0.9, 0], 0.4, 5, '#2a1048');
+  spike(bn, [E[0], E[1], 0], [E[0] + 0.1, E[1] + 1.2, 0], 0.22, 4, '#2a1048');                          // elbow spur
+  spike(gl, [W[0], W[1], 0], [W[0] - 0.5, W[1] + 1.9, 0], 0.18, 4, edge);                                // wrist horn
+  return { skin, bones: bn.build(), glow: gl.build() };
+}
+
 function buildVoid(): Rig {
   const dk = '#1b0b30', mid = '#2a1048', pur = '#c084fc', hi = '#e9d5ff';
   const body = new GB([0.7, 1.15]), glow = new GB([1, 1]), shards = new GB([0.8, 1.2]), sg = new GB([1, 1]);
@@ -300,7 +330,7 @@ function targets(e: Enemy, T: Pose, t: number): void {
   }
 }
 
-function Boss2({ kind }: { kind: EnemyKind }) {
+function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   // decoy >= 0: the n-th live illusion of this boss (the Void Herald's Mirror Images)
   const rig = useMemo(() => BUILD[kind]!(), [kind]);
   const mats = useMemo(() => ({
     lit: new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0.05, side: DoubleSide }),
@@ -308,8 +338,8 @@ function Boss2({ kind }: { kind: EnemyKind }) {
   }), []);
   const root = useRef<Group>(null!), body = useRef<Group>(null!), aL = useRef<Group>(null!), aR = useRef<Group>(null!), extra = useRef<Group>(null!);
   const kb = useRef<Group>(null!), kw = useRef<Group>(null!), wingL = useRef<Group>(null!), wingR = useRef<Group>(null!);
-  const wing = useMemo(() => (kind === 'BOSS_WARLORD' ? buildDevilWing() : null), [kind]);
-  const wingMat = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, metalness: 0, side: DoubleSide, emissive: new Color('#5a0c12'), emissiveIntensity: 0.7 }), []);
+  const wing = useMemo<{ skin: BufferGeometry; bones: BufferGeometry; glow?: BufferGeometry } | null>(() => (kind === 'BOSS_WARLORD' ? buildDevilWing() : kind === 'BOSS_VOID' ? buildVoidWing() : null), [kind]);
+  const wingMat = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, metalness: 0, side: DoubleSide, emissive: new Color(kind === 'BOSS_VOID' ? '#3b0f6e' : '#5a0c12'), emissiveIntensity: kind === 'BOSS_VOID' ? 0.9 : 0.7 }), [kind]);
   const km = useMemo(() => makeBossMats(), []), rig2 = useBossRig(KIT_PIECE[kind] || '', km);
   const S = useRef<Pose & { yaw: number; lastStep: number }>({ armL: 0, armR: 0, spread: 0.12, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0, yaw: 0, lastStep: 0 });
   const T = useMemo<Pose>(() => ({ armL: 0, armR: 0, spread: 0, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0 }), []);
@@ -318,8 +348,10 @@ function Boss2({ kind }: { kind: EnemyKind }) {
     const r = root.current;
     const status = useGameStore.getState().status;
     const id = bossView.id;
-    const e = id >= 0 ? world.enemies[id] : null;
-    if (!e || !e.active || e.kind !== kind || e.decoy || status === GameStatus.MENU || status === GameStatus.HERO_SELECT) { r.visible = false; return; }
+    let e: Enemy | null = null;
+    if (decoy >= 0) { let k = 0; const arr = world.enemies; for (let i = 0; i < arr.length; i++) { const x = arr[i]; if (x.active && x.decoy && x.kind === kind && x.trickKind === 1 && x.state !== 'DYING' && k++ === decoy) { e = x; break; } } }
+    else e = id >= 0 ? world.enemies[id] : null;
+    if (!e || !e.active || e.kind !== kind || (decoy < 0 && e.decoy) || status === GameStatus.MENU || status === GameStatus.HERO_SELECT) { r.visible = false; return; }
     if (e.hideT > 0 && e.state !== 'DYING') { r.visible = false; return; }   // submerged / airborne
     r.visible = true;
     const dt = status === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
@@ -349,15 +381,16 @@ function Boss2({ kind }: { kind: EnemyKind }) {
       else if (kind === 'BOSS_TREANT') extra.current.visible = bossView.bark;
       else extra.current.rotation.y = s.extraY;
     }
-    if (wingL.current) {   // (owner) devil wings in the Burning Form: they unfurl during the ignition and flap a little
-      const f = bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, wr = wingR.current, wl = wingL.current;
+    if (wingL.current) {   // devil wings in Ignar's Burning Form / the Void Herald's final form: they unfurl during the transformation and flap a little
+      const vo = kind === 'BOSS_VOID';
+      const f = vo ? (bossView.vform === 2 ? 1 : bossView.vform === 1 ? clamp(1 - bossView.vformT / 3, 0, 1) : 0) : bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, wr = wingR.current, wl = wingL.current;
       wl.visible = wr.visible = f > 0.02;
       const act = e.state === 'WINDUP' || e.state === 'ATTACK', fl = sin(TT * (act ? 7 : 4)) * (act ? 0.3 : 0.2), open = 0.25 + 0.35 * f;
-      const ws = 0.85 * f;
+      const ws = (vo ? 0.6 : 0.85) * f;
       wr.scale.set(ws, ws, ws); wl.scale.set(-ws, ws, ws);
       wr.rotation.y = open + fl; wl.rotation.y = -(open + fl);
-      wr.rotation.z = wl.rotation.z = 0.12 + fl * 0.35;
       wr.rotation.z = 0.12 + fl * 0.35; wl.rotation.z = -(0.12 + fl * 0.35);
+      if (vo) { wr.position.y = wl.position.y = 2.6 + s.dy; wl.position.x = -0.5; wr.position.x = 0.5; }
     }
     mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * sin(TT * 5));
     if (kind === 'BOSS_TREANT') mats.lit.color.setRGB(bossView.bark ? 0.62 : 1, bossView.bark ? 0.58 : 1, bossView.bark ? 0.55 : 1);
@@ -402,9 +435,10 @@ function Boss2({ kind }: { kind: EnemyKind }) {
   return (
     <group ref={root} visible={false}>
       {wing && ([wingR, wingL] as const).map((ref, k) => (
-        <group key={k} ref={ref} position={[k === 0 ? 0.55 : -0.55, 2.3, -0.7]} visible={false}>
+        <group key={k} ref={ref} position={[k === 0 ? 0.55 : -0.55, kind === 'BOSS_VOID' ? 2.6 : 2.3, -0.7]} visible={false}>
           <mesh geometry={wing.skin} material={wingMat} castShadow />
           <mesh geometry={wing.bones} material={wingMat} castShadow />
+          {wing.glow && <mesh geometry={wing.glow} material={mats.glow} />}
         </group>
       ))}
       {rig2 && <group ref={kb}><group ref={kw}><primitive object={rig2.root} /></group></group>}
@@ -432,6 +466,6 @@ function Boss2({ kind }: { kind: EnemyKind }) {
 }
 
 export function Bosses2() {
-  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><WarMachine /><BossWard /></>);
+  return (<><Boss2 kind="BOSS_TREANT" /><Boss2 kind="BOSS_HYDRA" /><Boss2 kind="BOSS_WARLORD" /><Boss2 kind="BOSS_VOID" /><Boss2 kind="BOSS_VOID" decoy={0} /><Boss2 kind="BOSS_VOID" decoy={1} /><Boss2 kind="BOSS_VOID" decoy={2} /><Boss2 kind="BOSS_VOID" decoy={3} /><WarMachine /><BossWard /></>);
 }
 export const __builders = { buildTreant, buildHydra, buildWyrm, buildWarlord, buildVoid };

@@ -85,23 +85,23 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     xp: 16, gold: 5, cost: 5, minWave: 6, weight: 3, color: 0x94a3b8, knockResist: 1, armor: 30,   // (owner: crabs were tankier than bosses) hp 150->95, armor 60->30, shell 0.35->0.65
   },
   BOSS_GOLEM: {
-    name: 'Gorath the Mountain', hp: 1800, speed: 1.68, radius: 4.5, scale: 6,   /* (owner 2026-10-24: 50% bigger, 40% slower) */ contactDamage: 25, projectileDamage: 18,
+    name: 'Gorath the Mountain', hp: 1800, speed: 1.68, radius: 7.1, scale: 9.5,   /* (owner 2026-10-24: 50% bigger, 40% slower; 2026-10-26: +12%, the guardians ~ the Dune Colossus's footprint) */ contactDamage: 25, projectileDamage: 18,
     xp: 7, gold: 300, cost: 0, minWave: 10, weight: 0, color: 0x78716c, knockResist: 1, armor: 80,
   },
   BOSS_LICH: {
-    name: 'Malakar the Undying', hp: 1430, speed: 3.4, radius: 1.4, scale: 2.6, contactDamage: 18, projectileDamage: 14,
+    name: 'The Undying Lich', hp: 1430, speed: 3.4, radius: 1.6, scale: 3.0, contactDamage: 18, projectileDamage: 14,
     xp: 8, gold: 400, cost: 0, minWave: 20, weight: 0, color: 0x38bdf8, knockResist: 1, armor: 40,
   },
   BOSS_TREANT: {
-    name: 'Elderroot the Ancient', hp: 1625, speed: 2.4, radius: 4.6, scale: 6.4, contactDamage: 22, projectileDamage: 16,
+    name: 'Elderroot the Ancient', hp: 1625, speed: 2.4, radius: 6.7, scale: 9.3,   /* (owner 2026-10-26: +12%, ~ the Dune Colossus's footprint) */ contactDamage: 22, projectileDamage: 16,
     xp: 9, gold: 0, cost: 0, minWave: 30, weight: 0, color: 0x4d7c0f, knockResist: 1, armor: 55,
   },
   BOSS_HYDRA: {
-    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 5.4, scale: 6.4, contactDamage: 22, projectileDamage: 17,
+    name: 'The Mire Hydra', hp: 2000, speed: 2.2, radius: 7.3, scale: 8.6,   /* (owner 2026-10-26: +12%) */ contactDamage: 22, projectileDamage: 17,
     xp: 10, gold: 0, cost: 0, minWave: 40, weight: 0, color: 0x3f8f4a, knockResist: 1, armor: 50,
   },
   BOSS_WYRM: {
-    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 4.4, scale: 6.4, contactDamage: 24, projectileDamage: 18,
+    name: 'Glacius the Frost Wyrm', hp: 2100, speed: 3.6, radius: 6.4, scale: 9.3,   /* (owner 2026-10-26: +12%) */ contactDamage: 24, projectileDamage: 18,
     xp: 11, gold: 0, cost: 0, minWave: 50, weight: 0, color: 0x7dd3fc, knockResist: 1, armor: 55,
   },
   BOSS_WARMACH: {
@@ -110,11 +110,11 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   BOSS_WARLORD: {
     name: 'Ignar the Infernal Warlord', hp: 3220,   // (owner: +40% for the Burning Form; was 2300)
-    speed: 5.4, radius: 2.04, scale: 3.06, contactDamage: 28, projectileDamage: 19,   // (owner: way faster, ~15% smaller; was speed 3.4 / radius 2.4 / scale 3.6)
+    speed: 5.4, radius: 4.5, scale: 6.6, contactDamage: 28, projectileDamage: 19,   // (owner: way faster, ~15% smaller; was speed 3.4 / radius 2.4 / scale 3.6; 2026-10-26: x1.35, a guardian-sized warlord)
     xp: 12, gold: 0, cost: 0, minWave: 60, weight: 0, color: 0xef4444, knockResist: 1, armor: 65,
   },
   BOSS_VOID: {
-    name: 'The Void Herald', hp: 2600, speed: 3.0, radius: 2.1, scale: 3.4, contactDamage: 26, projectileDamage: 20,
+    name: 'The Void Herald', hp: 2600, speed: 3.0, radius: 4.2, scale: 6.6, contactDamage: 26, projectileDamage: 20,   // (owner 2026-10-26: x1.3; the winged final form is x1.15 on top = ~ the Dune Colossus)
     xp: 13, gold: 0, cost: 0, minWave: 70, weight: 0, color: 0xa855f7, knockResist: 1, armor: 50,
   },
   BOSS_SAPLING: {
@@ -260,7 +260,7 @@ export function isBossAdd(k: EnemyKind): boolean { return k === 'BOSS_SAPLING' |
 
 export const BOSS_NAMES: Record<BossKind, { name: string; title: string }> = {
   BOSS_GOLEM: { name: 'Gorath the Mountain', title: 'Ancient Golem' },
-  BOSS_LICH: { name: 'Malakar the Undying', title: 'Lich King' },
+  BOSS_LICH: { name: 'The Undying Lich', title: 'Lich King' },
   BOSS_TREANT: { name: 'Elderroot the Ancient', title: 'Ancient Treant' },
   BOSS_HYDRA: { name: 'The Tide Hydra', title: 'Terror of the Reef' },
   BOSS_WYRM: { name: 'Glacius the Frost Wyrm', title: 'Winter Dragon' },

@@ -1,7 +1,7 @@
 // ============================================================================
 // Boss Trials (owner 2026-10-26): the purple portal on the south-west headland of the outskirts (townData BOSS_PORTAL) opens after the first game clear.
 // Each of the seven biome bosses can be fought alone, at Void strength, for one guaranteed top-tier piece of gear (a slot per boss).
-// Once per boss per day (local calendar day, dailyChallenge.dayKey, saved per character in progress.trialDay); a "Boss Trial Ticket" (300 gems) buys a rematch.
+// Once per boss per day, counted only after a WIN (loot received; a death / abandon does not use the try; local calendar day, dailyChallenge.dayKey, saved per character in progress.trialDay); a "Boss Trial Ticket" (300 gems) buys a rematch.
 // Pure data + run state (no React, no store import). The store (startBossTrial / claimBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
 // ============================================================================
 import type { Rarity } from './types';
@@ -34,6 +34,8 @@ export const TRIAL_BOSSES: readonly TrialBoss[] = [
   { biome: 6, slot: 'pet', slotLabel: 'Pet', icon: '\u{1F43E}' },
 ];
 
+/** Chance of a 2nd item (same slot, rolled like the first) on every win (the first one is guaranteed). */
+export const TRIAL_BONUS_ITEM = 0.5;
 /** Loot odds: never below Legendary. */
 export const TRIAL_MYTHIC = 0.3;
 export const rollTrialRarity = (rng: () => number = Math.random): Rarity => (rng() < TRIAL_MYTHIC ? 'MYTHIC' : 'LEGENDARY');

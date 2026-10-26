@@ -195,9 +195,9 @@ export interface EnemyProjectile {
   slow?: number;         // applies slow to player on hit (0..1)
   debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
-  trail?: number;        // > 0: leaves a burning ground patch every `trail` seconds (Malakar's fireballs)
+  trail?: number;        // > 0: leaves a burning ground patch every `trail` seconds (the Void Herald's fireballs)
   trailT?: number;
-  pct?: number;          // > 0: the hit costs this share of the hero's MAX hp (Malakar's major skills; damagePlayer `pct`)
+  pct?: number;          // > 0: the hit costs this share of the hero's MAX hp (the Void Herald's major skills; damagePlayer `pct`)
   dark?: boolean;        // fired by a corrupted (Void) monster: drawn black-purple
   owner?: number;        // the shooter's enemy id (-1 = boss script / unknown): the hero hits back at it
 }
@@ -273,6 +273,7 @@ export interface GroundFx {
   launch: boolean;            // SPIKE: launches enemies (Earthsplitter)
   color: number;
   hostile: boolean;           // dark hero copy of a hero effect: visual only here, its hit is resolved by darkHero.ts (hooks.hostileFx)
+  own: number;                // (hostile fx) the dark hero slot that made it, -1 none
 }
 
 // ---------------------------------------------------------------- pickups --
@@ -436,7 +437,7 @@ export interface RoomPlan {
   type: RoomType; reward: RewardKind; preboss?: boolean; obj?: RoomObjective; twist?: RoomTwist;
   /** Gatekeeper trial: gate index (0..4) and the room step inside that trial (engine/gates.ts). */
   gate?: number; step?: number;
-  /** The epilogue clearing after Malakar (a quiet forest room with the Keeper of the Font; director.ts finale). */
+  /** The epilogue clearing after the Void Herald (a quiet forest room with the Keeper of the Font; director.ts finale). */
   epilogue?: boolean;
   /** (owner) a Font dream: the same quiet clearing in the Greenwood, Aelia at its far end; talking to her wakes you in town. */
   dream?: boolean;
@@ -494,7 +495,7 @@ export interface BossHud {
   maxHp: number;
   phase: number;
   sx: number; sy: number; onScreen: boolean;   // screen position (px) above the boss's head, written by CameraRig
-  /** Malakar in the final fight (bosses.ts): stage 1, then stage 2 below half HP (bigger, faster skills). */
+  /** The Void Herald in the final fight: stage 1, then stage 2 (final form) below half HP (bosses2.ts). */
   final: boolean; stage: number; shieldCd: number;
   /** absorb shield on the bar's boss (not the invincible ward), and its size when raised: the boss bar's shield row */
   shield: number; shieldMax: number;

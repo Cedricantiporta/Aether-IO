@@ -56,7 +56,7 @@ export const RoomPlaque: React.FC = () => {
     if (key !== sig.current) {
       sig.current = key;
       const loop = loopOf(r.biome);
-      const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.name === 'Malakar the Undying';
+      const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.final;
       const gname = r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
       if (name.current) name.current.textContent = tower ? climbTitle() : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
       if (depth.current) depth.current.textContent = (tower ? climbFloor(towerState.floor) : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`) + (runInfo.hard ? ' · HARD' : '');

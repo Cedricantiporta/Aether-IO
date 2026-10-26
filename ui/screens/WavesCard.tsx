@@ -1,7 +1,7 @@
 // Endless Waves card (Set Out window tab) + its run summary line. Data: endlessWaves.ts; records: progress.wavesBest /
 // wavesClaimed (per class).
 import React from 'react';
-import { Waves, Gem, Skull, Crown } from '../components/GoldIcons';
+import { Waves, Coins, Skull, Crown } from '../components/GoldIcons';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { HERO_META } from '../lib/heroes';
@@ -28,7 +28,7 @@ export const WavesCard: React.FC = () => {
           return (
             <div key={w} className="dc-mod" style={{ ['--c' as string]: got ? '#9be86a' : best >= w ? '#ffd24a' : '#8a7a5a' }}>
               <b>{w % 10 === 0 ? <Skull size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> : null} Wave {w}</b>
-              <span><Gem size={11} style={{ display: 'inline', verticalAlign: '-1px' }} color="#5ee0f5" /> {milestoneText(m)}</span>
+              <span><Coins size={11} style={{ display: 'inline', verticalAlign: '-1px' }} color="#fbbf24" /> {milestoneText(m)}</span>
               <span style={{ marginLeft: 'auto', color: got ? '#9be86a' : '#8f826a', fontSize: '.64rem' }}>{got ? 'Claimed' : 'Clear it once'}</span>
             </div>
           );
