@@ -1,5 +1,6 @@
 // Centred event-style summon window (Korean MMO look): banner list on the left, big banner art + rates +
 // summon buttons on the right. Replaces the side panel for the SUMMON shop tab.
+import { GRADE_DROP_ODDS } from '../../grade';
 import React, { useMemo, useState } from 'react';
 import { summonPool } from '../../summonPool';
 import { shardItem } from '../../shards';
@@ -83,6 +84,7 @@ export const SummonWindow: React.FC = () => {
             <div className="sw-pop" onClick={() => setRewardsOpen(false)} data-testid="summon-rewards">
               <div className="sw-pop-box sw-pop-wide" onClick={(e) => e.stopPropagation()}>
                 <div className="sw-pop-h">Possible rewards · {hero.charAt(0) + hero.slice(1).toLowerCase()}<CloseX onClick={() => setRewardsOpen(false)} /></div>
+                <div className="text-[.78rem] muted" style={{ margin: '-.3rem 0 .2rem' }}>Every gear piece rolls its grade when you get it: Low {Math.round(GRADE_DROP_ODDS.low * 100)}% · Mid {Math.round((1 - GRADE_DROP_ODDS.low - GRADE_DROP_ODDS.high) * 100)}% · High {Math.round(GRADE_DROP_ODDS.high * 100)}%.</div>
                 <div className="sw-preview rpg-scroll" data-testid="summon-preview">
                   {gem && (   /* (owner) the Gem Altar gives Aether Crystals (1-5) or 3-6 potions instead of shards */
                     <div className="sw-tier" style={{ ['--rc' as any]: '#b98cff' }}>
