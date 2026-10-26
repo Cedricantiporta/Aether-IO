@@ -10,7 +10,7 @@ import {
   InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, ShaderMaterial, Vector4, type BufferGeometry,
 } from 'three';
 import { world } from '../engine/world';
-import { bp, MAX_TILES } from '../engine/systems/bossPhaseState';
+import { bp, MAX_TILES, LAVA_HITS } from '../engine/systems/bossPhaseState';
 import { humanView, humanFoot } from '../engine/systems/humanBosses';
 import { CELL, pushHalo } from './fx';
 import { commitInst, setInst, smooth } from './util';
@@ -180,12 +180,14 @@ export function BossPhaseFx() {
     if (vis && kind === 'LAVA') {
       const hs = bp.tileHalf - 0.2;
       for (let i = 0; i < bp.nt; i++) {
-        const te = bp.te[i], dtE = bp.t - te;
+        // two eruptions per tile: show the most urgent state (erupting > flashing warning), else a dim ember (it may erupt again)
+        const d0 = bp.t - bp.te[i * LAVA_HITS], d1 = bp.t - bp.te[i * LAVA_HITS + 1];
+        const dtE = (d0 > -1.05 && d0 < 0.55) ? d0 : (d1 > -1.05 && d1 < 0.55) ? d1 : Math.max(d0, d1) >= 0.55 && Math.min(d0, d1) >= 0.55 ? 1 : -2;
         let r: number, g: number, b: number, y = 0.075;
-        if (dtE >= 0.55) { r = 0.07; g = 0.09; b = 0.14; }                                   // cooled
+        if (dtE >= 1) { r = 0.07; g = 0.09; b = 0.14; }                                      // both eruptions done: cooled for good
         else if (dtE >= 0) { r = 3; g = 1.9 * (1 - dtE); b = 0.5; y = 0.12; }                 // erupting
         else if (dtE > -1.05) { const w = 0.55 + 0.45 * Math.sin(t * 22); r = 2.2 * w + 0.4; g = 0.55 * w; b = 0.05; }   // warning
-        else { r = 0.28; g = 0.05; b = 0.02; }                                              // hot floor, not yet
+        else { r = 0.1; g = 0.1; b = 0.17; }                                                  // cool right now (safe until it flashes)
         _c.setRGB(r * live, g * live, b * live); S.tiles.setColorAt(nt, _c);
         setInst(S.tiles, nt, bp.tx[i], y, bp.tz[i], 0, hs * 2, 1, hs * 2);
         nt++;

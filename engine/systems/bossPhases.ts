@@ -7,7 +7,7 @@
 //   Gorath   PINBALL     rolls as a boulder along telegraphed lines and bounces off the walls; hit a pillar to crack him
 //   Elderroot SPORES     4 spore pods swell: pop them (touch / hit) before they burst (heals him + poison); roots grab you
 //   Hydra    TIDAL       a wave from one side: hide behind a raised rock (line-of-sight cover) or take 70% max hp + knockback
-//   Ignar    LAVA        the floor is tiles that flash and erupt in two sweeps: step onto the cooled ones
+//   Ignar    LAVA        the floor is tiles; 4 sweeps (random directions) erupt half the floor each so EVERY tile erupts twice: keep moving
 //   Colossus SAND        a sandstorm from one direction, shifting once: hide behind a pillar / wreck or take ticking damage
 //   Void H.  DARK        lights out: only a lantern round you; telegraphed void hands erupt under you
 //   Malakar  REAL        he + 2 illusions run around you: hitting a fake pops it (damage), hitting the real one ends the phase
@@ -21,14 +21,14 @@ import { edgeLimit } from '../mapgen';
 import type { Enemy } from '../types';
 import { damagePlayer, applyPlayerDebuff, knockHero, playerTrickImmune } from './combat';
 import { damageMinion } from './minions';
-import { spawnEnemy, onEnemyDeath, spawnTelegraphLine } from './enemies';
+import { spawnEnemy, onEnemyDeath, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { bossStrike, bossPwr } from './bossMech';
 import { BT } from './bossFx';
 import { spawnHostileZone } from './tricks';
-import { spawnIllusions, popDecoy, clearDecoys, isSlimeKing } from './bossSpecials';
-import { mfx } from './malakarFx';
+import { spawnIllusions, popDecoy, clearDecoys, isSlimeKing, countIllusions } from './bossSpecials';
+import { mfx, queueBomb, queueHole, tickMalakarFx } from './malakarFx';
 import { hooks } from './hooks';
-import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, type PhaseKind } from './bossPhaseState';
+import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, type PhaseKind } from './bossPhaseState';
 import { useGameStore } from '../../store';
 
 const MECH: Record<string, PhaseKind> = {
@@ -42,10 +42,10 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
   PINBALL: { name: 'BOULDER PINBALL', sub: 'Bait him into a stone pillar!', color: 0xd9a066 },
   SPORES: { name: 'SPORE GARDEN', sub: 'Pop the spore pods before they burst!', color: 0x84cc16 },
   TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },
-  LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Stand on cooled tiles!', color: 0xff7a1a },
+  LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Every tile erupts twice - keep moving to one that is not flashing!', color: 0xff7a1a },
   SAND: { name: 'SANDSTORM', sub: 'Hide behind a pillar, out of the wind!', color: 0xe0b060 },
   DARK: { name: 'LIGHTS OUT', sub: 'Watch for faint purple circles!', color: 0xa060ff },
-  REAL: { name: 'FIND THE REAL ONE', sub: 'The real Malakar has a solid shadow - fakes flicker!', color: 0xc084fc },
+  REAL: { name: 'FIND THE REAL ONE', sub: 'A FAKE bursts on you and opens a black hole - only the real one ends this!', color: 0xc084fc },
 };
 
 const tv = new Vector3();
@@ -64,7 +64,7 @@ const G = {
   // darkness
   handT: 0,
   // real one
-  pulseOn: false,
+  pulseOn: false, spawnT: 0, volleyT: 0, tries: 0, px: 0, pz: 0,
 };
 
 const heroSpeed = (): number => useGameStore.getState().stats.moveSpeed * 0.8;
@@ -127,13 +127,25 @@ function begin(e: Enemy, kind: PhaseKind): void {
   bp.dark = false; bp.ball = false; bp.crackT = 0; bp.realId = -1; bp.slimes.length = 0;
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
+  G.spawnT = 0; G.volleyT = 1.0; G.tries = 0; G.px = 0; G.pz = 0;
   G.stage = 0; G.t0 = 0; G.hit = false; G.tick = 0; G.legs = 0; G.legHit = false; G.windT = 0; G.rootT = 0; G.hitCd = 0; G.handT = 0; G.pulseOn = false; G.dust = 0;
   banner(kind);
+  if (kind === 'REAL') realHint();
   e.vel.set(0, 0, 0);
   events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 3 + 4, color: bp.color });
   events.emit('shake', { amount: 0.45 });
   say(e, 'INVULNERABLE', bp.color, 1.3);
   useGameStore.getState().addNotification(`${INFO[kind].name}! ${INFO[kind].sub}`, '#' + bp.color.toString(16).padStart(6, '0'), 'BOSS');
+}
+
+const REAL_KEY = 'aether_real_hint';
+let realSeen = false;
+/** The first time ever: the banner teaches the tell (his solid shadow); afterwards it just states the stakes. */
+function realHint(): void {
+  try { realSeen = localStorage.getItem(REAL_KEY) === '1'; } catch { /* private mode: the hint just repeats */ }
+  bp.sub = realSeen ? 'Hit the REAL one. A fake bursts on you and opens a black hole!' : 'The real Malakar casts a solid shadow - fakes flicker!';
+  if (!realSeen) bp.bannerT = 5.5;
+  try { localStorage.setItem(REAL_KEY, '1'); } catch { /* ignore */ }
 }
 
 function end(e: Enemy | null, text = 'VULNERABLE!'): void {
@@ -176,16 +188,21 @@ hooks.phaseCheck = (e: Enemy): void => {
 hooks.phaseMul = (e: Enemy): number => (bp.kind === 'PINBALL' && bp.crackT > 0 && e.id === bp.id ? 1.5 : 1);
 
 /** The hero hit something during a phase (decoy / the real Malakar; Sable is in humanBosses.ts). */
+const FAKE_PCT = 0.30, FAKE_R = 4.5, FAKE_WARN = 0.9;
 hooks.phaseHit = (e: Enemy): void => {
   if (!bp.on || bp.kind !== 'REAL') return;
   const p = world.player;
   if (e.decoy) {
     if (e.state === 'DYING') return;
-    if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < 6 * 6) hitHero(0.18, 'MAGIC', e.pos.x, e.pos.z, 3, 0);
     popDecoy(e); say(e, 'A FAKE!', 0xc084fc, 1.1);
+    if (G.stage >= 1 && G.hitCd <= 0) {   // the punish: a telegraphed explosion on the hero (30% max hp) + a black hole that opens on them and drifts after them
+      G.hitCd = 0.6;
+      if (p.alive) { queueBomb(p.pos.x, p.pos.z, FAKE_R, FAKE_WARN, FAKE_PCT); queueHole(0.4); }
+      events.emit('floatText', { pos: p.pos, text: 'WRONG ONE!', color: 0xff6a8a, scale: 1.2, dy: 4 });
+    }
     return;
   }
-  if (e.id !== bp.id) return;
+  if (e.id !== bp.id || G.stage < 1 || bp.t - G.t0 < 0.8) return;   // hits in flight while he turns immune / the fakes appear do not count (that was the "no illusions" bug)
   clearDecoys();
   const boss = world.enemies[bp.id];
   end(boss, 'FOUND HIM!');
@@ -453,44 +470,86 @@ function tickSand(e: Enemy, dt: number): void {
   if (bp.t >= SAND_END) end(e);
 }
 
-const CELL = 5.0;
+const CELL = 5.0, LAVA_LEAD = 1.6, LAVA_GAP = 2.0, LAVA_SWEEP = 1.0, LAVA_WARN = 1.05, LAVA_END = LAVA_LEAD + 3 * LAVA_GAP + LAVA_SWEEP + 0.7;
+const LAVA_PCT = 0.28, LAVA_HIT_CD = 0.5, LAVA_RANGE = 10;
+/** Tile class 0..3 = (ix & 1) + 2 * (iz & 1) (a 2x2 repeating pattern). Wave w erupts the two classes of PAIRS[order[w]]; the four pairs
+ *  {0,1} {1,2} {2,3} {3,0} (in a random order) cover every class exactly twice, so EVERY tile erupts exactly twice (lavaVerify proves it),
+ *  while half the floor is always cool: a tile is safe against a wave when its class is not in the pair, and every tile touches tiles
+ *  of other classes, so there is always a cooled tile one step away. Each wave sweeps in from its own random direction (1 s across the arena),
+ *  and every tile flashes for ~1 s before it erupts. */
+const PAIRS = [[0, 1], [1, 2], [2, 3], [3, 0]];
+const lavaOrder = [0, 1, 2, 3];
 function lavaBuild(): void {
-  const a = Math.random() * 6.283, dx = Math.cos(a), dz = Math.sin(a);
-  let n = 0, smin = 1e9, smax = -1e9;
-  const half = 28 / CELL;
-  for (let ix = -Math.ceil(half * 1.6); ix <= Math.ceil(half * 1.6) && n < MAX_TILES; ix++) {
-    for (let iz = -Math.ceil(half * 1.6); iz <= Math.ceil(half * 1.6) && n < MAX_TILES; iz++) {
+  let n = 0;
+  for (let w = 0; w < 4; w++) { const a = Math.random() * 6.283; waveDx[w] = Math.cos(a); waveDz[w] = Math.sin(a); }   // every wave sweeps in from its own direction
+  for (let i = 3; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = lavaOrder[i]; lavaOrder[i] = lavaOrder[j]; lavaOrder[j] = x; }
+  for (let ix = -LAVA_RANGE; ix <= LAVA_RANGE && n < MAX_TILES; ix++) {
+    for (let iz = -LAVA_RANGE; iz <= LAVA_RANGE && n < MAX_TILES; iz++) {
       const cx = ix * CELL, cz = iz * CELL;
-      if (Math.hypot(cx, cz) + 3.6 > edgeLimit(cx, cz, 0)) continue;
-      bp.tx[n] = cx; bp.tz[n] = cz; bp.te[n] = (ix + iz) & 1;   // parity for now
-      const s = cx * dx + cz * dz; if (s < smin) smin = s; if (s > smax) smax = s;
+      // a tile exists when ANY part of it is inside the arena (a hero hugging the wall must not find a tile-less safe strip)
+      if (Math.hypot(cx, cz) - CELL * 0.75 > edgeLimit(cx, cz, 0)) continue;
+      bp.tx[n] = cx; bp.tz[n] = cz;
+      const cls = (ix & 1) + 2 * (iz & 1);
+      let k = 0;
+      for (let w = 0; w < 4; w++) {
+        const pr = PAIRS[lavaOrder[w]];
+        if (pr[0] !== cls && pr[1] !== cls) continue;
+        bp.te[n * LAVA_HITS + k++] = w;   // wave index for now; time below
+      }
       n++;
     }
   }
-  const span = Math.max(1, smax - smin);
+  // sweep times: projection of the tile on the wave direction, normalised over the arena diameter
   for (let i = 0; i < n; i++) {
-    const k = (bp.tx[i] * dx + bp.tz[i] * dz - smin) / span;
-    bp.te[i] = bp.te[i] === 0 ? 1.9 + k * 3.0 : 5.4 + (1 - k) * 3.0;   // sweep 1: half the tiles; sweep 2 (the other way): the rest
+    for (let k = 0; k < LAVA_HITS; k++) {
+      const w = bp.te[i * LAVA_HITS + k] | 0;
+      const f = Math.min(1, Math.max(0, ((bp.tx[i] * waveDx[w] + bp.tz[i] * waveDz[w]) / 48 + 1) * 0.5));
+      bp.te[i * LAVA_HITS + k] = LAVA_LEAD + w * LAVA_GAP + f * LAVA_SWEEP;
+    }
   }
   bp.nt = n; bp.tileHalf = CELL * 0.5;
+  lavaVerify();
+}
+const waveDx = [0, 0, 0, 0], waveDz = [0, 0, 0, 0];
+/** Proof that no spot is safe for the whole phase: (1) every tile has LAVA_HITS finite eruption times, (2) the times are at least a
+ *  warning apart, (3) every point of the arena (1 m grid) lies inside some tile (+ the 0.3 m hit margin) so no strip is tile-less.
+ *  Returns the problems found (0 = proven). Dev builds log it. */
+export function lavaVerify(): number {
+  let bad = 0;
+  for (let i = 0; i < bp.nt; i++) {
+    const a = bp.te[i * LAVA_HITS], b = bp.te[i * LAVA_HITS + 1];
+    if (!(a > 0) || !(b > 0) || Math.abs(a - b) < 0.9 || b > LAVA_END || a > LAVA_END) bad++;
+  }
+  for (let x = -50; x <= 50; x++) {
+    for (let z = -50; z <= 50; z++) {
+      if (Math.hypot(x, z) > edgeLimit(x, z, 0)) continue;
+      const ix = Math.round(x / CELL), iz = Math.round(z / CELL);
+      let found = false;
+      for (let i = 0; i < bp.nt; i++) if (bp.tx[i] === ix * CELL && bp.tz[i] === iz * CELL) { found = true; break; }
+      if (!found) bad++;
+    }
+  }
+  if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) console.log(`[lava] ${bp.nt} tiles, ${bad} problems (0 = every tile erupts ${LAVA_HITS}x, whole arena covered)`);
+  return bad;
 }
 function tickLava(e: Enemy, dt: number): void {
   const p = world.player;
-  if (G.stage === 0) { G.stage = 1; lavaBuild(); bp.count = 8.4; bp.countMax = 8.4; }
-  bp.count = Math.max(0, 8.4 - bp.t);
+  if (G.stage === 0) { G.stage = 1; lavaBuild(); bp.count = LAVA_END; bp.countMax = LAVA_END; }
+  bp.count = Math.max(0, LAVA_END - bp.t);
   G.hitCd -= dt;
   const t0 = bp.t - dt;
   for (let i = 0; i < bp.nt; i++) {
-    const te = bp.te[i];
-    if (te > t0 && te <= bp.t) {   // this tile erupts now
+    for (let k = 0; k < LAVA_HITS; k++) {
+      const te = bp.te[i * LAVA_HITS + k];
+      if (!(te > t0 && te <= bp.t)) continue;   // this tile erupts now
       tv.set(bp.tx[i], 0.4, bp.tz[i]);
       events.emit('explosion', { pos: tv.clone(), radius: 1.8, color: 0xff7a1a });
       if (p.alive && G.hitCd <= 0 && Math.abs(p.pos.x - bp.tx[i]) < bp.tileHalf + 0.3 && Math.abs(p.pos.z - bp.tz[i]) < bp.tileHalf + 0.3) {
-        G.hitCd = 0.6; hitHero(0.3, 'FIRE', bp.tx[i], bp.tz[i], 2.5, 0);
+        G.hitCd = LAVA_HIT_CD; hitHero(LAVA_PCT, 'FIRE', bp.tx[i], bp.tz[i], 2.5, 0);
       }
     }
   }
-  if (bp.t >= 8.7) end(e);
+  if (bp.t >= LAVA_END) end(e);
 }
 
 function tickDark(e: Enemy, dt: number): void {
@@ -523,24 +582,43 @@ function tickDark(e: Enemy, dt: number): void {
   if (bp.t >= 8.0) end(e);
 }
 
+const REAL_LEN = 10.0, REAL_WARN = 8.0, PULSE_T = 2.0, PULSE_R = 19, PULSE_PCT = 0.40;
+/** Find the Real One: Malakar + 2 illusions strafe round the hero (all cast orbs; the real one's are bigger and his floor shadow is solid, the
+ *  fakes' flicker). Hitting a FAKE pops it and punishes (30% max hp explosion + a black hole on you); hitting the REAL one ends the phase.
+ *  Not found in 10 s: a huge gravity pulse (40% max hp). BUG FIXED (2026-10-26): the illusions were spawned with the shuffle cap (old
+ *  shuffle copies counted / expired mid-phase) and hits in flight on the still-immune real one ended the phase before they appeared; now old
+ *  copies are cleared, two fresh ones are forced in (retried if the pool was full) and the real one ignores hits for 0.8 s after. */
 function tickReal(e: Enemy, dt: number): void {
   const p = world.player;
+  tickMalakarFx(dt);   // Malakar's own AI is replaced during the phase: keep his lasers / bombs / holes ticking
+  mfx.major = true;
+  G.hitCd -= dt;
   if (G.stage === 0) {
-    mfx.major = true;
-    if (bp.t >= 0.7) { G.stage = 1; bp.realId = e.id; spawnIllusions(e, 2, 12); say(e, 'WHICH ONE?', 0xc084fc, 1.3); bp.count = 8; bp.countMax = 8; }
+    if (bp.t < 0.05) clearDecoys();
+    if (bp.t >= 0.7) {
+      G.stage = 1; G.t0 = bp.t; bp.realId = e.id; spawnIllusions(e, 2, 60, true);
+      say(e, 'WHICH ONE?', 0xc084fc, 1.3); bp.count = REAL_LEN; bp.countMax = REAL_LEN;
+    }
     return;
   }
-  bp.count = Math.max(0, 8.0 - bp.t);
-  if (!G.pulseOn && bp.t >= 6.4) {   // nothing found: a big gravity pulse
-    G.pulseOn = true;
-    bossStrike(e.pos.x, e.pos.z, 10, 1.5, bossPwr(e) * 1.1, 0, 'SLOW', 2.0, 0x7c3aed);
+  const t = bp.t - G.t0;
+  if (t < 1.5 && countIllusions() < 2 && !G.hit) {   // the pool was full / a copy failed: top up (no second teleport)
+    const had = countIllusions();
+    spawnIllusions(e, 2 - had, 60, true, false);
+    if (countIllusions() === had && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV && t > 1.4) console.warn('[real one] could not spawn the illusions (enemy pool full?)');
+  }
+  bp.count = Math.max(0, REAL_LEN - t);
+  if (!G.pulseOn && t >= REAL_WARN) {   // nothing found: a big gravity pulse charges (2 s warning), you are drawn toward him
+    G.pulseOn = true; G.px = e.pos.x; G.pz = e.pos.z;
+    queueBomb(G.px, G.pz, PULSE_R, PULSE_T, PULSE_PCT);
     say(e, 'GRAVITY PULSE!', 0xc084fc, 1.3);
+    events.emit('shake', { amount: 0.4 });
   }
-  if (G.pulseOn && p.alive && !playerTrickImmune()) {   // drawn in while it charges
-    const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1;
-    if (d > 2) { const k = 4 * (p.dashT > 0 ? 0.3 : 1) * dt; p.pos.x += dx / d * k; p.pos.z += dz / d * k; }
+  if (G.pulseOn && p.alive && !playerTrickImmune()) {
+    const dx = G.px - p.pos.x, dz = G.pz - p.pos.z, d = Math.hypot(dx, dz) || 1;
+    if (d > 2) { const k = 5.5 * (p.dashT > 0 ? 0.3 : 1) * dt; p.pos.x += dx / d * k; p.pos.z += dz / d * k; }
   }
-  if (bp.t >= 8.0) { clearDecoys(); events.emit('shockwave', { pos: e.pos.clone(), radius: 16, color: 0xa855f7 }); events.emit('shake', { amount: 0.7 }); end(e, ''); }
+  if (t >= REAL_LEN + 0.3) { clearDecoys(); events.emit('shockwave', { pos: e.pos.clone(), radius: 16, color: 0xa855f7 }); events.emit('shake', { amount: 0.7 }); end(e, ''); }
 }
 
 // ----------------------------------------------------------------- per frame ----
@@ -612,6 +690,12 @@ export function phaseDrive(e: Enemy, dt: number): number {
     e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt;
     const r = Math.hypot(e.pos.x, e.pos.z), lim = edgeLimit(e.pos.x, e.pos.z, 3);
     if (r > lim) { e.pos.x *= lim / r; e.pos.z *= lim / r; }
+    G.volleyT -= dt;
+    if (G.volleyT <= 0) {   // the real one's volley: 5 big fast orbs (the fakes cast thin fans of small weak ones)
+      G.volleyT = 2.3;
+      const b = Math.atan2(ux, uz);
+      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.2), 0, Math.cos(b + i * 0.2)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', 11, 1, { pct: 0.1, life: 4, radius: 1.1, dark: true }); }
+    }
     e.vel.set(0, 0, 0); return Math.atan2(dx, dz);
   }
   e.vel.set(0, 0, 0);
@@ -628,6 +712,8 @@ if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: 
       }
       return 'none';
     },
+    lavaCheck: (): number => { lavaBuild(); return lavaVerify(); },
+    illusions: (): number => countIllusions(),
     state: (): string => `${bp.on}|${bp.kind}|${bp.t.toFixed(1)}|stage ${G.stage}`,
   };
 }

@@ -10,6 +10,8 @@ export interface PhaseProp { x: number; z: number; r: number; /** free value: po
 export interface PhaseHand { x: number; z: number; t: number; T: number; on: boolean }
 
 export const MAX_PROPS = 8, MAX_TILES = 300, MAX_HANDS = 6, MAX_FOOT = 14;
+/** Lava floor: every tile erupts exactly this many times during the phase (te holds MAX_TILES x LAVA_HITS times). */
+export const LAVA_HITS = 2;
 
 export const bp = {
   on: false,
@@ -35,8 +37,8 @@ export const bp = {
   wx: 0, wz: 1, wave: 2, windOn: false,
   /** the next wind direction (Sandstorm shifts once) shown as a ghost while `shiftT` > 0 */
   nx: 0, nz: 1, shiftT: 0,
-  /** Lava floor tiles: centre, erupt time (phase seconds), half size */
-  tx: new Float32Array(MAX_TILES), tz: new Float32Array(MAX_TILES), te: new Float32Array(MAX_TILES), nt: 0, tileHalf: 2.5,
+  /** Lava floor tiles: centre, the LAVA_HITS erupt times per tile (phase seconds, te[i * LAVA_HITS + k]), half size */
+  tx: new Float32Array(MAX_TILES), tz: new Float32Array(MAX_TILES), te: new Float32Array(MAX_TILES * LAVA_HITS), nt: 0, tileHalf: 2.5,
   /** Lights Out */
   dark: false, dOn: false, dsx: 0, dsy: 0,
   hands: Array.from({ length: MAX_HANDS }, (): PhaseHand => ({ x: 0, z: 0, t: 0, T: 1, on: false })),

@@ -30,7 +30,7 @@ import { isBoss2, updateBoss2, bossView } from './bosses2';
 import { bossWarded } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnIllusions } from './bossSpecials';
-import { mfx, queueLaser, queueMeteor, queueHole, gravityBegin, gravityBusy, meteorsBusy, holesBusy, spawnRune, tickMalakarFx, setTrailDamage } from './malakarFx';
+import { mfx, queueLaser, queueMeteor, queueHole, gravityBegin, gravityBusy, meteorsBusy, holesBusy, spawnRune, tickMalakarFx, setTrailDamage, eventHorizonBegin, ehBusy, soulMirrorBegin, mirrorBusy } from './malakarFx';
 
 const dirV = new Vector3();
 const posV = new Vector3();
@@ -255,11 +255,14 @@ const CROSS = 5;
 // GRAV gravity spell (indicator, whole-arena pull, damage core, explosion), HOLES summoned black holes that follow the hero, LASER telegraphed beams
 // (aimed + sweep), RING9 nine giant dark fireballs, METEOR (stage 2) a tracking meteor, SHUFFLE (illusions: one teleport into a ring round the hero),
 // CROSS (stage 2) the void cross of beams. SPIRAL / FAN are the basic volleys between the majors.
-const GRAV = 6, HOLES = 7, LASER = 8, RING9 = 9, METEOR = 10, SHUFFLE = 11;
-const SEQ1 = [SPIRAL, LASER, FAN, GRAV, RING9, SHUFFLE, FAN, HOLES];
-const SEQ2 = [SPIRAL, METEOR, LASER, FAN, GRAV, RING9, CROSS, SHUFFLE, FAN, HOLES];
+const GRAV = 6, HOLES = 7, LASER = 8, RING9 = 9, METEOR = 10, SHUFFLE = 11, EVENT = 12, MIRROR = 13;
+// (owner 2026-10-26 "too easy") two real MECHANIC skills: EVENT = Event Horizon (stand in a drifting light pocket or the collapse takes 85% max hp),
+// MIRROR = Soul Mirror (spikes erupt where your mirror image stands). Major hits are now a share of the hero's MAX hp (`pct`): lasers 24-34%,
+// gravity explosion 35-42%, meteor 32%, void cross 30%, fireball 20-24%, fan orb 8-10%, spiral orb 3%.
+const SEQ1 = [SPIRAL, LASER, FAN, GRAV, MIRROR, RING9, SHUFFLE, FAN, HOLES, EVENT];
+const SEQ2 = [SPIRAL, METEOR, LASER, FAN, EVENT, GRAV, RING9, MIRROR, CROSS, SHUFFLE, FAN, HOLES];
 /** Pause after a basic volley / after a major skill (seconds): stage 1 slower, stage 2 faster; the ordinary Lich keeps LICH_CD. */
-const MAL_GAP_BASIC = [1.5, 1.3], MAL_GAP_MAJOR = [2.4, 1.9];
+const MAL_GAP_BASIC = [1.2, 1.0], MAL_GAP_MAJOR = [2.0, 1.6];
 const isMajor = (p: number): boolean => p >= CROSS && p !== BLINK;
 let seqI = 0, gx = 0, gz = 0, sweepDir = 1;
 const DARK = { dark: true } as const;
@@ -306,7 +309,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
         return;
       }
       lichPosition(e, ux, uz, dist, 0.3);
-      if (e.stateT >= (e.pattern === GRAV || e.pattern === SHUFFLE ? 1.0 : e.pattern === METEOR ? 0.9 : 0.7)) {
+      if (e.stateT >= (e.pattern === GRAV || e.pattern === SHUFFLE || e.pattern === EVENT || e.pattern === MIRROR ? 0.8 : e.pattern === METEOR ? 0.7 : 0.6)) {
         e.patternT = 0;
         e.angle = Math.random() * Math.PI * 2;
         enter(e, 'ATTACK');
@@ -339,7 +342,7 @@ function startLichPattern(e: Enemy, pattern: number): void {
     spawnRune(e.pos.x, e.pos.z);   // departure circle
   } else if (pattern === GRAV) {   // the pulsing indicator marks the gravity centre where the hero stands now
     gx = world.player.pos.x; gz = world.player.pos.z;
-    gravityBegin(gx, gz, e.projectileDamage * (st2() ? 0.9 : 0.75));
+    gravityBegin(gx, gz, st2() ? 0.42 : 0.35);   // explosion = 35% / 42% max hp
   }
 }
 
@@ -366,7 +369,7 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
         for (let k = 0; k < arms; k++) {
           const a = e.angle + (k * Math.PI * 2) / arms;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 8.5 * (s2 ? 1.35 : st1() ? 0.85 : 1), e.projectileDamage * 0.6, { life: 6, radius: world.boss.final ? (s2 ? 1.2 : 0.8) : s2 ? 0.85 : 0.5, ...DARK });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 10 * (s2 ? 1.35 : st1() ? 0.9 : 1), e.projectileDamage * 0.6, { pct: 0.03, life: 6, radius: world.boss.final ? (s2 ? 1.2 : 0.8) : s2 ? 0.85 : 0.5, ...DARK });
         }
       }
       if (e.stateT >= 3.4 + 0.4 * e.phase) enter(e, 'RECOVER');
@@ -382,7 +385,7 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
         for (let i = -wide; i <= wide; i++) {
           const a = base + i * 0.26;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 13 * (s2 ? 1.35 : st1() ? 0.85 : 1), e.projectileDamage * 0.9, { life: 4, radius: world.boss.final ? (s2 ? 1.2 : 0.8) : s2 ? 0.85 : 0.5, ...DARK });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 15 * (s2 ? 1.35 : st1() ? 0.9 : 1), e.projectileDamage * 0.9, { pct: s2 ? 0.1 : 0.08, life: 4, radius: world.boss.final ? (s2 ? 1.2 : 0.8) : s2 ? 0.85 : 0.5, ...DARK });
         }
         e.patternT++;
       }
@@ -398,12 +401,12 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       const fire = (off: number) => {
         for (let k = 0; k < 4; k++) {
           const a = e.angle + off + (k * Math.PI) / 2;
-          queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 1.1, e.projectileDamage * 1.3);
+          queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 0.95, 0.30);
         }
       };
       if (e.patternT === 0) { e.patternT = 1; fire(0); }
-      if (e.patternT === 1 && e.stateT >= 1.0) { e.patternT = 2; fire(Math.PI / 4); }
-      if (e.patternT === 2 && e.stateT >= 2.4) enter(e, 'RECOVER');
+      if (e.patternT === 1 && e.stateT >= 0.85) { e.patternT = 2; fire(Math.PI / 4); }
+      if (e.patternT === 2 && e.stateT >= 2.1) enter(e, 'RECOVER');
       return;
     }
     case GRAV: {   // he waits while the spell runs (indicator, pull, explosion): nothing else happens meanwhile
@@ -423,43 +426,45 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
     }
     case LASER: {   // 3 aimed beams (0.6 s apart), then a sweep of 9 beams across an arc; each lane is a purple telegraph, then a bright beam fires
       stop(e);
-      const pl = world.player.pos, t = e.stateT, dmg = e.projectileDamage * (st2() ? 2.0 : 1.7);
-      if (e.patternT < 3 && t >= e.patternT * 0.6) {
+      const pl = world.player.pos, t = e.stateT, dmg = st2() ? 0.34 : 0.30, sdmg = st2() ? 0.28 : 0.24;   // share of max hp: aimed lane 30 / 34%, sweep lane 24 / 28%
+      if (e.patternT < 3 && t >= e.patternT * 0.5) {
         const a = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z);
-        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.6, 0.95, dmg);
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.6, 0.8, dmg);
         e.patternT++;
-      } else if (e.patternT >= 3 && e.patternT < 12 && t >= 2.3 + (e.patternT - 3) * 0.11) {
+      } else if (e.patternT >= 3 && e.patternT < 12 && t >= 1.9 + (e.patternT - 3) * 0.1) {
         const k = e.patternT - 3;
+        if (k === 0) queueHole(0.3);   // COMBINED: a black hole opens under you and drifts after you while the sweep comes
         if (k === 0) { e.angle = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z); sweepDir = Math.random() < 0.5 ? 1 : -1; }
         const a = e.angle + (k - 4) * 0.24 * sweepDir;
-        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.2, 0.9, dmg);
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.2, 0.75, sdmg);
         e.patternT++;
       }
-      if (e.patternT >= 12 && t >= 4.4) enter(e, 'RECOVER');
+      if (e.patternT >= 12 && t >= 3.8) enter(e, 'RECOVER');
       return;
     }
     case RING9: {   // 9 giant dark fireballs in 360 degrees (a second, offset ring in stage 2); a rare burning patch under each
       stop(e);
       const rings = st2() ? 2 : 1;
-      if (e.patternT < rings && e.stateT >= e.patternT * 1.1) {
+      if (e.patternT < rings && e.stateT >= e.patternT * 0.9) {
         const base = e.angle + e.patternT * (Math.PI / 9);
         setTrailDamage(e.projectileDamage * 0.15);
+        if (e.patternT === 0 && st2()) queueHole(0.4);   // stage 2 COMBINED: a black hole drifts at you during the rings
         for (let i = 0; i < 9; i++) {
           const a = base + (i / 9) * Math.PI * 2;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BIG_FLAME', 8, e.projectileDamage * 0.9, { life: 2.8, radius: 1.3, dark: true, trail: 1.4 });
+          fireEnemyProjectile(e.pos, dirV, 'BIG_FLAME', 10, e.projectileDamage * 0.9, { pct: st2() ? 0.24 : 0.2, life: 2.5, radius: 1.3, dark: true, trail: 1.4 });
         }
         events.emit('shockwave', { pos: e.pos.clone(), radius: 6, color: 0x7c3aed });
         events.emit('shake', { amount: 0.3 });
         e.patternT++;
       }
-      if (e.patternT >= rings && e.stateT >= (rings - 1) * 1.1 + 2.0) enter(e, 'RECOVER');
+      if (e.patternT >= rings && e.stateT >= (rings - 1) * 0.9 + 1.8) enter(e, 'RECOVER');
       return;
     }
     case METEOR: {   // 3 meteors 0.6 s apart: each indicator hunts the hero, locks, a meteor falls, impact (no black hole)
       stop(e);
-      const dmg = e.projectileDamage * 1.4;
-      if (e.patternT < 3 && e.stateT >= e.patternT * 0.6) {
+      const dmg = 0.32;   // 32% max hp
+      if (e.patternT < 3 && e.stateT >= e.patternT * 0.5) {
         const side = e.patternT === 0 ? 0 : 5.5;
         const a = Math.random() * 6.283;
         queueMeteor(Math.sin(a) * side, Math.cos(a) * side, dmg);
@@ -472,6 +477,23 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       stop(e);
       if (e.patternT === 0) { e.patternT = 1; spawnIllusions(e, 2, st2() ? 30 : 20); }
       if (e.stateT >= 1.0) enter(e, 'RECOVER');
+      return;
+    }
+    case EVENT: {   // EVENT HORIZON: the arena is a gravity well; stand in a drifting light pocket until the collapse (85% max hp outside)
+      stop(e);
+      if (e.patternT === 0) { e.patternT = 1; eventHorizonBegin(st2() ? 2 : 3); }
+      if (st2() && e.patternT === 1 && e.stateT >= 4.2) {   // stage 2 COMBINED: a fast fan at you while you hold your pocket
+        e.patternT = 2;
+        const a0 = Math.atan2(ux, uz);
+        for (let i = -2; i <= 2; i++) { dirV.set(Math.sin(a0 + i * 0.22), 0, Math.cos(a0 + i * 0.22)); fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 15, e.projectileDamage * 0.5, { pct: 0.08, life: 3.5, radius: 1.0, dark: true }); }
+      }
+      if (e.stateT >= 0.8 && !ehBusy()) enter(e, 'RECOVER');
+      return;
+    }
+    case MIRROR: {   // SOUL MIRROR: a line splits the arena; spikes erupt on your mirror image
+      stop(e);
+      if (e.patternT === 0) { e.patternT = 1; if (st2()) soulMirrorBegin(4, 1.0, 1.35, 0.34); else soulMirrorBegin(3, 1.25, 1.6, 0.30); }
+      if (e.stateT >= 0.8 && !mirrorBusy()) enter(e, 'RECOVER');
       return;
     }
     default: stop(e); enter(e, 'RECOVER');
