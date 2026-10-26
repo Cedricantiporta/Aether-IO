@@ -205,7 +205,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
         e.pos.set(tv.x, 0, tv.z);
         const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
         d.dirx = dx / l; d.dirz = dz / l; e.facing = Math.atan2(d.dirx, d.dirz); e.dir.set(d.dirx, 0, d.dirz);
-        spawnTelegraphLine(e.pos.x, e.pos.z, d.dirx, d.dirz, 12, 2.2, 0.5, 0xef4444)!.damage = power(e) * 2.2;
+        spawnTelegraphLine(e.pos.x, e.pos.z, d.dirx, d.dirz, 12, 3.8, 0.5, 0xef4444)!.damage = power(e) * 2.2;
         events.emit('trick', { pos: e.pos.clone(), kind: 'SMOKE', radius: 4 });
       }
       if (e.spStep === 2 && t >= 1.4) e.spStep = 3;
@@ -425,6 +425,28 @@ export function spawnIllusions(real: Enemy, n: number, life: number): void {
   }
 }
 
+const shufA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
+const shufX = [0, 0, 0], shufZ = [0, 0, 0];
+/** Malakar's Shuffle step: he and every live illusion jump to a fresh spot around the hero, in random order (called several times in a row). */
+export function shuffleLich(real: Enemy): void {
+  let n = 0; shufA[n++] = real;
+  for (const o of world.enemies) if (n < 3 && o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') shufA[n++] = o;
+  const p = world.player.pos, base = Math.random() * 6.283;
+  for (let i = 0; i < n; i++) {
+    const a = base + (i / n) * 6.283 + (Math.random() - 0.5) * 0.5, r = 8 + Math.random() * 6;
+    tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 4);
+    shufX[i] = tv.x; shufZ[i] = tv.z;
+  }
+  for (let i = n - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = shufA[i]; shufA[i] = shufA[j]; shufA[j] = x; }   // who lands where is random
+  for (let i = 0; i < n; i++) {
+    const o = shufA[i];
+    events.emit('explosion', { pos: o.pos.clone(), radius: 2.5, color: 0x7c3aed });
+    o.pos.set(shufX[i], 0, shufZ[i]);
+    events.emit('spawn', { pos: o.pos, kind: o.kind, elite: false });
+    events.emit('explosion', { pos: o.pos.clone(), radius: 2.5, color: 0x7c3aed });
+  }
+}
+
 function updateIllusion(e: Enemy, dt: number): void {
   const p = world.player.pos, s2 = world.boss.stage === 2;
   const dx = p.x - e.pos.x, dz = p.z - e.pos.z, dist = Math.hypot(dx, dz) || 1, ux = dx / dist, uz = dz / dist;
@@ -439,10 +461,10 @@ function updateIllusion(e: Enemy, dt: number): void {
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
     if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero
       const b = Math.atan2(ux, uz);
-      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.24), 0, Math.cos(b + i * 0.24)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd + 3, e.projectileDamage * 0.7, { life: 4, radius: r }); }
+      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.24), 0, Math.cos(b + i * 0.24)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd + 3, e.projectileDamage * 0.7, { life: 4, radius: r * 1.4, dark: true }); }
     } else {   // ring of orbs
       const m = s2 ? 12 : 9, b = Math.random() * 6.283;
-      for (let i = 0; i < m; i++) { const a = b + (i / m) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd, e.projectileDamage * 0.55, { life: 5, radius: r }); }
+      for (let i = 0; i < m; i++) { const a = b + (i / m) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd, e.projectileDamage * 0.55, { life: 5, radius: r * 1.4, dark: true }); }
     }
   }
   if (e.stateT > e.trickT) popDecoy(e);

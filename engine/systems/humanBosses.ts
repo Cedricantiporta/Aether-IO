@@ -282,7 +282,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
     if (k === 1) { S.wind = 0.35; S.act = 3.0; }
     else if (k === 2) {
       S.wind = 0.8; S.act = 0.5;
-      const zn = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, 14, 3, 0.8, C_STEEL); if (zn) zn.trick = BT.VISUAL;
+      const zn = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, 15, 5, 0.8, C_STEEL); if (zn) zn.trick = BT.VISUAL;
     } else if (k === 3) { S.wind = 0.9; S.act = 0.25; strike(e.pos.x, e.pos.z, 6, 0.9, P * 2.0, STUN | KNOCK, C_RED); }
     else if (k === SWING) { S.wind = 0.45; S.act = 0.15; strike(e.pos.x + dx * 2.1, e.pos.z + dz * 2.1, 2.7, 0.45, P * 0.8, 0, C_STEEL); }
     else { S.wind = 0.9; S.act = 0.2; warnCircle(e.pos.x, e.pos.z, 4, 0.9, 0xffd27a); }   // BANNER
@@ -376,7 +376,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
     }
     if (k === 2) {   // Shield Bash: charge along the telegraphed line, one hit + knockback
       e.vel.set(S.dirX * 26, 0, S.dirZ * 26); requestYaw(Math.atan2(S.dirX, S.dirZ));
-      if (!S.flag && playerIn(e.pos.x, e.pos.z, 1.6)) {
+      if (!S.flag && playerIn(e.pos.x, e.pos.z, 2.6)) {
         S.flag = true;
         damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });   // shield bash connects: knockdown
         applyPlayerDebuff('STUN', 0.4);

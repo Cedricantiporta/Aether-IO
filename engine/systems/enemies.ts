@@ -431,6 +431,15 @@ export function spawnEnemy(
   return e;
 }
 
+/** Malakar's dark wizard: a corrupted Cultist (dark purple-black tint, black-violet bolts, 2x damage, 1.3x size, sturdier). */
+export function spawnDarkWizard(pos: Vector3): Enemy | null {
+  const e = spawnEnemy('CULTIST', pos, { fixed: true });
+  if (!e) return null;
+  e.corrupt = true; e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3;
+  e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp;
+  return e;
+}
+
 /** Wave 5/15/25... mini-boss: elite-like unique (8x hp, +50% size) of a regional kind; drives world.boss HUD. */
 /** The enemy whose hp the boss bar shows (bosses win over minis). */
 let barOwner = -1;
@@ -1943,7 +1952,7 @@ const ELEM_DMG: Partial<Record<EnemyProjectileKind, 'FIRE' | 'ICE' | 'POISON' | 
 const ENEMY_ARROW_SPEED = 0.8;
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
-  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number },
+  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number; dark?: boolean; trail?: number },
 ): void {
   const p = allocEnemyProjectile();
   if (!p) return;
@@ -1961,7 +1970,8 @@ export function fireEnemyProjectile(
   p.debuff = opts?.debuff ?? 0;
   p.traits = curTraits;
   p.owner = curShooter;
-  p.dark = curShooter >= 0 && world.enemies[curShooter].corrupt;   // a corrupted monster's shot is black-purple
+  p.dark = opts?.dark ?? (curShooter >= 0 && world.enemies[curShooter].corrupt);
+  p.trail = opts?.trail ?? 0; p.trailT = 0;   // a corrupted monster's shot is black-purple
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
   if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
 }
@@ -2003,7 +2013,8 @@ export function updateEnemyProjectiles(dt: number): void {
     p.pos.y += p.vel.y * dt;
     p.pos.z += p.vel.z * dt;
     p.life -= dt;
-    if (p.life <= 0 || p.pos.x * p.pos.x + p.pos.z * p.pos.z > maxR * maxR) { p.active = false; if (p.kind === 'BIG_FLAME' && p.life <= 0) hooks.fireImpact(p.pos.x, p.pos.z, p.radius); continue; }
+    if (p.trail! > 0) { p.trailT! -= dt; if (p.trailT! <= 0) { p.trailT = p.trail; hooks.burnTrail(p.pos.x, p.pos.z); } }
+    if (p.life <= 0 || p.pos.x * p.pos.x + p.pos.z * p.pos.z > maxR * maxR) { p.active = false; if (p.kind === 'BIG_FLAME' && p.life <= 0) { if (p.dark) hooks.darkImpact(p.pos.x, p.pos.z, p.radius); else hooks.fireImpact(p.pos.x, p.pos.z, p.radius); } continue; }
 
     // earthwall dome
     if (ew.active) {

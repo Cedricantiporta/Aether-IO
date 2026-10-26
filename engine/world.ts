@@ -50,7 +50,7 @@ function makeProjectile(id: number): Projectile {
 }
 
 function makeEnemyProjectile(id: number): EnemyProjectile {
-  return { id, active: false, kind: 'ORB', pos: v(), vel: v(), life: 0, damage: 0, radius: 0.4, homing: 0, slow: 0, debuff: 0, dark: false };
+  return { id, active: false, kind: 'ORB', pos: v(), vel: v(), life: 0, damage: 0, radius: 0.4, homing: 0, slow: 0, debuff: 0, dark: false, trail: 0, trailT: 0 };
 }
 
 function makeZone(id: number): Zone {

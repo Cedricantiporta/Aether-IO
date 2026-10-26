@@ -19,7 +19,7 @@ const PET_KEYS = ['PET_FIRE', 'PET_GOLD', 'PET_LIGHT', 'PET_WATER'];   // PET_BO
 import { inView } from './view';
 
 const MAXP = 900, MAXE = 600;
-const DARKABLE: ReadonlySet<string> = new Set(['ARROW', 'POISON_ARROW', 'ORB', 'SLOW_ORB', 'FIRE_BOLT', 'BOLT', 'ICE_SHARD', 'FLAME']);
+const DARKABLE: ReadonlySet<string> = new Set(['ARROW', 'POISON_ARROW', 'ORB', 'SLOW_ORB', 'FIRE_BOLT', 'BOLT', 'ICE_SHARD', 'FLAME', 'BOSS_ORB', 'BIG_FLAME']);
 const NOISE = `
 float h31(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float vn3(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f*f*(3.0-2.0*f);
@@ -458,9 +458,9 @@ export function Projectiles() {
       const emit = dt > 0;
       if (dk) {   // corrupted monster's shot: a black core (arrow / orb) with a dim violet glow and a black-violet smoke trail
         if (ek === 'DARK_ARROW') place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), 0, 1.2);
-        else { const pu = 1 + 0.15 * Math.sin(t * 14 + n); place(ims, i, x, y, z, t * 3, t * 2, 0, pu * (p.kind === 'SLOW_ORB' || p.kind === 'ICE_SHARD' ? 0.9 : 1.1)); }
-        pushHalo(x, y, z, 1.6, 0.55, 0.12, 1.1, 0.4, CELL.GLOW);
-        if (emit && Math.random() < dt * 40) FX.norm.emit(x, y, z, (Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6, 0.45, 0.22, 0.5, 0.12, 0.04, 0.2, 0.6, CELL.SMOKE, -0.2, 1.2);
+        else { const pu = 1 + 0.15 * Math.sin(t * 14 + n); const big = Math.max(1, p.radius / 0.4); place(ims, i, x, y, z, t * 3, t * 2, 0, pu * big * (p.kind === 'SLOW_ORB' || p.kind === 'ICE_SHARD' ? 0.9 : 1.1)); }
+        pushHalo(x, y, z, 1.6 * Math.max(1, p.radius / 0.5), 0.55, 0.12, 1.1, 0.4, CELL.GLOW);
+        if (emit && Math.random() < dt * 40 * Math.max(1, p.radius / 0.5)) FX.norm.emit(x + (Math.random() - 0.5) * p.radius, y, z + (Math.random() - 0.5) * p.radius, (Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6, 0.45, 0.22, 0.5, 0.12, 0.04, 0.2, 0.6, CELL.SMOKE, -0.2, 1.2);
         continue;
       }
       switch (p.kind) {

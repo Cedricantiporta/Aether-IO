@@ -37,9 +37,23 @@ export const hz = {
   clouds: Array.from({ length: 8 }, () => ({ on: false, x: 0, z: 0, t: 0, tick: 0, seed: 0 })),
   nIce: 0, ice: Array.from({ length: 6 }, () => ({ x: 0, z: 0, r: 0 })),
   ic: Array.from({ length: 10 }, () => ({ on: false, x: 0, z: 0, t: 0, hit: false, seed: 0 })),
-  nRift: 0, rift: Array.from({ length: 3 }, () => ({ x: 0, z: 0 })),
+  /** black holes: permanent ones (Void rooms, life = Infinity) and timed ones (Malakar's meteors / spell); k = 0..1 fade in / out */
+  nRift: 0, rift: Array.from({ length: 8 }, () => ({ x: 0, z: 0, life: Infinity, age: 0, k: 1 })),
 };
 export const ICICLE_WARN_T = ICICLE_WARN, ICICLE_STAY_T = ICICLE_STAY, CLOUD_LIFE = CLOUD_T;
+export const BH_FORM = 0.9, BH_FADE = 0.6, BH_MAX_TIMED = 4;   // a timed black hole forms for 0.9 s (no pull yet), fades over its last 0.6 s; at most 4 alive
+/** A timed black hole (Malakar): the oldest timed one is recycled when 4 are already alive. Works in any room (the tick below runs whenever nRift > 0). */
+export function spawnBlackHole(x: number, z: number, life: number): void {
+  let timed = 0, oldest = -1;
+  for (let i = 0; i < hz.nRift; i++) if (hz.rift[i].life !== Infinity) { timed++; if (oldest < 0 || hz.rift[i].age > hz.rift[oldest].age) oldest = i; }
+  let r;
+  if (timed >= BH_MAX_TIMED && oldest >= 0) r = hz.rift[oldest];
+  else if (hz.nRift < hz.rift.length) r = hz.rift[hz.nRift++];
+  else if (oldest >= 0) r = hz.rift[oldest];
+  else return;
+  r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0;
+  hz.ver++;
+}
 export const HZ_CLOUD_R = CLOUD_R, HZ_RIFT_PULL_R = RIFT_PULL_R, HZ_RIFT_CORE_R = RIFT_CORE_R, HZ_SHROOM_CD = SHROOM_CD;
 
 /** Live modifiers read by player.ts: speed multiplier, velocity-lerp multiplier (1 = normal, <1 = icy), constant drift (units/s). */
@@ -124,7 +138,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     const n = 3;   // (owner 2026-10-24: the black holes are the Void's stationaries)
     for (let i = 0; i < n && hz.nRift < hz.rift.length; i++) {
       if (!spot(RIFT_PULL_R * 0.7, 3)) continue;
-      const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1];
+      const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1]; rf.life = Infinity; rf.age = 1; rf.k = 1;
       keep(rf.x, rf.z, RIFT_PULL_R);
     }
   }
@@ -164,7 +178,7 @@ function iceMobs(dt: number): void {
 }
 function tickBiomeHazards(dt: number): void {
   const room = world.room, pl = world.player;
-  if (!room.active || hz.kind === HZ.NONE) { hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; return; }
+  if (!room.active || (hz.kind === HZ.NONE && hz.nRift === 0)) { hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; return; }
   const fighting = world.director.phase === 'FIGHT';
   const alive = pl.alive;
   const px = pl.pos.x, pz = pl.pos.z;
@@ -250,16 +264,23 @@ function tickBiomeHazards(dt: number): void {
         }
       } else if (ic.t >= ICICLE_WARN + ICICLE_STAY) ic.on = false;
     }
-  } else {
+  }
+  if (hz.nRift > 0) {
     // ---- black holes: a violent pull + ticking damage for the hero inside the radius (dash to escape); monsters get a gentle pull and an HP drain in the core
     riftCd -= dt; plRiftCd -= dt; inRift = false;
     const tick = riftCd <= 0; if (tick) riftCd = RIFT_TICK;
     for (let i = 0; i < hz.nRift; i++) {
       const r = hz.rift[i];
-      if (alive) {
+      if (r.life !== Infinity) {   // timed: form, live, fade, then swap-remove
+        r.age += dt;
+        if (r.age >= r.life) { hz.rift[i] = hz.rift[hz.nRift - 1]; hz.rift[hz.nRift - 1] = r; hz.nRift--; hz.ver++; i--; continue; }
+        r.k = Math.min(1, r.age / BH_FORM, (r.life - r.age) / BH_FADE);
+      }
+      const live = r.k >= 1 || (r.life !== Infinity && r.age > BH_FORM && r.k > 0);   // (still forming = harmless)
+      if (alive && live) {
         const dx = r.x - px, dz = r.z - pz, d = Math.sqrt(dx * dx + dz * dz);
         if (d < RIFT_PULL_R && d > 0.05) {
-          const s = RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d / RIFT_PULL_R);
+          const s = (RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d / RIFT_PULL_R)) * r.k;
           dX += dx / d * s; dZ += dz / d * s;
           inRift = true;
           if (plRiftCd <= 0 && pl.dashT <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true }); }   // 4% max HP / 0.5 s while caught (not flagged dot: that would x4, HERO_DOT_MUL)
@@ -268,7 +289,7 @@ function tickBiomeHazards(dt: number): void {
       world.enemyGrid.query(r.x, r.z, RIFT_PULL_R + 4, ids);
       for (let k = 0; k < ids.length; k++) {
         const e = world.enemies[ids[k]];
-        if (!mobOk(e) || e.boss || e.mini || isStationary(e.kind)) continue;
+        if (!mobOk(e) || e.boss || e.mini || e.decoy || isStationary(e.kind) || !live) continue;
         const dx = r.x - e.pos.x, dz = r.z - e.pos.z, d = Math.sqrt(dx * dx + dz * dz);
         if (d >= RIFT_PULL_R || d < 0.05) continue;
         const s = RIFT_MOB_PULL * (1 - d / RIFT_PULL_R);

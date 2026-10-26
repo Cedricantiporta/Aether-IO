@@ -7,6 +7,7 @@ import { wardedBossId } from '../engine/systems/bossMech';
 /** The shield sphere around a warded (immune) boss, or a boss holding a damage shield (e.shield): fresnel rim + slow rising hex-like bands, pulses while it holds. */
 export function BossWard() {
   const m = useRef<Mesh>(null!);
+  const ill = useRef<Mesh[]>([]);
   const mat = useMemo(() => new ShaderMaterial({
     transparent: true, depthWrite: false, side: FrontSide, blending: AdditiveBlending,
     uniforms: { uT: { value: 0 }, uA: { value: 0 }, uC: { value: new Color(0.5, 0.75, 1.0) } },
@@ -24,6 +25,16 @@ export function BossWard() {
     const on = !!e && e.active && e.state !== 'DYING';
     mat.uniforms.uA.value = on ? Math.min(1, mat.uniforms.uA.value + dt * 3) : Math.max(0, mat.uniforms.uA.value - dt * 4);
     m.current.visible = mat.uniforms.uA.value > 0.01;
+    // Malakar's illusions wear the same shield as the real one (so the shield never tells them apart)
+    let nI = 0;
+    for (let i = 0; i < world.enemies.length && nI < 2; i++) {
+      const x = world.enemies[i];
+      if (!on || !e || e.kind !== 'BOSS_LICH' || !x.active || !x.decoy || x.trickKind !== 1 || x.state === 'DYING') continue;
+      const mm = ill.current[nI++]; if (!mm) break;
+      const r = Math.min(Math.max(x.radius * 1.45, x.scale * 0.8), x.radius * 1.15 + 0.8) * (1 + Math.sin(mat.uniforms.uT.value * 2.4) * 0.025);
+      mm.visible = true; mm.position.set(x.pos.x, r * 0.55, x.pos.z); mm.scale.setScalar(r);
+    }
+    for (let k = nI; k < 2; k++) if (ill.current[k]) ill.current[k].visible = false;
     if (!on || !e) return;
     mat.uniforms.uT.value += dt;
     const r = Math.min(Math.max(e.radius * 1.45, e.scale * 0.8), e.radius * 1.15 + 0.8) * (   // (owner: the Slime King's bubble was huge) hug the body
@@ -31,5 +42,10 @@ export function BossWard() {
     m.current.position.set(e.pos.x, r * 0.55, e.pos.z);
     m.current.scale.setScalar(r);
   });
-  return <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 40, 24]} /></mesh>;
+  return (
+    <>
+      <mesh ref={m} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 40, 24]} /></mesh>
+      {[0, 1].map((k) => <mesh key={k} ref={(o) => { if (o) ill.current[k] = o; }} material={mat} visible={false} renderOrder={30}><sphereGeometry args={[1, 40, 24]} /></mesh>)}
+    </>
+  );
 }

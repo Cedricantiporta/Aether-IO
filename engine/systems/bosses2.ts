@@ -842,7 +842,7 @@ LISTS.BOSS_WARLORD = [
     name: 'Blazing Rush!', wind: () => 0.55, act: () => 1.0, rec: () => 0.55,
     begin(e, ux, uz, dist) {
       e.dir.set(ux, 0, uz); S.dashLen = Math.min(Math.max(dist - 3, 6), 20);
-      lane(e, ux, uz, S.dashLen + 1, 3.4, 0.55 * fast(e), BT.VISUAL, 0, 0xff5a1a);
+      lane(e, ux, uz, S.dashLen + 1, 5.4, 0.55 * fast(e), BT.VISUAL, 0, 0xff5a1a);   // (owner 2026-10-26) wider red lane + bigger hit area on every boss dash
     },
     fire(e) {
       S.dashPh = 0; S.dashT = S.dashLen / DASH_SP; S.ramHit = false;
@@ -852,9 +852,9 @@ LISTS.BOSS_WARLORD = [
     tick(e, dt, ux, uz) {
       if (S.dashPh === 0) {
         drive(e, S.sdx, S.sdz, DASH_SP); S.slashD += DASH_SP * dt; S.dashT -= dt;
-        laneTrail(e, S.slashD, 3.2, 1.7);
+        laneTrail(e, S.slashD, 3.2, 2.4);
         const p = world.player;
-        if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 1.3) ** 2) {
+        if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 2.2) ** 2) {
           S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
         }
         if (S.dashT <= 0) {   // arrived: a quick aimed slash
@@ -989,12 +989,12 @@ LISTS.BOSS_WARMACH = [
   },
   { // Rampage: the machine lowers itself and charges along a lane, trampling anything in the way.
     name: 'Rampage!', wind: () => 1.6, act: () => 1.8, rec: () => 1.4,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 30, e.radius * 2 + 1, 1.6, BT.VISUAL, 0, 0xff5a1a); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 30, e.radius * 2 + 3, 1.6, BT.VISUAL, 0, 0xff5a1a); },
     fire() { events.emit('shake', { amount: 0.5 }); },
     tick(e) {
       drive(e, e.dir.x, e.dir.z, 13 + 1.5 * e.phase);   // (very slow walker, but the charge is still a real threat: ~25 m lane)
       const p = world.player, d = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
-      if (!S.ramHit && p.alive && d < e.radius + 1.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
+      if (!S.ramHit && p.alive && d < e.radius + 2.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
     },
     end(e) { stand(e); },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },

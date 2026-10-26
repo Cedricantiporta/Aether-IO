@@ -194,6 +194,8 @@ export interface EnemyProjectile {
   slow?: number;         // applies slow to player on hit (0..1)
   debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
+  trail?: number;        // > 0: leaves a burning ground patch every `trail` seconds (Malakar's fireballs)
+  trailT?: number;
   dark?: boolean;        // fired by a corrupted (Void) monster: drawn black-purple
   owner?: number;        // the shooter's enemy id (-1 = boss script / unknown): the hero hits back at it
 }

@@ -92,21 +92,21 @@ export function BiomeHazards() {
       tFill: u(disc, flat(new Color(1.0, 1.7, 2.2), 0.3), 10),
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
       icicle: u(icg, glowMat({ color: new Color(1.1, 1.8, 2.3) }), 10),
-      rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 3),
-      rCore: u(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: '#000000', toneMapped: false }), 3),
-      rDiskO: u(band(2.5, 30, 0.7, '#7a3cff', '#c58bff'), glowMat({ color: new Color(1.2, 0.6, 2.0) }), 3),
-      rDiskI: u(band(1.75, 24, 0.45, '#ff8a2a', '#ffd070'), glowMat({ color: new Color(2.2, 1.2, 0.6) }), 3),
-      rLens: u(lens, glowMat({ color: new Color(2.0, 1.6, 1.3), side: DoubleSide }), 3),
-      rMote: u(new IcosahedronGeometry(0.1, 0), glowMat({ color: new Color(1.6, 0.9, 2.2) }), 3 * MOTES),
-      rTel: u(new RingGeometry(0.965, 1, 64).rotateX(-Math.PI / 2), flat(new Color(1.8, 0.7, 2.4), 0.85), 3),
-      rTel2: u(new RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 1.1, 0.4), 0.55), 3),
-      rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 3),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
+      rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 8),
+      rCore: u(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: '#000000', toneMapped: false }), 8),
+      rDiskO: u(band(2.5, 30, 0.7, '#7a3cff', '#c58bff'), glowMat({ color: new Color(1.2, 0.6, 2.0) }), 8),
+      rDiskI: u(band(1.75, 24, 0.45, '#ff8a2a', '#ffd070'), glowMat({ color: new Color(2.2, 1.2, 0.6) }), 8),
+      rLens: u(lens, glowMat({ color: new Color(2.0, 1.6, 1.3), side: DoubleSide }), 8),
+      rMote: u(new IcosahedronGeometry(0.1, 0), glowMat({ color: new Color(1.6, 0.9, 2.2) }), 8 * MOTES),
+      rTel: u(new RingGeometry(0.965, 1, 64).rotateX(-Math.PI / 2), flat(new Color(1.8, 0.7, 2.4), 0.85), 8),
+      rTel2: u(new RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 1.1, 0.4), 0.55), 8),
+      rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 8),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
     };
   }, []);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
-    const on = world.room.active && hz.kind !== HZ.NONE;
+    const on = world.room.active && hz.kind !== HZ.NONE, bh = world.room.active && hz.nRift > 0;
     let nBr = 0, nMu = 0, nPuff = 0, nRing = 0, nIce = 0, nTel = 0, nIc = 0, nRift = 0, nMote = 0;
     if (on && hz.kind === HZ.GREEN) {
       // (the bramble patches are drawn as piled pack bushes now: BrambleBushes below; the collider / sting zone is unchanged)
@@ -145,10 +145,11 @@ export function BiomeHazards() {
           if (p < 0.3) pushHalo(ic.x, 0.6, ic.z, 5 * (1 - p), 1.0, 1.9, 2.4, 0.7 * (1 - p / 0.3), CELL.GLOW);
         }
       }
-    } else if (on) {
+    }
+    if (bh) {
       for (let i = 0; i < hz.nRift; i++) {
         const r = hz.rift[i]; if (!inView(r.x, r.z, HZ_RIFT_PULL_R + 2)) continue;
-        const pulse = 1 + Math.sin(t * 2.2 + i * 2) * 0.04, rp = HZ_RIFT_PULL_R, yaw = world.camera.yaw;
+        const kk = r.k, pulse = (1 + Math.sin(t * 2.2 + i * 2) * 0.04) * (0.15 + 0.85 * kk), rp = HZ_RIFT_PULL_R * (r.life - r.age < 0.6 ? Math.max(0.2, kk) : 1), yaw = world.camera.yaw;
         setInst(S.rDark, nRift, r.x, 0.05, r.z, 0, HZ_RIFT_CORE_R * 1.25 * pulse, 1, HZ_RIFT_CORE_R * 1.25 * pulse);
         setInst(S.rField, nRift, r.x, 0.045, r.z, 0, rp, 1, rp);
         // the pull radius is ringed on the floor (a violet line + an inward-marching orange one)
