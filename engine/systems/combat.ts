@@ -36,6 +36,7 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup, dropCrystals } from './pickups';
+import { waves } from '../../endlessWaves';
 import { onEnemyDeath, crabArmor, shieldBlock, bossAlive, SHIELD_BACKSTAB_MULT, WINDED_DMG_MULT } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
@@ -527,7 +528,8 @@ export function killEnemy(e: Enemy): void {
   {
     let coins = 0, value = 10;
     const gd = GOLD_DROPPERS[e.kind];
-    if (e.kind === 'BOSS_LICH') { coins = 8; value = 12; }
+    if (waves.on) { coins = e.boss ? 8 : e.mini ? 4 : e.elite ? 2 : Math.random() < 0.3 ? 1 : 0; value = Math.round(8 + wave * 1.5); }   // Endless Waves pays gold only
+    else if (towerMode()) coins = 0;   // (tower / daily: Aether Crystals only, spawnPickup would drop the coins anyway)
     else if (gd) { value = gd[1]; coins = e.elite ? 2 : Math.random() < gd[0] ? 1 : 0; }
     for (let i = 0; i < coins; i++) {
       dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));

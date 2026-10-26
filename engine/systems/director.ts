@@ -127,8 +127,8 @@ let duelCls: HeroClass = 'KNIGHT';
 /** (owner 2026-10-26) several dark heroes at once: the classes of this room's squad (different classes where possible) + the next one to rise. */
 const duelQ: HeroClass[] = [];
 let duelQi = 0;
-/** Each hero's HP share when `n` of them fight at once (1 hero = 1.0): 55-70% of a single duel hero's. */
-const SQUAD_HP = [1, 1, 0.7, 0.65, 0.6, 0.57, 0.55];
+/** Each dark hero's HP as a share of its biome guardian's HP when `n` of them fight at once: a solo duel hero 90% (80-100%), a squad 70% (2) down to 55% (6) each. */
+const SQUAD_HP = [0.9, 0.9, 0.7, 0.66, 0.62, 0.58, 0.55];
 /** How many dark heroes this duel room / champion floor holds: more with depth (adventure biome / tower floor), up to 6. The Gate of Shadows stays a solo duel. */
 function darkCount(): number {
   if (plan.gate !== undefined || debugDuelCls) return 1;
@@ -727,10 +727,9 @@ function activeMarkers(): number {
 function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag: number): void {
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
-  if (tag === 3) {   // dark hero duels are champions too; with several at once each has 55-70% of a single hero's hp
+  if (tag === 3) {   // dark hero duels are champions too; with several at once each has 55-70% of the biome guardian's hp
     const cls = duelQ.length ? duelQ[duelQi++ % duelQ.length] : duelCls;
-    const e = spawnDarkHero(cls, x, z);
-    if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP * SQUAD_HP[Math.min(6, Math.max(1, duelQ.length))]); e.hp = e.maxHp; }
+    spawnDarkHero(cls, x, z, SQUAD_HP[Math.min(6, Math.max(1, duelQ.length))], biomeOf(biome).boss);   // (boss-like HP + armour: darkHero.ts / enemies.bossHpLike)
     return;
   }
   if (tag === 5) {   // humanoid mini boss: champion hp factor like a guardian (-25% more in the depth-10 pre-boss)
@@ -768,7 +767,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const names = finalFight ? { name: 'The Void Herald', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp; e.radius *= 1.1; e.scale *= 1.1; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain (was x3.2 before spawnEnemy's boss HP doubled, 2026-10-26: same total)
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 2.25); e.hp = e.maxHp; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bosses2.ts FINAL_SPLIT; one bar, 2.25x)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
@@ -864,7 +863,9 @@ const at = (x: number, z: number): Vector3 => tmp2.set(x, 0, z);
 
 function grantReward(kind: RewardKind, bonus: number): void {
   const st = useGameStore.getState();
-  if (runInfo.mode !== 'TOWER') { kind = capCard(kind, world.room.biome); if (kind === 'CARD') useCard(world.room.biome); }   // (owner) a limited number of upgrade cards per biome
+  if (runInfo.mode !== 'TOWER') { kind = capCard(kind, world.room.biome); if (kind === 'CARD') useCard(world.room.biome); }
+  else if (waves.on) { if (kind === 'GEMS' || kind === 'ITEM' || kind === 'SHARDS') kind = 'GOLD'; }   // (owner 2026-10-26) Endless Waves: gold only
+  else if (kind === 'GOLD' || kind === 'GEMS' || kind === 'ITEM') kind = 'SHARDS';                     // Tower / Daily: Aether Crystals only (SHARDS = the crystal pile)   // (owner) a limited number of upgrade cards per biome
   if (runCards.guardian > 0 && (plan.type === 'MINIBOSS' || plan.type === 'DUEL' || plan.gate !== undefined)) {   // Guardian's Spoils: these stages also give a card selection
     if (kind === 'CARD') runCards.extraPicks++; else st.openWaveReward(false);
   }
@@ -1134,7 +1135,7 @@ function towerCleared(): void {
   world.run.towerFloor = towerFloor;
   const best = st.recordTowerFloor(towerFloor);
   events.emit('towerFloor', { floor: towerFloor, best });
-  if (towerFloor % 5 === 0) for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, 0), 2 + Math.floor(towerFloor / 5));   // milestone gems
+  if (towerFloor % 5 === 0) dropCrystals(3 + Math.floor(towerFloor / 5), { x: 0, z: 0 });   // milestone crystals (the tower pays Aether Crystals only)
   if (towerFloor % 10 === 0 && best) st.addNotification(`Floor ${towerFloor} milestone reached! Claim its reward at the Endless Tower.`, '#ffd24a', 'BOSS');
 }
 
@@ -1177,12 +1178,6 @@ function onBossCleared(): void {
   if (trial.on) { trialBossCleared(); return; }
   if (runInfo.mode === 'TOWER') {   // a tower boss floor: rewards, then the way up
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
-    bossRewards(); onCleared(); return;
-  }
-  if (plan.gate !== undefined) {   // the Gate of the Herald: rewards, then the way back to the Gatekeeper
-    for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
-    events.emit('biomeClear', { biome });
-    useGameStore.getState().addNotification('The Void Herald falls!', '#fbbf24', 'BOSS');
     bossRewards(); onCleared(); return;
   }
   if (finalFight) {

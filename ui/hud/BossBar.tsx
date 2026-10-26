@@ -3,7 +3,7 @@ import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
 /** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail.
- *  `illusion` = index of a Malakar illusion: the same bar (name, X/X, pips) over the decoy, to confuse the player. */
+ *  `illusion` = index of a Void Herald illusion: the same bar (name, X/X, pips) over the decoy, to confuse the player. */
 export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   const root = useRef<HTMLDivElement>(null);
   const hp = useRef<HTMLDivElement>(null);
@@ -33,7 +33,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
     }
     if (!on) return;
     if (I && !I.onScreen) { if (root.current) root.current.style.opacity = '0'; return; }
-    // (owner) the real boss bar is docked top-centre under the gold / gems row; Malakar's illusion bars still float over the decoys
+    // (owner) the real boss bar is docked top-centre under the gold / gems row; the Herald's illusion bars still float over the decoys
     if (root.current && !I) {
       const r = root.current;
       r.style.transform = `translate(${(window.innerWidth / 2 - r.offsetWidth / 2).toFixed(1)}px, var(--bb-top, 3.3rem))`;

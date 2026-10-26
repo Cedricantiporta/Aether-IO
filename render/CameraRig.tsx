@@ -143,9 +143,9 @@ export function CameraRig() {
         B.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
         B.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; B.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
       } else B.onScreen = false;
-      // Malakar's illusions: identical bars over each decoy
+      // the Void Herald's illusions: identical bars over each decoy
       let n = 0;
-      if (B.active) for (let i = 0; i < world.enemies.length && n < 2; i++) {
+      if (B.active) for (let i = 0; i < world.enemies.length && n < 4; i++) {
         const m = world.enemies[i];
         if (!m.active || !m.decoy || m.trickKind !== 1 || m.state === 'DYING') continue;
         const I = world.illusionBars[n++];
@@ -154,7 +154,16 @@ export function CameraRig() {
         I.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
         I.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; I.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
       }
-      for (; n < 2; n++) world.illusionBars[n].active = false;
+      for (; n < 4; n++) world.illusionBars[n].active = false;
+      // dark hero squad: a small bar over each hero's head
+      for (let k = 0; k < world.darkBars.length; k++) {
+        const D = world.darkBars[k];
+        const m = D.active && D.id >= 0 ? world.enemies[D.id] : null;
+        if (!m || !m.active || m.state === 'DYING') { D.onScreen = false; continue; }
+        _d.set(m.pos.x, 2 + m.scale * 1.6, m.pos.z).project(cam);
+        D.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
+        D.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; D.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      }
     }
 
     // ---- Lights Out (Void Herald phase): where the Herald is on screen, the darkness keeps a dim hole round it

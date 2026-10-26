@@ -40,13 +40,14 @@ export function resetPickups(): void {
  */
 /** Seconds an item lies on the ground before it vanishes. */
 export const ITEM_DESPAWN = 180;
-/** (owner 2026-10-26) The tower family (Endless Tower, Daily Trial, Endless Waves run as mode 'TOWER'): in-run loot is ONLY gold, hero orbs and Aether Crystals
+/** (owner 2026-10-26) The tower family (Endless Tower, Daily Trial, Endless Waves run as mode 'TOWER'): in-run loot is ONLY Aether Crystals (plus hearts / mana orbs)
  *  (Endless Waves: gold only, no crystals). Every item / shard / gem pickup is dropped here, whatever system asked for it (crates, chests, reward rooms,
  *  boss rewards, champions...). Items the hero dropped on purpose are never blocked. */
 function towerBlocks(kind: PickupKind, item?: Item): boolean {
   if (runInfo.mode !== 'TOWER' || !world.room.active || showcase.on) return false;
   if (kind === 'ITEM') return !(item && droppedItems.has(item.id));
-  return kind === 'SHARD' || kind === 'GEM' || (kind === 'CRYSTAL' && waves.on);
+  if (waves.on) return kind === 'SHARD' || kind === 'GEM' || kind === 'CRYSTAL';   // Endless Waves: gold only
+  return kind === 'SHARD' || kind === 'GEM' || kind === 'GOLD';   // Endless Tower / Daily Trial: Aether Crystals only
 }
 export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?: Item): void {
   if (towerBlocks(kind, item)) return;

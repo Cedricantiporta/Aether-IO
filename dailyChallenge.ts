@@ -97,12 +97,12 @@ export const dailyBiomeName = (d: DailyDef): string => BIOMES[d.biome % BIOMES.l
 export const dailyMult = (d: DailyDef): number => 1 + d.mods.reduce((s, m) => s + DAILY_MODS[m].bonus, 0);
 
 // ---------------------------------------------------------------- rewards ---
-export interface DailyReward { gold: number; gems: number; crystals: number; bonusShards: number; bonusRarity: Rarity }
-/** Paid on the first completion of the day. `streak` = consecutive days completed, counting today. */
+export interface DailyReward { crystals: number }
+/** (owner 2026-10-26) the tower family pays Aether Crystals only (the Daily Trial: no gold / gems / shards). */
 export function dailyReward(streak: number): DailyReward {
   const s = Math.max(1, streak), k = 1 + 0.1 * Math.min(6, s - 1);   // +10% per streak day, up to +60% (day 7)
-  const week = s % 7 === 0;                                          // every 7th day: an Epic shard on top
-  return { gold: Math.round(8000 * k / 10) * 10, gems: Math.round(40 * k) + (week ? 60 : 0), crystals: 60, bonusShards: week ? 1 : 0, bonusRarity: 'EPIC' };   // (owner) bigger gold, 60 Aether Crystals instead of a shard
+  const week = s % 7 === 0;                                          // every 7th day: +100 crystals on top
+  return { crystals: Math.round(100 * k) + (week ? 100 : 0) };
 }
 
 // ------------------------------------------------------------------ score ---

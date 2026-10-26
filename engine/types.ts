@@ -273,6 +273,7 @@ export interface GroundFx {
   launch: boolean;            // SPIKE: launches enemies (Earthsplitter)
   color: number;
   hostile: boolean;           // dark hero copy of a hero effect: visual only here, its hit is resolved by darkHero.ts (hooks.hostileFx)
+  own: number;                // (hostile fx) the dark hero slot that made it, -1 none
 }
 
 // ---------------------------------------------------------------- pickups --

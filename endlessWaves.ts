@@ -8,7 +8,6 @@
 // the store persists progress.wavesBest / wavesClaimed.
 // ============================================================================
 import type { RoomPlan } from './engine/types';
-import type { Rarity } from './types';
 
 export const WAVES_BIOMES = 7;
 export const WAVE_BREAK = 2.5;        // seconds of breather between waves (owner 2026-10-26: halved from 5; min ~2 s)
@@ -53,14 +52,16 @@ export const waveCrowd = (w: number): number => 0.8 + Math.min(1.0, w * 0.035); 
 
 // ------------------------------------------------------- milestones ---
 export const WAVE_MILESTONES = [10, 20, 30, 50] as const;
-export interface WaveMilestone { wave: number; gems: number; shards: number; rarity: Rarity }
+export interface WaveMilestone { wave: number; gold: number }
+/** (owner 2026-10-26) Endless Waves pays gold only (no gems, shards, items or crystals). */
 export function waveMilestone(w: number): WaveMilestone | null {
   switch (w) {
-    case 10: return { wave: 10, gems: 50, shards: 3, rarity: 'RARE' };
-    case 20: return { wave: 20, gems: 100, shards: 3, rarity: 'EPIC' };
-    case 30: return { wave: 30, gems: 150, shards: 2, rarity: 'LEGENDARY' };
-    case 50: return { wave: 50, gems: 300, shards: 1, rarity: 'MYTHIC' };
+    case 10: return { wave: 10, gold: 30000 };
+    case 20: return { wave: 20, gold: 80000 };
+    case 30: return { wave: 30, gold: 150000 };
+    case 50: return { wave: 50, gold: 400000 };
     default: return null;
   }
 }
-export const milestoneText = (m: WaveMilestone): string => `${m.gems} gems + ${m.shards} ${m.rarity.charAt(0) + m.rarity.slice(1).toLowerCase()} shard${m.shards > 1 ? 's' : ''}`;
+export const milestoneText = (m: WaveMilestone): string => `${m.gold.toLocaleString('en-US')} gold`;
+

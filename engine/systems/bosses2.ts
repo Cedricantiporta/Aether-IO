@@ -92,7 +92,7 @@ export function resetBosses2(): void {
   S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0; S.guardT = 0; S.shT = 0; S.dashPh = 2;
-  S.voidOn = false; S.gravT = 0; S.pushed = false; S.vform = 0; S.vformT = 0;
+  S.voidOn = false; S.gravT = 0; S.pushed = false; S.vform = 0; S.vformT = 0; bp.xformId = -1;
 }
 
 // ------------------------------------------------------------------ helpers ---
@@ -1235,6 +1235,8 @@ LISTS.BOSS_VOID!.push(
     done: (e) => e.patternT === 2 && e.stateT >= 2.1,
   },
 );
+/** The final fight's HP pool = form 1 (1x the Void boss's HP) + form 2 (1.25x); the transformation starts when form 1's share is spent. */
+export const FINAL_SPLIT = 1.25 / 2.25;
 const HERALD_F1 = [V_PORTALS, V_LASERS, V_ECHOES, V_WELL, V_MIRRORS, V_RING, V_HOLES, V_HORIZON, V_GRAVITY, V_SOUL];
 const HERALD_F2 = [V_STORM, V_METEORS, V_LASERS, V_HORIZON, V_WELL, V_CROSS, V_MIRRORS, V_SOUL, V_HOLES, V_RING, V_STORM, V_GRAVITY];
 
@@ -1243,7 +1245,7 @@ function startTransform(e: Enemy): void {
   const list = LISTS.BOSS_VOID!, a = list[e.pattern];
   if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
   enter(e, 'CHASE'); stand(e);
-  S.vformT = 3.0; S.vform = 1; e.attackCd = 1.0;
+  S.vformT = 3.0; S.vform = 1; e.attackCd = 1.0; bp.xformId = e.id;   // untouchable while the wings tear open
   clearDecoys(); clearVoidFx();
   circle(e.pos.x, e.pos.z, 12, 3.0, BT.VISUAL, 0, 0xc084fc);   // get clear of the nova
   events.emit('shake', { amount: 0.7 });
@@ -1257,14 +1259,13 @@ function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   const list = LISTS.BOSS_VOID!;
   tickVoidFx(dt);
   mfx.major = e.state !== 'CHASE' && e.pattern >= V_HORIZON && S.vformT <= 0;   // his illusions hold their basic volleys during a major skill
-  if (S.vform === 0 && !bp.on && e.hp < e.maxHp * 0.5) startTransform(e);
+  if (S.vform === 0 && !bp.on && e.hp < e.maxHp * (world.boss.final ? FINAL_SPLIT : 0.5)) startTransform(e);
   if (S.vformT > 0) {
     S.vformT -= dt; stand(e);
     if (Math.random() < dt * 6) events.emit('explosion', { pos: tv.set(e.pos.x + (Math.random() - 0.5) * 8, 1 + Math.random() * 5, e.pos.z + (Math.random() - 0.5) * 8).clone(), radius: 1.6, color: 0xa855f7 });
     if (S.vformT <= 0) {
-      S.vform = 2; S.cycle = 0;
-      e.radius *= 1.25; e.scale *= 1.25; e.speed *= 1.2; e.projectileDamage *= 1.15; e.contactDamage *= 1.15; e.attackCd = 0.8;
-      if (world.boss.final) { e.maxHp = Math.round(e.maxHp * 1.25); e.hp = Math.round(e.hp * 1.25); }   // the final fight's second stage: +25% hp (like Malakar's old second stage)
+      S.vform = 2; S.cycle = 0; bp.xformId = -1;
+      e.radius *= 1.15; e.scale *= 1.15; e.speed *= 1.2; e.projectileDamage *= 1.15; e.contactDamage *= 1.15; e.attackCd = 0.8;
       world.boss.stage = 2;
       spawnWave(e.pos.x, e.pos.z, 18, 26, 1.8, pwr(e) * 1.1, WAVE_VOID, 0xc084fc, e.radius);
       events.emit('shockwave', { pos: e.pos.clone(), radius: 22, color: 0xe9d5ff });

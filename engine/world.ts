@@ -62,7 +62,7 @@ function makeZone(id: number): Zone {
 }
 
 function makeFx(id: number): GroundFx {
-  return { id, active: false, kind: 'RAIN_ARROW', x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, radius: 1, dmg: 0, aux: 0, seed: 0, done: false, launch: false, color: 0xffffff, hostile: false };
+  return { id, active: false, kind: 'RAIN_ARROW', x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, radius: 1, dmg: 0, aux: 0, seed: 0, done: false, launch: false, color: 0xffffff, hostile: false, own: -1 };
 }
 
 function makePickup(id: number): Pickup {
@@ -164,8 +164,10 @@ export const world = {
     // click-to-walk: follow waypoints wp[0..n) (current = i, (x, z) = the waypoint being walked to), then do `act`
     go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
   boss: { active: false, interrupt: 0, interruptOn: false, interruptLabel: '', stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0, shield: 0, shieldMax: 0 } as BossHud,
-  /** Malakar's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
-  illusionBars: [0, 1].map(() => ({ active: false, hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
+  /** Dark hero squad: a small hp bar over each hero's head (darkHero.ts fills hp, CameraRig the screen anchor, ui/hud/SquadBars draws them). */
+  darkBars: [0, 1, 2, 3, 4, 5].map(() => ({ active: false, id: -1, name: '', hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
+  /** The Void Herald's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
+  illusionBars: [0, 1, 2, 3].map(() => ({ active: false, hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
   camera: { trauma: 0, zoom: 1, yaw: 0, pitch: CAM_PITCH0, dist: 1, uz: 1 } as CameraState,
   input: { keys: {}, pressed: {}, pointerNdc: { x: 0, y: 0 }, mouseDown: false, joy: { x: 0, z: 0, active: false }, aimStick: { x: 0, z: 0, active: false }, touchAim: { active: false, id: '', dx: 0, dz: 0, mag: 0, cancel: false }, cancelAim: false } as InputState,
@@ -232,7 +234,7 @@ export function allocZone(): Zone | null {
 export function allocFx(): GroundFx | null {
   const f = grab(world.fx, 'fx');
   if (!f) return null;
-  f.t = 0; f.done = false; f.launch = false; f.hostile = false; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
+  f.t = 0; f.done = false; f.launch = false; f.hostile = false; f.own = -1; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
   return f;
 }
 

@@ -1332,10 +1332,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ progress: { ...p, daily } });
       if (first) {
         const rw = dailyReward(streak), now = get();
-        set({ gold: now.gold + rw.gold, gems: now.gems + rw.gems, crystals: (now.crystals ?? 0) + rw.crystals, ...(rw.bonusShards ? { materials: { ...now.materials, [rw.bonusRarity]: now.materials[rw.bonusRarity] + rw.bonusShards } } : {}) });
+        set({ crystals: (now.crystals ?? 0) + rw.crystals });
         notify(`Daily Trial reward${streak > 1 ? ` · ${streak}-day streak` : ''}!`, '#ffd24a', 'SYSTEM');
-        feedReward({ gold: rw.gold, gems: rw.gems, crystals: rw.crystals });
-        if (rw.bonusShards) feedReward({ shards: rw.bonusShards, shardRarity: rw.bonusRarity });
+        feedReward({ crystals: rw.crystals });
       }
       return { rewarded: first, newBest: r.score > prevBest };
     },
@@ -1430,9 +1429,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       set({ progress });
       if (grant && m) {
         const now = get();
-        set({ gems: now.gems + m.gems, materials: { ...now.materials, [m.rarity]: now.materials[m.rarity] + m.shards } });
+        set({ gold: now.gold + m.gold });
         notify(`Endless Waves: wave ${wave} milestone reward!`, '#ffd24a', 'BOSS');
-        feedReward({ gems: m.gems, shards: m.shards, shardRarity: m.rarity });
+        feedReward({ gold: m.gold });
       }
       return wave > best;
     },
