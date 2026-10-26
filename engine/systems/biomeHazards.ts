@@ -38,20 +38,27 @@ export const hz = {
   nIce: 0, ice: Array.from({ length: 6 }, () => ({ x: 0, z: 0, r: 0 })),
   ic: Array.from({ length: 10 }, () => ({ on: false, x: 0, z: 0, t: 0, hit: false, seed: 0 })),
   /** black holes: permanent ones (Void rooms, life = Infinity) and timed ones (Malakar's meteors / spell); k = 0..1 fade in / out */
-  nRift: 0, rift: Array.from({ length: 8 }, () => ({ x: 0, z: 0, life: Infinity, age: 0, k: 1 })),
+  nRift: 0, rift: Array.from({ length: 9 }, () => ({ x: 0, z: 0, life: Infinity, age: 0, k: 1, s: 1, vis: false, follow: 0 })),   // s = visual scale, vis = picture only (no pull / damage: Malakar's gravity spell), follow = chase speed
 };
 export const ICICLE_WARN_T = ICICLE_WARN, ICICLE_STAY_T = ICICLE_STAY, CLOUD_LIFE = CLOUD_T;
 export const BH_FORM = 0.9, BH_FADE = 0.6, BH_MAX_TIMED = 4;   // a timed black hole forms for 0.9 s (no pull yet), fades over its last 0.6 s; at most 4 alive
 /** A timed black hole (Malakar): the oldest timed one is recycled when 4 are already alive. Works in any room (the tick below runs whenever nRift > 0). */
-export function spawnBlackHole(x: number, z: number, life: number): void {
+export function spawnBlackHole(x: number, z: number, life: number, follow = 0): void {
   let timed = 0, oldest = -1;
-  for (let i = 0; i < hz.nRift; i++) if (hz.rift[i].life !== Infinity) { timed++; if (oldest < 0 || hz.rift[i].age > hz.rift[oldest].age) oldest = i; }
+  for (let i = 0; i < hz.nRift; i++) { const q = hz.rift[i]; if (q.life !== Infinity && !q.vis) { timed++; if (oldest < 0 || q.age > hz.rift[oldest].age) oldest = i; } }
   let r;
   if (timed >= BH_MAX_TIMED && oldest >= 0) r = hz.rift[oldest];
   else if (hz.nRift < hz.rift.length) r = hz.rift[hz.nRift++];
   else if (oldest >= 0) r = hz.rift[oldest];
   else return;
-  r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0;
+  r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0; r.s = 1; r.vis = false; r.follow = follow;
+  hz.ver++;
+}
+/** A picture-only black hole `scale` times the normal size (Malakar's gravity spell: the pull / damage are applied by malakarFx). */
+export function spawnGravityVisual(x: number, z: number, life: number, scale: number): void {
+  if (hz.nRift >= hz.rift.length) return;
+  const r = hz.rift[hz.nRift++];
+  r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0; r.s = scale; r.vis = true; r.follow = 0;
   hz.ver++;
 }
 export const HZ_CLOUD_R = CLOUD_R, HZ_RIFT_PULL_R = RIFT_PULL_R, HZ_RIFT_CORE_R = RIFT_CORE_R, HZ_SHROOM_CD = SHROOM_CD;
@@ -138,7 +145,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
     const n = 3;   // (owner 2026-10-24: the black holes are the Void's stationaries)
     for (let i = 0; i < n && hz.nRift < hz.rift.length; i++) {
       if (!spot(RIFT_PULL_R * 0.7, 3)) continue;
-      const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1]; rf.life = Infinity; rf.age = 1; rf.k = 1;
+      const rf = hz.rift[hz.nRift++]; rf.x = spotOut[0]; rf.z = spotOut[1]; rf.life = Infinity; rf.age = 1; rf.k = 1; rf.s = 1; rf.vis = false; rf.follow = 0;
       keep(rf.x, rf.z, RIFT_PULL_R);
     }
   }
@@ -276,6 +283,11 @@ function tickBiomeHazards(dt: number): void {
         r.age += dt;
         if (r.age >= r.life) { hz.rift[i] = hz.rift[hz.nRift - 1]; hz.rift[hz.nRift - 1] = r; hz.nRift--; hz.ver++; i--; continue; }
         r.k = Math.min(1, r.age / BH_FORM, (r.life - r.age) / BH_FADE);
+      }
+      if (r.vis) continue;   // (picture only)
+      if (r.follow > 0 && alive && r.age > BH_FORM) {   // a summoned hole drifts after the hero, slower than walking
+        const fx = px - r.x, fz = pz - r.z, fd = Math.hypot(fx, fz);
+        if (fd > 1.2) { r.x += fx / fd * r.follow * dt; r.z += fz / fd * r.follow * dt; }
       }
       const live = r.k >= 1 || (r.life !== Infinity && r.age > BH_FORM && r.k > 0);   // (still forming = harmless)
       if (alive && live) {

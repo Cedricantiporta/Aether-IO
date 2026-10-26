@@ -11,7 +11,7 @@
 //   phase     0/1/2 at 66% / 33% hp
 //
 // GOLEM patterns: 0 SLAM, 1 ROCK_RING, 2 CHARGE
-// LICH  patterns: 0 SPIRAL, 1 FAN, 2 BLINK, 3 SUMMON
+// LICH  patterns: 0 SPIRAL, 1 FAN, 2 BLINK (Malakar's final-fight rotation: see SEQ1 / SEQ2 below)
 // The wave 30-70 bosses live in bosses2.ts (dispatched from updateBoss below).
 // ============================================================================
 import { Vector3 } from 'three';
@@ -23,23 +23,21 @@ import { KB, damagePlayer } from './combat';
 import { BOSS_NAMES, type BossKind } from '../enemyDefs';
 import { useGameStore } from '../../store';
 import {
-  enter, fireEnemyProjectile, findSpawnPoint, requestYaw, spawnEnemy,
+  enter, fireEnemyProjectile, findSpawnPoint, requestYaw,
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
 import { bossWarded } from './bossMech';
-import { spawnIllusions, shuffleLich } from './bossSpecials';
-import { gravityWell, queueMeteor, tickMalakarFx, setTrailDamage, C_DARK, C_DEEP } from './malakarFx';
-import { spawnBlackHole } from './biomeHazards';
-import { spawnDarkWizard } from './enemies';
+import { spawnIllusions } from './bossSpecials';
+import { mfx, queueLaser, queueMeteor, queueHole, gravityBegin, gravityBusy, meteorsBusy, holesBusy, spawnRune, tickMalakarFx, setTrailDamage } from './malakarFx';
 
 const dirV = new Vector3();
 const posV = new Vector3();
 
 // golem
 const SLAM = 0, RING = 1, CHARGE = 2;
-// lich
-const SPIRAL = 0, FAN = 1, BLINK = 2, SUMMON = 3;
+// lich (the ordinary Lich loops SPIRAL, FAN, BLINK; Malakar has no summons at all, owner 2026-10-26)
+const SPIRAL = 0, FAN = 1, BLINK = 2;
 
 const GOLEM_CD = [2.4, 1.8, 1.3];
 const LICH_CD = [1.6, 1.2, 0.9];
@@ -49,8 +47,6 @@ const BLINK_IN = 0.4;
 /** Seconds between the Lich's "don't hug me" blinks (balance pass: it used to blink EVERY time a melee hero got within
  *  6 u, so a Knight could not land hits and one fight ran ~9 min with 179 cultists summoned). */
 const HUG_BLINK_CD = 4;
-/** The Lich only summons while fewer than this many monsters are alive (was 14: peaks of 12-19 adds). */
-const LICH_SUMMON_CAP = 9;
 let hugBlinkT = 0;
 const DASH_LANE_W = 5.6, DASH_HIT_R = 2.6;
 let chargeHit = false;
@@ -253,16 +249,19 @@ function lichPosition(e: Enemy, ux: number, uz: number, dist: number, mul: numbe
 const st2 = (): boolean => world.boss.final && world.boss.stage === 2;
 /** Stage 1 of the final fight: slower patterns and orbs, fewer adds. */
 const st1 = (): boolean => world.boss.final && world.boss.stage === 1;
-const RAIN = 4, CROSS = 5;
-// (owner 2026-10-26) Malakar's black-purple arsenal: GRAV a giant gravity well, HOLES summoned black holes, LASER telegraphed beams (aimed + a sweep),
-// RING9 nine giant fireballs in 360 degrees leaving burning trails, METEOR (stage 2) a meteor shower whose impacts open black holes,
-// SHUFFLE the illusions and the real one teleport around several times in a row, WIZ two dark wizards.
-const GRAV = 6, HOLES = 7, LASER = 8, RING9 = 9, METEOR = 10, SHUFFLE = 11, WIZ = 12;
-const SEQ1 = [SPIRAL, GRAV, FAN, LASER, SUMMON, RING9, HOLES, BLINK, WIZ, SHUFFLE];
-const SEQ2 = [SPIRAL, RING9, LASER, GRAV, FAN, METEOR, SHUFFLE, CROSS, SUMMON, HOLES, RAIN, WIZ, BLINK];
+const CROSS = 5;
+// (owner 2026-10-26) Malakar's dark-violet, gravity-themed arsenal; ONE major skill at a time with a breather between them, no summons:
+// GRAV gravity spell (indicator, whole-arena pull, damage core, explosion), HOLES summoned black holes that follow the hero, LASER telegraphed beams
+// (aimed + sweep), RING9 nine giant dark fireballs, METEOR (stage 2) a tracking meteor, SHUFFLE (illusions: one teleport into a ring round the hero),
+// CROSS (stage 2) the void cross of beams. SPIRAL / FAN are the basic volleys between the majors.
+const GRAV = 6, HOLES = 7, LASER = 8, RING9 = 9, METEOR = 10, SHUFFLE = 11;
+const SEQ1 = [SPIRAL, LASER, FAN, GRAV, RING9, SHUFFLE, FAN, HOLES];
+const SEQ2 = [SPIRAL, METEOR, LASER, FAN, GRAV, RING9, CROSS, SHUFFLE, FAN, HOLES];
+/** Pause after a basic volley / after a major skill (seconds): stage 1 slower, stage 2 faster; the ordinary Lich keeps LICH_CD. */
+const MAL_GAP_BASIC = [1.5, 1.3], MAL_GAP_MAJOR = [2.4, 1.9];
+const isMajor = (p: number): boolean => p >= CROSS && p !== BLINK;
 let seqI = 0, gx = 0, gz = 0, sweepDir = 1;
 const DARK = { dark: true } as const;
-function wizardsAlive(): number { let n = 0; for (const o of world.enemies) if (o.active && o.corrupt && o.kind === 'CULTIST' && o.state !== 'DYING') n++; return n; }
 
 /** Malakar in the final fight: a periodic damage-absorbing shield (both fights). */
 function malakar(e: Enemy, dt: number): void {
@@ -278,7 +277,7 @@ function malakar(e: Enemy, dt: number): void {
 }
 
 function lich(e: Enemy, dt: number, dist: number): void {
-  if (world.boss.final) { malakar(e, dt); tickMalakarFx(dt); }
+  if (world.boss.final) { malakar(e, dt); tickMalakarFx(dt); mfx.major = e.state !== 'CHASE' && isMajor(e.pattern); }
   const player = world.player.pos;
   const dx = player.x - e.pos.x;
   const dz = player.z - e.pos.z;
@@ -294,9 +293,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
       if (e.attackCd <= 0) {
         let next: number;
         if (world.boss.final) { const q = st2() ? SEQ2 : SEQ1; next = q[seqI++ % q.length]; }
-        else next = (e.pattern + 1) % 4;
-        if (next === SUMMON && world.director.aliveCount >= LICH_SUMMON_CAP) next = SPIRAL;
-        if (next === WIZ && wizardsAlive() >= 2) next = LASER;
+        else next = (e.pattern + 1) % 3;
         startLichPattern(e, next);
       }
       return;
@@ -308,7 +305,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
         return;
       }
       lichPosition(e, ux, uz, dist, 0.3);
-      if (e.stateT >= (e.pattern === SUMMON || e.pattern === GRAV || e.pattern === WIZ ? 1.0 : e.pattern === METEOR ? 0.9 : 0.7)) {
+      if (e.stateT >= (e.pattern === GRAV || e.pattern === SHUFFLE ? 1.0 : e.pattern === METEOR ? 0.9 : 0.7)) {
         e.patternT = 0;
         e.angle = Math.random() * Math.PI * 2;
         enter(e, 'ATTACK');
@@ -322,7 +319,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
       lichPosition(e, ux, uz, dist, 0.4);
       const rec = e.pattern === BLINK ? 0.2 : 0.8;
       if (e.stateT >= rec) {
-        e.attackCd = e.pattern === BLINK ? 0.3 : LICH_CD[e.phase] * (st2() ? 0.65 : st1() ? 1.35 : 1);
+        e.attackCd = e.pattern === BLINK ? 0.3 : world.boss.final ? (isMajor(e.pattern) ? MAL_GAP_MAJOR : MAL_GAP_BASIC)[st2() ? 1 : 0] - 0.15 * e.phase : LICH_CD[e.phase];
         enter(e, 'CHASE');
       }
       return;
@@ -337,18 +334,18 @@ function startLichPattern(e: Enemy, pattern: number): void {
   e.patternT = 0;
   enter(e, 'WINDUP');
   if (pattern === BLINK) {
-    events.emit('shockwave', { pos: e.pos.clone(), radius: 4, color: 0x38bdf8 });
-  } else if (pattern === SUMMON || pattern === WIZ) {
-    events.emit('telegraph', { pos: e.pos, radius: 6, duration: 1.0 });
-  } else if (pattern === GRAV) {   // the well forms where the hero stands now: a big dark circle warns
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 4, color: 0xa855f7 });
+    spawnRune(e.pos.x, e.pos.z);   // departure circle
+  } else if (pattern === GRAV) {   // the pulsing indicator marks the gravity centre where the hero stands now
     gx = world.player.pos.x; gz = world.player.pos.z;
-    spawnTelegraphCircle(gx, gz, 11, 1.0, 0, C_DARK);
+    gravityBegin(gx, gz, e.projectileDamage * (st2() ? 0.9 : 0.75));
   }
 }
 
 function doBlink(e: Enemy): void {
   if (findSpawnPoint(12, 16, posV)) {
     e.pos.set(posV.x, 0, posV.z);
+    spawnRune(e.pos.x, e.pos.z);   // arrival circle
     events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
   }
   enter(e, 'ATTACK'); // fading back in
@@ -395,141 +392,87 @@ function lichAttack(e: Enemy, dt: number, ux: number, uz: number, dist: number):
       stop(e);
       if (e.stateT >= BLINK_IN) enter(e, 'RECOVER');
       return;
-    case RAIN: {   // Soul Rain (stage 2): 9 soulfire circles walk onto the hero, one every 0.16 s
-      lichPosition(e, ux, uz, dist, 0.3);
-      const pl = world.player;
-      while (e.patternT < 9 && e.stateT >= e.patternT * 0.16) {
-        const lead = e.patternT % 3 === 0 ? 0 : 2.5;
-        const ox = (Math.random() - 0.5) * 6 + pl.vel.x * 0.25 * lead, oz = (Math.random() - 0.5) * 6 + pl.vel.z * 0.25 * lead;
-        spawnTelegraphCircle(pl.pos.x + ox, pl.pos.z + oz, 3.4, 1.0, e.projectileDamage * 1.3, C_DARK);
-        e.patternT++;
-      }
-      if (e.patternT >= 9 && e.stateT >= 1.8) enter(e, 'RECOVER');
-      return;
-    }
-    case CROSS: {   // the Void Cross (stage 2): 4 long beams from Malakar, then 4 more turned 45 degrees
+    case CROSS: {   // the Void Cross (stage 2): 4 long violet beams from Malakar, then 4 more turned 45 degrees
       stop(e);
       const fire = (off: number) => {
         for (let k = 0; k < 4; k++) {
           const a = e.angle + off + (k * Math.PI) / 2;
-          const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 1.1, C_DEEP);
-          if (z) z.damage = e.projectileDamage * 1.6;
+          queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 1.1, e.projectileDamage * 1.3);
         }
       };
       if (e.patternT === 0) { e.patternT = 1; fire(0); }
-      if (e.patternT === 1 && e.stateT >= 0.7) { e.patternT = 2; fire(Math.PI / 4); }
-      if (e.stateT >= 2.0) enter(e, 'RECOVER');
+      if (e.patternT === 1 && e.stateT >= 1.0) { e.patternT = 2; fire(Math.PI / 4); }
+      if (e.patternT === 2 && e.stateT >= 2.4) enter(e, 'RECOVER');
       return;
     }
-    case GRAV: {
+    case GRAV: {   // he waits while the spell runs (indicator, pull, explosion): nothing else happens meanwhile
       stop(e);
-      if (e.patternT === 0) { e.patternT = 1; gravityWell(gx, gz, 11, 5.5, e.projectileDamage * (st2() ? 0.45 : 0.35)); }
-      if (e.stateT >= 0.6) enter(e, 'RECOVER');
+      if (e.stateT >= 0.8 && !gravityBusy()) enter(e, 'RECOVER');
       return;
     }
-    case HOLES: {   // three black holes open around the hero (they take 0.9 s to form: no pull yet)
+    case HOLES: {   // 2-3 warning circles follow the hero, each opens a black hole under them that then slowly follows
       stop(e);
       if (e.patternT === 0) {
         e.patternT = 1;
-        const pl = world.player.pos, base = Math.random() * Math.PI * 2, n = st2() ? 3 : 2;
-        for (let i = 0; i < n; i++) {
-          const a = base + (i / n) * Math.PI * 2, r = 6 + Math.random() * 4;
-          posV.set(pl.x + Math.sin(a) * r, 0, pl.z + Math.cos(a) * r); clampToArena(posV, 6);
-          spawnBlackHole(posV.x, posV.z, 7);
-        }
-        events.emit('shake', { amount: 0.25 });
+        const n = st2() ? 3 : 2;
+        for (let i = 0; i < n; i++) queueHole(i * 1.0);
       }
-      if (e.stateT >= 0.6) enter(e, 'RECOVER');
+      if (e.stateT >= 0.8 && !holesBusy()) enter(e, 'RECOVER');
       return;
     }
-    case LASER: {   // 3 aimed beams (0.55 s apart), then a sweep of 9 beams across an arc; every beam shows a dark line first
+    case LASER: {   // 3 aimed beams (0.6 s apart), then a sweep of 9 beams across an arc; each lane is a purple telegraph, then a bright beam fires
       stop(e);
-      const pl = world.player.pos, t = e.stateT, dmg = e.projectileDamage * (st2() ? 1.7 : 1.4);
-      if (e.patternT < 3 && t >= e.patternT * 0.55) {
+      const pl = world.player.pos, t = e.stateT, dmg = e.projectileDamage * (st2() ? 2.0 : 1.7);
+      if (e.patternT < 3 && t >= e.patternT * 0.6) {
         const a = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z);
-        const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.6, 0.9, C_DARK);
-        if (z) z.damage = dmg;
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.6, 0.95, dmg);
         e.patternT++;
-      } else if (e.patternT >= 3 && e.patternT < 12 && t >= 1.65 + (e.patternT - 3) * 0.11) {
+      } else if (e.patternT >= 3 && e.patternT < 12 && t >= 2.3 + (e.patternT - 3) * 0.11) {
         const k = e.patternT - 3;
         if (k === 0) { e.angle = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z); sweepDir = Math.random() < 0.5 ? 1 : -1; }
-        const a = e.angle + (k - 4) * 0.2 * sweepDir;
-        const z = spawnTelegraphLine(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.4, 0.8, C_DARK);
-        if (z) z.damage = dmg;
+        const a = e.angle + (k - 4) * 0.24 * sweepDir;
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.2, 0.9, dmg);
         e.patternT++;
       }
-      if (e.patternT >= 12 && t >= 3.3) enter(e, 'RECOVER');
+      if (e.patternT >= 12 && t >= 4.4) enter(e, 'RECOVER');
       return;
     }
-    case RING9: {   // 9 giant black-purple fireballs in 360 degrees, each leaving a burning trail (a second, offset ring in stage 2)
+    case RING9: {   // 9 giant dark fireballs in 360 degrees (a second, offset ring in stage 2); a rare burning patch under each
       stop(e);
       const rings = st2() ? 2 : 1;
-      if (e.patternT < rings && e.stateT >= e.patternT * 1.0) {
+      if (e.patternT < rings && e.stateT >= e.patternT * 1.1) {
         const base = e.angle + e.patternT * (Math.PI / 9);
-        setTrailDamage(e.projectileDamage * 0.2);
+        setTrailDamage(e.projectileDamage * 0.15);
         for (let i = 0; i < 9; i++) {
           const a = base + (i / 9) * Math.PI * 2;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BIG_FLAME', 8, e.projectileDamage * 1.1, { life: 2.8, radius: 1.3, dark: true, trail: 0.45 });
+          fireEnemyProjectile(e.pos, dirV, 'BIG_FLAME', 8, e.projectileDamage * 0.9, { life: 2.8, radius: 1.3, dark: true, trail: 1.4 });
         }
         events.emit('shockwave', { pos: e.pos.clone(), radius: 6, color: 0x7c3aed });
         events.emit('shake', { amount: 0.3 });
         e.patternT++;
       }
-      if (e.patternT >= rings && e.stateT >= (rings - 1) * 1.0 + 0.4) enter(e, 'RECOVER');
+      if (e.patternT >= rings && e.stateT >= (rings - 1) * 1.1 + 2.0) enter(e, 'RECOVER');
       return;
     }
-    case METEOR: {   // 9 meteors walk onto the hero over 2 s; every impact opens a black hole (max 4 alive, 6 s each)
+    case METEOR: {   // 3 meteors 0.6 s apart: each indicator hunts the hero, locks, a meteor falls, impact (no black hole)
       stop(e);
-      const pl = world.player;
-      while (e.patternT < 9 && e.stateT >= e.patternT * 0.24) {
-        const lead = e.patternT % 3 === 0 ? 0 : 1.6;
-        const ox = (Math.random() - 0.5) * 9 + pl.vel.x * 0.3 * lead, oz = (Math.random() - 0.5) * 9 + pl.vel.z * 0.3 * lead;
-        posV.set(pl.pos.x + ox, 0, pl.pos.z + oz); clampToArena(posV, 3);
-        queueMeteor(posV.x, posV.z, 1.2, e.projectileDamage * 1.2);
+      const dmg = e.projectileDamage * 1.4;
+      if (e.patternT < 3 && e.stateT >= e.patternT * 0.6) {
+        const side = e.patternT === 0 ? 0 : 5.5;
+        const a = Math.random() * 6.283;
+        queueMeteor(Math.sin(a) * side, Math.cos(a) * side, dmg);
         e.patternT++;
       }
-      if (e.patternT >= 9 && e.stateT >= 2.3) enter(e, 'RECOVER');
+      if (e.patternT >= 3 && !meteorsBusy()) enter(e, 'RECOVER');
       return;
     }
-    case SHUFFLE: {   // Malakar and his illusions teleport around, several times in a row (the shield shows on all of them)
+    case SHUFFLE: {   // illusions: Malakar and two copies teleport ONCE into an even ring round the hero (spawnIllusions places them)
       stop(e);
-      if (e.patternT === 0) { e.patternT = 1; spawnIllusions(e, 2, st2() ? 40 : 25); }
-      if (e.patternT >= 1 && e.patternT <= 4 && e.stateT >= 0.5 + (e.patternT - 1) * 0.7) { shuffleLich(e); e.patternT++; }
-      if (e.patternT > 4 && e.stateT >= 3.1) enter(e, 'RECOVER');
+      if (e.patternT === 0) { e.patternT = 1; spawnIllusions(e, 2, st2() ? 30 : 20); }
+      if (e.stateT >= 1.0) enter(e, 'RECOVER');
       return;
     }
-    case WIZ: {   // two dark wizards (corrupted cultists) at his sides
-      stop(e);
-      if (e.patternT === 0) {
-        e.patternT = 1;
-        const have = wizardsAlive(), base = Math.atan2(ux, uz);
-        for (let i = have; i < 2; i++) {
-          const a = base + (i === 0 ? 1.2 : -1.2);
-          posV.set(e.pos.x + Math.sin(a) * 4.5, 0, e.pos.z + Math.cos(a) * 4.5); clampToArena(posV, 3);
-          spawnDarkWizard(posV);
-        }
-        events.emit('shake', { amount: 0.3 });
-      }
-      if (e.stateT >= 0.5) enter(e, 'RECOVER');
-      return;
-    }
-    default: { // SUMMON
-      stop(e);
-      if (e.patternT === 0) {
-        e.patternT = 1;
-        // dark mages (cultists); every third one an elite lich acolyte
-        const n = st1() ? 2 + e.phase : 2 + e.phase + (st2() ? 1 : 0);   // (balance pass: one fewer per summon outside Malakar's first fight)
-        const base = Math.random() * Math.PI * 2;
-        for (let i = 0; i < n; i++) {
-          const a = base + (i / n) * Math.PI * 2;
-          posV.set(e.pos.x + Math.sin(a) * 4, 0, e.pos.z + Math.cos(a) * 4);
-          clampToArena(posV, 3);
-          spawnEnemy('CULTIST', posV, i % 3 === 2 ? { elite: true } : undefined);
-        }
-        events.emit('shake', { amount: 0.3 });
-      }
-      if (e.stateT >= 0.4) enter(e, 'RECOVER');
-    }
+    default: stop(e); enter(e, 'RECOVER');
   }
 }

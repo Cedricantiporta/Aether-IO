@@ -92,15 +92,15 @@ export function BiomeHazards() {
       tFill: u(disc, flat(new Color(1.0, 1.7, 2.2), 0.3), 10),
       tRing: u(new RingGeometry(0.88, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 0.9, 0.8), 0.9), 10),
       icicle: u(icg, glowMat({ color: new Color(1.1, 1.8, 2.3) }), 10),
-      rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 8),
-      rCore: u(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: '#000000', toneMapped: false }), 8),
-      rDiskO: u(band(2.5, 30, 0.7, '#7a3cff', '#c58bff'), glowMat({ color: new Color(1.2, 0.6, 2.0) }), 8),
-      rDiskI: u(band(1.75, 24, 0.45, '#ff8a2a', '#ffd070'), glowMat({ color: new Color(2.2, 1.2, 0.6) }), 8),
-      rLens: u(lens, glowMat({ color: new Color(2.0, 1.6, 1.3), side: DoubleSide }), 8),
-      rMote: u(new IcosahedronGeometry(0.1, 0), glowMat({ color: new Color(1.6, 0.9, 2.2) }), 8 * MOTES),
-      rTel: u(new RingGeometry(0.965, 1, 64).rotateX(-Math.PI / 2), flat(new Color(1.8, 0.7, 2.4), 0.85), 8),
-      rTel2: u(new RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 1.1, 0.4), 0.55), 8),
-      rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 8),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
+      rDark: u(new CylinderGeometry(1, 1, 0.05, 32), new MeshBasicMaterial({ color: '#07020f', toneMapped: false }), 9),
+      rCore: u(new IcosahedronGeometry(1, 2), new MeshBasicMaterial({ color: '#000000', toneMapped: false }), 9),
+      rDiskO: u(band(2.5, 30, 0.7, '#7a3cff', '#c58bff'), glowMat({ color: new Color(1.2, 0.6, 2.0) }), 9),
+      rDiskI: u(band(1.75, 24, 0.45, '#ff8a2a', '#ffd070'), glowMat({ color: new Color(2.2, 1.2, 0.6) }), 9),
+      rLens: u(lens, glowMat({ color: new Color(2.0, 1.6, 1.3), side: DoubleSide }), 9),
+      rMote: u(new IcosahedronGeometry(0.1, 0), glowMat({ color: new Color(1.6, 0.9, 2.2) }), 9 * MOTES),
+      rTel: u(new RingGeometry(0.965, 1, 64).rotateX(-Math.PI / 2), flat(new Color(1.8, 0.7, 2.4), 0.85), 9),
+      rTel2: u(new RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2), flat(new Color(2.4, 1.1, 0.4), 0.55), 9),
+      rField: u(disc, flat(new Color(0.28, 0.07, 0.5), 0.5), 9),   // (owner 2026-10-24: the black-hole field must read clearly: a deep violet disc over its whole pull radius)
     };
   }, []);
 
@@ -148,24 +148,24 @@ export function BiomeHazards() {
     }
     if (bh) {
       for (let i = 0; i < hz.nRift; i++) {
-        const r = hz.rift[i]; if (!inView(r.x, r.z, HZ_RIFT_PULL_R + 2)) continue;
-        const kk = r.k, pulse = (1 + Math.sin(t * 2.2 + i * 2) * 0.04) * (0.15 + 0.85 * kk), rp = HZ_RIFT_PULL_R * (r.life - r.age < 0.6 ? Math.max(0.2, kk) : 1), yaw = world.camera.yaw;
+        const r = hz.rift[i]; const sc = r.s; if (!inView(r.x, r.z, HZ_RIFT_PULL_R * sc + 2)) continue;
+        const kk = r.k, pulse = (1 + Math.sin(t * 2.2 + i * 2) * 0.04) * (0.15 + 0.85 * kk) * sc, rp = HZ_RIFT_PULL_R * sc * (r.life - r.age < 0.6 ? Math.max(0.2, kk) : 1), yaw = world.camera.yaw;
         setInst(S.rDark, nRift, r.x, 0.05, r.z, 0, HZ_RIFT_CORE_R * 1.25 * pulse, 1, HZ_RIFT_CORE_R * 1.25 * pulse);
         setInst(S.rField, nRift, r.x, 0.045, r.z, 0, rp, 1, rp);
         // the pull radius is ringed on the floor (a violet line + an inward-marching orange one)
         setInst(S.rTel, nRift, r.x, 0.08, r.z, 0, rp, 1, rp);
         const m = 1 - ((t * 0.5 + i * 0.3) % 1);
         setInst(S.rTel2, nRift, r.x, 0.085, r.z, 0, rp * (0.35 + 0.65 * m), 1, rp * (0.35 + 0.65 * m));
-        setInst(S.rCore, nRift, r.x, CORE_Y, r.z, t * 0.3, 1.25 * pulse);
-        setInst(S.rDiskO, nRift, r.x, CORE_Y - 0.05, r.z, t * 1.3 + i, 1, 1, 1);
-        setInst(S.rDiskI, nRift, r.x, CORE_Y, r.z, -t * 3.1 + i, 1, 1, 1);
-        setInst(S.rLens, nRift, r.x, CORE_Y, r.z, yaw, 1.38 * pulse);
+        setInst(S.rCore, nRift, r.x, CORE_Y * sc, r.z, t * 0.3, 1.25 * pulse);
+        setInst(S.rDiskO, nRift, r.x, (CORE_Y - 0.05) * sc, r.z, t * 1.3 + i, sc, sc, sc);
+        setInst(S.rDiskI, nRift, r.x, CORE_Y * sc, r.z, -t * 3.1 + i, sc, sc, sc);
+        setInst(S.rLens, nRift, r.x, CORE_Y * sc, r.z, yaw, 1.38 * pulse);
         for (let q = 0; q < MOTES; q++) {   // swirl motes: spiral in from the rim, faster and smaller as they fall
           const u = (t * 0.32 + q / MOTES + i * 0.19) % 1, rad = 1.1 + (rp - 1.1) * Math.pow(1 - u, 1.4), ang = q * 2.4 + i + t * 0.8 + u * u * 9;
-          setInst(S.rMote, nMote++, r.x + Math.cos(ang) * rad, 0.25 + (1 - u) * 0.9 + u * (CORE_Y - 0.4), r.z + Math.sin(ang) * rad, 0, 0.5 + (1 - u) * 1.1);
+          setInst(S.rMote, nMote++, r.x + Math.cos(ang) * rad, (0.25 + (1 - u) * 0.9 + u * (CORE_Y - 0.4)) * sc, r.z + Math.sin(ang) * rad, 0, (0.5 + (1 - u) * 1.1) * sc);
         }
-        pushHalo(r.x, CORE_Y, r.z, 5.5 + Math.sin(t * 2 + i) * 0.5, 0.5, 0.12, 0.8, 0.3, CELL.GLOW);
-        pushHalo(r.x, CORE_Y, r.z, 3.2, 1.5, 0.7, 0.2, 0.22, CELL.GLOW);
+        pushHalo(r.x, CORE_Y * sc, r.z, (5.5 + Math.sin(t * 2 + i) * 0.5) * sc, 0.5, 0.12, 0.8, 0.3, CELL.GLOW);
+        pushHalo(r.x, CORE_Y * sc, r.z, 3.2 * sc, 1.5, 0.7, 0.2, 0.22, CELL.GLOW);
         nRift++;
       }
     }

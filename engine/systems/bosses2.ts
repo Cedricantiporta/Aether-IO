@@ -802,27 +802,27 @@ LISTS.BOSS_WARLORD = [
     begin(e, ux, uz) {
       e.dir.set(ux, 0, uz);
       const n = S.enraged ? 3 : 1;
-      for (let i = 0; i < n; i++) { const a = Math.atan2(ux, uz) + (n === 1 ? 0 : (i - 1) * 0.42); lane(e, Math.sin(a), Math.cos(a), 25, 7, 0.6 * fast(e), BT.VISUAL, 0, 0xff7a2a); }
+      for (let i = 0; i < n; i++) { const a = Math.atan2(ux, uz) + (n === 1 ? 0 : (i - 1) * 0.42); lane(e, Math.sin(a), Math.cos(a), 30, 14, 0.6 * fast(e), BT.VISUAL, 0, 0xff2a2a); }   // (owner 2026-10-26) crescents 2x bigger + red
     },
     fire(e) {
       const base = Math.atan2(e.dir.x, e.dir.z), n = S.enraged ? 3 : 1;
-      for (let i = 0; i < n; i++) crescent(e, base + (n === 1 ? 0 : (i - 1) * 0.42), CRESC_SP, 0.85, 3.4, ipwr(e) * 1.5);
+      for (let i = 0; i < n; i++) crescent(e, base + (n === 1 ? 0 : (i - 1) * 0.42), CRESC_SP, 1.0, 6.8, ipwr(e) * 1.5);
       S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
       events.emit('shake', { amount: 0.18 });
     },
-    tick(e, dt) { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 21), 4.5, 1.6); },   // the fire trail follows the crescent
+    tick(e, dt) { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 2.6, 3.0); },   // the fire trail follows the crescent (owner 2026-10-26: longer, wider, denser)
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
   },
   { // Radiant Burst (knight passive): a fiery burst round him and a ring of crescents, then a fire shield wraps him.
     name: 'Radiant Burst!', wind: () => 0.85, act: () => 0.4, rec: () => 0.7,
     begin(e) {
-      circle(e.pos.x, e.pos.z, 7.5, 0.85 * fast(e), BT.FBURST, ipwr(e) * 1.3, 0xff5a1a);
+      circle(e.pos.x, e.pos.z, 15, 0.85 * fast(e), BT.FBURST, ipwr(e) * 1.3, 0xff3a1a);   // (owner 2026-10-26) Radiant Burst 2x bigger
       const n = S.enraged ? 10 : 8; S.wheelA = Math.random() * 6.283;
-      for (let i = 0; i < n; i++) { const a = S.wheelA + (i / n) * 6.283; lane(e, Math.sin(a), Math.cos(a), 17, 4.6, 0.85 * fast(e), BT.VISUAL, 0, 0xff8a3a); }
+      for (let i = 0; i < n; i++) { const a = S.wheelA + (i / n) * 6.283; lane(e, Math.sin(a), Math.cos(a), 19, 9.2, 0.85 * fast(e), BT.VISUAL, 0, 0xff2a2a); }
     },
     fire(e) {
       const n = S.enraged ? 10 : 8;
-      for (let i = 0; i < n; i++) crescent(e, S.wheelA + (i / n) * 6.283, 17, 0.9, 2.2, ipwr(e) * 0.9);
+      for (let i = 0; i < n; i++) { crescent(e, S.wheelA + (i / n) * 6.283, 17, 1.0, 4.4, ipwr(e) * 0.9); for (let k = 1; k <= 3; k++) { const a = S.wheelA + (i / n) * 6.283; firePatch(e.pos.x + Math.sin(a) * k * 5, e.pos.z + Math.cos(a) * k * 5, 2.6, 2.8, ipwr(e) * 0.1); } }
       e.shield = Math.max(e.shield, e.maxHp * 0.04); S.shT = 7;   // fire shield (a small absorb, 7 s)
       events.emit('floatText', { pos: e.pos, text: 'FIRE SHIELD', color: 0xffb040, scale: 0.9, dy: 2.8 });
       events.emit('shockwave', { pos: e.pos.clone(), radius: 8, color: 0xffb040 });
@@ -852,25 +852,25 @@ LISTS.BOSS_WARLORD = [
     tick(e, dt, ux, uz) {
       if (S.dashPh === 0) {
         drive(e, S.sdx, S.sdz, DASH_SP); S.slashD += DASH_SP * dt; S.dashT -= dt;
-        laneTrail(e, S.slashD, 3.2, 2.4);
+        laneTrail(e, S.slashD, 2.4, 3.2);
         const p = world.player;
         if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 2.2) ** 2) {
           S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
         }
         if (S.dashT <= 0) {   // arrived: a quick aimed slash
           S.dashPh = 1; stand(e); e.dir.set(ux, 0, uz); S.slashT = 0.34 * fast(e);
-          lane(e, ux, uz, 24, 7, S.slashT, BT.VISUAL, 0, 0xff7a2a);
+          lane(e, ux, uz, 30, 14, S.slashT, BT.VISUAL, 0, 0xff2a2a);
         }
       } else if (S.dashPh === 1) {
         stand(e); requestYaw(Math.atan2(e.dir.x, e.dir.z)); S.slashT -= dt;
         if (S.slashT <= 0) {
           const a = Math.atan2(e.dir.x, e.dir.z);
-          crescent(e, a, CRESC_SP, 0.8, 3.4, ipwr(e) * 1.4);
-          if (S.enraged) { crescent(e, a + 0.4, CRESC_SP, 0.8, 3.0, ipwr(e) * 1.1); crescent(e, a - 0.4, CRESC_SP, 0.8, 3.0, ipwr(e) * 1.1); }
+          crescent(e, a, CRESC_SP, 1.0, 6.8, ipwr(e) * 1.4);
+          if (S.enraged) { crescent(e, a + 0.5, CRESC_SP, 1.0, 6.0, ipwr(e) * 1.1); crescent(e, a - 0.5, CRESC_SP, 1.0, 6.0, ipwr(e) * 1.1); }
           S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 3; S.slashD = 0;
           S.dashPh = 2; S.slashT = 0.3; events.emit('shake', { amount: 0.2 });
         }
-      } else { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 20), 4.5, 1.6); S.slashT -= dt; }
+      } else { stand(e); S.slashD += CRESC_SP * dt; laneTrail(e, Math.min(S.slashD, 30), 2.6, 3.0); S.slashT -= dt; }
     },
     done: () => S.dashPh === 2 && S.slashT <= 0,
     end(e) { stand(e); S.dashPh = 2; },

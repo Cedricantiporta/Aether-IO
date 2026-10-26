@@ -18,6 +18,7 @@ import { hooks } from './hooks';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
+import { mfx, spawnRune } from './malakarFx';
 import { KB } from './combat';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
@@ -68,7 +69,9 @@ export const tether = { active: false, id: -1, t: 0, maxDist: 0, lx: 0, lz: 0 };
 export const prism: { zone: import('../types').Zone | null } = { zone: null };
 hooks.onCleanse = () => { if (tether.active) { tether.active = false; events.emit('trick', { pos: world.player.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); } };
 
-export function hasSpecial(e: Enemy): boolean { return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId); }
+export function hasSpecial(e: Enemy): boolean {
+  if (e.kind === 'BOSS_LICH' && world.boss.final) return false;   // (owner 2026-10-26: Malakar's final fight runs his own rotation, one major skill at a time)
+  return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId); }
 export function initSpecial(e: Enemy): void { e.spCd = 3.5 + Math.random() * 3; e.spKind = 0; e.spT = 0; e.spStep = 0; }
 
 function clampArena(v: Vector3, margin: number): void {
@@ -403,45 +406,37 @@ function spawnDecoy(real: Enemy, x: number, z: number): void {
   e.spT = 0;
   events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
 }
-/** Malakar's illusions: n copies beside him with his current HP and half his armour. They move and cast his
- *  basic attacks (orb fans and orb rings) for `life` seconds, then fade. No rewards. Max 2 at a time. */
+/** Malakar's illusions: up to 2 copies with his current HP and half his armour. They cast his basic volleys (orb fans and rings) for `life`
+ *  seconds, then fade. No rewards. Max 2 at a time. Malakar and every live illusion then teleport ONCE into an even ring round the hero. */
 export function spawnIllusions(real: Enemy, n: number, life: number): void {
   let have = 0;
   for (const o of world.enemies) if (o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') have++;
-  const base = Math.random() * 6.283;
   for (let k = 0; k < n && have < 2; k++, have++) {
     const e = allocEnemy();
-    if (!e) return;
-    const a = base + (k / Math.max(1, n)) * 6.283;
-    tv.set(real.pos.x + Math.sin(a) * 6, 0, real.pos.z + Math.cos(a) * 6); clampArena(tv, 4);
-    e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true; e.trickKind = 1; e.trickT = life;
-    e.pos.set(tv.x, 0, tv.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as Malakar's bar, to confuse e.shield = 0;
+    if (!e) break;
+    e.kind = 'BOSS_LICH'; e.boss = false; e.elite = false; e.decoy = true; e.bossAdd = false; e.trickKind = 1; e.trickT = life;
+    e.pos.set(real.pos.x, 0, real.pos.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as Malakar's bar, to confuse
+    e.shield = 0;
     e.armor = real.armor * 0.5; e.staggerMax = 0; e.stagger = 0; e.staggerT = 0;   // same HP as Malakar, half his defense
     e.speed = real.speed; e.radius = real.radius; e.scale = real.scale;
     e.contactDamage = 0; e.projectileDamage = real.projectileDamage; e.xp = 0; e.gold = 0;
-    e.state = 'CHASE'; e.stateT = 0; e.attackCd = 1 + Math.random(); e.facing = real.facing; e.active = true; e.spT = 0; e.pattern = 0;
-    events.emit('spawn', { pos: e.pos, kind: e.kind, elite: false });
-    events.emit('explosion', { pos: e.pos.clone(), radius: 3, color: 0x7c3aed });
+    e.state = 'CHASE'; e.stateT = 0; e.attackCd = 2 + Math.random(); e.facing = real.facing; e.active = true; e.spT = 0; e.pattern = 0;
   }
+  ringTeleport(real);
 }
 
-const shufA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
-const shufX = [0, 0, 0], shufZ = [0, 0, 0];
-/** Malakar's Shuffle step: he and every live illusion jump to a fresh spot around the hero, in random order (called several times in a row). */
-export function shuffleLich(real: Enemy): void {
-  let n = 0; shufA[n++] = real;
-  for (const o of world.enemies) if (n < 3 && o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') shufA[n++] = o;
+const ringA: Enemy[] = [null as unknown as Enemy, null as unknown as Enemy, null as unknown as Enemy];
+/** One teleport: Malakar and the live illusions land evenly spaced on a ring (radius ~11) around the hero, random starting angle and order. */
+function ringTeleport(real: Enemy): void {
+  let n = 0; ringA[n++] = real;
+  for (const o of world.enemies) if (n < 3 && o.active && o.decoy && o.trickKind === 1 && o.state !== 'DYING') ringA[n++] = o;
+  for (let i = n - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = ringA[i]; ringA[i] = ringA[j]; ringA[j] = x; }   // who stands where is random
   const p = world.player.pos, base = Math.random() * 6.283;
   for (let i = 0; i < n; i++) {
-    const a = base + (i / n) * 6.283 + (Math.random() - 0.5) * 0.5, r = 8 + Math.random() * 6;
-    tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 4);
-    shufX[i] = tv.x; shufZ[i] = tv.z;
-  }
-  for (let i = n - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = shufA[i]; shufA[i] = shufA[j]; shufA[j] = x; }   // who lands where is random
-  for (let i = 0; i < n; i++) {
-    const o = shufA[i];
-    events.emit('explosion', { pos: o.pos.clone(), radius: 2.5, color: 0x7c3aed });
-    o.pos.set(shufX[i], 0, shufZ[i]);
+    const o = ringA[i], a = base + (i / n) * 6.283;
+    tv.set(p.x + Math.sin(a) * 11, 0, p.z + Math.cos(a) * 11); clampArena(tv, 4);
+    spawnRune(o.pos.x, o.pos.z); spawnRune(tv.x, tv.z);   // departure + arrival circles
+    o.pos.set(tv.x, 0, tv.z);
     events.emit('spawn', { pos: o.pos, kind: o.kind, elite: false });
     events.emit('explosion', { pos: o.pos.clone(), radius: 2.5, color: 0x7c3aed });
   }
@@ -457,7 +452,8 @@ function updateIllusion(e: Enemy, dt: number): void {
   e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
   e.attackCd -= dt;
   if (e.attackCd <= 0) {
-    e.attackCd = (s2 ? 1.5 : 2.1) + Math.random() * 0.6;
+    if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while Malakar runs a major skill
+    e.attackCd = (s2 ? 2.4 : 3.2) + Math.random() * 0.8;
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
     if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero
       const b = Math.atan2(ux, uz);

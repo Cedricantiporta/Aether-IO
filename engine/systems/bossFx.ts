@@ -53,7 +53,7 @@ export function stat(name: string): void { bossStats[name] = (bossStats[name] ??
 const tv = new Vector3();
 
 /** Ignar's fire trails (owner): a FIREPATCH that is skipped once FIRE_CAP patches are alive, so the arena never fills up. */
-export const FIRE_CAP = 22;
+export const FIRE_CAP = 40;   // (owner 2026-10-26: Ignar's crescents leave more fire)
 export function firePatch(x: number, z: number, r: number, life: number, dps: number): boolean {
   let n = 0;
   const zs = world.zones;
