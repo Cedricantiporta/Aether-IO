@@ -30,7 +30,7 @@ import type {
 } from '../types';
 import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
-  waveHpMult, waveDmgMult, waveSpeedMult, isAquatic, bossHpAt, BOSS_HP_REL, towerHpMult, towerDmgMult,
+  waveHpMult, waveDmgMult, waveSpeedMult, isAquatic, bossHpAt, bossLevelMul, BOSS_HP_REL, towerHpMult, towerDmgMult,
   optionalForClear,
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
@@ -380,7 +380,7 @@ export function spawnEnemy(
   e.affix = affix;
   e.boss = boss;
   e.pos.set(pos.x, 0, pos.z);
-  e.maxHp = boss ? Math.round(bossHpAt(wave) * (BOSS_HP_REL[kind] ?? 1) * bossRatio * mods.hp * mods.bossHp * lfx.hp)   // biome bosses: fixed pacing table (enemyDefs.BOSS_HP_KNOTS), x Ascension boss hp
+  e.maxHp = boss ? Math.round(bossHpAt(wave) * (BOSS_HP_REL[kind] ?? 1) * bossRatio * mods.hp * mods.bossHp * (towerMode() ? 1 : Math.max(lfx.hp, bossLevelMul(lvl))))   // biome bosses: fixed pacing table (enemyDefs.BOSS_HP_KNOTS), x Ascension boss hp
     : Math.round(def.hp * hpMul);   // (owner 2026-10-25: tower archers keep the normal goblin archer HP; only their defense is doubled, combat.ts)
   e.hp = e.maxHp;
   e.shield = affix === 'SHIELDED' ? e.maxHp * 0.5 : 0;

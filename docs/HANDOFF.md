@@ -476,8 +476,9 @@ ENEMY_DMG_MUL 1.25; elites x2 HP. **Hero level vs monsters (`enemies.levelFx`)**
 a fresh hero meets the old early-game strength; Lv 10-30 nothing (levelling just makes you stronger); above Lv 30 a soft floor of +4% HP / +3% damage
 per level that fades to nothing by the Void (Lv 50 meets x1.8 HP / x1.6 damage in Greenwood, so biome 1-2 is not a one-hit sweep). **Bosses**:
 `bossHpAt(wave)` (knots 6000 / 8500 / 14500 / 17500 / 20500 / 23000 / 27000 at the biome boss rooms, x1.1 for the Dune Colossus, x Ascension boss HP,
-x hero-power ratio in the Tower) replaces def.hp x curve; Elderroot keeps its -15%, the Slime King is 30% of the table, Malakar is 60% of the Void
-value in stage 1 and +25% in stage 2, a Lich mini-boss 80%. BOSS_DMG 0.6 / BOSS_SKILL_MUL 1.5 are unchanged (a boss skill hit is ~1.4x an ordinary hit; phase
+x hero-power ratio in the Tower) replaces def.hp x curve; Elderroot keeps its -15%, the Slime King is 30% of the table, Malakar is 100% of the Void
+value in stage 1 and +25% in stage 2 (owner: 60% was 'almost 3-hit'); outside the Tower, bosses, dark heroes and the Slime King also get
+`enemyDefs.bossLevelMul` (above Lv 30 HP x e^(0.08 (Lv-30)): Lv 40 x2.2, Lv 50 x5.0, so a strong hero still gets a real boss fight), a Lich mini-boss 80%. BOSS_DMG 0.6 / BOSS_SKILL_MUL 1.5 are unchanged (a boss skill hit is ~1.4x an ordinary hit; phase
 attacks are % of max HP and need no tuning). **Dark hero champion**: HP = 80% of the biome boss (`darkHero.DARK_HERO_HP`, no champion-room discount),
 skills come back in 60% of the old cooldown (ultimate 70%, opens below 72% HP, pause between casts 0.55-0.6 s).
 **Targets for a Lv 30 hero (model output)**: normal room 11 s (Greenwood) .. 36 s (Void) including ~6 s of walking; an ordinary hit costs 5% of EHP in

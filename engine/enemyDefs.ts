@@ -326,6 +326,10 @@ export function bossHpAt(wave: number): number {
   else { const i = Math.floor(w / 10) - 1, t = (w - (i + 1) * 10) / 10; v = k[i] + (k[i + 1] - k[i]) * t; }
   return Math.max(3000, v);
 }
+/** (owner 2026-10-26 "I almost 3-hit Malakar") bosses, dark heroes and the Slime King keep up with a strong hero: above Lv 30 their HP
+ *  grows x1.083 per level (Lv 40 x2.2, Lv 50 x5.0; hero DPS grows ~x7.9 over that span, so levelling still makes boss fights shorter,
+ *  just never trivial). Not used in the Tower family (it already scales off the hero). */
+export const bossLevelMul = (lv: number): number => (lv <= 30 ? 1 : Math.exp(0.08 * (lv - 30)));
 /** Per-boss HP trim on top of bossHpAt (the war machine is a slow giant with the heaviest armour). */
 export const BOSS_HP_REL: Partial<Record<EnemyKind, number>> = { BOSS_WARMACH: 1.1 };
 

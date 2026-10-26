@@ -37,7 +37,7 @@ import { world, allocEnemyProjectile, allocZone, allocFx } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
-import { bossHpAt, waveHpMult, towerHpMult } from '../enemyDefs';
+import { bossHpAt, bossLevelMul, waveHpMult, towerHpMult } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, killEnemy, playerTrickImmune, freezePlayer } from './combat';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, poofAllEnemies, strikeT } from './enemies';
 import { hooks } from './hooks';
@@ -148,7 +148,7 @@ export function spawnDarkHero(cls: HeroClass, x: number, z: number): Enemy | nul
   // (owner 2026-10-26) the champion duel is a real boss-length fight: HP = DARK_HERO_HP (80%) of this depth's biome boss (enemyDefs.bossHpAt),
   // it has no invulnerable phases but a shield roll below; the Tower family scales it off the hero's power like every boss
   const lvl = Math.max(1, st.level | 0), asc = st.progress.endings > 0 ? Math.max(0, st.progress.ascensionMax - 1) : 0;
-  const ratio = towerMode() ? towerHpMult(wave, lvl, asc) / waveHpMult(wave) : 1;
+  const ratio = towerMode() ? towerHpMult(wave, lvl, asc) / waveHpMult(wave) : bossLevelMul(lvl);
   e.maxHp = Math.round(bossHpAt(wave) * DARK_HERO_HP * ratio * mods.hp * mods.bossHp); e.hp = e.maxHp;
   e.mini = true; e.staggerMax = 80; e.armor = Math.round(e.armor * 1.25);
   rollEliteShield(e);

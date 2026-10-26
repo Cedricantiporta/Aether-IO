@@ -18,7 +18,7 @@ import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
 import type { EnemyKind, RoomPlan, RewardKind, RoomType } from '../types';
 import { liveStep } from '../../questUnlocks';
-import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, bossHpAt, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
+import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, bossHpAt, bossLevelMul, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
@@ -724,7 +724,7 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(bossHpAt(10 * (biome + 1)) * 0.3 * m.hp * m.bossHp); e.hp = e.maxHp;   // 30% of the biome boss's HP (2026-10-26 rebalance; was half of the old Elderroot formula)
+      e.maxHp = Math.round(bossHpAt(10 * (biome + 1)) * 0.3 * m.hp * m.bossHp * bossLevelMul(useGameStore.getState().level | 0)); e.hp = e.maxHp;   // 30% of the biome boss's HP (2026-10-26 rebalance; was half of the old Elderroot formula)
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
       world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
       { const f = 100 / (100 + e.armor); e.armor = Math.round(100 / (1 - 1.5 * (1 - f)) - 100); }   // +50% damage reduction (owner)
@@ -748,7 +748,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 0.6); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain: two stages of ~60 s + ~75 s for a Lv 30 hero (stage 1 = 60% of the Void boss's HP table value, stage 2 +25%; 2026-10-26 rebalance)
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.0); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain: two stages of ~60 s + ~75 s for a Lv 30 hero (stage 1 = 100% of the Void boss's HP table value (owner: was 60%, 'almost 3-hit'), stage 2 +25%)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
