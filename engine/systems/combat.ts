@@ -813,7 +813,7 @@ function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
   else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
 }
 
-export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number }): void {
+export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number; /** MECHANIC-CHECK hit (Avalanche, Tidal Wave, Sandstorm, collapses): needs `pct`; dodge roll, dash / dodge i-frames and the Energy Shield do NOT stop it (only the safe spot does); no defence reduction; leaves 1 HP when the hero is above 50% max HP, can kill at or below it. Big red number + screen flash */ crit?: boolean }): void {
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)
@@ -826,14 +826,15 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   amount *= DMG_INFLATE;   // (owner) monsters / bosses / hazards hit twice as hard (hero HP is x2 too, store HP_INFLATE)
   const isDot = !!o?.dot;
   if ((isDot || o?.env) && !o?.noDotMul) amount *= HERO_DOT_MUL;   // (owner) ticking damage hurts the hero 4x more
-  if (!isDot && (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0)))) return;
+  const crit = !!(o?.crit && o.pct);   // mechanic-check hit: dash / dodge i-frames never negate it (an ultimate or a fresh revive still does)
+  if (!isDot && (crit ? (p.ultT > 0 || p.reviveFx > 0) : (p.invulnT > 0 || (p.dashIframes && (p.anim.dashing || p.dashT > 0))))) return;
   const kind = o?.kind ?? 'PHYSICAL';
   if (!isDot && world.village.miningT > 0) {   // a hit knocks the hero out of mining (owner)
     world.village.miningT = 0; world.village.harvestCd = 1.2;
     events.emit('floatText', { pos: p.pos, text: 'Interrupted!', color: 0xffb070, scale: 0.9, dy: 2.4 });
   }
 
-  if (!isDot && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
+  if (!isDot && !crit && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
   if (!isDot && !o?.env) {   // (owner 2026-10-25) remember who hit the hero: it hits back (player.ts)
     let src: Enemy | null = o?.src ?? (o?.srcId !== undefined && o.srcId >= 0 ? world.enemies[o.srcId] ?? null : null);
     if (!src && o?.pos) {   // melee / scripted hits pass the attacker's position: the nearest monster to it
@@ -858,9 +859,10 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
   let reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
-  if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
+  if (crit) { reduced = st.stats.maxHealth * o!.pct!; if (p.hp > st.stats.maxHealth * 0.5) reduced = Math.min(reduced, p.hp - 1); }   // mechanic hit: flat share of max HP; above 50% HP it leaves at least 1 HP, at or below 50% it can kill
+  else if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
-  if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && p.hp - reduced < st.stats.maxHealth * 0.2) {
+  if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && (crit ? p.hp - reduced <= 0 : p.hp - reduced < st.stats.maxHealth * 0.2)) {   // (a mechanic hit only trips it when it would kill)
     triggerBarrier(barrier);
     return;
   }
@@ -907,8 +909,8 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
     damageEnemiesInRadius(p.pos.x, p.pos.z, 4.5, st.stats.thorns * (1 + st.stats.damage * 0.04), thornOpts);
   }
 
-  if (!isDot) events.emit('playerHit', { pos: p.pos, amount: reduced });
-  events.emit('damage', { pos: p.pos, amount: reduced, crit: false, kind, toPlayer: true, dot: isDot });
+  if (!isDot) events.emit('playerHit', { pos: p.pos, amount: reduced, big: crit && o!.pct! >= 0.3 });
+  events.emit('damage', { pos: p.pos, amount: reduced, crit: crit && o!.pct! >= 0.3, kind, toPlayer: true, dot: isDot });
   if (!isDot) addShake(Math.min(0.4, Math.max(0.15, (reduced / st.stats.maxHealth) * 1.2)));
 
   if (p.hp > 0) return;
