@@ -1095,7 +1095,7 @@ LISTS.BOSS_VOID = [
   },
 ];
 
-// ---- the Herald's dark-purple gravity kit (adapted from the retired Malakar fight): one major skill at a time, every hit a share of the hero's MAX hp.
+// ---- the Herald's dark-purple gravity kit: one major skill at a time, every hit a share of the hero's MAX hp.
 const V_MIRRORS = 3, V_HORIZON = 4, V_SOUL = 5, V_LASERS = 6, V_HOLES = 7, V_WELL = 8, V_RING = 9, V_STORM = 10, V_METEORS = 11, V_CROSS = 12;
 const f2 = (): boolean => S.vform === 2;
 const DARKP = { dark: true } as const;

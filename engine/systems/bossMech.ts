@@ -163,7 +163,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   if (bp.on && bp.id === e.id) return true;
   S.gapT -= dt;
 
-  // barrier: a periodic absorb shield (Malakar's final fight has its own in bosses.ts)
+  // barrier: a periodic absorb shield (never in the Herald's final fight)
   if (!world.boss.final) {
     S.barrierCd -= dt;
     if (S.barrierCd <= 0 && e.shield <= 0) {
@@ -187,7 +187,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
     return S.healT > 0;
   }
   S.healCd -= dt;
-  if (m.heal && !world.boss.final && S.healCd <= 0 && hpF < 0.7 && e.state !== 'WINDUP' && e.state !== 'ATTACK') {   // (never while warded: it could not be interrupted then; never for Malakar's final fight, which has its own shield - balance pass)
+  if (m.heal && !world.boss.final && S.healCd <= 0 && hpF < 0.7 && e.state !== 'WINDUP' && e.state !== 'ATTACK') {   // (never while warded: it could not be interrupted then; never for the final Herald)
     S.healCd = HEAL_CD; S.healT = HEAL_T; S.healHp0 = e.hp;
     spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2, HEAL_T, 0, 0x4ade80);
     events.emit('floatText', { pos: e.pos, text: 'HEALING...', color: 0x4ade80, scale: 1.2, dy: 5 });

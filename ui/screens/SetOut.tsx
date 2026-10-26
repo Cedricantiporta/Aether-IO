@@ -109,7 +109,7 @@ export const SetOutWindow: React.FC = () => {
         <div className="so-asc" data-testid="so-asc">
           <div className="text-[.72rem] mb-2" style={{ color: 'var(--text-dim)' }}>The Ascension level for your next adventure through the Adventure Portal.</div>
           {progress.ascensionMax === 0 ? (
-            <div className="so-asc-lock">Defeat Malakar at the end of the Void to unlock <b>Ascension</b>: harder runs with bigger rewards.</div>
+            <div className="so-asc-lock">Defeat the Void Herald at the end of the Void to unlock <b>Ascension</b>: harder runs with bigger rewards.</div>
           ) : (<>
             <div className="flex items-center justify-between">
               <span className="rpg-label !text-[.7rem]">Ascension</span>

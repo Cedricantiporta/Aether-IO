@@ -1,7 +1,7 @@
 // Visuals of the boss invulnerable phases (engine/systems/bossPhases.ts state `bp`, human versions from humanBosses.ts `humanView`):
 //   one big floor plane (shader) = Glacius' red Avalanche floor with glowing safe circles, and the wind / wave streaks with clear
 //   "lee" lanes behind rocks / pillars (Hydra Tidal Wave, Dune Colossus Sandstorm); instanced rocks / pillars / wrecks, spore pods,
-//   lava tiles, void-hand rings, Gorath's boulder, the solid-vs-flickering shadows of Malakar's illusions, Varn's giant shield and
+//   lava tiles, void-hand rings, Gorath's boulder, the solid-vs-flickering shadows of the Herald's illusions, Varn's giant shield and
 //   Sable's footprints. Everything is pooled / instanced and skipped when idle.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';

@@ -1,4 +1,4 @@
-// Malakar's violet-and-dark effects (pooled, allocation-free per frame). State lives in `mfx`; render/VoidFx.tsx draws it.
+// The Void Herald's violet-and-dark effects (pooled, allocation-free per frame). State lives in `mfx`; render/VoidFx.tsx draws it.
 //   LASERS   a purple telegraph lane, then a visible beam fires along it (hit-test once when it fires, see tickLasers)
 //   GRAVITY  a ~1.5 s indicator at the centre, then a pull across the whole arena (stronger the closer you stand), a damage core
 //            (more damage nearer the middle) and a big final explosion; the black hole itself is biomeHazards' visual (spawnGravityVisual)
@@ -73,7 +73,7 @@ function clampArena(v: { x: number; z: number }, margin: number): void {
 }
 
 // ---------------------------------------------------------------- runes ----
-/** A violet magic circle on the floor (every Malakar teleport: departure + arrival). */
+/** A violet magic circle on the floor (every Herald teleport: departure + arrival). */
 export function spawnRune(x: number, z: number, r = 3.4, life = 1.2): void {
   let q = mfx.runes.find((k) => !k.on);
   if (!q) { q = mfx.runes[0]; for (const k of mfx.runes) if (k.t > q.t) q = k; }
@@ -343,7 +343,7 @@ function tickMirror(dt: number): void {
 }
 
 // ------------------------------------------------------------ fire trails ----
-/** Called by Malakar's fireballs (EnemyProjectile.trail): a short-lived burning patch (rare). */
+/** Called by the Herald's fireballs (EnemyProjectile.trail): a short-lived burning patch (rare). */
 export function setTrailDamage(d: number): void { trailDmg = d; }
 function burnPatch(x: number, z: number): void {
   const b = burns.find((q) => !q.z || !q.z.active);

@@ -388,7 +388,7 @@ export function spawnIllusions(real: Enemy, n: number, life: number, max = 4, ri
     e.kind = real.kind; e.boss = false; e.elite = false; e.decoy = true; e.bossAdd = false; e.trickKind = 1; e.trickT = life;
     e.pos.set(real.pos.x, 0, real.pos.z); e.maxHp = real.maxHp; e.hp = Math.max(1, real.hp);   // same X/X as the Herald's bar, to confuse
     e.shield = 0;
-    e.armor = real.armor * 0.5; e.staggerMax = 0; e.stagger = 0; e.staggerT = 0;   // same HP as Malakar, half his defense
+    e.armor = real.armor * 0.5; e.staggerMax = 0; e.stagger = 0; e.staggerT = 0;   // same HP as the Herald, half his defense
     e.speed = real.speed; e.radius = real.radius; e.scale = real.scale;
     e.contactDamage = 0; e.projectileDamage = real.projectileDamage; e.xp = 0; e.gold = 0;
     e.state = 'CHASE'; e.stateT = 0; e.attackCd = 2 + Math.random(); e.facing = real.facing; e.active = true; e.spT = 0; e.pattern = 0;
@@ -423,7 +423,7 @@ function updateIllusion(e: Enemy, dt: number): void {
   e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
   e.attackCd -= dt;
   if (e.attackCd <= 0) {
-    if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while Malakar runs a major skill
+    if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while the Herald runs a major skill
     e.attackCd = (s2 ? 3.0 : 3.8) + Math.random() * 1.0;   // (4 copies: each one fires a little less often)
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
     if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero

@@ -1,4 +1,4 @@
-// Malakar's violet effects (engine/systems/voidFx.ts `mfx`): laser beams (lilac-white core in a dark violet shell), teleport rune circles,
+// The Void Herald's violet effects (engine/systems/voidFx.ts `mfx`): laser beams (lilac-white core in a dark violet shell), teleport rune circles,
 // the gravity spell's indicator, falling meteors, Event Horizon light pockets, Soul Mirror line + soul + spike circles, telegraphed bombs. Pooled instanced meshes written from `mfx` each frame; everything is skipped when idle.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
