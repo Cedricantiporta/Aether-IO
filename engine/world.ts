@@ -97,6 +97,8 @@ export const CAM_YAW_TOWN = 0;   // (owner) straight north-up like Echoes of Wis
 export const CAM_PITCH0 = 50 * Math.PI / 180;   // (owner) Echoes-of-Wisdom top-down: high enough to read the ground, low enough to see fronts and faces
 
 export const world = {
+  /** The co-op partner's hero (net/coop.ts writes the interpolated values every frame; render/RemoteHero.tsx reads them). Preallocated, never reassigned. */
+  remote: { active: false, x: 0, z: 0, facing: 0, blend: 0, /** net/protocol F_* bits */ flags: 0, hp: 1, /** bumps on every position the partner sent (render wakes) */ rx: 0 },
   /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */
   targetAnchor: { on: false, sx: 0, sy: 0 },
   time: 0,              // total simulated seconds (only advances while PLAYING)

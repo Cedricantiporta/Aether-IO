@@ -3991,3 +3991,27 @@ select.dbg-in option { background: #2a2a32; color: #fff; }
 .bt-act { flex: none; min-width: 5.2rem; text-align: center; }
 .bt-wait { font-size: .66rem; line-height: 1.25; color: #cdbfe0; }
 .compact .bt-main b { font-size: 1rem; } .compact .bt-main span, .compact .bt-main em, .compact .bt-intro, .compact .bt-wait { font-size: .82rem; }
+
+/* ---- online co-op (net/, ui/screens/CoopLobby.tsx, ui/hud/CoopHud.tsx): soft rounded pills, no lines ---- */
+.coop-box { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: .45rem; padding: .7rem .85rem; margin-top: .55rem; border-radius: 22px; background: rgba(255, 255, 255, .07); color: #fff; }
+.coop-title { font-weight: 700; font-size: .92rem; color: #fff; }
+.coop-line { font-size: .78rem; color: #d9f6ff; }
+.coop-note { font-size: .72rem; line-height: 1.4; color: var(--z-dim, #c9c9d2); }
+.coop-err { font-size: .74rem; line-height: 1.35; color: #ffb4a8; }
+.coop-row { display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; }
+.coop-btn { min-height: 2.1rem; padding: 0 1rem; border-radius: 999px; border: 0; background: #fff6e0; color: #3a2d1c; font-weight: 700; font-size: .82rem; cursor: pointer; transition: transform .12s, filter .12s; }
+.coop-btn:hover:not(:disabled) { transform: scale(1.04); filter: brightness(1.05); }
+.coop-btn:disabled { opacity: .4; cursor: default; }
+.coop-btn.ghost { background: rgba(255, 255, 255, .14); color: #fff; align-self: flex-start; }
+.coop-input { flex: 1; min-width: 5rem; height: 2.1rem; padding: 0 .9rem; border: 0; border-radius: 999px; outline: none; background: rgba(255, 255, 255, .14); color: #fff; font-weight: 700; font-size: 1rem; letter-spacing: .3em; text-align: center; }
+.coop-input:focus { background: rgba(255, 255, 255, .22); box-shadow: 0 0 10px rgba(95, 211, 230, .5); }
+.coop-code { display: flex; gap: .4rem; justify-content: center; margin: .1rem 0; }
+.coop-code b { width: 2.5rem; height: 3rem; display: grid; place-items: center; border-radius: 16px; background: #fff6e0; color: #3a2d1c; font-size: 1.7rem; font-weight: 800; }
+.coop-code b.dim { width: auto; padding: 0 1rem; opacity: .5; }
+.coop-hud { position: fixed; top: .55rem; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: .5rem; padding: .25rem .35rem .25rem .8rem; border-radius: 999px; background: rgba(30, 30, 34, .72); color: #fff; font-size: .78rem; pointer-events: none; box-shadow: 0 2px 10px rgba(0, 0, 0, .3); }
+.coop-dot { width: .55rem; height: .55rem; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
+.coop-hud-name { font-weight: 700; color: #d9f6ff; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coop-hud-sub { color: var(--z-dim, #c9c9d2); font-size: .7rem; }
+.coop-hud-leave { pointer-events: auto; height: 1.5rem; padding: 0 .7rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff; font-size: .7rem; font-weight: 700; cursor: pointer; }
+.coop-hud-leave:hover { background: rgba(255, 255, 255, .28); }
+.compact .coop-hud { top: .3rem; zoom: .8; }
