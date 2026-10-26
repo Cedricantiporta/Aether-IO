@@ -372,7 +372,12 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
       }
       // island biome: wet sand at the waterline, then the beach shelves down under the sea
       if (waterSea && isHalls) {   // Coral Isles HALLS: each chamber is a sandy island, the passages are bridges over the sea: the ground sinks under them and outside the chambers
-        const ou = hallsBridge(x, z) ? 3.4 : -hallsSdf(x, z);
+        let ou = hallsBridge(x, z) ? 4.2 : -hallsSdf(x, z);
+        if (ou < 4.2 && ou > -0.2 && ou < 2.6 && hallsSdf(x, z) < 0.05) {   // solid ground right beside a bridge deck: sink it too (no sand strips along the planks), faded out over ~0.5 m
+          let db = 9;
+          for (let a = -1.75; a < 2; a += 0.5) for (let b = -1.75; b < 2; b += 0.5) if (hallsBridge(x + a, z + b)) { const d = Math.hypot(a, b); if (d < db) db = d; }
+          if (db < 9) ou = Math.max(ou, 4.2 - Math.max(0, db - 1.25) * 5);
+        }
         const k = sstep(1.5, 4.2, ou);
         if (k > 0) pos.setY(i, Math.min(pos.getY(i), -1.6 * k));
         out.lerp(tmpC.set('#c8b07a'), sstep(0.2, 1.4, ou) * 0.7);

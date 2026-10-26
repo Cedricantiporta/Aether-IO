@@ -518,7 +518,7 @@ export function updatePlayer(dt: number): void {
 }
 
 /** Town horseback speed multiplier (village.ride). */
-export const RIDE_SPEED = 2;
+export const RIDE_SPEED = 1.6;
 let rideTouchWas = false;
 export const RIDE_DASH_T = 0.35, RIDE_DASH_CD = 6;
 /** Village mode: walking only (movement, collisions, animation). No dash, attacks, abilities or regen drain. */
