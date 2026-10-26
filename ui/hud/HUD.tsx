@@ -11,6 +11,7 @@ import { LevelUpBurst } from './LevelUpBurst';
 import { TargetFrame } from './TargetFrame';
 import { Minimap } from './Minimap';
 import { ActionBar } from './ActionBar';
+import { CpNotice } from './CpNotice';
 import { VitalBars, ExpStrip, SkillRow } from './Vitals';
 import { Announcer, Vignettes } from './Overlays';
 import { UltOverlay } from './UltOverlay';
@@ -55,6 +56,7 @@ export const HUD: React.FC = () => {
     <div className="absolute left-0 right-0 flex justify-center pointer-events-none hud-bottom" style={{ bottom: '1.5rem' }}>
       <SkillRow><ActionBar /></SkillRow>
     </div>
+    <CpNotice />
     <ExpStrip />
     {!device.touch && <CornerButtons />}
 

@@ -438,6 +438,7 @@ tabs, flat translucent charcoal, no frames / gradients / dividers, selection = l
 - **Bottom bar**: ultimate (round, soft fill-meter glow) + active skills (14 px rounded tiles, art clipped, radial cooldown sweep with a big
   white number, white key chip) + dash (Space) + two round potion bubbles. No passive slots (passives with timers show as tiny bubbles under the
   HP bar, `ui/hud/BuffTray.tsx`), no corner horse/dash buttons (E interacts/mounts); AUTO is a small pill. The bar hides during dialogue.
+  **Combat power notice** (`ui/hud/CpNotice.tsx`, owner 2026-10-26): any change of `calculateTotalCP(stats)` pops a pill above the skill bar, "CP 10,232 › 23,772 ▲" (green up / red down), changes within 400 ms merged, none on load or a character switch.
 - **Dialogue**: flat translucent charcoal, ~30 px radius, no lattice, no close X; Later / Accept / Next and the hero reply (same pill size) sit bottom-right of the box. A quest offer shows a separate rounded charcoal card mid-screen ("New Quest" / "Side Quest", goal line, reward chips: EXP, coin, gems, item icons) while the offer line is up.
 
 **Nintendo Switch / Zelda: Echoes of Wisdom ("v8 Zelda" override layer, the LAST block of `index.css`; it replaces the earlier
