@@ -32,7 +32,7 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
   warcry: { t: 0, max: 12, kind: 'time' },
   inspire: { t: 0, max: 12, kind: 'time' },
   consecrate: { t: 0, max: 0, kind: 'time' },   // always-on aura: no cooldown shown
-  smite: { t: 0, max: 10, kind: 'hits' },
+  smite: { t: 0, max: 5, kind: 'time' },   // Righteous Riposte: cooldown between counter-novas
   radiant: { t: 0, max: 10, kind: 'time' },
 };
 
@@ -53,7 +53,7 @@ const holyAuraOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 let orbState = 2, orbT = 2, orbTick = 0;
 
 export function resetSkills(): void {
-  blizzT = stormT = rallyT = auraT = radT = 0;
+  blizzT = stormT = rallyT = auraT = radT = riposteCd = 0;
   orbState = 2; orbT = 2; orbTick = 0;
   blades.length = 0;
   for (const k in passiveCooldowns) { passiveCooldowns[k].t = 0; }
@@ -83,30 +83,28 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
 const smiteOut: number[] = [];
 const smiteOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const smiteStun: StatusEffect = { type: 'STUN', duration: 0.6 };
-const smiteFrom = new Vector3(), smiteAt = new Vector3();
-/** SMITE (knight proc): holy light strikes the nearest enemy (or ahead): area damage + a short stun. */
-function smite(level: number): void {
+/** RIGHTEOUS RIPOSTE (knight passive; internal key 'smite' so saves and cards stay valid): when an enemy hits the knight, a holy
+ *  counter-nova bursts around him (damage + stun to everything close) and a small shield wraps him. The cooldown shortens per level. */
+function riposte(level: number): void {
   const pl = world.player, st = useGameStore.getState().stats;
-  const t = findNearestEnemy(pl.pos.x, pl.pos.z, 14);
-  if (t) smiteAt.set(t.pos.x, 0, t.pos.z);
-  else { getAimDir(aim); smiteAt.set(pl.pos.x + aim.x * 5, 0, pl.pos.z + aim.z * 5); }
-  const R = 3.2 + 0.3 * (level - 1), dmg = st.damage * 2.4 * st.skillDamage * lvScale(level);
-  smiteStun.duration = 0.6 + 0.1 * (level - 1);
-  hitRoomTraps(smiteAt.x, smiteAt.z, R, dmg);   // (owner) stationaries take the smite too
-  const ids = world.enemyGrid.query(smiteAt.x, smiteAt.z, R + 2, smiteOut);
+  const R = 4.2 + 0.4 * (level - 1), dmg = st.damage * 2.6 * st.skillDamage * lvScale(level);
+  smiteStun.duration = 0.7 + 0.1 * (level - 1);
+  hitRoomTraps(pl.pos.x, pl.pos.z, R, dmg);
+  const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, R + 2, smiteOut);
   for (let i = 0; i < ids.length; i++) {
     const e = world.enemies[ids[i]];
     if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') continue;
-    if ((e.pos.x - smiteAt.x) ** 2 + (e.pos.z - smiteAt.z) ** 2 > (R + e.radius) ** 2) continue;
+    if ((e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > (R + e.radius) ** 2) continue;
     damageEnemy(e, dmg, smiteOpts); applyStatus(e, smiteStun);
   }
-  smiteFrom.set(smiteAt.x, 16, smiteAt.z);
-  events.emit('lightning', { from: smiteFrom.clone(), to: smiteAt.clone() });
-  events.emit('crater', { pos: smiteAt.clone(), radius: R, color: 0xffe08a });
-  events.emit('shockwave', { pos: smiteAt.clone(), radius: R, color: 0xfff3c0 });
-  events.emit('floatText', { pos: smiteAt.clone(), text: 'SMITE!', color: 0xfff3a0, scale: 0.9, dy: 2 });
-  events.emit('shake', { amount: 0.15 });
+  const sh = st.maxHealth * (0.04 + 0.01 * (level - 1));   // a small holy shield (shares the Radiant bar)
+  pl.radiant = Math.min(st.maxHealth * 0.5, pl.radiant + sh); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = Math.max(pl.radiantT, 5);
+  events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xfff3c0 });
+  events.emit('crater', { pos: pl.pos.clone(), radius: R * 0.8, color: 0xffe08a });
+  events.emit('floatText', { pos: pl.pos.clone(), text: 'RIPOSTE!', color: 0xfff3a0, scale: 0.9, dy: 2.4 });
+  events.emit('shake', { amount: 0.12 });
 }
+let riposteCd = 0;
 
 /** AXE STORM: 3 giant spinning axes in a ~40 degree fan; each ricochets off the first enemy / obstacle toward the next enemy. */
 function axeStorm(level: number): void {
@@ -222,7 +220,7 @@ export function updateSkills(dt: number): void {
   const chargeMul = pl.vel.x * pl.vel.x + pl.vel.z * pl.vel.z > 0.25 || pl.dashT > 0 ? 0.3 : 1;
 
   // On-attack procs: HUD counters (logic lives in projectiles.fireBasicAttack).
-  for (const k of ['burning', 'freezing', 'thunder', 'stamp', 'smite'] as const) procHud(k, passiveCooldowns[k]);
+  for (const k of ['burning', 'freezing', 'thunder', 'stamp'] as const) procHud(k, passiveCooldowns[k]);
 
   // (owner) timed passives only work in a fight: never in town (the cave's monster floors aside), never once the room is
   // empty (cleared / idle). Blades already out finish their flight but nothing new charges or fires.
@@ -232,6 +230,7 @@ export function updateSkills(dt: number): void {
       if (orbState === 0) { for (const b of blades) b.active = false; blades.length = 0; orbState = 2; orbT = 0; }   // circling blades fade out
       else updateOrbitals(dt, lv.orbital, 0);
     }
+    procFlags.smite = 0;
     return;
   }
 
@@ -357,7 +356,15 @@ export function updateSkills(dt: number): void {
 
   // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).
   if (procFlags.stomp > 0) { const l = procFlags.stomp; procFlags.stomp = 0; axeStorm(l); }
-  if (procFlags.smite > 0) { const l = procFlags.smite; procFlags.smite = 0; smite(l); }
+  {   // Righteous Riposte: ready again after 5 s (-0.4 s per level, min 2.6 s, shortened by cooldown reduction); fires on the next hit taken
+    const rl = lv.smite, rmax = Math.max(2.6, 5 - 0.4 * (rl - 1)) * cdrMul();
+    if (rl > 0) {
+      riposteCd = Math.max(0, riposteCd - dt);
+      setCd('smite', riposteCd, rmax);
+      if (procFlags.smite > 0 && riposteCd <= 0) { riposte(procFlags.smite); riposteCd = rmax; }
+    }
+    procFlags.smite = 0;
+  }
 
   if (lv.orbital > 0) updateOrbitals(dt, lv.orbital, chargeMul);
 }

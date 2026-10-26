@@ -90,7 +90,7 @@ export function spawnProjectile(
 
 // ------------------------------------------------------------ proc system --
 /** Per-run on-attack proc state. Reset by resetProcs() on startRun. */
-export const procFlags = { stomp: 0, smite: 0 };   // set to skill level by the basic attack; consumed by skills.ts
+export const procFlags = { stomp: 0, smite: 0 };   // stomp: set by the basic attack; smite (= Righteous Riposte): set by combat.damagePlayer when the knight is hit; both hold the skill level and are consumed by skills.ts
 let procCount = 0;                       // volleys since the last proc
 let raiseCount = 0;                      // soul bolts since the last wand MAGES / BOWMEN raise
 let archerNext = 0;                      // 0 = fire next, 1 = ice next
@@ -134,8 +134,6 @@ export function procHud(skill: string, out: { t: number; max: number }): void {
     n = procN(lv.stamp); left = n - procCount;
   } else if (st.hero === 'NECROMANCER' && skill === 'graveCall' && lv.graveCall > 0) {
     n = graveN(lv.graveCall); left = n - procCount;
-  } else if (st.hero === 'KNIGHT' && skill === 'smite' && lv.smite > 0) {
-    n = procN(lv.smite); left = n - procCount;
   } else { out.t = 0; out.max = 0; return; }
   out.t = left > 0 ? left : 0; out.max = n;
 }
@@ -257,8 +255,6 @@ export function fireBasicAttack(): void {
     if (procCount >= procN(lv.stamp)) { procCount = 0; procFlags.stomp = lv.stamp; }
   } else if (hero === 'NECROMANCER' && kind === 'SOUL_BOLT' && lv.graveCall > 0) {
     if (procCount >= graveN(lv.graveCall)) { procCount = 0; graveProc = lv.graveCall; }
-  } else if (hero === 'KNIGHT' && kind === 'SLASH' && lv.smite > 0) {
-    if (procCount >= procN(lv.smite)) { procCount = 0; procFlags.smite = lv.smite; }
   }
 
   const emp = kind === 'SLASH' && pl.avatarT > 0;   // Divine Avatar: golden double-size sword arcs (render reads p.emp)

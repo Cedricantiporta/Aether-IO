@@ -96,7 +96,7 @@ const INITIAL_STATS: PlayerStats = {
   skillDamage: 1.0, knockback: 0.5, dodge: 0,
   lifeSteal: 0, minionDmg: 0, minionLife: 0, minionCount: 0, minionHaste: 0, thorns: 0, goldFind: 0, xpBonus: 0, pierceBonus: 0, attackRange: 0, onHitBurnChance: 0, onHitSlowChance: 0,
   echoEvery: 0, hawkBonus: 0, galeWidth: 0, orbBonus: 0, procHaste: 0, thunderChain: 0, stormBonus: 0, avatarBonus: 0, stormTwin: 0, blizzardRadius: 0, blizzFreeze: 0,
-  stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0,
+  stompRadius: 0, stompStun: 0, stompPower: 0, dashCharges: 0, lowHpHaste: 0, rageBonus: 0, dmgReduce: 0, manaCostCut: 0, berserk: 0, resPoison: 0, resBurn: 0, resFrost: 0, resProj: 0,
   stunBonus: 0, burnStacks: 0, backstab: 0, axeCount: 0, axeBounce: 0, axeSize: 0,
 };
 
@@ -272,6 +272,7 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
   cp += stats.dodge * 500;
   cp += stats.lifeSteal * 3000 + stats.thorns * 8 + stats.goldFind * 200 + stats.xpBonus * 200 + stats.pierceBonus * 150;
   cp += stats.onHitBurnChance * 300 + stats.onHitSlowChance * 300 + stats.dmgReduce * 1500 + stats.dashCharges * 300;
+  cp += (stats.resPoison + stats.resBurn + stats.resFrost) * 400 + stats.resProj * 900;   // (resistances: situational, a bit under damage reduction)
   return Math.floor(cp);
 };
 
@@ -281,11 +282,12 @@ export const calculateTotalCP = (stats: PlayerStats): number => {
 export const HP_INFLATE = 1.6, DMG_INFLATE = 2;   // (owner) hero HP x2 then -20% (every HP source: base, items, upgrades, cards)
 /** last time each WARNING toast text was shown (addNotification de-dupes repeats within 3 s) */
 const warnAt = new Map<string, number>();
-export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.03 } as const;   // (owner 2026-10-25: life steal reduced, very small cap; combat.ts also caps it at 1% max HP healed per second)
+export const STAT_CAPS = { critRate: 0.5, cooldownReduction: 0.4, dodge: 0.35, lifeSteal: 0.03, resPoison: 0.6, resBurn: 0.6, resFrost: 0.6, resProj: 0.6 } as const;   // (owner 2026-10-25: life steal reduced, very small cap; combat.ts also caps it at 1% max HP healed per second)
 
 /** baseStats + equipment (+ affixes, set bonuses, talents). Temporary buffs (rage / sprint) are applied by the engine. */
 const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass, talents: Record<HeroClass, TalentRanks>, attrs?: Attrs): PlayerStats => {
   const final: PlayerStats = { ...base };
+  for (const k of ['resPoison', 'resBurn', 'resFrost', 'resProj'] as const) if (!final[k]) final[k] = 0;   // (stats added later: older saved base stats lack them)
   if (!final.attackRange) final.attackRange = 0;   // (stat added later: older saved base stats lack it)
   const acc = newAcc();
 
