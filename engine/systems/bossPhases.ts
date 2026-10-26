@@ -174,6 +174,9 @@ hooks.phaseReset = (): void => {
 // ---------------------------------------------------------------- the trigger ----
 hooks.phaseCheck = (e: Enemy): void => {
   if (bp.on || e.state === 'SPAWN' || e.state === 'DYING' || e.decoy) return;
+  // (owner 2026-10-26 bug: Endless Waves with several Elderroots chained Spore Gardens forever, the per-boss counter D swapping between them)
+  // only the room's own boss (director.bossId) or the Slime King runs phases; extra bosses (waves, summons) never do
+  if (world.director.bossId !== e.id && !isSlimeKing(e)) return;
   const kind: PhaseKind = isSlimeKing(e) ? 'SPLIT' : e.boss ? (MECH[e.kind] ?? '') : '';
   if (!kind) return;
   if (D.id !== e.id) { D.id = e.id; D.n = 0; D.since = -1; D.lastEnd = -99; }
