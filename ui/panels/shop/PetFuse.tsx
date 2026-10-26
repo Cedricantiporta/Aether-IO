@@ -90,6 +90,7 @@ export const PetAscend: React.FC = () => {
   const equipped = useGameStore((s) => s.equipment.pet);
   const ascendPet = useGameStore((s) => s.ascendPet);
   const [keepId, setKeep] = useState(''), [sacId, setSac] = useState('');
+  const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);   // the shared crafting cinematic
   const bag = inventory.filter((i) => i.type === 'PET');
   const keepers = [...(equipped ? [equipped] : []), ...bag].filter((k) => petStars(k) < PET_MAX_STARS && bag.some((d) => d.id !== k.id && d.name === k.name));
   const keep = keepers.find((k) => k.id === keepId) ?? null;
@@ -104,9 +105,10 @@ export const PetAscend: React.FC = () => {
         {keep && (<>
           <div className="text-[.75rem] muted">2. Duplicate to sacrifice (it is consumed)</div>
           <div className="slot-grid">{dupes.map((d) => <ItemSlot key={d.id} item={d} fluid size="100%" iconSize="78%" tooltip="none" selected={d.id === sacId} onClick={() => setSac(d.id)} />)}</div>
-          <button className="rpg-btn bevel pe px-4 py-2 self-center" disabled={!sacId} data-testid="pet-ascend-go" onClick={() => { ascendPet(keep.id, sacId); setKeep(''); setSac(''); }}>Ascend {keep.name} ★</button>
+          <button className="rpg-btn bevel pe px-4 py-2 self-center" disabled={!sacId} data-testid="pet-ascend-go" onClick={() => { const kid = keep.id, sid = sacId, k = keep; setKeep(''); setSac(''); setCine({ preview: k, run: () => { const ok = ascendPet(kid, sid); return { success: ok, item: k, title: ok ? 'Ascended!' : 'Ascension Failed', sub: ok ? `${k.name} gained a gold star` : undefined }; } }); }}>Ascend {keep.name} ★</button>
         </>)}
       </>) : <div className="rpg-label">No duplicates to ascend (a pet below 5 stars plus a same-name copy in your bag).</div>}
+      {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Ascension Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
 };

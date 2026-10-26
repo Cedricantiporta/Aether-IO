@@ -64,7 +64,7 @@ import { crystalCount, syncCrystalStack, crystalItem } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
 import { startRun, enterVillage } from './engine/game';
 import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
-import { ELIXIRS, applyElixir, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
+import { ELIXIRS, applyActiveElixirs, setActiveElixirs, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { gearStars, withNextStar, GEAR_MAX_STARS } from './gearStars';
 import { petPower, petStatMul, PET_PCT_STATS, petStars, PET_MAX_STARS } from './petGrowth';
@@ -319,6 +319,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   applyPetCollection(final);   // Pet Collection milestones (petCollection.ts)
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
   if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; final.damage *= 0.85; }   // (damage feeds basic attacks and skills)   // fragile, slow caster (user tuning)
+  applyActiveElixirs(final);   // run elixirs (elixirs.ts): on the final stats, before the caps
   for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps
   final.maxHealth = Math.round(final.maxHealth * HP_INFLATE);   // (owner) every HP source doubled
   return final;
@@ -911,11 +912,10 @@ export const useGameStore = create<GameState>()((set, get) => {
       const state = get();
       // the run's time of day: a snapshot of the town clock (the endless tower, waves and daily keep day)
       world.runTime = world.townTime; world.runPhase = runInfo.mode === 'TOWER' ? 0 : phaseOfTime(world.townTime);
-      const l = loadoutFor(state.hero, state.inventory, state.equipment);
-      // elixirs drunk in town start working now (for this run only)
+      // elixirs drunk in town start working now (for this run only; applied to the final stats in calculateStats)
       const elixirs = state.elixirsNext.slice();
-      for (const id of elixirs) applyElixir(l.baseStats, id);
-      if (elixirs.length) l.stats = calc(l.baseStats, l.equipment);
+      setActiveElixirs(elixirs);
+      const l = loadoutFor(state.hero, state.inventory, state.equipment);
       set({
         ...runState(state.hero, l.baseStats, l.stats),
         elixirsRun: elixirs, elixirsNext: [],
@@ -950,6 +950,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     resetGame: () => {
       enterVillage();
+      setActiveElixirs([]);   // run elixir buffs end with the run
       const s = get();
       const l = loadoutFor(s.hero, s.inventory, s.equipment);
       set({
@@ -975,6 +976,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     },
 
     resetProfile: () => {
+      setActiveElixirs([]);
       try { if (typeof localStorage !== 'undefined') localStorage.removeItem(PROFILE_KEY); } catch { /* ignore */ }
       const f = freshProfile(get().settings, undefined, isAltChar());
       set({
@@ -1914,9 +1916,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       if ((inRun ? s.elixirsRun : s.elixirsNext).includes(d.id)) { notify(`${d.name} is already ${inRun ? 'active' : 'waiting for your next run'}.`, '#f1d58e', 'WARNING'); return false; }
       if (!get().consumeItem((i) => i.type === 'ELIXIR' && i.name === d.name)) return false;
       if (inRun) {
-        const b = { ...get().baseStats };
-        applyElixir(b, d.id);
-        set({ baseStats: b, stats: calc(b, get().equipment), elixirsRun: [...get().elixirsRun, d.id] });
+        const run = [...get().elixirsRun, d.id];
+        setActiveElixirs(run);
+        set({ stats: calc(get().baseStats, get().equipment), elixirsRun: run });
         notify(`${d.name}: ${d.effect} for the rest of this run`, d.color, 'SYSTEM');
       } else {
         set({ elixirsNext: [...get().elixirsNext, d.id] });

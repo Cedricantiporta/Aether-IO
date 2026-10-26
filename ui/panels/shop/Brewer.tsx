@@ -15,6 +15,7 @@ import { ItemArt } from '../../components/ItemArt';
 import { CoinGlyph, GemGlyph } from '../../components/SkillIcons';
 import { QtyStepper } from '../../components/Modal';
 import { RARITY_TEXT } from '../../lib/game';
+import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 
 const lootIcon = (id: string): Item => ({ id, name: LOOT_BY_ID[id].name, type: 'LOOT', rarity: LOOT_BY_ID[id].rarity, level: 1, stats: {}, price: 0, description: LOOT_BY_ID[id].desc } as Item);
 
@@ -26,6 +27,7 @@ export const BrewerTab: React.FC = () => {
   const samples = useMemo(() => Object.fromEntries(ELIXIR_IDS.map((k) => [k, elixirItem(k)])) as Record<ElixirId, Item>, []);
   const [sel, setSel] = useState<ElixirId>('might');
   const [qty, setQty] = useState(1);
+  const [cine, setCine] = useState<{ preview: Item; run: () => ForgeOutcome } | null>(null);   // the shared crafting cinematic (ForgeCinematic)
   const d = ELIXIRS[sel];
   const freeBrew = useGameStore((s) => questFree(s, 'elixir')) && sel === 'might';   // tutorial: one free Elixir of Might
   let afford = Math.min(10, Math.floor(gold / d.gold));
@@ -60,7 +62,7 @@ export const BrewerTab: React.FC = () => {
         </div>
         <div className="rpg-label mt-3 mb-1.5">Quantity</div>
         <QtyStepper value={q} max={maxQty} onChange={setQty} />
-        <button className={`forge-btn ${missing ? 'off' : 'on'}`} disabled={!!missing} title={missing || undefined} onClick={() => brew(sel, q)} data-testid="brew-btn">
+        <button className={`forge-btn ${missing ? 'off' : 'on'}`} disabled={!!missing} title={missing || undefined} onClick={() => { const id = sel, n = q; setCine({ preview: samples[id], run: () => { const done = brew(id, n); return { success: done > 0, item: samples[id], title: done > 0 ? 'Brewing Success!' : 'Brewing Failed', sub: done > 0 ? `${done > 1 ? `${done}x ` : ''}${ELIXIRS[id].name}` : 'Not enough ingredients or gold.' }; } }); }} data-testid="brew-btn">
           <FlaskConical size={20} /> {freeBrew ? 'Brew (Free)' : q > 1 ? `Brew x${q}` : 'Brew'}{gemCost > 0 && <span className="ml-2 inline-flex items-center gap-1 text-[.8em]"><GemGlyph size={14} /> {gemCost}</span>}
         </button>
       </div>
@@ -71,6 +73,7 @@ export const BrewerTab: React.FC = () => {
           : <div className="flex flex-wrap gap-1.5">{active.map((k) => <span key={k} className="brew-chip" ><ItemArt item={samples[k]} size={20} /> {ELIXIRS[k].effect}</span>)}</div>}
         <div className="rpg-label !text-[.55rem] mt-2 opacity-70">Drink an elixir in town and its buff lasts through your next adventure; drink it during a run and it lasts until that run ends. One of each kind at a time.</div>
       </div>
+      {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Brewing Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
 };

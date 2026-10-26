@@ -10,8 +10,8 @@ import type { Item, PlayerStats, Rarity } from './types';
 import { GOLD_SCALE } from './constants';
 import type { LootNeed } from './crafting';
 
-export type ElixirId = 'might' | 'iron' | 'swift' | 'fortune' | 'vigor';
-export const ELIXIR_IDS: ElixirId[] = ['might', 'iron', 'swift', 'fortune', 'vigor'];
+export type ElixirId = 'might' | 'iron' | 'swift' | 'fortune' | 'vigor' | 'fireward' | 'steadfast' | 'poisonward';
+export const ELIXIR_IDS: ElixirId[] = ['might', 'iron', 'swift', 'vigor', 'fortune', 'fireward', 'steadfast', 'poisonward'];
 
 export interface ElixirDef {
   id: ElixirId; name: string; rarity: Rarity;
@@ -23,12 +23,18 @@ export interface ElixirDef {
   parts: LootNeed[];
 }
 
+// Balance (owner 2026-10-26): every buff applies to the FINAL stats (gear + talents + cards included, see store.calculateStats), so it stays
+// worth its price late game. Core elixirs ~ a Rare run card (+12-15% of one pillar: damage / attack speed / effective HP); the
+// resistance elixirs are situational and cheaper (+25% of one resistance, the hard cap is 60%); Fortune is the Epic economy one.
 export const ELIXIRS: Record<ElixirId, ElixirDef> = {
-  might:   { id: 'might',   name: 'Elixir of Might',     rarity: 'RARE', effect: '+15% damage',       color: '#ff7a2a', gold: 250 * GOLD_SCALE, parts: [{ id: 'goblin_ear', count: 6 }, { id: 'ogre_tusk', count: 4 }, { id: 'brute_knuckle', count: 1 }] },
-  iron:    { id: 'iron',    name: 'Elixir of Iron',      rarity: 'RARE', effect: '+10 defense',       color: '#9eacc2', gold: 250 * GOLD_SCALE, parts: [{ id: 'beetle_shell', count: 6 }, { id: 'old_bone', count: 6 }, { id: 'brute_knuckle', count: 1 }] },
-  swift:   { id: 'swift',   name: 'Elixir of Swiftness', rarity: 'RARE', effect: '+15% attack speed', color: '#5fd35a', gold: 250 * GOLD_SCALE, parts: [{ id: 'bat_wing', count: 6 }, { id: 'slime_gel', count: 6 }, { id: 'echo_crystal', count: 1 }] },
-  fortune: { id: 'fortune', name: 'Elixir of Fortune',   rarity: 'EPIC', effect: '+35% gold find, +15% XP', color: '#ffc94a', gold: 350 * GOLD_SCALE, parts: [{ id: 'goblin_ear', count: 5 }, { id: 'cultist_rune', count: 5 }, { id: 'dark_page', count: 1 }] },
-  vigor:   { id: 'vigor',   name: 'Elixir of Vigor',     rarity: 'RARE', effect: '+20% max HP',       color: '#ff4a5e', gold: 250 * GOLD_SCALE, parts: [{ id: 'slime_gel', count: 6 }, { id: 'ogre_tusk', count: 3 }, { id: 'shimmer_core', count: 1 }] },
+  might:   { id: 'might',   name: 'Elixir of Might',     rarity: 'RARE', effect: '+12% damage',       color: '#ff7a2a', gold: 250 * GOLD_SCALE, parts: [{ id: 'goblin_ear', count: 6 }, { id: 'ogre_tusk', count: 4 }, { id: 'brute_knuckle', count: 1 }] },
+  iron:    { id: 'iron',    name: 'Elixir of Iron',      rarity: 'RARE', effect: '+30% defense',      color: '#9eacc2', gold: 250 * GOLD_SCALE, parts: [{ id: 'beetle_shell', count: 6 }, { id: 'old_bone', count: 6 }, { id: 'brute_knuckle', count: 1 }] },
+  swift:   { id: 'swift',   name: 'Elixir of Swiftness', rarity: 'RARE', effect: '+12% attack speed', color: '#5fd35a', gold: 250 * GOLD_SCALE, parts: [{ id: 'bat_wing', count: 6 }, { id: 'slime_gel', count: 6 }, { id: 'echo_crystal', count: 1 }] },
+  vigor:   { id: 'vigor',   name: 'Elixir of Vigor',     rarity: 'RARE', effect: '+15% max HP',       color: '#ff4a5e', gold: 250 * GOLD_SCALE, parts: [{ id: 'slime_gel', count: 6 }, { id: 'ogre_tusk', count: 3 }, { id: 'shimmer_core', count: 1 }] },
+  fortune: { id: 'fortune', name: 'Elixir of Fortune',   rarity: 'EPIC', effect: '+30% gold find, +10% XP', color: '#ffc94a', gold: 350 * GOLD_SCALE, parts: [{ id: 'goblin_ear', count: 5 }, { id: 'cultist_rune', count: 5 }, { id: 'dark_page', count: 1 }] },
+  fireward:   { id: 'fireward',   name: 'Elixir of Fire Ward',   rarity: 'RARE', effect: '+25% fire resistance',   color: '#ff6a2e', gold: 200 * GOLD_SCALE, parts: [{ id: 'beetle_shell', count: 5 }, { id: 'ogre_tusk', count: 3 }, { id: 'volatile_gland', count: 1 }] },
+  steadfast:  { id: 'steadfast',  name: 'Elixir of Steadfast',   rarity: 'RARE', effect: '+25% CC resistance',     color: '#c9a2ff', gold: 200 * GOLD_SCALE, parts: [{ id: 'goblin_ear', count: 4 }, { id: 'bat_wing', count: 4 }, { id: 'brute_knuckle', count: 1 }] },
+  poisonward: { id: 'poisonward', name: 'Elixir of Poison Ward', rarity: 'RARE', effect: '+25% poison resistance', color: '#9be83a', gold: 200 * GOLD_SCALE, parts: [{ id: 'slime_gel', count: 5 }, { id: 'old_bone', count: 5 }, { id: 'shimmer_core', count: 1 }] },
 };
 
 export const ELIXIR_BY_NAME: Record<string, ElixirDef> = Object.fromEntries(ELIXIR_IDS.map((k) => [ELIXIRS[k].name, ELIXIRS[k]]));
@@ -45,14 +51,23 @@ export function elixirItem(id: ElixirId, quantity = 1): Item {
   };
 }
 
-/** The buff of one elixir applied to run base stats (in place). */
-export function applyElixir(b: PlayerStats, id: ElixirId): void {
-  switch (id) {
-    case 'might': b.damage *= 1.15; break;
-    case 'iron': b.defense = (b.defense || 0) + 10; break;
-    case 'swift': b.fireRate *= 1.15; break;
-    case 'fortune': b.goldFind = (b.goldFind || 0) + 0.35; b.xpBonus = (b.xpBonus || 0) + 0.15; break;
-    case 'vigor': b.maxHealth = Math.round(b.maxHealth * 1.2); break;
+// The elixirs active in the current run (store keeps this in sync with elixirsRun before every stats recalculation).
+let ACTIVE: ElixirId[] = [];
+export const setActiveElixirs = (ids: readonly ElixirId[]): void => { ACTIVE = ids.slice(); };
+
+/** The active elixir buffs applied to the FINAL stats (in place; called by store.calculateStats before the stat caps). */
+export function applyActiveElixirs(f: PlayerStats): void {
+  for (const id of ACTIVE) {
+    switch (id) {
+      case 'might': f.damage *= 1.12; break;
+      case 'iron': f.defense = (f.defense || 0) + Math.max(12, (f.defense || 0) * 0.3); break;
+      case 'swift': f.fireRate *= 1.12; break;
+      case 'vigor': f.maxHealth *= 1.15; break;
+      case 'fortune': f.goldFind = (f.goldFind || 0) + 0.3; f.xpBonus = (f.xpBonus || 0) + 0.1; break;
+      case 'fireward': f.resBurn = (f.resBurn || 0) + 0.25; break;
+      case 'steadfast': f.resCC = (f.resCC || 0) + 0.25; break;
+      case 'poisonward': f.resPoison = (f.resPoison || 0) + 0.25; break;
+    }
   }
 }
 

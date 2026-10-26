@@ -544,14 +544,18 @@ const ITEM_PAINT: Record<string, string> = {
   revive_ankh: 'revive_ankh', ankh: 'revive_ankh', reforge_stone: 'reforge_stone', temper_oil: 'temper_oil', augment_rune: 'augment_rune',
   erase_scroll: 'erase_scroll', binding_seal: 'binding_seal', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
   elixir_might: 'elixir_might', elixir_iron: 'elixir_iron', elixir_swift: 'elixir_swift', elixir_fortune: 'elixir_fortune', elixir_vigor: 'elixir_vigor',
+  // no art yet for the resistance elixirs: borrow the closest painted flask and hue-shift it (ITEM_PAINT_TINT). TODO art: elixir_fireward, elixir_steadfast, elixir_poisonward
+  elixir_fireward: 'elixir_might', elixir_steadfast: 'elixir_swift', elixir_poisonward: 'elixir_vigor',
 };
+/** CSS hue-rotate (deg) for borrowed icons. might = orange -> fire stays red-orange; swift = green -> violet; vigor = red -> toxic green. */
+const ITEM_PAINT_TINT: Record<string, string> = { elixir_fireward: 'hue-rotate(-14deg) saturate(1.3)', elixir_steadfast: 'hue-rotate(170deg)', elixir_poisonward: 'hue-rotate(95deg) saturate(1.1)' };
 const ART_URL = (((import.meta as any).env?.BASE_URL as string) || '/') + 'art/items/';
-export const PaintImg: React.FC<{ file: string; size: number | string }> = React.memo(({ file, size }) => (
+export const PaintImg: React.FC<{ file: string; size: number | string; tint?: string }> = React.memo(({ file, size, tint }) => (
   <img src={`${ART_URL}${file}.webp`} alt="" draggable={false} decoding="async"
-    style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} />
+    style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: `${tint ? tint + ' ' : ''}drop-shadow(0 2px 2px rgba(0,0,0,.55))`, pointerEvents: 'none' }} />
 ));
 const Art: React.FC<{ k: string; c: string; size: number | string }> = React.memo(({ k, c, size }) => (
-  ITEM_PAINT[k] ? <PaintImg file={ITEM_PAINT[k]} size={size} /> : <Svg size={size}>{(DRAW[k] ?? Treasure)(k === 'paw' ? '#c8a878' : c)}</Svg>
+  ITEM_PAINT[k] ? <PaintImg file={ITEM_PAINT[k]} size={size} tint={ITEM_PAINT_TINT[k]} /> : <Svg size={size}>{(DRAW[k] ?? Treasure)(k === 'paw' ? '#c8a878' : c)}</Svg>
 ));
 Art.displayName = 'ItemArt';
 
