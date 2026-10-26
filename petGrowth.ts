@@ -3,7 +3,8 @@
 // Pure data + helpers (no store / React imports) so engine, UI and store share them.
 // State lives ON the pet Item (petLv / petXp / petStage) so it survives bag / warehouse / equip moves.
 // ============================================================================
-import { GOLD_SCALE } from './constants';
+import { GOLD_SCALE, PETS_POOL } from './constants';
+import { SHARD_RARITIES, shardTier } from './shards';
 import type { Item, Rarity } from './types';
 
 export const PET_MAX_LV = 20;
@@ -34,13 +35,58 @@ export const petLvCap = (stage: number): number => (stage >= 3 ? PET_MAX_LV : PE
 /** Multiplier on the pet's base stats AND pet skill power. 1.0 at Lv 1 stage 1; Lv 20 stage 3 = 2.7. */
 export const petPowerAt = (lv: number, stage: number, stars = 0): number => (1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage]) * (1 + PET_STAR_BONUS * stars);
 export const petPower = (p: Item): number => (p.type === 'PET' ? petPowerAt(petLv(p), petStage(p), petStars(p)) : 1);
-/** (owner balance) percentage stats a pet gives (crit, cooldown, dodge, speed ...) count half and grow at a quarter of the
- *  flat-stat rate: a maxed Mythic pet no longer hands out +54% crit. Flat stats (damage, health, defense, regen) use petPower. */
+/** Stats that are NOT a share of the hero's own value (flat small numbers or fractions); kept for gear upgrades (store.ts / ui/lib/game.ts). */
 export const PET_PCT_STATS = new Set(['critRate', 'critDamage', 'cooldownReduction', 'dodge', 'moveSpeed', 'skillDamage', 'lifeSteal', 'fireRate', 'goldFind', 'xpBonus', 'multishot']);
-export const petStatMul = (p: Item, k: string): number => {
-  if (p.type !== 'PET') return 1;
-  const pm = petPower(p);
-  return PET_PCT_STATS.has(k) ? 0.5 * (1 + (pm - 1) * 0.25) : pm;
+
+// ---- Pet stat model (owner 2026-10-26): a pet's `stats` in the catalog are WEIGHTS (1.0 = a full line), not numbers.
+//   value = share(rarity) x weight x growth x (a hero reference stat)       (damage, health, defense, regen, mana regen, attack speed, move speed)
+//   value = absolute cap(stat) x (share(rarity) / Mythic share) x weight x growth   (crit, crit damage, cooldown, dodge, knockback ...)
+// share(rarity) is the line size at max growth (Lv 20, Stage III, 0 stars): Common 4% ... Mythic 19% of the hero's own stat.
+// growth runs 0.5 (Lv 1 Stage I) .. 1.0 (Lv 20 Stage III), +10% per ascension star. Weights are looked up by pet NAME in PETS_POOL,
+// so saved pets (whose stored stats come from the old number scale) follow the new model without a migration.
+export const PET_LINE_SHARE: Record<Rarity, number> = { COMMON: 0.04, UNCOMMON: 0.06, RARE: 0.085, EPIC: 0.115, LEGENDARY: 0.15, MYTHIC: 0.19 };
+/** Absolute stats at share = Mythic, weight 1, growth 1. */
+export const PET_ABS_MAX: Record<string, number> = { critRate: 0.10, critDamage: 0.40, cooldownReduction: 0.10, dodge: 0.06, knockback: 0.8, skillDamage: 0.15, lifeSteal: 0.01, goldFind: 0.10, xpBonus: 0.10 };
+/** Share-of-reference stats: damage / maxHealth / defense / moveSpeed / fireRate use their own reference; regen is % of max HP per second, manaRegen % of max mana per second. */
+const REL_FACTOR: Record<string, number> = { damage: 1, maxHealth: 1, defense: 1, moveSpeed: 0.5, fireRate: 0.6, regen: 0.03, manaRegen: 0.06 };
+/** The hero's stats BEFORE the pet is added (gear + class + talents): kept up to date by store.calculateStats. `hpMul` = the HP inflation shown in game. */
+export const petRef = { damage: 18, maxHealth: 100, defense: 3, maxMana: 100, fireRate: 1.4, moveSpeed: 10, hpMul: 1 };
+const REF_KEY: Record<string, 'damage' | 'maxHealth' | 'defense' | 'moveSpeed' | 'fireRate'> = { damage: 'damage', maxHealth: 'maxHealth', defense: 'defense', moveSpeed: 'moveSpeed', fireRate: 'fireRate' };
+
+/** Weights of a pet (template by name; the item's own stats only for unknown pets). */
+export const petWeights = (p: Pick<Item, 'name' | 'stats'>): Partial<Record<string, number>> => {
+  const t = PETS_POOL.find((q) => q.name === p.name);
+  return (t ?? p).stats as Partial<Record<string, number>>;
+};
+/** 0.5 at Lv 1 Stage I -> 1.0 at Lv 20 Stage III (the same raw curve as petPowerAt), x(1 + 10%) per star. */
+export const petStatGrowth = (lv: number, stage: number, stars = 0): number => {
+  const raw = 1 + PET_LV_BONUS * (lv - 1) + PET_STAGE_BONUS[stage];
+  return (0.5 + 0.5 * (raw - 1) / (PET_LV_BONUS * (PET_MAX_LV - 1) + PET_STAGE_BONUS[3])) * (1 + PET_STAR_BONUS * stars);
+};
+/** Share of the hero's reference stat (0.17 = +17%) for the relative stats, or undefined for absolute ones. */
+export const petStatShare = (p: Item, k: string, lv = petLv(p), stage = petStage(p), stars = petStars(p)): number | undefined => {
+  const w = petWeights(p)[k];
+  if (w === undefined || REL_FACTOR[k] === undefined) return undefined;
+  return PET_LINE_SHARE[p.rarity] * w * petStatGrowth(lv, stage, stars) * REL_FACTOR[k];
+};
+/** The number a pet stat line gives (flat for damage / health / ..., a fraction for crit / cooldown ...). `ref` = hero reference stats. */
+export const petStatAt = (p: Item, k: string, lv: number, stage: number, stars: number, ref = petRef): number => {
+  const sh = petStatShare(p, k, lv, stage, stars);
+  if (sh !== undefined) {
+    if (k === 'regen') return ref.maxHealth * sh;
+    if (k === 'manaRegen') return ref.maxMana * sh;
+    if (k === 'defense') return Math.max(ref.defense, ref.maxHealth * 0.03) * sh;
+    return ref[REF_KEY[k]] * sh;
+  }
+  const w = petWeights(p)[k] ?? 0, cap = PET_ABS_MAX[k] ?? 0;
+  return cap * (PET_LINE_SHARE[p.rarity] / PET_LINE_SHARE.MYTHIC) * w * petStatGrowth(lv, stage, stars);
+};
+/** Value of a pet stat line at the pet's current growth (applied to the hero by store.calculateStats; maxHealth is pre-inflation there). */
+export const petStatValue = (p: Item, k: string, ref = petRef): number => (p.type === 'PET' ? petStatAt(p, k, petLv(p), petStage(p), petStars(p), ref) : 0);
+/** What the player sees for a pet line: the in-game number (HP inflation included) and the share of the hero's stat when it has one. */
+export const petStatShown = (p: Item, k: string, lv = petLv(p), stage = petStage(p), stars = petStars(p)): { value: number; share?: number } => {
+  const v = petStatAt(p, k, lv, stage, stars);
+  return { value: k === 'maxHealth' ? v * petRef.hpMul : v, share: petStatShare(p, k, lv, stage, stars) };
 };
 /** (owner) feeding is tiered: a pet eats food of its own rarity (Common / Uncommon count as one tier). */
 const FOOD_TIER: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 1, EPIC: 2, LEGENDARY: 3, MYTHIC: 4 };
@@ -52,10 +98,27 @@ export const petDisplayName = (p: Item): string => (p.type === 'PET' ? PET_STAGE
 export const petCanEvolve = (p: Item): boolean => { const st = petStage(p); return st < 3 && petLv(p) >= PET_EVOLVE_LV[st]; };
 
 export interface EvolveCost { gold: number; shards: Partial<Record<Rarity, number>> }
-/** Cost to evolve FROM `stage` (1 -> 2 or 2 -> 3). Gold is pre-scaled by GOLD_SCALE. */
-export const PET_EVOLVE_COST: Record<number, EvolveCost> = {
-  1: { gold: 2000 * GOLD_SCALE, shards: { COMMON: 150, RARE: 30 } },
-  2: { gold: 8000 * GOLD_SCALE, shards: { COMMON: 300, RARE: 80, EPIC: 15 } },
+/** Evolve costs by pet rarity (owner 2026-10-26): shards of the pet's OWN tier (Uncommon pets use Common shards, the only low tier
+ *  without an Uncommon shard) and, for the second evolution, a smaller pile of the tier below; gold grows with rarity and stage.
+ *  [gold / GOLD_SCALE, own-tier shards, below-tier shards] for stage I -> II and II -> III. Shard counts follow the crafting recipes
+ *  (a Mythic piece costs 12 Mythic shards) and the Gem Shop (Mythic 60 gems each). */
+const EVOLVE_TABLE: Record<Rarity, [[number, number, number], [number, number, number]]> = {
+  COMMON: [[2000, 60, 0], [6000, 150, 0]],
+  UNCOMMON: [[3000, 90, 0], [8000, 220, 0]],
+  RARE: [[4500, 25, 0], [12000, 60, 100]],
+  EPIC: [[7000, 15, 0], [18000, 35, 40]],
+  LEGENDARY: [[10000, 8, 0], [26000, 20, 25]],
+  MYTHIC: [[15000, 5, 0], [40000, 12, 15]],
+};
+/** Cost to evolve `p` FROM its current stage (1 -> 2 or 2 -> 3), or null at the final stage. Gold is pre-scaled by GOLD_SCALE. */
+export const petEvolveCost = (p: Pick<Item, 'rarity' | 'petStage'>): EvolveCost | null => {
+  const st = petStage(p);
+  if (st >= 3) return null;
+  const [gold, own, below] = EVOLVE_TABLE[p.rarity][st - 1];
+  const tier = shardTier(p.rarity), shards: Partial<Record<Rarity, number>> = { [tier]: own };
+  const lower = SHARD_RARITIES[SHARD_RARITIES.indexOf(tier) - 1];
+  if (below > 0 && lower) shards[lower] = below;
+  return { gold: gold * GOLD_SCALE, shards };
 };
 
 /** XP granted per feed unit. Shards: 1 shard; loot: 1 crystal / ore item. */

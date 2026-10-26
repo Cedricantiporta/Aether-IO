@@ -15,7 +15,7 @@ import { gradeLabel, gradeOf, isGraded } from '../../grade';
 import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { gearStars, GEAR_MAX_STARS, GEAR_STAR_BONUS } from '../../gearStars';
-import { petPower, petStatMul, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
+import { petPower, petStatShown, petWeights, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -55,7 +55,8 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
   const cp = calculateItemCP(item);
   const cpDelta = equipped && !isEquippedItself ? cp - calculateItemCP(equipped) : 0;
   const pm = petPower(item), epm = equipped ? petPower(equipped) : 1; // pet growth scales displayed stats
-  const keys = statKeys(item.stats, equipped && !isEquippedItself ? equipped.stats : undefined).filter((k) => item.stats[k] !== undefined || (equipped && equipped.stats[k] !== undefined));
+  const sOf = (it: Item): Partial<PlayerStats> => (it.type === 'PET' ? (petWeights(it) as Partial<PlayerStats>) : it.stats);   // pet stats are weights (petGrowth.ts)
+  const keys = statKeys(sOf(item), equipped && !isEquippedItself ? sOf(equipped) : undefined).filter((k) => sOf(item)[k] !== undefined || (equipped && sOf(equipped)[k] !== undefined));
 
   return (
     <div style={{ width: '16rem' }}>
@@ -79,15 +80,16 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
       {item.type === 'LOOT' && LOOT_BY_NAME[item.name] && lootCraftUse(LOOT_BY_NAME[item.name].id) && <div className="muted text-[.68rem]">{lootCraftUse(LOOT_BY_NAME[item.name].id)}</div>}
       {keys.length > 0 && <div className="tt-sep" />}
       {keys.map((k) => {
-        const v = item.stats[k] === undefined ? undefined : (item.stats[k] as number) * (item.type === 'PET' ? petStatMul(item, k) : pm);
-        const ev = equipped && !isEquippedItself && equipped.stats[k] !== undefined ? (equipped.stats[k] as number) * (equipped.type === 'PET' ? petStatMul(equipped, k) : epm) : undefined;
+        const shown = item.type === 'PET' && sOf(item)[k] !== undefined ? petStatShown(item, k) : undefined;
+        const v = item.stats[k] === undefined && !shown ? undefined : shown ? shown.value : (item.stats[k] as number) * pm;
+        const ev = equipped && !isEquippedItself && sOf(equipped)[k] !== undefined ? (equipped.type === 'PET' ? petStatShown(equipped, k).value : (equipped.stats[k] as number) * epm) : undefined;
         const diff = equipped && !isEquippedItself ? (v ?? 0) - (ev ?? 0) : 0;
         const dir = diff > 0.0001 ? 'pos' : diff < -0.0001 ? 'neg' : '';
         return (
           <div key={k} className="tt-row">
             <span className="muted">{STAT_LABEL[k]}</span>
             <span className={v === undefined ? 'neg' : (v ?? 0) < 0 ? 'neg' : ''}>
-              {v !== undefined ? fmtItemStat(k, v) : '—'}
+              {v !== undefined ? fmtItemStat(k, v) : '—'}{shown?.share !== undefined && k !== 'regen' && k !== 'manaRegen' && <span className="muted" style={{ fontSize: '.68rem' }}> ({(shown.share * 100).toFixed(1)}%)</span>}
               {equipped && !isEquippedItself && diff !== 0 && <span className={`ml-1 ${dir}`} style={{ fontSize: '.68rem' }}>{diff > 0 ? '▲' : '▼'}</span>}
             </span>
           </div>
@@ -150,7 +152,7 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
           <div className="tt-row"><span style={{ color: petStage(item) > 1 ? '#7a2ec2' : undefined, fontWeight: 800 }}>{PET_STAGE_LABEL[petStage(item)]} · Lv {petLv(item)}/{petLvCap(petStage(item))}</span>
             <span className="muted">{petLv(item) >= petLvCap(petStage(item)) ? (petStage(item) < 3 ? 'Ready to evolve' : 'MAX') : `${petXp(item)}/${petXpNeed(petLv(item))} XP`}</span></div>
           {petStars(item) > 0 && <div className="tt-row"><span style={{ color: '#e0a800', fontWeight: 800 }} data-testid="pet-stars-tip">{'★'.repeat(petStars(item))}{'☆'.repeat(5 - petStars(item))}</span><span className="muted">+{petStars(item) * 10}% power</span></div>}
-          <div className="muted text-[.68rem]">Health / damage / defense and skill power x{pm.toFixed(2)} · % stats x{petStatMul(item, 'critRate').toFixed(2)}</div>
+          <div className="muted text-[.68rem]">Stats are a share of your own stats (Lv {petLv(item)} / {PET_STAGE_LABEL[petStage(item)]}); skill power x{pm.toFixed(2)}</div>
         </div>
       )}
       {item.petSkill && <div className="muted mt-1">Pet skill: {item.petSkill.replace('_', ' ').toLowerCase()}{item.petCooldown ? ` (${item.petCooldown}s)` : ''}</div>}

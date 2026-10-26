@@ -6,7 +6,7 @@ import { Button } from '../../components/Button';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import {
-  petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
+  petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, petEvolveCost, petStatShown, petWeights,
   PET_SHARD_XP, petEats, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV,
 } from '../../../petGrowth';
 import { feedLoot, feedShards, evolvePet, lootFoodXp, canAffordEvolve } from '../../../petActions';
@@ -28,9 +28,10 @@ export const PetCare: React.FC = () => {
   const nextLv = atCap ? lv : lv + 1;
   const cur = petPowerAt(lv, st, petStars(pet));
   const nxt = evolving ? petPowerAt(lv, st + 1, petStars(pet)) : petPowerAt(nextLv, st, petStars(pet));
-  const keys = Object.keys(pet.stats ?? {}) as (keyof PlayerStats)[];
+  const keys = Object.keys(petWeights(pet)) as (keyof PlayerStats)[];
+  const stars = petStars(pet), toLv = evolving ? lv : nextLv, toSt = evolving ? st + 1 : st;
   const food = inv.filter((i) => lootFoodXp(i) > 0 && petEats(pet, i.rarity));   // (owner) tiered feeding
-  const cost = PET_EVOLVE_COST[st];
+  const cost = petEvolveCost(pet);
   const can = canAffordEvolve(pet, gold, mats);
   const hasShards = RARITIES.some((r) => (mats[r] ?? 0) > 0 && petEats(pet, r));
 
@@ -56,12 +57,13 @@ export const PetCare: React.FC = () => {
       <div className="text-[.74rem]" data-testid="pet-preview">
         <div className="rpg-label mb-0.5">{evolving ? 'After evolving' : atCap ? 'Current bonuses' : `At Lv ${nextLv}`}</div>
         {keys.map((k) => {
-          const base = pet.stats[k] as number;
-          const a = base * cur, b = base * nxt;
+          const A = petStatShown(pet, k, lv, st, stars), B = petStatShown(pet, k, toLv, toSt, stars);
+          const a = A.value, b = B.value;
+          const pc = (x?: number) => (x === undefined ? '' : ` (${(x * 100).toFixed(1)}%)`);
           return (
             <div key={k} className="flex justify-between">
               <span style={{ color: 'var(--text-dim)' }}>{STAT_LABEL[k]}</span>
-              <span className="rpg-num">{fmtItemStat(k, +a.toFixed(3))}{b !== a && <span style={{ color: 'var(--good)' }}> {'->'} {fmtItemStat(k, +b.toFixed(3))}</span>}</span>
+              <span className="rpg-num">{fmtItemStat(k, +a.toFixed(3))}{A.share !== undefined && k !== 'regen' && k !== 'manaRegen' ? pc(A.share) : ''}{b !== a && <span style={{ color: 'var(--good)' }}> {'->'} {fmtItemStat(k, +b.toFixed(3))}</span>}</span>
             </div>
           );
         })}
@@ -93,17 +95,17 @@ export const PetCare: React.FC = () => {
         </div>
       </div>
 
-      {st < 3 && cost && (
+      {cost && (
         <div className="flex items-center gap-3 pt-1" >
           <div className="flex-1 min-w-0 text-[.72rem]" data-testid="pet-evolve-cost">
             <div className="rpg-label">Evolve to {PET_STAGE_PREFIX[st]}{pet.name}</div>
             <div className="flex flex-wrap gap-x-3 rpg-num" style={{ color: 'var(--text-dim)' }}>
               <span className="flex items-center gap-1" style={{ color: gold >= cost.gold ? undefined : BAD }}><CoinGlyph size={13} />{cost.gold.toLocaleString()}</span>
               {(Object.keys(cost.shards) as Rarity[]).map((r) => (
-                <span key={r} style={{ color: mats[r] >= (cost.shards[r] ?? 0) ? RARITY_TEXT[r] : BAD }}>{RLABEL[r]} {mats[r]}/{cost.shards[r]}</span>
+                <span key={r} style={{ color: (mats[r] ?? 0) >= (cost.shards[r] ?? 0) ? RARITY_TEXT[r] : BAD }}>{RLABEL[r]} shards {(mats[r] ?? 0).toLocaleString()}/{cost.shards[r]}</span>
               ))}
             </div>
-            <div style={{ color: 'var(--text-dim)' }}>Needs Lv {petLvCap(st)}. Bigger form, glow aura, big stat jump.</div>
+            <div style={{ color: 'var(--text-dim)' }}>Needs Lv {petLvCap(st)}{atCap ? '' : ` (now Lv ${lv})`}. Costs {RLABEL[pet.rarity]}-tier shards. Bigger form, glow aura, big stat jump.</div>
           </div>
           <Button variant={can ? 'primary' : 'default'} disabled={!can} onClick={() => evolvePet()} data-testid="pet-evolve-btn">Evolve</Button>
         </div>

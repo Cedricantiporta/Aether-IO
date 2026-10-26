@@ -2048,10 +2048,13 @@ def pet_crystal():
 def pet_leviathan():
     c = Cr('pet_leviathan', 1.2)
     b = c.part('body', (0, 0.6, 0))
-    pts = [(0, 0.55 + math.sin(t * PI * 1.5) * 0.22, 0.45 - t * 1.0) for t in (0.0, 0.15, 0.3, 0.45, 0.6)]
-    b.tube(spline(pts, 3), lambda tt: 0.26 - 0.06 * tt, 'pl_blue', segs=9, cap=False)
+    # body runs the whole way from the neck (z .45) to the tail root (z -.55) so it never shows a gap; the tail part starts inside its last ring
+    BY = lambda t: 0.55 + math.sin(t * PI * 1.5) * 0.22
+    pts = [(0, BY(t), 0.45 - t * 1.0) for t in (0.0, 0.15, 0.3, 0.45, 0.6, 0.8, 1.0)]
+    b.tube(spline(pts, 3), lambda tt: 0.26 - 0.07 * tt, 'pl_blue', segs=9, cap=False)
     sb(b, (0, 0.5, 0.45), 0.26, 'pl_blue', seg=9, rings=6)
-    b.tube(spline([(0, 0.38 + math.sin(t * PI * 1.5) * 0.22, 0.52 - t * 1.0) for t in (0.0, 0.15, 0.3, 0.45)], 3), lambda tt: 0.14, 'pl_belly', segs=6, cap=False)
+    sb(b, (0, BY(1.0), -0.55), 0.19, 'pl_blue', seg=9, rings=6)
+    b.tube(spline([(0, BY(t) - 0.17, 0.52 - t * 1.0) for t in (0.0, 0.15, 0.3, 0.45, 0.6, 0.75)], 3), lambda tt: 0.14, 'pl_belly', segs=6, cap=False)
     for i, t_ in enumerate((0.1, 0.25, 0.4, 0.55)):
         y = 0.55 + math.sin(t_ * PI * 1.5) * 0.22
         horn(b, (0, y + 0.18, 0.45 - t_), (0, y + 0.45 - t_ * 0.2, 0.38 - t_), 0.06, 'pl_fin', segs=5)
@@ -2066,8 +2069,8 @@ def pet_leviathan():
         horn(h, (s * 0.26, 0.8, 0.8), (s * 0.55, 0.95, 0.65), 0.1, 'pl_fin', segs=6, curve=(0, 0.1, 0))
         horn(h, (s * 0.12, 1.05, 0.8), (s * 0.2, 1.4, 0.65), 0.07, 'pl_fin', segs=6)
     face(h, hc, hr, hs, ex=0.46, ey=0.16, er=0.22, my=-0.58, mw=0.1, mouth='smile', cheeks=True)
-    t = c.part('tail', (0, 0.55, -0.55))
-    t.tube(spline([(0, 0.55, -0.55), (0, 0.45, -0.85), (0, 0.6, -1.1), (0, 0.85, -1.15)], 3), lambda tt: 0.17 - 0.12 * tt, 'pl_blue', segs=7)
+    t = c.part('tail', (0, BY(1.0), -0.55))
+    t.tube(spline([(0, BY(1.0), -0.5), (0, 0.4, -0.85), (0, 0.55, -1.1), (0, 0.85, -1.15)], 3), lambda tt: 0.19 - 0.14 * tt, 'pl_blue', segs=7)
     for s in (-1, 1):
         horn(t, (0, 0.88, -1.15), (s * 0.3, 1.0, -1.3), 0.08, 'pl_fin', segs=5)
     return c.done()

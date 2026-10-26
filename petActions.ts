@@ -6,7 +6,7 @@
 import { useGameStore } from './store';
 import { world } from './engine/world';
 import {
-  petApplyXp, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, petCanEvolve, PET_EVOLVE_COST,
+  petApplyXp, petLv, petStage, petXp, petXpNeed, petLvCap, petDisplayName, petCanEvolve, petEvolveCost,
   PET_SHARD_XP, petEats, PET_LOOT_XP, PET_FOOD_GLYPHS, PET_STAGE_PREFIX,
 } from './petGrowth';
 import { LOOT_BY_NAME } from './loot';
@@ -96,7 +96,7 @@ export function feedShards(rarity: Rarity, n: number): number {
 }
 
 export function canAffordEvolve(pet: Item, gold: number, materials: Record<Rarity, number>): boolean {
-  const c = PET_EVOLVE_COST[petStage(pet)];
+  const c = petEvolveCost(pet);
   if (!c || !petCanEvolve(pet) || gold < c.gold) return false;
   return (Object.keys(c.shards) as Rarity[]).every((k) => materials[k] >= (c.shards[k] ?? 0));
 }
@@ -106,7 +106,7 @@ export function evolvePet(): boolean {
   const st = useGameStore.getState();
   const pet = st.equipment.pet;
   if (!pet || !canAffordEvolve(pet, st.gold, st.materials)) return false;
-  const c = PET_EVOLVE_COST[petStage(pet)];
+  const c = petEvolveCost(pet)!;
   const next = petStage(pet) + 1;
   st.patchEquippedPet({ petStage: next, petXp: 0 }, { gold: c.gold, materials: c.shards });
   st.addNotification(`${pet.name} evolved into ${PET_STAGE_PREFIX[next - 1]}${pet.name}!`, '#c58bff', 'BOSS');

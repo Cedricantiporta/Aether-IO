@@ -6,7 +6,9 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier } from '../../../petFusion';
 import { RARITY_COLOR } from '../../lib/game';
 import { ForgeCinematic, type ForgeOutcome } from '../../components/ForgeCinematic';
 import type { Item } from '../../../types';
-import { petStars, PET_MAX_STARS } from '../../../petGrowth';
+import { petStars, PET_MAX_STARS, petLv, petStage } from '../../../petGrowth';
+/** a pet nobody invested in (Lv 1, Stage I, no stars): the only kind Auto / Fuse xN may use up (pet.level is always 1, the growth lives in petLv / petStage / petStars) */
+const ungrown = (p: Item): boolean => petLv(p) <= 1 && petStage(p) <= 1 && petStars(p) === 0 && !(p.petXp && p.petXp > 0);
 import { FUSE_BATCH, FuseResults, batchOutcome, type FuseResult } from './ItemFuse';
 
 export const PetFuse: React.FC = () => {
@@ -34,7 +36,7 @@ export const PetFuse: React.FC = () => {
   /** (owner) Fuse xN: up to FUSE_BATCH sets of the picked tier at once (the picked pets first, then the rest; grown pets above Lv 1 are kept) */
   const sets = (): string[][] => {
     if (!tier) return [];
-    const pool = [...picked, ...pets.filter((p) => p.rarity === tier && p.level <= 1 && !sel.includes(p.id))].map((p) => p.id);
+    const pool = [...picked, ...pets.filter((p) => p.rarity === tier && ungrown(p) && !sel.includes(p.id))].map((p) => p.id);
     const out: string[][] = [];
     for (let i = 0; i + FUSE_COUNT <= pool.length && out.length < FUSE_BATCH; i += FUSE_COUNT) out.push(pool.slice(i, i + FUSE_COUNT));
     return out;
@@ -43,10 +45,10 @@ export const PetFuse: React.FC = () => {
   const goMany = () => { const ss = sets(); if (ss.length < 2) return; setSel([]); play(picked[0], () => { const rs: FuseResult[] = []; for (const ids of ss) { const r = fusePets(ids); if (r) rs.push(r); } return rs; }); };
   /** (owner) Auto fuse: keeps fusing groups of FUSE_COUNT same-tier bag pets, lowest tier first (grown pets above Lv 1 are kept). */
   const ORDER: Item['rarity'][] = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'];
-  const autoGroups = (list: Item[]) => ORDER.filter((r) => (FUSE_CHANCE[r] ?? 0) > 0 && nextTier(r) && list.filter((p) => p.rarity === r && p.level <= 1).length >= FUSE_COUNT);
+  const autoGroups = (list: Item[]) => ORDER.filter((r) => (FUSE_CHANCE[r] ?? 0) > 0 && nextTier(r) && list.filter((p) => p.rarity === r && ungrown(p)).length >= FUSE_COUNT);
   const canAuto = autoGroups(pets).length > 0;
   /** (owner 2026-10-24) Auto: only fills the 5 slots (lowest tier first); the player presses Fuse */
-  const autoFuse = () => { const r = autoGroups(pets)[0]; if (!r) return; setLast([]); setSel(pets.filter((p) => p.rarity === r && p.level <= 1).slice(0, FUSE_COUNT).map((p) => p.id)); };
+  const autoFuse = () => { const r = autoGroups(pets)[0]; if (!r) return; setLast([]); setSel(pets.filter((p) => p.rarity === r && ungrown(p)).slice(0, FUSE_COUNT).map((p) => p.id)); };
 
   return (
     <div className="flex flex-col gap-3" data-testid="pet-fuse">

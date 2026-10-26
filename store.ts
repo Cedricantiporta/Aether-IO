@@ -68,7 +68,7 @@ import { LOOT_STACK_LIMIT, LOOT_BY_ID, isFishName } from './loot';
 import { ELIXIRS, applyActiveElixirs, setActiveElixirs, elixirItem, elixirOf, isElixirId, type ElixirId } from './elixirs';
 import { lootOwned, CRAFT_MAT_NAMES } from './crafting';
 import { gearStars, withNextStar, GEAR_MAX_STARS } from './gearStars';
-import { petPower, petStatMul, PET_PCT_STATS, petStars, PET_MAX_STARS } from './petGrowth';
+import { petStatValue, petRef, PET_PCT_STATS, petStars, PET_MAX_STARS, petWeights } from './petGrowth';
 import { POTION_FUSE_COUNT, POTION_LADDER } from './potionFusion';
 import { emptyNpcQuests, sanitizeNpcQuests, npcQuestStatus, NPC_QUESTS, type NpcQuestSave } from './npcQuests';
 import { availableQuestIds } from './questSeen';
@@ -233,13 +233,19 @@ export const potionCount = (inv: Item[], kind: 'hp' | 'mp'): number => { let n =
 export const potionCapMsg = (kind: 'hp' | 'mp'): string => `You can carry at most ${POTION_CAP} ${kind === 'hp' ? 'health' : 'mana'} potions.`;
 const isGear = (item: Item): boolean => item.type === 'WEAPON' || item.type === 'ARMOR' || item.type === 'ACCESSORY' || item.type === 'HELMET' || item.type === 'GLOVES' || item.type === 'BOOTS';
 
+/** CP per unit of each pet stat line (the same weights the gear formula uses). */
+const PET_CP_COEF: Record<string, number> = { damage: 10, maxHealth: 1, defense: 8, moveSpeed: 500, fireRate: 100, regen: 50, manaRegen: 50, critRate: 500, critDamage: 100, cooldownReduction: 500, skillDamage: 100, dodge: 500, knockback: 0, lifeSteal: 3000, goldFind: 200, xpBonus: 200 };
+
 /** Combat power of one item (UI comparison / auto-equip). */
 export const calculateItemCP = (item: Item): number => {
   if (item.type === 'POTION' || item.type === 'CORE' || item.type === 'REVIVE' || item.type === 'ELIXIR') return 0;
   if (!item.stats) return 0;
   const s = item.stats;
   let cp = 0;
-  const petMul = petPower(item); // pet growth (level + evolution) scales its stats
+  if (item.type === 'PET') {   // pet lines resolve against the hero's own stats (petGrowth.ts): rarity and growth are already inside the numbers
+    for (const k of Object.keys(petWeights(item))) { const v = petStatValue(item, k) * (k === 'maxHealth' ? petRef.hpMul : 1); cp += PET_CP_COEF[k] ? v * PET_CP_COEF[k] : 0; }
+    return Math.floor(cp);
+  }
   if (s.damage) cp += s.damage * 10;
   if (s.maxHealth) cp += s.maxHealth;
   if (s.defense) cp += s.defense * 8;
@@ -256,7 +262,7 @@ export const calculateItemCP = (item: Item): number => {
   const mult: Record<Rarity, number> = { COMMON: 1, UNCOMMON: 1.1, RARE: 1.2, EPIC: 1.5, LEGENDARY: 2.0, MYTHIC: 3.0 };
   cp += affixCP(item);
   if (charmOf(item)) cp += 350;   // the accessory's special effect
-  return Math.floor(cp * petMul * mult[item.rarity]);
+  return Math.floor(cp * mult[item.rarity]);
 };
 
 /** Combat power of the whole character. */
@@ -296,16 +302,23 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   if (!final.attackRange) final.attackRange = 0;   // (stat added later: older saved base stats lack it)
   const acc = newAcc();
 
-  (Object.values(equipment) as (Item | null)[]).forEach((item) => {
-    if (!item || !item.stats) return;
+  const gear = (Object.values(equipment) as (Item | null)[]).filter((it): it is Item => !!it);
+  const pet = gear.find((it) => it.type === 'PET');
+  const addLines = (item: Item) => {
+    if (!item.stats || item.type === 'PET') return;
     (Object.keys(item.stats) as (keyof PlayerStats)[]).forEach((k) => {
       let v = item.stats[k];
       if (v === undefined || v === null) return;
       if (item.type === 'WEAPON' && k === 'damage') v *= 0.5;
       if (item.type === 'ARMOR' && k === 'defense') v *= 0.5;
-      if (item.type === 'PET') v *= petStatMul(item, k);
       final[k] += v;
     });
+  };
+  // pass 1: the hero without a pet; pet lines are a share of THIS (petGrowth.ts), so they scale with the hero's progress
+  gear.forEach(addLines);
+  petRef.damage = final.damage; petRef.maxHealth = final.maxHealth; petRef.defense = final.defense; petRef.maxMana = final.maxMana; petRef.fireRate = final.fireRate; petRef.moveSpeed = final.moveSpeed; petRef.hpMul = HP_INFLATE;
+  if (pet) for (const k of Object.keys(petWeights(pet)) as (keyof PlayerStats)[]) if (k in final) final[k] += petStatValue(pet, k);
+  gear.forEach((item) => {
     if (item.affixes) for (const a of item.affixes) accumulate(acc, affixFx(a));
     accumulate(acc, charmFx(item));   // Epic+ accessories: their special effect (accessoryCharms.ts)
   });

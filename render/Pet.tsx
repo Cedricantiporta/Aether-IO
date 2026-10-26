@@ -175,11 +175,11 @@ const DEFS: Record<string, () => PetDef> = {
     const b = new GB([0.85, 1.15]), g = new GB([1, 1]);
     const c = '#2f8fd8', c2 = '#7fe0ff', bl = '#d8fbff';
     // serpentine body: arc of spheres tapering to the tail
-    for (let i = 0; i < 9; i++) {
-      const t = i / 8, z = 0.5 - t * 1.8, y = 0.55 + Math.sin(t * Math.PI * 1.5) * 0.28;
+    for (let i = 0; i < 17; i++) {
+      const t = i / 16, z = 0.5 - t * 1.8, y = 0.55 + Math.sin(t * Math.PI * 1.5) * 0.28;
       b.sph(0.2 - t * 0.12, [0, y, z], i % 2 ? c : '#2a78c0', 1, 7);
       b.sph(0.12 - t * 0.07, [0, y - 0.06, z + 0.02], bl, [1, 0.8, 1], 5);
-      if (i > 0 && i < 7) b.cone(0.05, 0.18 + (1 - t) * 0.1, 4, [0, y + 0.2 - t * 0.08, z], c2);
+      if (i > 1 && i < 14 && i % 2) b.cone(0.05, 0.18 + (1 - t) * 0.1, 4, [0, y + 0.2 - t * 0.08, z], c2);
     }
     b.sph(0.26, [0, 0.62, 0.62], c, [1, 0.9, 1.3], 8); b.cone(0.1, 0.26, 5, [0, 0.58, 0.9], c2, [Math.PI / 2, 0, 0]);
     for (const s of [-1, 1]) { b.cone(0.05, 0.4, 4, [s * 0.14, 0.9, 0.5], bl, [-0.7, 0, -s * 0.3]); g.sph(0.05, [s * 0.14, 0.7, 0.8], '#ffffff', 1, 4); b.cone(0.12, 0.4, 4, [s * 0.3, 0.5, 0.2], c2, [0, 0, -s * 1.4]); }

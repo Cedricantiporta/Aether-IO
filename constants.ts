@@ -231,51 +231,51 @@ export const UPGRADES_POOL: Upgrade[] = [
   { id: 'u_inspire', type: 'SKILL_INSPIRE', name: 'Inspire', description: 'Passive Level Up', rarity: 'EPIC', value: 1, classType: 'ARCHER' },
 ];
 
-// PETS POOL: Stats follow 1 (Common) -> 2 (Rare) -> 3 (Epic) -> 4 (Legend) -> 5 (Mythic)
+// PETS POOL: `stats` are WEIGHTS (1.0 = full line), not numbers: the real values are a share of the hero's stats by rarity and growth (petGrowth.ts)
 export const PETS_POOL: Item[] = [
     { 
         id: 'pet_blob', name: 'Green Blob', type: 'PET', rarity: 'COMMON', price: 500, level: 1, 
-        stats: { maxHealth: 20 }, // 1 Stat
+        stats: { maxHealth: 1.0 }, // 1 Stat
         description: 'Bounces into nearby enemies.', petSkill: 'ATTACK_MELEE', petValue: 10 
     },
     { 
         id: 'pet_bat', name: 'Vampire Bat', type: 'PET', rarity: 'UNCOMMON', price: 1000, level: 1, 
-        stats: { damage: 5 }, // 1 Stat
+        stats: { damage: 1.0 }, // 1 Stat
         description: 'Every 5s bites the nearest enemy and drains its life to heal you.', petSkill: 'LEECH', petValue: 16, petCooldown: 5 
     },
     { 
         id: 'pet_fairy', name: 'Light Fairy', type: 'PET', rarity: 'RARE', price: 1500, level: 1, 
-        stats: { manaRegen: 0.5, regen: 0.5 }, // 2 Stats
+        stats: { regen: 1.0, manaRegen: 0.8 }, // 2 Stats
         description: 'Heals 10 HP every 8s.', petSkill: 'HEAL', petValue: 10, petCooldown: 8 
     },
     { 
         id: 'pet_wolf', name: 'Spirit Wolf', type: 'PET', rarity: 'EPIC', price: 3000, level: 1, 
-        stats: { critRate: 0.1, moveSpeed: 0.1, damage: 15 }, // 3 Stats
+        stats: { damage: 1.0, critRate: 0.8, moveSpeed: 0.6 }, // 3 Stats
         description: 'Attacks nearby enemies.', petSkill: 'ATTACK_MELEE', petValue: 20 
     },
     { 
         id: 'pet_dragon', name: 'Gold Dragon', type: 'PET', rarity: 'LEGENDARY', summonOnly: true, price: 10000, level: 1, 
-        stats: { damage: 60, critDamage: 0.5, fireRate: 0.2 }, // 3 Stats
+        stats: { damage: 1.0, critDamage: 0.9, fireRate: 0.7 }, // 3 Stats
         description: 'Shoots fireballs.', petSkill: 'ATTACK_RANGED', petValue: 40 
     },
     { 
         id: 'pet_rock', name: 'Pet Rock', type: 'PET', rarity: 'COMMON', price: 500, level: 1, 
-        stats: { defense: 10 }, // 1 Stat
+        stats: { defense: 1.0 }, // 1 Stat
         description: 'It does nothing, but it is hard.', petSkill: undefined 
     },
     { 
         id: 'pet_golem', name: 'Iron Golem', type: 'PET', rarity: 'EPIC', price: 3500, level: 1, 
-        stats: { maxHealth: 100, defense: 20, knockback: 1.0 }, // 3 Stats
+        stats: { maxHealth: 1.0, defense: 1.0, knockback: 0.7 }, // 3 Stats
         description: 'Attacks enemies slowly.', petSkill: 'ATTACK_MELEE', petValue: 50 
     },
     { 
         id: 'pet_phoenix', name: 'Phoenix', type: 'PET', rarity: 'MYTHIC', summonOnly: true, price: 12000, level: 1, 
-        stats: { regen: 2.5, maxHealth: 100, fireRate: 0.1, damage: 20 }, // 4 Stats
+        stats: { regen: 1.0, maxHealth: 0.75, damage: 0.6, fireRate: 0.5 }, // 4 Stats
         description: 'Revives you on death (300s CD).', petSkill: 'REVIVE', petCooldown: 300 
     },
     { 
         id: 'pet_demigod', name: 'Celestial Wisp', type: 'PET', rarity: 'MYTHIC', summonOnly: true, price: 25000, level: 1, 
-        stats: { damage: 100, maxHealth: 300, moveSpeed: 0.5, cooldownReduction: 0.2, critRate: 0.2 }, // 5 Stats
+        stats: { damage: 1.0, maxHealth: 1.0, moveSpeed: 0.7, cooldownReduction: 0.8, critRate: 0.8 }, // 5 Stats
         description: 'A fragment of a star.', petSkill: 'ATTACK_RANGED', petValue: 100 
     },
     ...EXTRA_PETS,
