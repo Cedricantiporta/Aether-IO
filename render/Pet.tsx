@@ -374,8 +374,12 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
     if (stg > 1) {
       const pul = 0.75 + 0.25 * Math.sin(t * 2.4);
       const c = AURA[stg] ?? AURA[2];
-      pushHalo(pet.pos.x, root.current.position.y + 0.45 * S0, pet.pos.z, (1.7 + stg * 0.5) * size * gs * pul, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.45, CELL.GLOW);
-      pushHalo(pet.pos.x, 0.12, pet.pos.z, (2.0 + stg * 0.5) * size * gs, c[0] * 0.6, c[1] * 0.6, c[2] * 0.6, 0.55 * pul, CELL.RING);   // glow ring on the ground
+      // (owner 2026-10-26) a snug aura hugging the pet (~1.2x its size), fully above the floor: a soft glow behind the body plus a
+      // small ring around the feet. Both are camera-facing sprites, so each sits with its centre at half its height over the ground.
+      const gd = 1.2 * S0 * pul, ym = root.current.position.y;
+      pushHalo(pet.pos.x, Math.max(ym + 0.55 * S0, gd * 0.5 + 0.03), pet.pos.z, gd, c[0] * 0.4, c[1] * 0.4, c[2] * 0.4, 0.32, CELL.GLOW);
+      const rd = 0.9 * S0 + 0.1 * stg;
+      pushHalo(pet.pos.x, Math.max(ym, 0) + rd * 0.5 + 0.03, pet.pos.z, rd, c[0] * 0.5, c[1] * 0.5, c[2] * 0.5, 0.3 * pul, CELL.RING);
       if (dt > 0 && Math.random() < dt * (stg === 2 ? 6 : 14)) FX.add.emit(pet.pos.x + (Math.random() - 0.5) * size * gs, root.current.position.y + 0.3 * S0, pet.pos.z + (Math.random() - 0.5) * size * gs, 0, 0.9, 0, 1.0, 0.18, 0.03, c[0], c[1], c[2], 0.9, CELL.STAR, 0, 0.3, Math.random() * 3, 3);
     }
     if (def.halo) pushHalo(pet.pos.x, root.current.position.y + 0.5 * S0, pet.pos.z, def.halo[0] * size, def.halo[1] * 0.5, def.halo[2] * 0.5, def.halo[3] * 0.5, 0.5, CELL.GLOW);

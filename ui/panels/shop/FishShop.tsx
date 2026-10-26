@@ -11,12 +11,12 @@ import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { RARITY_TEXT } from '../../lib/game';
-import { RODS, rodLevel, buyRod, sellAllFish, fishLog, fishCaught, onFishSave } from '../../../engine/systems/fishing';
+import { RODS, rodLevel, buyRod, sellAllFish, fishLog, fishCaught, onFishSave, canPayTool, toolCostText } from '../../../engine/systems/fishing';
 
 const fishIcon = (id: string): Item => ({ id, name: LOOT_BY_ID[id].name, type: 'LOOT', rarity: LOOT_BY_ID[id].rarity, level: 1, stats: {}, price: LOOT_BY_ID[id].price, description: LOOT_BY_ID[id].desc } as Item);
 
 export const FishShopTab: React.FC = () => {
-  const gold = useGameStore((s) => s.gold);
+  const gold = useGameStore((s) => s.gold), gems = useGameStore((s) => s.gems), crystals = useGameStore((s) => s.crystals ?? 0);
   const inventory = useGameStore((s) => s.inventory);
   const setSell = useUiStore((s) => s.setSellItem);
   const ask = useUiStore((s) => s.askConfirm);
@@ -45,13 +45,13 @@ export const FishShopTab: React.FC = () => {
       <div>
         <div className="rpg-label mb-2">Fishing rod</div>
         <div className="brew-card">
-          <div className="brew-name"><Fish size={16} /> {rod.name}</div>
+          <div className="brew-name"><Fish size={16} /> <span style={{ color: RARITY_TEXT[rod.tier] }}>{rod.name}</span> <span className="muted text-[.65rem]">({rod.tier.charAt(0) + rod.tier.slice(1).toLowerCase()} tier)</span></div>
           <div className="brew-fx">{rod.desc}</div>
           <div className="muted text-[.7rem] mt-1">Bite wait {pct(rod.wait)} · reel zone {pct(rod.zone)} · luck {pct(rod.luck)} · {fishCaught()} fish caught</div>
           {next ? (
-            <button className="forge-btn on mt-3" disabled={gold < next.price} data-testid="buy-rod"
-              onClick={() => ask({ title: `Buy the ${next.name}?`, body: `${next.desc} (${next.price.toLocaleString()} G)`, confirmLabel: 'Buy', onConfirm: () => { buyRod(); } })}>
-              <Fish size={18} /> {`Upgrade to ${next.name} · ${next.price.toLocaleString()} G`}
+            <button className="forge-btn on mt-3" disabled={!canPayTool(next.cost)} data-testid="buy-rod" data-have={`${gold}/${gems}/${crystals}`}
+              onClick={() => ask({ title: `Buy the ${next.name}?`, body: `${next.tier.charAt(0) + next.tier.slice(1).toLowerCase()} tier. ${next.desc} (${toolCostText(next.cost)})`, confirmLabel: 'Buy', onConfirm: () => { buyRod(); } })}>
+              <Fish size={18} /> {`Upgrade to ${next.name} (${next.tier.charAt(0) + next.tier.slice(1).toLowerCase()}) · ${toolCostText(next.cost)}`}
             </button>
           ) : <div className="rpg-label !text-[.6rem] mt-2 opacity-80">The finest rod on the lake.</div>}
         </div>

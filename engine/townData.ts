@@ -65,10 +65,23 @@ export function riverBank(x: number, side: 0 | 1): number {
   return c + (z - c) * Math.sqrt(1 - (1 - t) * (1 - t));
 }
 /** (owner) a plank footbridge where the mine path crosses the river (deck arches up to h; railings are colliders). */
-export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riverBank(x, 0) - 1.4, z1: riverBank(x, 1) + 1.4, h: 0.55 }; })();
+export const MINE_BRIDGE = (() => { const x = 58.6; return { x, hw: 1.7, z0: riverBank(x, 0) - 1.4, z1: riverBank(x, 1) + 1.4, h: 0.55, dw: 1.55, rail: 1.5 }; })();
 export const onMineBridge = (x: number, z: number, m = 0): boolean => Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.hw + m && z > MINE_BRIDGE.z0 - m && z < MINE_BRIDGE.z1 + m;
 /** The great cobblestone bridge over the river (walkable deck arching up to h; railings are colliders). */
-export const BRIDGE = { hw: 6.3, z0: 57.5, z1: 78.5, h: 1.6 };
+export const BRIDGE = { hw: 6.3, z0: 57.5, z1: 78.5, h: 1.6, /** the kit mesh's real deck half-width / railing line (kit_v3 bridge_stone_arch x natureLayout scale) */ dw: 5.3, rail: 4.86 };
+/** (owner 2026-10-26) the hero stands on the bridge MESH's deck, not a plain parabola: kit_v3 bridge_stone_arch top = 1.12 * (0.6 + 1.3 * (1 - (u / 5)^2)) with u = the kit-local
+ *  position along the span (world z scaled by 10.9 / length), ramping down to the ground over the last ~0.9 units at each end (art/blender/kit_v3.py build_bridges). */
+export function bridgeDeckY(z: number): number {
+  const L = BRIDGE.z1 - BRIDGE.z0, u = Math.abs(z - (BRIDGE.z0 + BRIDGE.z1) / 2) * 10.9 / L;
+  if (u <= 5) return 1.12 * (0.6 + 1.3 * (1 - (u / 5) ** 2));
+  return Math.max(0, 0.672 * (1 - (u - 5) / 0.45));
+}
+/** Same for the plank footbridge (kit_v3 bridge_wood_small: 0.62 * (0.45 + 0.35 * (1 - (u / 2.6)^2) + 0.1), u scaled by 6.5 / length). */
+export function mineBridgeDeckY(z: number): number {
+  const L = MINE_BRIDGE.z1 - MINE_BRIDGE.z0, u = Math.abs(z - (MINE_BRIDGE.z0 + MINE_BRIDGE.z1) / 2) * 6.5 / L;
+  if (u <= 2.55) return 0.62 * (0.55 + 0.35 * (1 - (u / 2.6) ** 2));
+  return Math.max(0, 0.37 * (1 - (u - 2.55) / 0.7));
+}
 /** The Adventure Portal (owner 2026-10-24: it left the plaza and stands where the Endless Tower used to, in the forest clearing at the end of the bending forest road): the kit v3
  *  `adventure_portal` at scale PORTAL_S, turned by `ry` (PI) so its front faces north, down the road. `front` = where the hero stands to step in (E, guide arrow, minimap icon), `out` = where he
  *  reappears after a run (a little further down the road, looking at it). Nothing stands in the plaza any more. */
@@ -221,8 +234,8 @@ function tierLift(x: number, z: number): number {
 export function townLift(x: number, z: number): number {
   { const t = tierLift(x, z); if (t > 0) return t; }
   // the bridge deck: a gentle arch over the river
-  if (Math.abs(x) <= BRIDGE.hw + 0.6 && z > BRIDGE.z0 && z < BRIDGE.z1) { const t = (z - BRIDGE.z0) / (BRIDGE.z1 - BRIDGE.z0); return BRIDGE.h * (1 - (2 * t - 1) ** 2); }
-  if (onMineBridge(x, z, 0.3)) { const t = (z - MINE_BRIDGE.z0) / (MINE_BRIDGE.z1 - MINE_BRIDGE.z0); return MINE_BRIDGE.h * (1 - (2 * t - 1) ** 2); }
+  if (Math.abs(x) <= BRIDGE.dw + 0.3 && z > BRIDGE.z0 && z < BRIDGE.z1) return bridgeDeckY(z);
+  if (Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.dw + 0.2 && z > MINE_BRIDGE.z0 && z < MINE_BRIDGE.z1) return mineBridgeDeckY(z);
   // the Endless Tower's knoll (a raised mound; the path ramps up to the door)
   { const kn = towerKnollAt(x, z); if (kn > 0) return kn; }
   const T = TERRACE;
@@ -729,10 +742,10 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   kitRing(c, 'windmill', WINDMILL.x, WINDMILL.z, WINDMILL.s, 1.0);
   for (const [x, z] of GRAVES) c.push([x, z, 0.55]);
   // the river: both banks are a chain of circles (gap for the bridge), the east end is closed; the bridge railings
-  for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.hw + 0.5 && Math.abs(x - MINE_BRIDGE.x) > MINE_BRIDGE.hw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
+  for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.dw + 0.5 && Math.abs(x - MINE_BRIDGE.x) > MINE_BRIDGE.dw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
   c.push([RIVER.x1 + 0.4, (RIVER.z0 + RIVER.z1) / 2, 1.2]);
-  for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * (BRIDGE.hw + 0.35), z, 0.4]);
-  for (const sx of [-1, 1]) for (let z = MINE_BRIDGE.z0 + 0.5; z <= MINE_BRIDGE.z1 - 0.49; z += 0.7) c.push([MINE_BRIDGE.x + sx * (MINE_BRIDGE.hw + 0.25), z, 0.3]);   // footbridge railings
+  for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * BRIDGE.rail, z, 0.5]);   // (on the kit railing line)
+  for (const sx of [-1, 1]) for (let z = MINE_BRIDGE.z0 + 0.5; z <= MINE_BRIDGE.z1 - 0.49; z += 0.7) c.push([MINE_BRIDGE.x + sx * MINE_BRIDGE.rail, z, 0.4]);   // footbridge railings
   c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);

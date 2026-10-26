@@ -59,6 +59,7 @@ import { applyPetCollection, petMirror, petSpeciesId, sanitizePetSeen, PET_MILES
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
+import { skinPickaxe, pickTierOf } from './toolTiers';
 import { itemClass, canUseClass, classOnlyMsg, classFilter, OTHER_CLASS_SHARE, PICKAXE_ID } from './itemClass';
 import { crystalCount, syncCrystalStack, crystalItem } from './crystals';
 import type { Difficulty, Equipment, EquipSlot, GameState, RunProgress, Settings, ShopTab, BulkSellOpts } from './storeTypes';
@@ -484,7 +485,7 @@ export function rollDropPlus(i: Item | null, tier: 0 | 1 | 2): Item | null {
 /** Old saves: gear without a grade is rescaled to the new tier ladder once and stamped MID (grade.ts migrateGear). */
 const migrateEquipment = (e: Equipment, relabel = false): Equipment => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, k === 'tool' ? null : (relabel ? legacyLowToMid : (x: Item | null) => x)(migrateGear(v as Item | null))])) as unknown as Equipment;
 /** The Mining Pickaxe used to be a TOOL (own slot); it is now a weapon item. Old saves: a TOOL pickaxe (bag / warehouse / tool slot) becomes the weapon, kept in the bag. */
-export const newPickaxe = (): Item => { const t = ITEMS_POOL.find((i) => i.id === PICKAXE_ID)!; return { ...t, stats: { ...t.stats }, quantity: 1, grade: 'MID' }; };   // (fixed stats: never rolled)
+export const newPickaxe = (tier = 0): Item => { const t = ITEMS_POOL.find((i) => i.id === PICKAXE_ID)!; return skinPickaxe({ ...t, stats: { ...t.stats }, quantity: 1, grade: 'MID' }, tier); };   // (fixed stats: never rolled)
 const oldPickaxeFix = (i: Item): Item => (i && i.id === PICKAXE_ID && i.type === 'TOOL' ? newPickaxe() : i);
 interface Profile {
   v: number;
@@ -669,6 +670,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   towerClaimed: Object.fromEntries((['ARCHER', 'WIZARD', 'BARBARIAN', 'KNIGHT', 'NECROMANCER'] as HeroClass[]).map((h) => [h, Array.isArray(p?.towerClaimed?.[h]) ? (p!.towerClaimed![h] as unknown[]).map(Number).filter((n) => n > 0 && n % 10 === 0) : []])) as Record<HeroClass, number[]>,
   caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
   ascClaimed: Array.isArray(p?.ascClaimed) ? [...new Set((p!.ascClaimed as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= ASCENSION_MAX))] : [],
+  pickTier: pickTierOf(p?.pickTier),
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
 
@@ -2155,7 +2157,7 @@ export const useGameStore = create<GameState>()((set, get) => {
           const special = pool.filter((i) => i.type === 'PET' && (i as { summonOnly?: boolean }).summonOnly);
           const pets = pool.filter((i) => i.type === 'PET'), gearOnly = pool.filter((i) => i.type !== 'PET');
           if (special.length && Math.random() < 0.6) pool = special;
-          else if (pets.length && Math.random() < 0.35) pool = pets;   // (owner) pets come up a bit more often
+          else if (pets.length && Math.random() < 0.6) pool = pets;   // (owner 2026-10-26) pets a bit more often still (0.35 -> 0.6, ~1.7x)
           else if (gearOnly.length) pool = gearOnly;
         }
         if (Math.random() < OTHER_CLASS_SHARE) {   // (owner) ~15% of gear pulls are another class's piece (shared warehouse / alts)

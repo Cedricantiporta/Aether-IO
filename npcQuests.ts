@@ -37,6 +37,8 @@ export interface NpcObjective {
 
 export interface NpcReward {
   gold?: number;                       // base units (x GOLD_SCALE at payout)
+  /** exact gold paid as written (no GOLD_SCALE / side multiplier): the one-time clear gift */
+  rawGold?: number;
   gems?: number;
   shards?: [Rarity, number];           // crafting shards
   items?: { id: string; qty?: number }[];   // ITEMS_POOL / PETS_POOL ids
@@ -57,7 +59,7 @@ export interface NpcQuestDef {
   /** chain: the quest id that must be turned in first */
   after?: string;
   /** hidden quest: not offered (no marker) until this holds (`rank` = legacy alias of minLevel) */
-  cond?: { boss?: string; rank?: number };
+  cond?: { boss?: string; rank?: number; ending?: boolean };
   /** class level needed before the quest is offered (shown as "Lv N" while locked) */
   minLevel?: number;
   /** the quest needs a place behind this story gate (engine/townGates.ts): hidden until it is open */
@@ -69,6 +71,17 @@ export interface NpcQuestDef {
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
+  // ---- (owner 2026-10-26) the crown's one-time thank-you for the FIRST game clear (Malakar defeated). `giver` is switched to the
+  //      Queen once she replaces the King (npcQuestLogic syncGate). Old saves that already finished the game can claim it too.
+  {
+    id: 'king_clear_gift', giver: 'King Aldric', title: 'The Crown\'s Thanks', summary: 'Claim the Crown\'s reward for ending Malakar',
+    cond: { ending: true },
+    intro: ['Malakar is fallen, and the Font shines. The whole realm owes you more than gold can say.', 'You:: Gold is a fine start.', 'Then take the treasury\'s thanks, hero. Accept it, then speak to me once more and it is yours.'],
+    progress: 'Speak to the Crown again to claim your reward.',
+    done: ['A realm saved deserves a reward to match.', 'You:: Is that the whole treasury?', 'Only the part I could carry. Spend it well, hero: 100,000 gold and 2,000 gems.'],
+    objective: { type: 'LISTEN', count: 1 },
+    reward: { rawGold: 100000, gems: 2000 },
+  },
   // ---- the farm outside the gate (interaction quests): milk, eggs
   {
     id: 'hollis_milk', giver: 'Hollis', title: 'Milk Run', summary: 'Milk the cows by the barn 3 times',
@@ -258,7 +271,7 @@ export function sanitizeNpcQuests(raw: unknown): NpcQuestSave {
 export type NpcQuestStatus = 'LOCKED' | 'AVAILABLE' | 'ACTIVE' | 'DONE';
 
 /** Side quests open only once the main-story town tutorial is through (the hero has met the King). Kept in sync with the store by engine/systems/npcQuestLogic.ts (owner: quest availability / order). */
-export const questGate = { open: true };
+export const questGate = { open: true, endings: 0 };
 export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: number): NpcQuestStatus {
   const e = save.q[def.id];
   if (e) return e.s === 2 ? 'DONE' : 'ACTIVE';
@@ -267,6 +280,7 @@ export function npcQuestStatus(def: NpcQuestDef, save: NpcQuestSave, rank: numbe
   if (def.gate && !gateFlags[def.gate]) return 'LOCKED';
   if (def.after && save.q[def.after]?.s !== 2) return 'LOCKED';
   if (def.cond?.boss && !(save.bossKills[def.cond.boss] > 0)) return 'LOCKED';
+  if (def.cond?.ending && questGate.endings <= 0) return 'LOCKED';   // the game was finished at least once
   if (rank < npcQuestMinLevel(def)) return 'LOCKED';
   return 'AVAILABLE';
 }

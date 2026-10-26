@@ -104,6 +104,10 @@ export const FISH_IDS = ['fish_boot', 'fish_tin', 'fish_minnow', 'fish_perch', '
 /** True for a fish (or the boot) from the lake, by bag item name. */
 export const isFishName = (name: string): boolean => !!LOOT_BY_NAME[name]?.id.startsWith('fish_');
 
+/** (owner 2026-10-26) fish sell for 2.5x (rarity order unchanged) */
+export const FISH_PRICE_MUL = 2.5;
+for (const l of LOOT) if (l.id.startsWith('fish_')) l.price = Math.round(l.price * FISH_PRICE_MUL);
+
 export const LOOT_BY_ID: Record<string, LootDef> = Object.fromEntries(LOOT.map((l) => [l.id, l]));
 export const LOOT_BY_NAME: Record<string, LootDef> = Object.fromEntries(LOOT.map((l) => [l.name, l]));
 

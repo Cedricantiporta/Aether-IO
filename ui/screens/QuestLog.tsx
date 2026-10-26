@@ -48,6 +48,7 @@ export const Rewards: React.FC<{ r: NpcReward; scale?: boolean; xp?: number; sid
     <div className="qw-rew">
       {!!xp && <CurSlot icon={<span className="qw-xp">EXP</span>} n={xp} label="EXP" />}
       {!!g && <CurSlot icon={<CoinGlyph size={34} />} n={scale ? Math.round(g * GOLD_SCALE * (side ? SIDE_GOLD_MUL : 1)) : g} label="Gold" />}
+      {!!r.rawGold && <CurSlot icon={<CoinGlyph size={34} />} n={r.rawGold} label="Gold" />}
       {!!gems && <CurSlot icon={<GemGlyph size={34} />} n={gems} label="Gems" />}
       {list.map(([id, n]) => { const it = rewardItem(id, n); return it ? <div key={id} className="qw-ri"><ItemSlot item={it} fluid size="100%" iconSize="78%" qty={n} tooltip="none" compare={false} /></div> : null; })}
     </div>

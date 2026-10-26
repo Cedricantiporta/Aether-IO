@@ -9,6 +9,9 @@ import { ShopGrid } from '../../components/ShopGrid';
 import { Button } from '../../components/Button';
 import { useUiStore } from '../../uiStore';
 import { UNLOCK_LV } from '../../../unlocks';
+import { PICKAXES, PICK_MAX, toolCostText } from '../../../toolTiers';
+import { buyPickaxeTier } from '../../../engine/systems/pickaxe';
+import { RARITY_TEXT } from '../../lib/game';
 import {
   spareFlasks, onKitChange, buyFlasks, sellMineGoods, isMineGood, minePrice,
   SPARE_FLASK_OIL, MAX_SPARE, flaskPrice, KIT_FLASKS, kitPrice, MINE_PREMIUM,
@@ -18,6 +21,10 @@ export const MineShopTab: React.FC = () => {
   const gold = useGameStore((s) => s.gold);
   const level = useGameStore((s) => s.level);
   const inventory = useGameStore((s) => s.inventory);
+  const gems = useGameStore((s) => s.gems), crystals = useGameStore((s) => s.crystals ?? 0), pt = useGameStore((s) => s.progress.pickTier ?? 0);
+  const pick = PICKAXES[Math.min(PICK_MAX, pt)], nextPick = pt < PICK_MAX ? PICKAXES[pt + 1] : null;
+  const canPick = !!nextPick && gold >= (nextPick.cost.gold ?? 0) && gems >= (nextPick.cost.gems ?? 0) && crystals >= (nextPick.cost.crystals ?? 0);
+  const tierName = (t: string) => t.charAt(0) + t.slice(1).toLowerCase();
   const ask = useUiStore((s) => s.askConfirm);
   const [, bump] = useState(0);
   useEffect(() => onKitChange(() => bump((n) => n + 1)), []);
@@ -52,6 +59,20 @@ export const MineShopTab: React.FC = () => {
           {offer(KIT_FLASKS, kitPrice(level), 'Miner\'s Kit', `${KIT_FLASKS} oil flasks, bundled for less (save ${(flaskPrice(level) * KIT_FLASKS - kitPrice(level)).toLocaleString()} G).`, 'buy-kit')}
         </div>
         <div className="rpg-label !text-[.55rem] mt-1.5 opacity-70">Bigger lanterns and refills: Grit's bench, inside the cave.</div>
+      </div>
+      <div>
+        <div className="rpg-label mb-2">Pickaxe</div>
+        <div className="brew-card">
+          <div className="brew-name"><Pickaxe size={16} /> <span style={{ color: RARITY_TEXT[pick.tier] }} data-testid="pick-name">{pick.name}</span> <span className="muted text-[.65rem]">({tierName(pick.tier)} tier)</span></div>
+          <div className="brew-fx">{pick.desc}</div>
+          <div className="muted text-[.7rem] mt-1">Equip it as your weapon (I) to mine. Strokes {pick.mul}x · double ore {Math.round(pick.bonus * 100)}%</div>
+          {nextPick ? (
+            <button className="forge-btn on mt-3" disabled={!canPick} data-testid="buy-pickaxe"
+              onClick={() => ask({ title: `Upgrade to the ${nextPick.name}?`, body: `${tierName(nextPick.tier)} tier. ${nextPick.desc} (${toolCostText(nextPick.cost)})`, confirmLabel: 'Upgrade', onConfirm: () => { buyPickaxeTier(); } })}>
+              <Pickaxe size={18} /> {`Upgrade to ${nextPick.name} (${tierName(nextPick.tier)}) · ${toolCostText(nextPick.cost)}`}
+            </button>
+          ) : <div className="rpg-label !text-[.6rem] mt-2 opacity-80">The finest pickaxe in the land.</div>}
+        </div>
       </div>
       <div>
         <div className="rpg-label mb-2">Ore &amp; crystals (+{Math.round((MINE_PREMIUM - 1) * 100)}% over the town price)</div>

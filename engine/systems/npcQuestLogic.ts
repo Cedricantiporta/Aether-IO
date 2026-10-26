@@ -3,7 +3,7 @@ import { feedReward } from '../../rewardFeed';
 // per-NPC marker cache read by render/Npcs.tsx. The state lives in the store (`npcQuests`, saved with the profile).
 // Importing this module registers the event listeners (dialogue.ts imports it).
 import { questXp } from '../../classLevels';
-import { STORY } from '../../story';
+import { STORY, storyIdx } from '../../story';
 import { storyWantsKill } from './storyLogic';
 import { GOLD_SCALE, COLORS, PETS_POOL, ITEMS_POOL } from '../../constants';
 import { useGameStore, makeItemById, instantiate, newPickaxe } from '../../store';
@@ -51,7 +51,7 @@ export function acceptNpcQuest(id: string): boolean {
 function rewardItems(id: string, qty: number): Item[] {
   if (id === PICKAXE_ID) {   // the Mining Pickaxe: fixed stats, given once (skipped when the hero already owns one)
     const s = useGameStore.getState();
-    return s.equipment.weapon?.id === PICKAXE_ID || s.inventory.some((i) => i.id === PICKAXE_ID) ? [] : [newPickaxe()];
+    return s.equipment.weapon?.id === PICKAXE_ID || s.inventory.some((i) => i.id === PICKAXE_ID) ? [] : [newPickaxe(s.progress.pickTier)];
   }
   const tpl = PETS_POOL.find((i) => i.id === id) ?? ITEMS_POOL.find((i) => i.id === id);
   if (!tpl) return [];
@@ -73,6 +73,8 @@ function takeLoot(inv: Item[], id: string, count: number): Item[] {
   }
   return out;
 }
+
+const goldOf = (r: NpcQuestDef['reward']): number => (r.rawGold ?? 0) + Math.round((r.gold ?? 0) * GOLD_SCALE * SIDE_GOLD_MUL);
 
 /** Turn-in: removes delivered goods, pays gold / gems / shards / items. False (nothing changed) when the bag cannot hold the rewards. */
 export function completeNpcQuest(id: string): boolean {
@@ -96,7 +98,7 @@ export function completeNpcQuest(id: string): boolean {
   }
   const s = useGameStore.getState();
   useGameStore.setState({
-    gold: s.gold + Math.round((def.reward.gold ?? 0) * GOLD_SCALE * SIDE_GOLD_MUL),
+    gold: s.gold + goldOf(def.reward),
     gems: s.gems + (def.reward.gems ?? 0),
     npcQuests: { ...s.npcQuests, q: { ...s.npcQuests.q, [id]: { s: 2, p: def.objective.count } } },
   });
@@ -105,7 +107,7 @@ export function completeNpcQuest(id: string): boolean {
   const qxp = questXp('SIDE', s.level); useGameStore.getState().addExperience(qxp);   // (owner) every quest pays EXP
   notify(`Quest complete: ${def.title}`);
   events.emit('hub', { kind: 'quest', n: 1 });   // (daily / weekly goals: 'Complete a quest')
-  feedReward({ gold: Math.round((def.reward.gold ?? 0) * GOLD_SCALE * SIDE_GOLD_MUL), gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
+  feedReward({ gold: goldOf(def.reward), gems: def.reward.gems, items: got, shards: def.reward.shards?.[1], shardRarity: def.reward.shards?.[0], xp: qxp }, true);
   return true;
 }
 
@@ -210,10 +212,15 @@ export function questDialogueFor(name: string): { mode: 'turnin' | 'offer' | 'pr
 
 // side quests unlock after the main-story tutorial (story step 'king' reached = the town tutorial is done)
 const GATE_STEP = Math.max(0, STORY.findIndex((st) => st.id === 'king'));
-const syncGate = (step: number): void => { questGate.open = step >= GATE_STEP; syncGateFlags(step); };   // (+ the story gates, engine/townGates.ts: side quests behind a closed gate stay hidden)
+const QUEEN_STEP = storyIdx('queen');
+const syncGate = (step: number): void => {
+  questGate.open = step >= GATE_STEP; syncGateFlags(step);
+  const gift = NPC_QUEST_BY_ID.king_clear_gift; if (gift) gift.giver = step >= QUEEN_STEP ? 'Queen Aelia' : 'King Aldric';   // the crown's gift is handed in at whoever sits the throne
+};   // (+ the story gates, engine/townGates.ts: side quests behind a closed gate stay hidden)
 setTimeout(() => {   // (deferred: this module loads while the store module is still initialising)
   syncGate(useGameStore.getState().story.step);
-  useGameStore.subscribe((s, p) => { if (s.story !== p.story) syncGate(s.story.step); });
+  questGate.endings = useGameStore.getState().progress.endings;
+  useGameStore.subscribe((s, p) => { if (s.story !== p.story) syncGate(s.story.step); if (s.progress.endings !== p.progress.endings) questGate.endings = s.progress.endings; });
   // (owner 2026-10-25) side quests are NOT auto-accepted any more: an open one shows in the tracker as "Talk to <giver>"
   // (tap = walk there) and starts when the hero speaks with them (dialogue.ts: one "Okay" button)
 }, 0);
@@ -249,7 +256,7 @@ events.on('crateBreak', (e) => { const id = wantedDrop(e.kind); if (id) dropWant
 export function npcRewardText(r: NpcQuestDef['reward']): string {
   const parts: string[] = [];
   parts.push(`${questXp('SIDE', useGameStore.getState().level).toLocaleString()} EXP`);
-  if (r.gold) parts.push(`${Math.round(r.gold * GOLD_SCALE * SIDE_GOLD_MUL).toLocaleString()} gold`);
+  if (r.gold || r.rawGold) parts.push(`${goldOf(r).toLocaleString()} gold`);
   if (r.gems) parts.push(`${r.gems} gems`);
   if (r.shards) parts.push(`${r.shards[0].charAt(0)}${r.shards[0].slice(1).toLowerCase()} shards x${r.shards[1]}`);
   if (r.flasks) parts.push(`Lantern Oil Flask x${r.flasks}`);

@@ -10,6 +10,7 @@ import type { Rarity } from '../../types';
 import { useGameStore, DMG_INFLATE, makeItemById } from '../../store';
 import { GameStatus } from '../../types';
 import { PICKAXE_ID } from '../../itemClass';
+import { PICKAXES, pickTierOf } from '../../toolTiers';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { CRATE_HP, isHarvestNode } from '../mapgen';
@@ -63,7 +64,7 @@ export const hasPickaxe = (): boolean => useGameStore.getState().equipment.weapo
 export function hitCrate(c: Crate, amount: number, byHand = false): void {
   if (!c.active) return;
   if (!byHand && isHarvestNode(c.kind)) return;
-  if (byHand && hasPickaxe()) amount *= 2;
+  if (byHand && hasPickaxe()) amount *= PICKAXES[pickTierOf(useGameStore.getState().progress.pickTier)].mul;   // (owner 2026-10-26) tiered pickaxes
   c.hp -= amount;
   c.hitFlash = 1;
   if (c.hp <= 0) breakCrate(c);
@@ -202,7 +203,13 @@ export function breakCrate(c: Crate): void {
   }
   if (c.kind !== 'EXPLOSIVE_BARREL' && c.kind !== 'HAY') dropLoot(c.kind, 1 + wave * 0.01, c.pos.x, c.pos.z);
   events.emit('crateBreak', { pos: c.pos, kind: c.kind });
+  // (owner 2026-10-26) a better pickaxe sometimes pays a mined node twice (one bonus pass, no recursion)
+  if (!bonusPass && isHarvestNode(c.kind) && hasPickaxe() && Math.random() < PICKAXES[pickTierOf(st.progress.pickTier)].bonus) {
+    bonusPass = true; c.active = true; breakCrate(c); bonusPass = false;
+    events.emit('floatText', { pos: c.pos, text: 'Bonus ore!', color: 0xffd36a, scale: 0.9, dy: 2.2 });
+  }
 }
+let bonusPass = false;
 
 export function updateCrates(dt: number): void {
   if (world.time < lastTime) fuse.fill(0); // new run

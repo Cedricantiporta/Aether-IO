@@ -16,18 +16,33 @@ import { FISH_SPOTS, FISH_SPOT_R } from '../beachData';
 import { LOOT_BY_ID, FISH_IDS, lootItem, isFishName } from '../../loot';
 import { GOLD_SCALE, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
 import type { Rarity } from '../../types';
+import { toolCostText, type ToolCost } from '../../toolTiers';
 
 export const FISH = { IDLE: 0, CAST: 1, WAIT: 2, BITE: 3, REEL: 4, RESULT: 5 } as const;
 
 // ------------------------------------------------------------------ rods + save
-export interface RodDef { name: string; price: number; wait: number; zone: number; luck: number; bite: number; desc: string }
-/** Fishing rods (bought from the Fishmonger). wait = bite wait multiplier, zone = green-zone width multiplier,
- *  luck = rarity bonus, bite = hook window (s). */
+export type { ToolCost };
+export { toolCostText };
+export interface RodDef { name: string; /** rarity tier shown in the UI */ tier: Rarity; price: number; cost: ToolCost; wait: number; zone: number; luck: number; bite: number; desc: string }
+/** Fishing rods (bought from the Fishmonger, Common -> Mythic). wait = bite wait multiplier, zone = green-zone width multiplier,
+ *  luck = rarity bonus, bite = hook window (s). Low tiers cost gold, Epic Aether Crystals, Legendary / Mythic gems (+ crystals). */
+const rod = (name: string, tier: Rarity, cost: ToolCost, wait: number, zone: number, luck: number, bite: number, desc: string): RodDef => ({ name, tier, cost, price: cost.gold ?? 0, wait, zone, luck, bite, desc });
 export const RODS: RodDef[] = [
-  { name: 'Willow Rod', price: 0, wait: 1, zone: 1, luck: 1, bite: 1.1, desc: 'A bent stick and some string. It works.' },
-  { name: 'Oak Rod', price: 8000 * GOLD_SCALE, wait: 0.8, zone: 1.2, luck: 1.15, bite: 1.3, desc: 'Faster bites, a wider reel zone, slightly rarer fish.' },
-  { name: 'Aether Rod', price: 40000 * GOLD_SCALE, wait: 0.6, zone: 1.4, luck: 1.35, bite: 1.5, desc: 'Hums over the water. The big ones notice it.' },
+  rod('Willow Rod', 'COMMON', {}, 1, 1, 1, 1.1, 'A bent stick and some string. It works.'),
+  rod('Oak Rod', 'UNCOMMON', { gold: 8000 * GOLD_SCALE }, 0.8, 1.2, 1.15, 1.3, 'Faster bites, a wider reel zone, slightly rarer fish.'),
+  rod('Aether Rod', 'RARE', { gold: 40000 * GOLD_SCALE }, 0.6, 1.4, 1.35, 1.5, 'Hums over the water. The big ones notice it.'),
+  rod('Starsilk Rod', 'EPIC', { crystals: 60 }, 0.45, 1.6, 1.6, 1.7, 'Spun from starlight thread. Bites come fast and the reel zone is generous.'),
+  rod('Sunscale Rod', 'LEGENDARY', { gems: 600 }, 0.35, 1.85, 1.95, 1.9, 'Gleams like a golden scale. Rare fish queue up for it.'),
+  rod('Moonwake Rod', 'MYTHIC', { gems: 1500, crystals: 150 }, 0.25, 2.2, 2.4, 2.2, 'The lake itself leans toward this rod. Legends bite, and the reel is almost easy.'),
 ];
+/** True when the hero can pay (gold / gems / crystals). */
+export const canPayTool = (c: ToolCost): boolean => { const st = useGameStore.getState(); return st.gold >= (c.gold ?? 0) && st.gems >= (c.gems ?? 0) && (st.crystals ?? 0) >= (c.crystals ?? 0); };
+/** Pays a tool cost; false (nothing taken) when short. */
+export function payTool(c: ToolCost): boolean {
+  if (!canPayTool(c)) return false;
+  useGameStore.setState((st) => ({ gold: st.gold - (c.gold ?? 0), gems: st.gems - (c.gems ?? 0), crystals: (st.crystals ?? 0) - (c.crystals ?? 0) }));
+  return true;
+}
 const KEY = 'aether-survivor-fishing-v1';
 interface FishSave { rod: number; caught: number; log: Record<string, number> }
 let save: FishSave | null = null;
@@ -49,12 +64,12 @@ export const rodLevel = (): number => load().rod;
 export const fishCaught = (): number => load().caught;
 export const fishLog = (id: string): number => load().log[id] ?? 0;
 
-/** Buys the next rod (gold). Returns true on success. */
+/** Buys the next rod (gold / crystals / gems). Returns true on success. */
 export function buyRod(): boolean {
   const s = load(), st = useGameStore.getState(), next = RODS[s.rod + 1];
   if (!next) return false;
-  if (st.gold < next.price) { st.addNotification('Not enough gold for the ' + next.name + '.', '#ff8a7a', 'WARNING'); return false; }
-  st.addGold(-next.price); events.emit('purchase', {}); 
+  if (!canPayTool(next.cost)) { st.addNotification(`Not enough to buy the ${next.name} (${toolCostText(next.cost)}).`, '#ff8a7a', 'WARNING'); return false; }
+  payTool(next.cost); events.emit('purchase', {});
   s.rod++; changed();
   st.addNotification(`Bought the ${next.name}!`, '#7fd8ff', 'SYSTEM');
   return true;
