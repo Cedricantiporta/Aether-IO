@@ -79,18 +79,17 @@ export const PetFuse: React.FC = () => {
             dim={(!!tier && p.rarity !== tier) || !(FUSE_CHANCE[p.rarity] ?? 0)} onClick={() => toggle(p)} />
         )) : <div className="rpg-label">No pets in your bag.</div>}
       </div>
-      <AscendSection />
       {cine && <ForgeCinematic item={cine.preview} run={cine.run} heading="Fusion Result" noLevel onDone={() => setCine(null)} />}
     </div>
   );
 };
 
 /** Pet ascension: keep one pet, sacrifice a same-name duplicate from the bag for +1 star (+10% power, max 5). */
-const AscendSection: React.FC = () => {
+export const PetAscend: React.FC = () => {
   const inventory = useGameStore((s) => s.inventory);
   const equipped = useGameStore((s) => s.equipment.pet);
   const ascendPet = useGameStore((s) => s.ascendPet);
-  const [keepId, setKeep] = useState('');
+  const [keepId, setKeep] = useState(''), [sacId, setSac] = useState('');
   const bag = inventory.filter((i) => i.type === 'PET');
   const keepers = [...(equipped ? [equipped] : []), ...bag].filter((k) => petStars(k) < PET_MAX_STARS && bag.some((d) => d.id !== k.id && d.name === k.name));
   const keep = keepers.find((k) => k.id === keepId) ?? null;
@@ -101,10 +100,11 @@ const AscendSection: React.FC = () => {
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">Own two of the same pet? Pick the one to keep, then a duplicate from your bag to sacrifice: the keeper gains a gold star (+10% pet power, up to {PET_MAX_STARS}).</div>
       {keepers.length ? (<>
         <div className="text-[.75rem] muted">1. Pet to keep (equipped pet included)</div>
-        <div className="slot-grid">{keepers.map((k) => <ItemSlot key={k.id} item={k} fluid size="100%" iconSize="78%" tooltip="none" selected={k.id === keepId} onClick={() => setKeep(k.id)} />)}</div>
+        <div className="slot-grid">{keepers.map((k) => <ItemSlot key={k.id} item={k} fluid size="100%" iconSize="78%" tooltip="none" selected={k.id === keepId} onClick={() => { setKeep(k.id); setSac(''); }} />)}</div>
         {keep && (<>
           <div className="text-[.75rem] muted">2. Duplicate to sacrifice (it is consumed)</div>
-          <div className="slot-grid">{dupes.map((d) => <ItemSlot key={d.id} item={d} fluid size="100%" iconSize="78%" tooltip="none" onClick={() => { ascendPet(keep.id, d.id); setKeep(''); }} />)}</div>
+          <div className="slot-grid">{dupes.map((d) => <ItemSlot key={d.id} item={d} fluid size="100%" iconSize="78%" tooltip="none" selected={d.id === sacId} onClick={() => setSac(d.id)} />)}</div>
+          <button className="rpg-btn bevel pe px-4 py-2 self-center" disabled={!sacId} data-testid="pet-ascend-go" onClick={() => { ascendPet(keep.id, sacId); setKeep(''); setSac(''); }}>Ascend {keep.name} ★</button>
         </>)}
       </>) : <div className="rpg-label">No duplicates to ascend (a pet below 5 stars plus a same-name copy in your bag).</div>}
     </div>

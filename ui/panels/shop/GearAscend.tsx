@@ -11,9 +11,9 @@ export const GearAscend: React.FC = () => {
   const inventory = useGameStore((s) => s.inventory);
   const equipment = useGameStore((s) => s.equipment);
   const ascendGear = useGameStore((s) => s.ascendGear);
-  const [keepId, setKeep] = useState('');
-  const bag = inventory.filter(isGear);
-  const worn = (Object.values(equipment) as (Item | null)[]).filter((i): i is Item => !!i && isGear(i));
+  const [keepId, setKeep] = useState(''), [sacId, setSac] = useState('');
+  const bag = inventory.filter((i) => isGear(i) && i.type !== 'PET');   // (pets ascend at the Pet House)
+  const worn = (Object.values(equipment) as (Item | null)[]).filter((i): i is Item => !!i && isGear(i) && i.type !== 'PET');
   const same = (a: Item, b: Item) => a.name === b.name && a.rarity === b.rarity;
   const keepers = [...worn, ...bag].filter((k) => gearStars(k) < GEAR_MAX_STARS && bag.some((d) => d.id !== k.id && same(d, k)));
   const keep = keepers.find((k) => k.id === keepId) ?? null;
@@ -24,10 +24,11 @@ export const GearAscend: React.FC = () => {
       <div className="rpg-parchment p-3 text-[.8rem] leading-snug">Own two of the same gear piece (same name and tier)? Pick the one to keep, then a duplicate from your bag to sacrifice: the keeper gains a gold star (+{Math.round(GEAR_STAR_BONUS * 100)}% base stats, up to {GEAR_MAX_STARS}). Upgrades, grade and bonus lines are kept; bonus lines are not boosted.</div>
       {keepers.length ? (<>
         <div className="text-[.75rem] muted">1. Piece to keep (worn gear included)</div>
-        <div className="slot-grid">{keepers.map((k) => <ItemSlot key={k.id} item={k} fluid size="100%" iconSize="78%" tooltip="none" selected={k.id === keepId} onClick={() => setKeep(k.id)} />)}</div>
+        <div className="slot-grid">{keepers.map((k) => <ItemSlot key={k.id} item={k} fluid size="100%" iconSize="78%" tooltip="none" selected={k.id === keepId} onClick={() => { setKeep(k.id); setSac(''); }} />)}</div>
         {keep && (<>
           <div className="text-[.75rem] muted">2. Duplicate to sacrifice (it is consumed)</div>
-          <div className="slot-grid">{dupes.map((d) => <ItemSlot key={d.id} item={d} fluid size="100%" iconSize="78%" tooltip="none" onClick={() => { ascendGear(keep.id, d.id); setKeep(''); }} />)}</div>
+          <div className="slot-grid">{dupes.map((d) => <ItemSlot key={d.id} item={d} fluid size="100%" iconSize="78%" tooltip="none" selected={d.id === sacId} onClick={() => setSac(d.id)} />)}</div>
+          <button className="rpg-btn bevel pe px-4 py-2 self-center" disabled={!sacId} data-testid="gear-ascend-go" onClick={() => { ascendGear(keep.id, sacId); setKeep(''); setSac(''); }}>Ascend {keep.name} ★</button>
         </>)}
       </>) : <div className="rpg-label">No duplicates to ascend (a piece below 5 stars plus a same-name, same-tier copy in your bag).</div>}
     </div>

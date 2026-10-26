@@ -6,7 +6,7 @@ import { ItemSlot } from '../../components/ItemSlot';
 import { ShopGrid } from '../../components/ShopGrid';
 import { ItemArt } from '../../components/ItemArt';
 import { PetCare } from './PetCare';
-import { PetFuse } from './PetFuse';
+import { PetFuse, PetAscend } from './PetFuse';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
 import type { PlayerStats } from '../../../types';
@@ -48,9 +48,9 @@ export const PetsTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['SHOP', 'CARE', 'FUSE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : t === 'CARE' ? 'Pet Care' : 'Fuse'}</button>)}
+        {(['SHOP', 'CARE', 'FUSE', 'ASCEND'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : t === 'CARE' ? 'Pet Care' : t === 'FUSE' ? 'Fuse' : 'Ascend'}</button>)}
       </div>
-      {tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
+      {tab === 'ASCEND' ? <PetAscend /> : tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
         <ShopGrid className="pet-grid" testId="pet-grid">
           {SHOP_PETS.map((q) => (
             <div key={q.id} className="pet-cell" style={q.summonOnly ? { filter: 'grayscale(1) brightness(.45)' } : undefined} data-testid={`pet-row-${q.id}`}>

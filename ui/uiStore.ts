@@ -44,8 +44,8 @@ interface UiState {
   /** buy dialog overrides (merchant / pets): unit price, how many are left, and the purchase itself */
   buyOpts: BuyOpts | null;
   selectedItem: Item | null;            // blacksmith selection
-  blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT' | 'FUSE' | 'SHARDS' | 'REFORGE';
-  petsTab: 'SHOP' | 'CARE' | 'FUSE';    // Pet House tab (the upgrade hints open Care / Fuse directly)
+  blacksmithTab: 'UPGRADE' | 'RECYCLE' | 'CRAFT' | 'FUSE' | 'SHARDS' | 'REFORGE' | 'ASCEND';
+  petsTab: 'SHOP' | 'CARE' | 'FUSE' | 'ASCEND';    // Pet House tab (the upgrade hints open Care / Fuse directly)
   setPetsTab: (t: UiState['petsTab']) => void;
   confirm: ConfirmRequest | null;
   bagView: boolean;                     // small screens: show the bag instead of the shop (shop tabs that use the bag)

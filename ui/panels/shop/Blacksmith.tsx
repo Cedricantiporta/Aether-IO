@@ -1,3 +1,4 @@
+import { GearAscend } from './GearAscend';
 import React, { useEffect, useState } from 'react';
 import { useDrop } from '../../lib/dnd';
 import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from '../../components/GoldIcons';
@@ -242,12 +243,13 @@ export const BlacksmithTab: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2">
-        {(['UPGRADE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe relative ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}{t === 'CRAFT' && craftDot && <i className="red-dot" data-testid="craft-tab-dot" />}</button>)}
+        {(['UPGRADE', 'CRAFT', 'FUSE', 'SHARDS', 'REFORGE', 'ASCEND'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe relative ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)}>{t}{t === 'CRAFT' && craftDot && <i className="red-dot" data-testid="craft-tab-dot" />}</button>)}
       </div>
       {tab === 'UPGRADE' && <Upgrade />}
       {tab === 'FUSE' && <ItemFuse />}
       {tab === 'SHARDS' && <ShardTab />}
       {tab === 'REFORGE' && <ReforgeTab />}
+      {tab === 'ASCEND' && <GearAscend />}
       {tab === 'CRAFT' && (<>
         <div className="rpg-frame p-3 text-[.78rem] text-center">The Workshop is open. Pick a recipe on the left, check the materials and forge.</div>
         <Workshop onClose={() => setTab('UPGRADE')} />
