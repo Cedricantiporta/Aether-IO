@@ -124,7 +124,7 @@ function NpcActor({ i }: { i: number }) {
 
   useEffect(() => () => disposeMerged(ch), [ch]);
   useEffect(() => {
-    if (def.noHat) for (const m of ch.meshes) if (/hat|helm|hood|cap|crown|visor/i.test(m.name)) m.visible = false;   // (merging then keeps the parts separate)
+    if (def.noHat) for (const m of ch.meshes) if (/hat|helm|hood|cap|crown|visor/i.test(m.name.split("_").pop() ?? "")) m.visible = false;   // (merging then keeps the parts separate)
     if (def.noCape) for (const m of ch.meshes) if (/cape|quiver|mask/i.test(m.name)) m.visible = false;
     meshes.current = mergeCharacter(ch);   // 1 draw call per NPC instead of 7-9
     // light tints only: blend the authored tint 45% towards white so the KayKit atlas stays bright and readable

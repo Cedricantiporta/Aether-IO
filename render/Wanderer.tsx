@@ -69,7 +69,7 @@ function Actor({ def }: { def: number }) {
   useEffect(() => {
     if (d.id === 'KEEPER') return dressKeeper(ch.meshes, ch.root);
     if (d.id === 'RHEA') {   // like her town self: the Knight without the helmet, in cream and teal
-      for (const m of ch.meshes) if (/hat|helm|hood|cap|crown|visor/i.test(m.name)) m.visible = false;
+      for (const m of ch.meshes) if (/hat|helm|hood|cap|crown|visor/i.test(m.name.split("_").pop() ?? "")) m.visible = false;
       const tint = new Color(d.tint).lerp(WHITE, 0.35);
       ch.mats.forEach((m: any) => { if (m.color) m.color.copy(tint); });
       return () => { for (const m of ch.meshes) m.visible = true; };
