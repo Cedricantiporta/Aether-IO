@@ -131,7 +131,7 @@ export const SummonWindow: React.FC = () => {
               <span className="bar"><i style={{ width: `${((drawn % PITY_LEGEND) / PITY_LEGEND) * 100}%` }} /></span>
             </div>
             <div className="sw-pity-row" style={{ ['--pc' as any]: RARITY_LIGHT.MYTHIC }}>
-              <span className="n">Every {PITY_MYTHIC}: <b>80% Legendary · 20% Mythic</b> in <b className="rpg-num">{PITY_MYTHIC - (drawn % PITY_MYTHIC)}</b></span>
+              <span className="n">Every {PITY_MYTHIC}: <b>guaranteed Mythic</b> in <b className="rpg-num">{PITY_MYTHIC - (drawn % PITY_MYTHIC)}</b></span>
               <span className="bar"><i style={{ width: `${((drawn % PITY_MYTHIC) / PITY_MYTHIC) * 100}%` }} /></span>
             </div>
           </div>

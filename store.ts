@@ -194,8 +194,8 @@ export const SHARD_COST_1 = 10;
 export const SHARD_COST_10 = 90;
 /** Max copies of a rarity a single summon (1x or 10x) can yield; extra rolls are downgraded to RARE. */
 /** Gem cost of a single summon and of a 10x summon. */
-/** Summon pity: every PITY_LEGEND-th draw on an altar is a Legendary; every PITY_MYTHIC-th is 80% Legendary / 20% Mythic. */
-export const PITY_LEGEND = 60, PITY_MYTHIC = 240;
+/** Summon pity: every PITY_LEGEND-th draw on an altar is a Legendary; every PITY_MYTHIC-th is a guaranteed Mythic (owner 2026-10-26: was 240 draws, 20%). */
+export const PITY_LEGEND = 60, PITY_MYTHIC = 180;
 export type SummonPity = { GEM: number; SHARD: number };
 const sanitizePity = (raw: unknown): SummonPity => {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
@@ -2117,8 +2117,8 @@ export const useGameStore = create<GameState>()((set, get) => {
         }
         const cap = CAPS[rarity];
         if (cap !== undefined && results.filter((i) => i.rarity === rarity).length >= cap) rarity = 'RARE';
-        // pity: the 60th draw is a Legendary; the 240th is 80% Legendary / 20% Mythic
-        if (drawn % PITY_MYTHIC === 0) rarity = Math.random() < 0.2 ? 'MYTHIC' : 'LEGENDARY';
+        // pity: every 60th draw is a Legendary; every 180th a guaranteed Mythic
+        if (drawn % PITY_MYTHIC === 0) rarity = 'MYTHIC';
         else if (drawn % PITY_LEGEND === 0) rarity = 'LEGENDARY';
         // half the pulls are shards of the rolled tier (Rare at least; several of the lower tiers), half are gear (Epic at least); pity pulls are gear
         const pity = drawn % PITY_LEGEND === 0 || drawn % PITY_MYTHIC === 0;
