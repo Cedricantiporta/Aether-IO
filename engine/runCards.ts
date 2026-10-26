@@ -361,3 +361,72 @@ export function takeRunCard(u: Upgrade): boolean {
   r.anyDmg = r.afflict > 0 || r.slayer > 0 || r.execute > 0 || r.firstStrike > 0;
   return true;
 }
+
+// ------------------------------------------------------------ ship decks --
+/** (owner 2026-10-26) Captain Rhea's decks: ready-made sets of NORMAL run cards (never specials / Death Defiance / Aegis) handed over at once
+ *  when a run starts past biome 1 (the ship). `cards` is the 12-card recipe (4 cards per skipped biome for the Coral Isles); other sizes
+ *  scale it proportionally. `fallback`: the stat card given instead of one that is already at its cap. */
+export interface ShipDeck { id: string; name: string; flavour: string; fallback: string; cards: readonly (readonly [string, number])[] }
+export const SHIP_DECKS: readonly ShipDeck[] = [
+  { id: 'OFFENSE', name: 'Offense', flavour: 'Hit hard, hit fast, and let the crabs worry.', fallback: 'Sharpness',
+    cards: [['Sharpness', 3], ['Haste', 3], ['Precision', 2], ['Lethality', 2], ['Clockwork', 1], ['Bloodthirst', 1]] },
+  { id: 'DEFENSE', name: 'Defense', flavour: 'A thick skin and a thicker hat. Nothing bites twice.', fallback: 'Iron Skin',
+    cards: [['Vitality Rune', 3], ['Iron Skin', 3], ['Bulwark', 2], ['Bloodthirst', 2], ['Wind Step', 1], ['Haste', 1]] },
+  { id: 'BALANCED', name: 'Balanced', flavour: 'A little of everything, like a good sailor\'s stew.', fallback: 'Sharpness',
+    cards: [['Sharpness', 2], ['Haste', 2], ['Vitality Rune', 2], ['Iron Skin', 2], ['Precision', 1], ['Bulwark', 1], ['Wind Step', 1], ['Clockwork', 1]] },
+  { id: 'STRATEGIST', name: 'Strategist', flavour: 'Skills first: more mana, faster ultimates, quicker spells.', fallback: 'Spring of Mana',
+    cards: [['Clockwork', 3], ['Mana Thrift', 2], ['Surging Heart', 2], ['Spring of Mana', 2], ['Mana Crystal', 1], ['Sharpness', 2]] },
+  { id: 'RESOURCEFUL', name: 'Resourceful', flavour: 'Quick flasks, quick feet, quick escapes.', fallback: 'Haste',
+    cards: [['Quickdraw Flask', 2], ['Shadow Step', 2], ['Wind Step', 2], ['Bloodthirst', 2], ['Vitality Rune', 2], ['Spring of Mana', 1], ['Sharpness', 1]] },
+];
+/** Rarity mix per 12 cards: 4 Common, 5 Rare, 2 Epic, 1 Legendary (scaled with the deck size, assigned at random). */
+const DECK_TIERS = [4, 5, 2, 1];
+
+/** Largest-remainder scaling of `weights` to a total of `n`. */
+function scaleTo(weights: readonly number[], n: number): number[] {
+  const sum = weights.reduce((a, b) => a + b, 0), raw = weights.map((w) => (w * n) / sum), out = raw.map(Math.floor);
+  let left = n - out.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => ({ i, f: r - Math.floor(r) })).sort((a, b) => b.f - a.f);
+  for (let k = 0; left > 0; k = (k + 1) % order.length, left--) out[order[k].i]++;
+  return out;
+}
+
+/** The `count` cards of a ship deck as Omit<Upgrade,'id'>[] (apply them in this order). Rarities are shuffled across the cards. Mana Thrift /
+ *  Surging Heart / Quickdraw Flask / Shadow Step respect their caps (counting what the run already holds): a capped card becomes the deck's
+ *  fallback stat card. The store rewrites Vitality / Iron Skin numbers (withCardText). */
+export function deckCards(deck: ShipDeck, count: number): Omit<Upgrade, 'id'>[] {
+  const names: string[] = [];
+  scaleTo(deck.cards.map((c) => c[1]), count).forEach((n, i) => { for (let k = 0; k < n; k++) names.push(deck.cards[i][0]); });
+  const tiers: number[] = [];
+  scaleTo(DECK_TIERS, count).forEach((n, t) => { for (let k = 0; k < n; k++) tiers.push(t); });
+  for (let i = tiers.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [tiers[i], tiers[j]] = [tiers[j], tiers[i]]; }
+  let mana = runCards.manaCut, ult = runCards.ultCharge, step = runCards.dashStacks, flask = runCards.potionCdStacks, flaskCut = runCards.potionCdCut;
+  const stat = (name: string, t: number): Omit<Upgrade, 'id'> => { const d = STATS.find((x) => x.name === name)!; return mk(d.type, d.name, d.fmt(d.vals[t]), t, d.vals[t]); };
+  const out: Omit<Upgrade, 'id'>[] = [];
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i], t = tiers[i] ?? 0;
+    if (name === 'Mana Thrift' && mana < MANA_CUT_CAP - 1e-6) {
+      const v = Math.min(MANA_CUT_VALS[t], MANA_CUT_CAP - mana); mana += v;
+      out.push(mk('MANA_COST', name, `Skills cost ${pct(v)} less mana (max -${pct(MANA_CUT_CAP)} total)`, t, v));
+    } else if (name === 'Surging Heart' && ult < ULT_CHARGE_CAP - 1e-6) {
+      const v = Math.min(ULT_CHARGE_VALS[t], ULT_CHARGE_CAP - ult); ult += v;
+      out.push(mk('ULT_CHARGE', name, `Your Ultimate charges ${pct(v)} faster (max +${pct(ULT_CHARGE_CAP)} total)`, t, v));
+    } else if (name === 'Shadow Step' && step < DASH_CARD_MAX) {
+      const v = STEP_VALS[t]; step++;
+      out.push(mk('DASH_COOLDOWN', name, `-${pct(v)} Dash cooldown (${step}/${DASH_CARD_MAX})`, t, v));
+    } else if (name === 'Quickdraw Flask' && flask < POTION_CD_STACKS_MAX && flaskCut < POTION_CD_CAP - 1e-6) {
+      const tt = Math.min(t, 3), v = Math.min(POTION_CD_VALS[tt], POTION_CD_CAP - flaskCut); flask++; flaskCut += v;
+      out.push(mk('POTION_CD', name, `-${pct(v)} Potion cooldown (${flask}/${POTION_CD_STACKS_MAX}, max -${pct(POTION_CD_CAP)} total)`, tt, v));
+    } else if (STATS.some((x) => x.name === name)) out.push(stat(name, t));
+    else out.push(stat(deck.fallback, t));   // a capped card: the deck's fallback stat card
+  }
+  return out;
+}
+
+/** The deck card list for display: [card name, count] at `count` total cards (the same scaling deckCards uses). */
+export function deckRecipe(deck: ShipDeck, count: number): [string, number][] {
+  const n = scaleTo(deck.cards.map((c) => c[1]), count);
+  return deck.cards.map((c, i) => [c[0], n[i]] as [string, number]).filter((x) => x[1] > 0);
+}
+/** The rarity mix of a deck of `count` cards, [Common, Rare, Epic, Legendary]. */
+export const deckRarityMix = (count: number): number[] => scaleTo(DECK_TIERS, count);

@@ -26,6 +26,7 @@ import { useUiStore } from './uiStore';
 import { WaveReward } from './screens/WaveReward';
 import { GameOver } from './screens/GameOver';
 import { AnkhPrompt } from './screens/AnkhPrompt';
+import { ShipDecks } from './screens/ShipDecks';
 import { SetOutWindow } from './screens/SetOut';
 import { ShowcaseLauncher, ShowcaseOverlay } from './screens/Showcase';
 import { DailyPopup } from './screens/DailyPopup';
@@ -99,6 +100,7 @@ export const GameUI: React.FC = () => {
       <AnimatePresence>{status === GameStatus.LEVEL_UP && <WaveReward key="reward" />}</AnimatePresence>
       <AnimatePresence>{status === GameStatus.GAME_OVER && <GameOver key="over" />}</AnimatePresence>
       {status === GameStatus.PLAYING && <AnkhPrompt />}
+      {status === GameStatus.PLAYING && <ShipDecks />}
       {village && <SetOutWindow />}
       {village && <ShowcaseLauncher />}
       {village && <DailyPopup />}

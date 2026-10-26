@@ -24,7 +24,7 @@ import { feat, MAX_FIXED } from '../roomFeatures';
 import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
 import { damagePlayer } from './combat';
 import { GameStatus } from '../../types';
-import { runMods, runInfo, veteran } from '../runMods';
+import { runMods, runInfo, veteran, shipState } from '../runMods';
 import {
   BIOMES, biomeOf, bossNameIn, depthWave, firstPlan, nextChoices, portalLabel, rarityForDepth, shardRarity, REST_INDEX, ROOMS_PER_BIOME, BOSS_INDEX, PREBOSS_INDEX, shortcutPlan, type BiomeDef, capCard, useCard, cardBudget,
 } from '../roomDefs';
@@ -59,7 +59,7 @@ import { isArenaRoom, arenaRadius } from '../arenaRooms';
 import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
 import { maybeAlly, resetAlly, removeAlly } from './ally';
-import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper, placeCampWanderer } from '../wanderers';
+import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper, placeCampWanderer, placeShipCaptain, RHEA_GOODBYE } from '../wanderers';
 import { dialogueOpen, advanceDialogue, acceptOffer, openCustomDialogue } from './dialogue';
 // Daily Trial (dailyChallenge.ts): a short seeded tower-style climb; these hooks only apply while daily.on
 import { daily, dailyPlan, dailyBiome, dailyRoomSeed, dailyDepth, climbTitle, climbFloor, DAILY_FLOORS } from '../../dailyChallenge';
@@ -202,6 +202,7 @@ export function resetDirector(): void {
 /** Begins a run: biome 0, room 0 (a skirmish), fading in from black. */
 export function startRunRooms(): void {
   cardBudget.biome = -1; cardBudget.used = 0;   // (a new run: fresh card limits)
+  shipState.lock = false; shipState.open = false;
   biome = 0; index = 0; merchantBiome = -1; fountainBiome = -1; shrineBiome = -1;
   finalFight = false; endingDone = false; towerFloor = 0; towerState.floor = 0; world.run.towerFloor = 0;
   resetGates();
@@ -209,9 +210,11 @@ export function startRunRooms(): void {
   if (showcase.on) { enterRoom(SHOWCASE_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // (owner) the new character's fully powered showcase arena (engine/showcase.ts)
   if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
   if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
-  const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens at that biome's camp)
-  runInfo.catchUp = 0;
-  if (sb > 0) { runInfo.catchUp = 4 * sb; enterRoom(sb, 0, firstPlan()); return; }   // (owner 2026-10-25: 4 catch-up card picks per skipped biome, a normal run gets up to 6 per biome)
+  const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens in that biome's camp, where Captain Rhea hands out a card deck)
+  if (sb > 0) {   // (owner 2026-10-26) the camp's exit stays shut until the hero has talked to the captain and chosen a deck (4 cards per skipped biome)
+    shipState.lock = true; shipState.skipped = sb; shipState.onChosen = shipChosen;
+    enterRoom(sb, 0, firstPlan()); return;
+  }
   enterRoom(0, 0, firstPlan());
 }
 
@@ -378,7 +381,10 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
   maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
-  if (campPath) placeCampWanderer(b, cx, cz + 5);   // a traveller rests at the waystation (the camp's NPC)
+  if (campPath && shipState.lock && idx === 0) {   // the ship start: Captain Rhea, not a random traveller
+    placeShipCaptain(cx, cz + 5);
+    st.addNotification('Captain Rhea waits by the fire. Talk to her (E) to choose your deck.', '#6fd0e0', 'SYSTEM');
+  } else if (campPath) placeCampWanderer(b, cx, cz + 5);   // a traveller rests at the waystation (the camp's NPC)
   if (p.type === 'CRYSTAL') st.addNotification('A quiet crystal cavern: harvest what you can, then pick an exit.', '#7fd8ff', 'SYSTEM');
 }
 
@@ -928,8 +934,16 @@ function bossRewards(): void {
 }
 
 // ------------------------------------------------------------ clearing ------
+/** The deck is chosen (store.chooseShipDeck): the captain's goodbye, and the exits to stage 1 open. */
+function shipChosen(): void {
+  wander.used = true;
+  useGameStore.getState().addNotification(`Captain Rhea: "${RHEA_GOODBYE}"`, '#6fd0e0', 'SYSTEM');
+  if (dd().phase === 'CLEARED') openPortals();   // (not cleared yet: onCleared opens them as usual, the lock is gone)
+}
+
 function openPortals(): void {
   const r = world.room;
+  if (shipState.lock && runInfo.mode === 'ADVENTURE') return;   // the ship start: shut until a deck is chosen
   if (runInfo.mode === 'TOWER') {   // one way up
     const po = r.portals[0];
     for (const q of r.portals) q.active = false;
@@ -1430,6 +1444,7 @@ export function updateDirector(dt: number): void {
     if (world.input.pressed.KeyF) acceptOffer();
     return;
   }
+  if (shipState.open) return;   // the captain's deck window is showing
   scanNearby();
   harvestCd = Math.max(0, harvestCd - dt);
   if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);

@@ -5,7 +5,7 @@
 import { GOLD_SCALE } from './constants';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
-import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost } from './engine/runCards';
+import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost, SHIP_DECKS, deckCards } from './engine/runCards';
 import { ASCENSION_MAX } from './ascension';
 import { weaponPerk, lifeStealOf } from './weaponPerks';
 import { activeChar, activeProfileKey, characters } from './characters';
@@ -15,7 +15,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { runInfo, hardMul, phaseOfTime, type RunMode } from './engine/runMods';
+import { runInfo, hardMul, phaseOfTime, shipState, shipDeckChosen, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
 import { create } from 'zustand';
@@ -391,6 +391,42 @@ const withCardText = (opt: Upgrade): Upgrade => {
   if (opt.type === 'HEALTH') { opt.value = Math.max(opt.value, Math.round((st.maxHealth / HP_INFLATE) * f)); opt.description = `+${Math.round(opt.value * HP_INFLATE)} Max HP`; }
   else if (opt.type === 'DEFENSE') { opt.value = Math.max(opt.value, Math.round(st.defense * f)); opt.description = `+${opt.value} Defense`; }
   return opt;
+};
+
+/** (owner 2026-10-26) Applies ONE run card's stat / engine effect to `base` / `levels` (mutated). The single code path for a normally picked
+ *  card and for the cards of a ship deck (selectUpgrade / chooseShipDeck). `state` is the store state the card is applied against. */
+const applyCardEffect = (state: GameState, base: PlayerStats, levels: SkillLevels, upgrade: Upgrade): void => {
+  const key = skillKeyFor(upgrade.type, state.hero);
+
+  if (key) {
+    levels[key] = Math.min(MAX_SKILL_LEVEL, levels[key] + 1);
+  } else {
+    switch (upgrade.type) {
+      case 'HEALTH': base.maxHealth += upgrade.value; world.player.hp += upgrade.value * HP_INFLATE; break;
+      case 'MAX_MANA': base.maxMana += upgrade.value; world.player.mana += upgrade.value; break;
+      // (owner 2026-10-25) % cards add up on the run's starting value (five +10% = +50%), they no longer compound
+      case 'DAMAGE': base.damage = (base.damage / (1 + runCards.pctDmg)) * (1 + runCards.pctDmg + upgrade.value); runCards.pctDmg += upgrade.value; break;
+      case 'SPEED': base.moveSpeed = (base.moveSpeed / (1 + runCards.pctSpeed)) * (1 + runCards.pctSpeed + upgrade.value); runCards.pctSpeed += upgrade.value; break;
+      case 'FIRE_RATE': base.fireRate = (base.fireRate / (1 + runCards.pctRate)) * (1 + runCards.pctRate + upgrade.value); runCards.pctRate += upgrade.value; break;
+      case 'DEFENSE': base.defense += upgrade.value; break;
+      case 'CRIT_RATE': base.critRate += upgrade.value; break;
+      case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
+      case 'MULTISHOT': base.multishot += upgrade.value; break;
+      case 'ULT_FILL': world.player.ult = Math.min(100, Math.max(world.player.ult, world.player.ult + upgrade.value)); break;   // (Rare: +60%, Epic+: full)
+      case 'RESTORE': { const f = upgrade.value > 0 && upgrade.value < 1 ? upgrade.value : 0.3, hp = state.stats.maxHealth * f; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * f); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
+      case 'AEGIS': { const sh = upgrade.value;   // the shield HP by the card's rarity (60 / 80 / 110 / 150)
+ world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
+      case 'COOLDOWN': base.cooldownReduction += upgrade.value; break;
+      case 'KNOCKBACK': base.knockback = (base.knockback / (1 + runCards.pctKb)) * (1 + runCards.pctKb + upgrade.value); runCards.pctKb += upgrade.value; break;
+      case 'LIFESTEAL': base.lifeSteal += upgrade.value; break;
+      case 'DMG_REDUCE': base.dmgReduce += upgrade.value; break;
+      case 'MANA_REGEN': base.manaRegen += upgrade.value; break;
+      case 'SPECIAL': if (upgrade.special === 'GOLD_RUSH' && !runCards.taken.GOLD_RUSH) base.goldFind += upgrade.value; break;
+      // DASH_COOLDOWN (-10% dash cooldown) and DEATH_DEFIANCE are engine-side (runCards)
+      default: break;
+    }
+  }
+  takeRunCard(upgrade);
 };
 
 /** Adds Upgrade Cores to the bag (stacks onto an existing core stack). */
@@ -1082,50 +1118,30 @@ export const useGameStore = create<GameState>()((set, get) => {
       const state = get();
       const base: PlayerStats = { ...state.baseStats };
       const levels: SkillLevels = { ...state.skillLevels };
-      const key = skillKeyFor(upgrade.type, state.hero);
-
-      if (key) {
-        levels[key] = Math.min(MAX_SKILL_LEVEL, levels[key] + 1);
-      } else {
-        switch (upgrade.type) {
-          case 'HEALTH': base.maxHealth += upgrade.value; world.player.hp += upgrade.value * HP_INFLATE; break;
-          case 'MAX_MANA': base.maxMana += upgrade.value; world.player.mana += upgrade.value; break;
-          // (owner 2026-10-25) % cards add up on the run's starting value (five +10% = +50%), they no longer compound
-          case 'DAMAGE': base.damage = (base.damage / (1 + runCards.pctDmg)) * (1 + runCards.pctDmg + upgrade.value); runCards.pctDmg += upgrade.value; break;
-          case 'SPEED': base.moveSpeed = (base.moveSpeed / (1 + runCards.pctSpeed)) * (1 + runCards.pctSpeed + upgrade.value); runCards.pctSpeed += upgrade.value; break;
-          case 'FIRE_RATE': base.fireRate = (base.fireRate / (1 + runCards.pctRate)) * (1 + runCards.pctRate + upgrade.value); runCards.pctRate += upgrade.value; break;
-          case 'DEFENSE': base.defense += upgrade.value; break;
-          case 'CRIT_RATE': base.critRate += upgrade.value; break;
-          case 'CRIT_DAMAGE': base.critDamage += upgrade.value; break;
-          case 'MULTISHOT': base.multishot += upgrade.value; break;
-          case 'ULT_FILL': world.player.ult = Math.min(100, Math.max(world.player.ult, world.player.ult + upgrade.value)); break;   // (Rare: +60%, Epic+: full)
-          case 'RESTORE': { const f = upgrade.value > 0 && upgrade.value < 1 ? upgrade.value : 0.3, hp = state.stats.maxHealth * f; world.player.hp = Math.min(state.stats.maxHealth, world.player.hp + hp); world.player.mana = Math.min(state.stats.maxMana, world.player.mana + state.stats.maxMana * f); events.emit('heal', { pos: world.player.pos, amount: hp }); break; }   // Second Breath: 30% HP and mana
-          case 'AEGIS': { const sh = upgrade.value;   // the shield HP by the card's rarity (60 / 80 / 110 / 150)
- world.player.aegis = Math.max(world.player.aegis, sh); world.player.aegisMax = Math.max(world.player.aegisMax, world.player.aegis); break; }
-          case 'COOLDOWN': base.cooldownReduction += upgrade.value; break;
-          case 'KNOCKBACK': base.knockback = (base.knockback / (1 + runCards.pctKb)) * (1 + runCards.pctKb + upgrade.value); runCards.pctKb += upgrade.value; break;
-          case 'LIFESTEAL': base.lifeSteal += upgrade.value; break;
-          case 'DMG_REDUCE': base.dmgReduce += upgrade.value; break;
-          case 'MANA_REGEN': base.manaRegen += upgrade.value; break;
-          case 'SPECIAL': if (upgrade.special === 'GOLD_RUSH' && !runCards.taken.GOLD_RUSH) base.goldFind += upgrade.value; break;
-          // DASH_COOLDOWN (-10% dash cooldown) and DEATH_DEFIANCE are engine-side (runCards)
-          default: break;
-        }
-      }
-      takeRunCard(upgrade);
+      applyCardEffect(state, base, levels, upgrade);
       const more = runCards.extraPicks > 0;   // Guardian's Spoils: another selection right behind this one
       if (more) runCards.extraPicks--;
-      const catchUp = !more && runInfo.catchUp > 0;   // (owner 2026-10-25) the ship skipped biomes: their cards are picked here, one after another
-      if (catchUp) { runInfo.catchUp--; notify(`Catch-up for the skipped biomes: ${runInfo.catchUp + 1} card${runInfo.catchUp ? 's' : ''} left`, COLORS.uiAccent, 'SYSTEM'); }
       set({
         baseStats: base,
         skillLevels: levels,
         stats: calc(base, state.equipment),
         runPicks: [...state.runPicks, upgrade],
         upgradeOptions: more ? generateUpgradeOptions(state.hero, levels, state.stats, 2 + (runCards.guardian > 1 ? 1 : 0), [...state.runPicks, upgrade], runCards.guardianTier || 1)
-          : catchUp ? generateUpgradeOptions(state.hero, levels, calc(base, state.equipment), 3, [...state.runPicks, upgrade]) : [],
-        status: more || catchUp ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
+          : [],
+        status: more ? GameStatus.LEVEL_UP : GameStatus.PLAYING,
       });
+    },
+
+    chooseShipDeck: (deckId) => {   // (owner 2026-10-26) Captain Rhea's deck: a ready-made set of normal run cards, given at once
+      const state = get(), deck = SHIP_DECKS.find((d) => d.id === deckId);
+      if (!deck || !shipState.lock || state.status !== GameStatus.PLAYING) return false;
+      const base: PlayerStats = { ...state.baseStats }, levels: SkillLevels = { ...state.skillLevels };
+      const cards = deckCards(deck, 4 * shipState.skipped).map((c) => withCardText({ ...c, id: uid('card') }));
+      for (const c of cards) applyCardEffect(state, base, levels, c);   // (the same code path as picking a card; the engine-side caps were respected when the deck was built)
+      set({ baseStats: base, skillLevels: levels, stats: calc(base, state.equipment), runPicks: [...state.runPicks, ...cards] });
+      notify(`Captain Rhea hands you the ${deck.name} deck: ${cards.length} cards`, COLORS.uiAccent, 'SYSTEM');
+      shipDeckChosen();
+      return true;
     },
 
     refreshCards: () => {   // Card Refresh: reroll every offered card (uses one of this run's refreshes)

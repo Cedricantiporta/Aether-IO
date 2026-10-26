@@ -19,7 +19,7 @@ import { spawnPickup } from './systems/pickups';
 import { isSpawnable } from './systems/enemies';
 import { rarityForDepth, BIOMES, bossNameIn } from './roomDefs';
 import { BOSS_NAMES } from './enemyDefs';
-import { runInfo } from './runMods';
+import { runInfo, shipState } from './runMods';
 import type { CharKey } from '../render/characters';
 
 export interface WandererDef {
@@ -65,6 +65,14 @@ export const WANDERERS: readonly WandererDef[] = [
       'Sixteen hits, faster than they can blink. That is the whole trick. Want me to show you a few moves?',
     ] },
     offer: 'Spar with Keeto' },
+  // the ship start (never met at random): the captain waits in the first camp and hands out a card deck (store.chooseShipDeck)
+  { id: 'RHEA', name: 'Captain Rhea Saltwind', title: 'Ship Captain', model: 'KNIGHT', tint: '#f3e3c3', accent: '#6fd0e0', biomes: [],
+    lines: { 0: [
+      'Welcome ashore, hero! The Gull Queen drops her guests wherever the tide is kindest. Here, mostly.',
+      'You skipped the long road through three realms. A fighter should not skip the tools that road gives.',
+      'So I packed five decks of cards, ready to wear. Pick the one that suits you and I will open the way.',
+    ] },
+    offer: 'Choose a deck' },
   // the epilogue (never met at random): the light Malakar stole, waiting in a forest clearing after the final fight
   { id: 'KEEPER', name: 'Aelia', title: 'Keeper of the Font', model: 'WIZARD', tint: '#ffffff', accent: '#fff3c4', biomes: [],
     lines: { 0: [
@@ -85,6 +93,9 @@ export const WANDERERS: readonly WandererDef[] = [
     ] },
     offer: 'Return home' },
 ];
+
+/** Captain Rhea's parting line once the deck is chosen (director.shipChosen). */
+export const RHEA_GOODBYE = 'Fair winds, hero! Go show those Isles who the crabs should fear.';
 
 /** The wanderer in the current room (render reads it). */
 export const wander = { on: false, def: 0, x: 0, z: 0, used: false, ver: 0 };
@@ -135,6 +146,11 @@ function linesFor(d: WandererDef): string[] {
   return (d.lines[b] ?? d.lines[0]).slice();
 }
 
+/** The ship start: Captain Rhea stands by the camp fire (director.enterRoom). */
+export function placeShipCaptain(x: number, z: number): void {
+  wander.on = true; wander.def = WANDERERS.findIndex((w) => w.id === 'RHEA'); wander.x = x; wander.z = z; wander.used = false; wander.ver++;
+}
+
 /** The epilogue: Aelia stands in the clearing (director.onCleared of the epilogue room). */
 export function placeKeeper(x: number, z: number): void {
   wander.on = true; wander.def = WANDERERS.findIndex((w) => w.id === 'KEEPER'); wander.x = x; wander.z = z; wander.used = false; wander.ver++;
@@ -148,7 +164,7 @@ function keeperStage(): number {
 
 /** E at the wanderer: their story, then the offer (once). */
 export function talkWanderer(): void {
-  if (!wander.on) return;
+  if (!wander.on || shipState.open) return;
   const d = WANDERERS[wander.def], st = useGameStore.getState();
   if (d.id === 'KEEPER' && world.room.plan.dream) {   // (owner) a Font dream: her lines, then you wake in town
     const dr = dreamView.pending;
@@ -161,6 +177,11 @@ export function talkWanderer(): void {
   }
   if (d.id === 'KEEPER') {   // her words, then the ending slides and home
     openCustomDialogue(d.name, d.title, d.accent, (d.lines[keeperStage()] ?? d.lines[0]).slice(), { label: d.offer, accept: () => { if (!wander.used) { wander.used = true; events.emit('gameEnding', {}); } } });
+    return;
+  }
+  if (d.id === 'RHEA') {   // the deck choice opens a window (ui/screens/ShipDecks.tsx); afterwards only a goodbye
+    if (!shipState.lock) { openCustomDialogue(d.name, d.title, d.accent, [RHEA_GOODBYE]); return; }
+    openCustomDialogue(d.name, d.title, d.accent, linesFor(d), { label: d.offer, accept: () => { if (shipState.lock) shipState.open = true; } });
     return;
   }
   const lines = linesFor(d);

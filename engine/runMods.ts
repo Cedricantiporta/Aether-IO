@@ -9,8 +9,12 @@ import { showcase, SHOWCASE_HP_MUL } from './showcase';
 export type RunMode = 'ADVENTURE' | 'TOWER';
 /** back: where the hero reappears in town after this run ('TOWER': at the Endless Tower door; '': the plaza). */
 /** startBiome: the biome an ADVENTURE run opens in (0; the captain's ship to the Coral Isles sets 3). */
-export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false, /** this run is on Hard mode (set at run start; better gold / XP / drop and card odds) */ hard: false,
-  /** (owner 2026-10-25) a run started past biome 1 (the ship): extra card picks queued behind the first card reward, for the biomes skipped */ catchUp: 0 };
+export const runInfo = { mode: 'ADVENTURE' as RunMode, ascension: 0, back: '' as '' | 'TOWER', startBiome: 0, /** the next run is a Font dream (dreams.ts) */ dream: false, /** this run is on Hard mode (set at run start; better gold / XP / drop and card odds) */ hard: false };
+
+/** (owner 2026-10-26) The ship start: the run opens in a calm camp where Captain Rhea waits. `lock`: the exit portals stay shut until the hero
+ *  has chosen a deck (4 cards per skipped biome, `skipped`); `open`: the deck window is showing; `onChosen`: the director opens the portals. */
+export const shipState = { lock: false, open: false, skipped: 0, onChosen: null as (() => void) | null };
+export function shipDeckChosen(): void { shipState.lock = false; shipState.open = false; shipState.onChosen?.(); }
 
 /** Hard mode reward multipliers (gold + XP, epic-and-better item odds). Applied only while a Hard run is in progress. */
 export const HARD_GOLD_XP = 1.5;

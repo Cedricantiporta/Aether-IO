@@ -7,7 +7,7 @@ import { Panel, Ribbon } from '../components/Frame';
 import { SkullGlyph } from '../components/SkillIcons';
 import { ROOMS_PER_BIOME, BIOMES, BOSS_INDEX, PREBOSS_INDEX, biomeOf, loopOf, shownDepth } from '../../engine/roomDefs';
 import { bossKeyState, descend, finishRunVictory, towerState } from '../../engine/systems/director';
-import { runInfo } from '../../engine/runMods';
+import { runInfo, shipState } from '../../engine/runMods';
 import { climbTitle, climbFloor, daily } from '../../dailyChallenge';
 import { waves } from '../../endlessWaves';
 import { useGameStore } from '../../store';
@@ -28,6 +28,7 @@ function subText(): string {
     if (t === 'FOUNTAIN' || t === 'MERCHANT') return 'Take a breath, then pick an exit';
     if (t === 'TREASURE' && r.station.kind === 'CHEST' && !r.station.used) return 'Open the chest, then pick an exit';
     if (t === 'CRYSTAL') return 'Harvest the crystals, then press E at an exit';
+    if (t === 'CAMP' && shipState.lock) return 'Talk to Captain Rhea (E) to choose a deck';
     if (t === 'CAMP') return 'Rest: store loot, train skills, then pick an exit';
     if (t === 'SHRINE' && !r.shrineOn && !r.station.used) return 'Touch the altar for a challenge, or leave';
     return 'Room cleared - pick an exit';

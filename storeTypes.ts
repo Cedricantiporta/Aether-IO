@@ -202,6 +202,8 @@ export interface GameState {
   openWaveReward: (bonus?: boolean) => void; // room reward: generates upgradeOptions (+a 4th card when `bonus`), accumulatedWaveGold += 100, status = LEVEL_UP
   addMaterial: (rarity: Rarity, n?: number) => void; // crafting shards
   applyBlessing: (kind: BlessingKind) => string;   // fountain blessing for the rest of the run (edits baseStats); returns its label
+  /** Captain Rhea's ship deck (engine/runCards SHIP_DECKS): applies all its cards at once; false when it cannot be chosen now */
+  chooseShipDeck: (deckId: string) => boolean;
   selectUpgrade: (u: Upgrade) => void;// applies card, status = PLAYING
   upgradeSkill: (k: keyof SkillLevels) => void; // spend SP (skills tab)
   endRun: (summary: Omit<RunSummary, 'hero' | 'difficulty' | 'cp' | 'waveGoldBonus' | 'level' | 'rankXpGained' | 'rankUps' | 'rank'>) => void; // GAME_OVER + stats
