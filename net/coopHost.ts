@@ -20,6 +20,8 @@ import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 import { zonesTick, applyZones } from './coopZones';
 import { pullTick } from './coopPull';
 import { hazTick, hazReset, onTrapHit } from './coopHaz';
+import { minTick } from './coopMinions';
+import { rate } from './coopRate';
 import { coopUse, stationBits } from '../engine/systems/director';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
@@ -181,8 +183,9 @@ export function hostTick(now: number, inRun: boolean, R: typeof world.remote): v
   p.hp = Math.max(1, R.hp * 1000);
   p.invulnT = 0;
   coopRoom.ally = p;
-  if (now - lastSnap >= SNAP_MS) { lastSnap = now; sendSnap(now); }
+  if (now - lastSnap >= SNAP_MS * rate.mul) { lastSnap = now; sendSnap(now); }
   zonesTick(now, true);   // (STEP 3) my own ground skill zones as harmless copies on his screen
+  minTick(now, dt);       // (STEP 4) my summons / pet as ghosts on his screen
   hazTick(now);           // (STEP 4) traps / hazards / boss-phase props / room-event state as cosmetic mirrors on his screen
   pullTick(now);          // (STEP 4) pulls / pushes on the stand-in -> the guest's own hero
 }

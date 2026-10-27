@@ -5,6 +5,7 @@
 import { world, allocZone, allocFx, MAX_ZONES, MAX_FX } from '../engine/world';
 import type { ZoneKind, GroundFxKind } from '../engine/types';
 import { isNum, MSG } from './protocol';
+import { rate } from './coopRate';
 
 export interface ZonesIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: ZonesIO | null = null;
@@ -33,7 +34,7 @@ const r1 = (v: number): number => Math.round(v * 10), r2 = (v: number): number =
 
 /** Called every frame while both heroes are in the same room: ships my own zones / ground fx at ~8 Hz. */
 export function zonesTick(now: number, inRun: boolean): void {
-  if (!io || !inRun || !io.connected() || now - lastSend < 125) return;
+  if (!io || !inRun || !io.connected() || now - lastSend < 125 * rate.mul) return;
   lastSend = now;
   const zs: number[] = [], fs: number[] = [];
   const zl = world.zones;

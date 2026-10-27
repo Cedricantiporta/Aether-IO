@@ -21,6 +21,8 @@ import { zonesReset, zonesBind, zoneStats } from './coopZones';
 import { lootBind, lootStats } from './coopLoot';
 import { pullBind, pullReset, pullStats } from './coopPull';
 import { hazBind, hazStats } from './coopHaz';
+import { rateFrame } from './coopRate';
+import { minBind, minReset, onMinions, minStats } from './coopMinions';
 import { guestBind, guestTick, guestReset, guestOnMessage, guestStats } from './coopGuest';
 import { useCoop, coopSet } from './coopStore';
 import { pickTransport, type Conn, type Handle, type Transport } from './transport';
@@ -73,7 +75,7 @@ function clearTimers(): void {
 }
 function resetRemote(): void { count = 0; head = 0; world.remote.active = false; world.remote.reviveIn = 0; }
 /** the world of the co-op combat layer (monster mirror, stand-in hero, queues): `full` = also forget that a partner joined this run */
-function resetCombat(full: boolean): void { hostReset(full); zonesReset(); pullReset(); if (role === 'guest') guestReset(); }   // (guestReset wipes the monster pools: only ever on the guest, whose monsters are a mirror)
+function resetCombat(full: boolean): void { hostReset(full); zonesReset(); pullReset(); minReset(); if (role === 'guest') guestReset(); }   // (guestReset wipes the monster pools: only ever on the guest, whose monsters are a mirror)
 function teardown(): void {
   clearTimers();
   const c = conn; conn = null;
@@ -181,7 +183,7 @@ function send(m: unknown[]): void {
 // bandwidth meter (dev / QA: `?coopStats=1` or window.__coop.stats()): JSON bytes of every message sent / received
 const stats = { on: (() => { try { return new URLSearchParams(location.search).get('coopStats') === '1' || !!(import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV; } catch { return false; } })(), tx: 0, rx: 0, t0: 0, txBy: {} as Record<string, number>, rxBy: {} as Record<string, number> };
 const io = { send, rv: () => rv, connected };
-hostBind(io); guestBind(io); lootBind(io); zonesBind(io); pullBind(io); hazBind(io);
+hostBind(io); guestBind(io); lootBind(io); zonesBind(io); pullBind(io); hazBind(io); minBind(io);
 
 // ------------------------------------------------------------------ receive ---
 function onData(d: unknown): void {
@@ -233,6 +235,7 @@ function onData(d: unknown): void {
       if (d[1] !== rv) return;
       if (role === 'guest' && coopRoom.guest) guestOnMessage(d); else if (role === 'host') hostOnMessage(d);
       return;
+    case MSG.MIN: if (d[1] === rv && ((role === 'guest' && coopRoom.guest) || (role === 'host' && coopRoom.two))) onMinions(d); return;
     case MSG.DMG: case MSG.USE: if (role === 'host' && d[1] === rv) hostOnMessage(d); return;
     // ---- STEP 4
     case MSG.TRIAL: if (role === 'guest') onTrialInvite(d); return;
@@ -369,8 +372,10 @@ function reviveTick(now: number, st: GameStatus): void {
 
 // ------------------------------------------------------------- per frame ---
 /** Called once per frame from engine/game.updateGame (before the status switch): sends my position, interpolates the partner. */
+let lastFrameAt = 0;
 export function coopTick(): void {
   if (!role) return;
+  { const t = nowMs(); rateFrame(lastFrameAt ? t - lastFrameAt : 0); lastFrameAt = t; }   // (STEP 4) slow device -> the senders halve their rates
   if (invite && nowMs() - invite.at > 6000) { invite = null; notify('No answer from your friend. Try again.', '#ffd08a'); }
   if (!conn || useCoop.getState().state !== 'connected') { world.remote.active = false; if (coopRoom.ally || coopRoom.two) hostReset(true); return; }
   const st = useGameStore.getState().status, now = nowMs();
@@ -410,7 +415,7 @@ export function coopTick(): void {
 
 // Dev hook for headless tests (vite dev only): drive / inspect co-op from the page.
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
-  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), partnerState: () => ({ pFlags, pSeen, now: nowMs(), partner: coopRoom.partner(), live: coopRoom.live(), reviveOut: coopRoom.reviveOut }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats, loot: lootStats, zones: zoneStats, pull: pullStats, haz: hazStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
+  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), partnerState: () => ({ pFlags, pSeen, now: nowMs(), partner: coopRoom.partner(), live: coopRoom.live(), reviveOut: coopRoom.reviveOut }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats, loot: lootStats, zones: zoneStats, pull: pullStats, haz: hazStats, min: minStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
     import('../engine/game').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.game = m; }).catch(() => { /* ignore */ });
     import('../engine/systems/enemies').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.enemies = m; }).catch(() => { /* ignore */ });
     import('../engine/systems/combat').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.combat = m; }).catch(() => { /* ignore */ });

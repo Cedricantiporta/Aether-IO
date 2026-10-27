@@ -24,6 +24,8 @@ import { zonesTick, applyZones } from './coopZones';
 import { onDrop, onReward } from './coopLoot';
 import { onPull, pullStep } from './coopPull';
 import { hazOnMessage, hazStep } from './coopHaz';
+import { minTick } from './coopMinions';
+import { rate } from './coopRate';
 
 export interface GuestIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: GuestIO | null = null;
@@ -96,16 +98,18 @@ EV_G2H.forEach((d, idx) => {
   }) as never);
 });
 
+let lastG = 0;
+const gdt = (now: number): number => { const d = lastG ? Math.min(0.1, (now - lastG) / 1000) : 0; lastG = now; return d; };
 /** Per frame (coopTick, guest): flush my hit claims at ~30 Hz, my FX moments and my projectiles at ~15 Hz. */
 export function guestTick(now: number, inRun: boolean): void {
-  if (inRun) { pullStep(now); hazStep(now); }
+  if (inRun) { pullStep(now); hazStep(now); minTick(now, gdt(now)); }
   if (!io || !inRun) { if (hq.length) hq.length = 0; if (sq.length) sq.length = 0; if (evtQ.length) evtQ.length = 0; return; }
-  if (now - lastFlush >= 33) {
+  if (now - lastFlush >= 33 * rate.mul) {
     lastFlush = now;
     if (hq.length || sq.length) { io.send([MSG.DMG, io.rv(), hq.slice(), sq.slice()]); hq.length = 0; sq.length = 0; }
     if (evtQ.length) { io.send([MSG.EVT, io.rv(), ...evtQ]); evtQ.length = 0; }
   }
-  if (now - lastGp >= 66) {
+  if (now - lastGp >= 66 * rate.mul) {
     lastGp = now;
     const gp = packGhosts();
     if (gp) io.send([MSG.GP, io.rv(), gp]);

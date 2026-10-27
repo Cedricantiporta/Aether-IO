@@ -46,13 +46,15 @@ function buildRig(d: RigDef, mat: Material, glow: Material): Rig {
   return { root, hips, head, armL, armR, legL, legR };
 }
 
+const PET_GHOST: [number, number, number][] = [[1.6, 1.6, 1.6], [0.8, 1.8, 0.8], [0.7, 1.2, 2.2], [1.6, 0.8, 2.2], [2.2, 1.7, 0.6], [2.2, 0.8, 1.6]];
 const SCALE = [1.3, 1.3, 2.85, 1.3];   // warrior, mage, golem, bowman
 const BAR_Y = [2.75, 3.0, 8.7, 2.85];
 
-export function Minions() {
-  const N = world.minions.length;
+export function Minions({ pool = world.minions as unknown as typeof world.ghostMinions, ghost = false }: { pool?: typeof world.ghostMinions; ghost?: boolean } = {}) {   // (ghost: the co-op partner's summons, see net/coopMinions.ts)
+  const N = pool.length;
   const slots = useMemo<Slot[]>(() => {
     const mat = litMat({ roughness: 0.8 });
+    if (ghost) { mat.transparent = true; mat.opacity = 0.5; mat.depthWrite = false; }
     const glow = new MeshBasicMaterial({ color: 0xc27cff, toneMapped: false });
     const defs = [skeletonDef('W'), skeletonDef('M'), golemDef(), skeletonDef('A')];
     const barBg = new MeshBasicMaterial({ color: 0x140c1c, transparent: true, opacity: 0.8, depthTest: false, side: DoubleSide });
@@ -70,12 +72,13 @@ export function Minions() {
       const ward = new Mesh(wardGeo, wardMat); ward.visible = false; outer.add(ward);
       return { outer, body, rigs, bar, fill, ward };
     });
-  }, [N]);
+  }, [N, ghost]);
 
   useFrame(({ clock, camera }) => {
     const t = clock.elapsedTime;
+    if (ghost && world.ghostPet.on) { const gp = world.ghostPet, c = PET_GHOST[gp.rar] ?? PET_GHOST[0]; pushHalo(gp.x, 1.3 + Math.sin(t * 3) * 0.15, gp.z, 1.5, c[0], c[1], c[2], 0.55, CELL.GLOW); }   // (the partner's pet: a glowing wisp in its rarity colour)
     for (let i = 0; i < N; i++) {
-      const S = slots[i], m = world.minions[i];
+      const S = slots[i], m = pool[i];
       S.outer.visible = m.active && m.src !== 6;   // (src 6 = the run ally, drawn by render/Ally.tsx)
       if (!m.active || m.src === 6) continue;
       const k = m.kind;
@@ -127,7 +130,7 @@ export function Minions() {
       const frac = m.maxHp > 0 ? Math.max(0, m.hp / m.maxHp) : 1;
       S.ward.visible = m.shield > 0 && rise <= 0;
       if (S.ward.visible) { const r = (golem ? 3.45 : 1.25) * (1 + Math.sin(t * 5 + i) * 0.03); S.ward.scale.set(r, r * 1.15, r); S.ward.position.y = golem ? 3.6 : 1.25; S.ward.rotation.y = t * 0.6; }
-      S.bar.visible = frac < 0.999 && rise <= 0;
+      S.bar.visible = !ghost && frac < 0.999 && rise <= 0;
       if (S.bar.visible) {
         S.bar.position.y = BAR_Y[k] * fade;
         S.bar.quaternion.copy(camera.quaternion);

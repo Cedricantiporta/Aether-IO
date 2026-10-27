@@ -155,6 +155,7 @@ export function Scene() {
           <BossPhaseFx />
           <RoomTraps />
           <Minions />
+          <Minions pool={world.ghostMinions} ghost />
           <Projectiles />
           <Pet />
         </>
