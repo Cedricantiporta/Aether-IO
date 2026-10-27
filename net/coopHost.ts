@@ -263,15 +263,15 @@ function sendSnap(now: number): void {
   let pk = '';
   for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) pk += `${Math.round(po.x * 10)},${Math.round(po.z * 10)},${po.plan.type},${po.plan.reward},${po.big ? 1 : 0},${po.pre ? 1 : 0},${po.active ? 1 : 0};`; }
   const sb = stationBits();
-  let ck = '';   // (extra chests: [on, x, z, pocket, used] per chest; the guest cannot know which ones the host's room events rolled)
-  const chestRows: number[] = [];
-  for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; chestRows.push(c.on ? 1 : 0, Math.round(c.x * 10), Math.round(c.z * 10), c.pocket ? 1 : 0, c.used ? 1 : 0); }
-  ck = chestRows.join(',');
+  let ck = 0;   // (extra chests: [on, x, z, pocket, used] per chest; hashed here, the array is only built when a message goes out)
+  for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; ck = (Math.imul(ck, 31) + (c.on ? 1 : 0) + Math.round(c.x * 10) * 3 + Math.round(c.z * 10) * 7 + (c.pocket ? 11 : 0) + (c.used ? 13 : 0)) | 0; }
   const key = `${d.phase}|${d.wave}|${r.enemiesLeft}|${d.aliveCount}|${pk}|${coopRoom.hlHost}|${sb}|${ck}`;
   if (key !== rstKey || now - lastRst > 1000) {
     rstKey = key; lastRst = now;
     const portals: unknown[][] = [];
     for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) portals.push([i, Math.round(po.x * 10), Math.round(po.z * 10), po.plan.type, po.plan.reward, po.big ? 1 : 0, po.pre ? 1 : 0, po.active ? 1 : 0, Math.round(po.t * 10)]); }
+    const chestRows: number[] = [];
+    for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; chestRows.push(c.on ? 1 : 0, Math.round(c.x * 10), Math.round(c.z * 10), c.pocket ? 1 : 0, c.used ? 1 : 0); }
     io.send([MSG.RST, rv, ROOM_PHASES.indexOf(d.phase), d.wave, r.enemiesLeft, d.aliveCount, portals, coopRoom.hlHost, sb, chestRows]);
   }
   // ---- boss bar (<= 10 Hz, on change)
