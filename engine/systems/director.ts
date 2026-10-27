@@ -396,7 +396,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
     for (let i = 0; i < feat.nTowers; i++) { fixedKind[fixedN] = 'GOBLIN_ARCHER'; fixedX[fixedN] = feat.tx[i]; fixedZ[fixedN] = feat.tz[i]; fixedN++; }
     for (let i = 0; i < feat.nHydras; i++) { fixedKind[fixedN] = 'LAKE_HYDRA'; fixedX[fixedN] = feat.hx[i]; fixedZ[fixedN] = feat.hz[i]; fixedN++; }
   }
-  if (kind === 'MERCHANT') rollMerchantStock(depth);
+  if (kind === 'MERCHANT') rollMerchantStock(depth, seed);   // (seeded: a co-op partner sees the same stock)
   else clearMerchantStock();
   r.enemiesLeft = unitN + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? Math.max(1, duelQ.length) : 0);
 
@@ -1263,9 +1263,10 @@ function scanNearby(): void {
   // no interacting while monsters are still alive in the room (combat); harvesting works mid-fight (owner)
   let fighting = false;
   for (let i = 0; i < world.enemies.length && !fighting; i++) { const e = world.enemies[i]; if (e.active && e.state !== 'DYING') fighting = true; }
-  if (!coopRoom.guest && r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {   // (co-op guest: only the loot / harvest pills below; doors, chests and stations are the host's)
+  if (r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {   // (co-op guest: no doors / gatekeeper / wanderers / captive (the host's); chests, the station and the camp posts work: his E is sent to the host, see interactRoom)
+    const gst = coopRoom.guest;
     const q = (x: number, z: number) => (x - p.x) ** 2 + (z - p.z) ** 2;
-    if (d.phase === 'CLEARED') {
+    if (d.phase === 'CLEARED' && !gst) {
       for (let i = 0; i < r.portals.length; i++) {
         const po = r.portals[i];
         if (!po.active || po.t < 0.5) continue;
@@ -1273,11 +1274,11 @@ function scanNearby(): void {
         if (dist < 36) { const l = portalLabel(po.plan, biome); pushNearby('Enter', l.sub ? `${l.title} · ${l.sub}` : l.title, i, dist); }
       }
     }
-    if (d.phase === 'BIOME_DONE') {   // the big portal to the next biome
+    if (d.phase === 'BIOME_DONE' && !gst) {   // the big portal to the next biome
       const po = r.portals[0];
       if (po.active && po.big && po.t >= PORTAL_ARM) { const dist = q(po.x, po.z); if (dist < 49) pushNearby('Enter', finale.step === 3 ? 'The light beyond' : nextBiomeLabel(), 20, dist); }
     }
-    if (r.plan.type === 'GATEKEEPER' && d.phase === 'CLEARED') {
+    if (r.plan.type === 'GATEKEEPER' && d.phase === 'CLEARED' && !gst) {
       for (let i = 0; i < GATES.length; i++) {
         gatePos(i, gp);
         const dg = q(gp[0], gp[1]);
@@ -1288,9 +1289,9 @@ function scanNearby(): void {
       const dk = q(KEEPER_POS[0], KEEPER_POS[1]);
       if (dk < 30) pushNearby('Talk', 'The Gatekeeper', 56, dk);
     }
-    if (wander.on) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
+    if (wander.on && !gst) { const dw = q(wander.x, wander.z); if (dw < 16) pushNearby('Talk', WANDERERS[wander.def].name, 60, dw); }
     for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; if (c.on && !c.used && (c.pocket || (r.station.kind === 'CHEST' && r.station.ready))) { const dc = q(c.x, c.z); if (dc < 20) pushNearby('Open', 'Treasure Chest', 12 + i, dc); } }
-    if (world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
+    if (!gst && world.roomEvt.obj === 'RESCUE' && world.roomEvt.state === 4) { const dq = q(world.roomEvt.x, world.roomEvt.z); if (dq < 16) pushNearby('Free', 'Captive', 40, dq); }
     if (r.plan.type === 'CAMP' && !r.plan.epilogue) {
       const ds = q(campPos.storage[0], campPos.storage[1]); if (ds < 12) pushNearby('Open', 'Camp Storage', 30, ds);
       const dt2 = q(campPos.trainer[0], campPos.trainer[1]); if (dt2 < 12) pushNearby('Train', 'Training Post', 31, dt2);
@@ -1329,10 +1330,15 @@ function scanNearby(): void {
 const LOOT_R = 2.4;   // the E-loot prompt shows from the same distance auto loot grabs items (pickups ITEM_GRAB_R2)
 
 /** Same action as pressing E next to the thing (also used by the touch interact pills). */
-export function interactRoom(it: Interactable): void {
+export function interactRoom(it: Interactable, fromPartner = false): void {
   const d = dd(), r = world.room, st = useGameStore.getState();
-  if (st.status !== GameStatus.PLAYING) return;
-  if (coopRoom.guest && it.node < 100) return;   // co-op guest: no doors, chests, stations (the host's)
+  if (st.status !== GameStatus.PLAYING && !fromPartner) return;
+  if (coopRoom.guest) {   // co-op guest: no doors (the host's); the station / chests are done by the host for both of us (USE), the merchant + camp posts are my own windows
+    const n = it.node;
+    if (n === 12 || n === 13) { coopRoom.sendUse?.(1, n - 12); return; }
+    if (n === 10) { if (r.station.kind === 'MERCHANT') { if (!st.isShopOpen) st.openSpecificShop('MERCHANT'); } else coopRoom.sendUse?.(0, 0); return; }
+    if (n < 100 && !(n >= 30 && n <= 32)) return;
+  }
   if (it.node >= 0 && it.node < 4) {
     const po = r.portals[it.node];
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
@@ -1345,7 +1351,7 @@ export function interactRoom(it: Interactable): void {
   }
   if (it.node === 12 || it.node === 13) {   // an extra treasure chest
     const c = r.chests[it.node - 12];
-    if (c && c.on && !c.used && (c.pocket || r.station.ready) && world.player.alive) { c.used = true; chestLoot(c.x, c.z); events.emit('shake', { amount: 0.25 }); vacuumT = 1.2; }
+    if (c && c.on && !c.used && (c.pocket || r.station.ready) && (world.player.alive || fromPartner)) { c.used = true; chestLoot(c.x, c.z); events.emit('shake', { amount: 0.25 }); vacuumT = 1.2; }
     return;
   }
   if (it.node === 40) { freeCaptive(); return; }   // rescue objective
@@ -1403,6 +1409,22 @@ export function interactRoom(it: Interactable): void {
     startShrineChallenge();
   }
 }
+
+/** CO-OP HOST: the guest pressed E at the station (what 0) or an extra chest (what 1, `a` = chest index). The world side runs exactly as if the host had pressed it
+ *  (rewards reach both: chest loot / the fountain / the card choices are forwarded as each player's OWN, see net/coopLoot.ts); the answer is mirrored back in RST. */
+const useIt: Interactable = { active: true, key: 'E', verb: '', label: '', shop: '', node: 10, d2: 0, act: 'shop' };
+export function coopUse(what: number, a: number): void {
+  const r = world.room;
+  if (coopRoom.guest || !r.active || r.fade > 0.6 || dd().phase === 'LEAVING') return;
+  if (what === 0) {
+    const k = r.station.kind;
+    if (k === 'MERCHANT' || k === 'NONE' || r.station.used) return;
+    if (k === 'CHEST' && !r.station.ready) return;
+    useIt.node = 10; interactRoom(useIt, true);
+  } else if (what === 1 && (a === 0 || a === 1)) { useIt.node = 12 + a; interactRoom(useIt, true); }
+}
+/** RST payload bits for the guest: the station / shrine state he cannot compute (his copy of the room has no host logic). */
+export function stationBits(): number { const r = world.room; return (r.station.used ? 1 : 0) | (r.station.ready ? 2 : 0) | (r.shrineOn ? 4 : 0) | (r.shrineDone ? 8 : 0); }
 
 let keeperLine = 0;
 function interactHub(node: number): void {

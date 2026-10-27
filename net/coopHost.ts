@@ -19,6 +19,7 @@ import { u16ToB64, EV_H2G, EV_G2H, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 import { zonesTick, applyZones } from './coopZones';
 import { pullTick } from './coopPull';
+import { coopUse, stationBits } from '../engine/systems/director';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: HostIO | null = null;
@@ -154,6 +155,7 @@ export function hostOnMessage(d: unknown[]): void {
     case MSG.EVT: onEvt(d); return;
     case MSG.GP: if (typeof d[2] === 'string') applyGhosts(d[2]); return;
     case MSG.PZ: applyZones(d); return;
+    case MSG.USE: if (isNum(d[2]) && isNum(d[3]) && coopRoom.two) coopUse(d[2] | 0, d[3] | 0); return;   // (STEP 4) the guest pressed E at a chest / the fountain / the shrine
     default: return;
   }
 }
@@ -252,12 +254,17 @@ function sendSnap(now: number): void {
   const d = world.director, r = world.room;
   let pk = '';
   for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) pk += `${Math.round(po.x * 10)},${Math.round(po.z * 10)},${po.plan.type},${po.plan.reward},${po.big ? 1 : 0},${po.pre ? 1 : 0},${po.active ? 1 : 0};`; }
-  const key = `${d.phase}|${d.wave}|${r.enemiesLeft}|${d.aliveCount}|${pk}|${coopRoom.hlHost}`;
+  const sb = stationBits();
+  let ck = '';   // (extra chests: [on, x, z, pocket, used] per chest; the guest cannot know which ones the host's room events rolled)
+  const chestRows: number[] = [];
+  for (let i = 0; i < r.chests.length; i++) { const c = r.chests[i]; chestRows.push(c.on ? 1 : 0, Math.round(c.x * 10), Math.round(c.z * 10), c.pocket ? 1 : 0, c.used ? 1 : 0); }
+  ck = chestRows.join(',');
+  const key = `${d.phase}|${d.wave}|${r.enemiesLeft}|${d.aliveCount}|${pk}|${coopRoom.hlHost}|${sb}|${ck}`;
   if (key !== rstKey || now - lastRst > 1000) {
     rstKey = key; lastRst = now;
     const portals: unknown[][] = [];
     for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) portals.push([i, Math.round(po.x * 10), Math.round(po.z * 10), po.plan.type, po.plan.reward, po.big ? 1 : 0, po.pre ? 1 : 0, po.active ? 1 : 0, Math.round(po.t * 10)]); }
-    io.send([MSG.RST, rv, ROOM_PHASES.indexOf(d.phase), d.wave, r.enemiesLeft, d.aliveCount, portals, coopRoom.hlHost]);
+    io.send([MSG.RST, rv, ROOM_PHASES.indexOf(d.phase), d.wave, r.enemiesLeft, d.aliveCount, portals, coopRoom.hlHost, sb, chestRows]);
   }
   // ---- boss bar (<= 10 Hz, on change)
   const b = world.boss;

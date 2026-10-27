@@ -232,7 +232,7 @@ function onData(d: unknown): void {
       if (d[1] !== rv) return;
       if (role === 'guest' && coopRoom.guest) guestOnMessage(d); else if (role === 'host') hostOnMessage(d);
       return;
-    case MSG.DMG: if (role === 'host' && d[1] === rv) hostOnMessage(d); return;
+    case MSG.DMG: case MSG.USE: if (role === 'host' && d[1] === rv) hostOnMessage(d); return;
     // ---- STEP 4
     case MSG.TRIAL: if (role === 'guest') onTrialInvite(d); return;
     case MSG.TRIALR: if (role === 'host') onTrialReply(d); return;

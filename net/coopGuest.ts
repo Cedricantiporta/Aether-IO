@@ -74,6 +74,13 @@ coopRoom.sendHit = (e: Enemy, amount: number, o: DamageOpts, knockRoll: boolean,
   guestStats.claims++;
   hq.push(e.id, Math.round(amount * 10), DK[o.kind] ?? 0, fl, Math.round((o.fromX ?? fx) * 10), Math.round((o.fromZ ?? fz) * 10), Math.round(kx * 100), Math.round(kz * 100), Math.round(kb * 100), Math.round(launch * 100), Math.round(slam * 10));
 };
+let lastUse = 0;
+/** (STEP 4) I pressed E at a chest / the fountain / the shrine: the host runs the world side for both of us. */
+coopRoom.sendUse = (what: number, a: number): boolean => {
+  const now = nowMs();
+  if (!io || !io.connected() || now - lastUse < 400) return false;
+  lastUse = now; io.send([MSG.USE, io.rv(), what, a]); return true;
+};
 coopRoom.sendStatus = (e: Enemy, effect: StatusEffect): void => {
   if (sq.length >= 4 * 300) return;
   sq.push(e.id, ST[effect.type] ?? 0, Math.round(effect.duration * 100), Math.round((effect.value ?? 0) * 100));
@@ -228,6 +235,13 @@ function onRst(d: unknown[]): void {
   if (!isNum(ph) || !isNum(wave) || !isNum(left) || !isNum(alive)) return;
   const dr = world.director, r = world.room;
   dr.phase = (ROOM_PHASES[ph | 0] ?? 'FIGHT') as RoomPhase; dr.wave = wave | 0; dr.aliveCount = alive | 0; r.enemiesLeft = Math.max(0, left | 0);
+  const sb = isNum(d[8]) ? d[8] | 0 : 0, ch = d[9];
+  r.station.used = (sb & 1) !== 0; r.station.ready = r.station.ready || (sb & 2) !== 0; r.shrineOn = (sb & 4) !== 0; r.shrineDone = (sb & 8) !== 0;   // (STEP 4) station / shrine state of the host
+  if (Array.isArray(ch)) for (let i = 0; i < r.chests.length && i * 5 + 4 < ch.length; i++) {
+    const c = r.chests[i], o = i * 5;
+    if (!isNum(ch[o]) || !isNum(ch[o + 1]) || !isNum(ch[o + 2])) continue;
+    c.on = ch[o] === 1; c.x = (ch[o + 1] as number) / 10; c.z = (ch[o + 2] as number) / 10; c.pocket = ch[o + 3] === 1; c.used = ch[o + 4] === 1;
+  }
   coopRoom.hl = isNum(d[7]) ? d[7] | 0 : -1;   // the door the host stands at ("Host is choosing..." text, ui/hud/CoopHud.tsx)
   const was = r.portals.map((p) => p.active);
   for (const po of r.portals) { po.active = false; po.pre = false; }

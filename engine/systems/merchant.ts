@@ -22,8 +22,21 @@ const SALE = 0.25;
 const GOLD_KEEP = 0.05;
 
 /** Rolls a fresh stock for a merchant room at `depth`. */
-export function rollMerchantStock(depth: number): void {
+/** `seed`: the room seed. The stock is rolled from it in three separately seeded parts (potions, gear, the rare extra), so a co-op partner entering the same room
+ *  (same seed) sees the SAME stock: the same potions, the same number of gear pieces at the same rarity / +level / price, the same tool / Ankh / shard (gear is rolled for each player's own class).
+ *  Each player buys from his own copy with his own gold. */
+export function rollMerchantStock(depth: number, seed?: number): void {
+  const orig = Math.random;
+  const reseed = (n: number): void => {
+    if (seed === undefined) return;
+    let a = ((seed ^ Math.imul(n, 0x9e3779b1)) >>> 0) || 1;
+    Math.random = () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  };
+  try { rollStock(depth, reseed); } finally { Math.random = orig; }
+}
+function rollStock(depth: number, reseed: (n: number) => void): void {
   const st = useGameStore.getState();
+  reseed(1);
   const items: MerchantEntry[] = [];
   const add = (item: Item | undefined, left: number, markup = MARKUP): void => {
     if (!item) return;
@@ -36,6 +49,7 @@ export function rollMerchantStock(depth: number): void {
   const nPot = Math.random() < 0.5 ? 1 : 2;
   for (let i = 0; i < nPot; i++) add(makeItemById(kinds[i], 1)[0], kinds[i].endsWith('_big') ? 2 : 4);
   for (let i = 0; i < 3; i++) {
+    reseed(10 + i);   // (each gear slot has its own stream: a class with a different pool size does not shift the others)
     let rar = rarityForDepth(depth, 0.05, world.run.bossKills);
     if (rar === 'MYTHIC' || (rar === 'LEGENDARY' && Math.random() >= GOLD_KEEP)) rar = 'EPIC';   // (owner) shops never sell Mythic, gold (Legendary) only very rarely
     let gear = st.rollItemDrop(rar);
@@ -47,6 +61,7 @@ export function rollMerchantStock(depth: number): void {
     }   // gear: the town shop price +50% (owner: it used to undercut the town)
   }
   // rarely: an Ankh of Life or a Legendary (gold) shard, at an inflated price
+  reseed(99);
   const r = Math.random();
   if (r < 0.1) add(makeItemById('revive_ankh', 1)[0], 1, MARKUP * 2.5);
   else if (r < 0.12) add(shardItem('LEGENDARY', 1), 1, MARKUP * 3);   // (owner: gold very rare in shops)
