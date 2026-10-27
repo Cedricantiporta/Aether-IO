@@ -24,10 +24,10 @@ what is below. Source of truth: `engine/roomDefs.ts`, `engine/systems/director.t
   a red-gold "Shortcut to <boss>" door appears at depth 5 or 7 of it.
 * Bosses: Greenwood **Elderroot** (Treant), Marble Halls **Gorath** (Golem), Desert **The Dune Colossus** (war machine),
   Coral Isles **The Tide Hydra**, Frostpeak **Glacius** (Wyrm), Ember **Ignar** (Warlord), Void **Void Herald**.
-  **Malakar** (the Lich) is a mini-boss in crypt biomes (Marble Halls, Void) and the final boss. Boss arenas grow per biome
+  The Undying Lich is a mini-boss in crypt biomes (Marble Halls, Void); the **Void Herald** is also the final boss. Boss arenas grow per biome
   (radius 34 -> 50) and have their own pillar plan.
 * **Ending**: the Void's last room is the Gatekeeper courtyard (five trial gates -> five Gate Keys open the Dark Castle),
-  then the two-stage Malakar fight on "The Undying Throne", a finale, an epilogue clearing with Aelia and the ending slides.
+  then the Void Herald's two-form fight on "The Void Throne" (he transforms at ~half HP into a winged final form), a finale, an epilogue clearing with Aelia and the ending slides.
   The first ending unlocks Hard mode, Ascension 1-10 and the Endless Tower story step; the "true ending" needs 10 clears
   and the Font dreams (HANDOFF 3.4).
 * After a boss: boss loot + cards, then ONE big portal to the next biome. There is no return-to-town choice; the run ends on
@@ -62,7 +62,7 @@ what is below. Source of truth: `engine/roomDefs.ts`, `engine/systems/director.t
 
 ## Other run modes (tower family, `runInfo.mode === 'TOWER'`)
 Endless Tower (floors, boss every 10th), Daily Trial (seeded 5 floors, Lv 15), Endless Waves (arena survival, Lv 30). They
-use round arenas, give no item drops / potions / Ankh / EXP and pay gold + Aether Crystals. Details: HANDOFF 3.4.
+use round arenas, give no item drops / potions / Ankh / EXP; the tower family pays Aether Crystals only, Endless Waves gold only (waves rest 2.5 s between them). Champion floors / duel rooms hold up to 6 dark heroes (more with depth), each with 55-70% of its biome guardian's HP (solo: ~90%). Details: HANDOFF 3.4.
 
 ## Removed / changed history
 * Removed (2026-10-13): siege cutscene, respite timer, shops closing, 45 s wave timer, "X/Y" quota, calling waves early.
