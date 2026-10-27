@@ -19,7 +19,8 @@ import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, clampInt, isNum, 
 const POS_HZ = 16, POS_EVERY_MS = 1000 / POS_HZ;
 const INTERP_MS = 100;          // render the partner this far in the past (buffer for jitter)
 const BEAT_MS = 1000;           // ping interval
-const TIMEOUT_MS = 10000;       // no message for this long = connection lost
+// no message for this long = connection lost (`?coopTimeout=ms` raises it for headless tests, where software GL starves the page)
+const TIMEOUT_MS = (() => { try { const v = Number(new URLSearchParams(location.search).get('coopTimeout')); return v >= 3000 ? v : 10000; } catch { return 10000; } })();
 const SETUP_MS = 12000;         // hosting / joining must succeed within this
 
 let tr: Transport = pickTransport();
@@ -135,7 +136,7 @@ function onLink(c: Conn): void {
   conn = c;
   c.onData = onData;
   c.onClose = () => { if (conn === c) partnerGone('Your friend lost connection.'); };
-  lastRx = nowMs(); lastTx = 0; lastBeat = 0;
+  lastRx = nowMs(); lastTx = 0; lastBeat = 0; gotHello = false;
   if (setupT) { clearTimeout(setupT); setupT = null; }
   if (role === 'host' && handle) { /* keep the broker handle: it is released on teardown */ }
   send([MSG.HELLO, COOP_VERSION, mySnap()]);
@@ -143,6 +144,7 @@ function onLink(c: Conn): void {
   beat = setInterval(heartbeat, BEAT_MS);
 }
 let lastBeat = 0;
+let gotHello = false;   // first HELLO of this link seen (we answer it once: a HELLO sent before the other side attached its handler is not lost)
 function heartbeat(): void {
   if (!conn) return;
   const now = nowMs();
@@ -174,6 +176,7 @@ function onData(d: unknown): void {
       const snap = sanitizeSnap(d[2]);
       if (!snap) { fail('Your friend sent an unreadable hero. Try again.'); return; }
       const first = useCoop.getState().state !== 'connected';
+      if (!gotHello) { gotHello = true; send([MSG.HELLO, COOP_VERSION, mySnap()]); }
       coopSet({ state: 'connected', partner: snap, error: '' });
       if (first) notify(`${snap.n} (Lv ${snap.l} ${snap.c.charAt(0) + snap.c.slice(1).toLowerCase()}) joined the co-op!`, '#9be7ff');
       return;

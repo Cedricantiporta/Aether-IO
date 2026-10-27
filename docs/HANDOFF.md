@@ -59,6 +59,7 @@ engine/            pure TS simulation (no React); world.ts = mutable singleton f
             village npcs dialogue storyLogic townGatesLogic npcQuestLogic questNav townPath cave fishing tutorial target aim combo heroTrail dailyRun ...
 render/            R3F components (Scene, Room, Town*, Hero, Enemies, Bosses*, ...); read `world` in useFrame
 ui/                DOM HUD (hud/), windows (panels/, panels/shop/), screens/, components/, lib/ (dnd, padNav, inputMode, alerts, cursors)
+net/                online co-op (see 3.11): coop.ts protocol.ts transport.ts coopStore.ts coopRoom.ts
 store.ts storeTypes.ts   Zustand meta/RPG state (profile in localStorage 'aether-survivor-profile-v1', one key per character slot)
 data modules (root): constants.ts types.ts classLevels.ts talents.ts attributes.ts itemCatalog.ts itemClass.ts itemSets.ts affixes.ts
   crafting.ts reforge.ts weaponPerks.ts accessoryCharms.ts shards.ts crystals.ts loot.ts summonPool.ts gemShop.ts tech.ts elixirs.ts
@@ -471,6 +472,41 @@ bosses (Malakar) far too weak, "the original iteration was better". Enemies use 
 `enemies.monsterLevel` hero-level scaling capped near `biomeLevel(b) = 8 + 7b`, +12% HP / +10% damage per biome, boss HP = def.hp x curve x 0.9).
 Kept from that pass: Ascension first-clear rewards (`ascension.ASC_REWARDS`), dark hero HP x3 (`darkHero.DARK_HERO_HP`) with faster skills, and
 a harder Tower family (x1.6 HP / x1.4 damage, +15% / +10% per cleared Ascension, `enemies.spawnEnemy`).
+
+### 3.11 Online co-op (step 1 of 3; `net/`, owner-approved 2026-10-26)
+2-player, host-authoritative, WebRTC. Only ADVENTURE runs (boss trials come with step 2); the town stays solo. Each player brings their own hero.
+- **Files**: `net/protocol.ts` (wire format, `COOP_VERSION`, code alphabet, sanitisers), `net/transport.ts` (one `Transport` interface, two
+  implementations), `net/coop.ts` (session: `hostCoop / joinCoop / leaveCoop`, heartbeat, room + position messages, `coopTick()`),
+  `net/coopStore.ts` (tiny Zustand slice for the UI: state idle / hosting / joining / connected / error, code, ping, partner snapshot),
+  `net/coopRoom.ts` (dependency-free bridge so the director needs only a few one-line hooks). UI: `ui/screens/CoopLobby.tsx` (inside the
+  Adventure Set Out window: Host / Join / connected card), `ui/hud/CoopHud.tsx` (partner name + ping), PauseMenu "Leave co-op".
+  Render: `render/RemoteHero.tsx` (same KayKit model + weapon + rarity-tinted gear + outfit tint, soft teal ring, name plate).
+- **Signalling**: `peerjs` npm package (default; the free public cloud broker is used ONLY to meet, then a P2P DataChannel). Host peer id =
+  `'aether-' + 4-letter code` (alphabet `ACDEFGHJKLMNPQRTUVWXY`, no lookalikes). `?coopPeer=host:port[:s]` (or localStorage `aether-coop-peer`)
+  targets another broker (a local `peer` server for tests). `?coopTransport=bc` = BroadcastChannel dev transport (two tabs of one browser
+  profile, no network) behind the same interface. `?coopTimeout=ms` raises the 10 s link timeout (headless tests only).
+- **Protocol** (compact JSON arrays `[type, ...]`, see `MSG` in protocol.ts): HELLO(version, hero snapshot) both ways on open; version mismatch
+  = BYE with a clear "update the game on both devices" message (a host keeps its room open for another friend); PING/PONG every 1 s (ping shown
+  smoothed, timeout 10 s, the timer forgives our own frozen thread); ROOM(rv, biome, index, plan, seed, first, mode) host -> guest; LEAVING
+  (host walked into a portal: guest fades out); POS(rv, x, z, facing, moveBlend, flags, hp%) both ways at 16 Hz as integers; END (host's run over);
+  BYE. All incoming data is sanitised (`sanitizeSnap`, `sanitizePlan`, clamps). `rv` = room counter so late POS of an old room is dropped.
+- **Run flow**: the host sets out normally. `director.enterRoom` calls `coopRoom.onEnter(b, idx, plan, seed)` and the host sends ROOM; the guest
+  (status MENU, title done) starts ADVENTURE with `coopRoom.guest = true` and `coopRoom.forced`, so `enterRoom` builds exactly the host's
+  geometry from the same seed (`buildRoom`, lava / ice floors) and skips events, hazards, traps, spawns, allies and boss props; `updateDirector`
+  returns early for a guest (phase CLEARED, no rewards / portals). The host's room changes re-send ROOM (the guest waits if paused).
+  The guest's Set Out button reads "Waiting for the host".
+- **Remote hero**: `world.remote` (preallocated: active, x, z, facing, blend, flags, hp, rx). `coopTick()` (first line of `updateGame`) sends my POS and
+  interpolates the partner from a 16-slot Float64Array ring buffer, rendered 100 ms in the past. No per-frame allocation.
+- **Disconnect**: guest drops -> host notified and carries on solo (state idle). Host drops / ends the run -> the guest goes back to town with a message
+  (`resetGame`). "Leave co-op" in the pause menu = polite BYE.
+- **Step 1 limits**: no combat sync. The guest sees an EMPTY copy of the room and just walks beside the host; the guest takes no damage, grants no
+  loot / XP, cannot open chests or take portals (the host decides). The partner does not hit or get hit. Not synced: breakables, pickups, the host's
+  enemies. TOWER / DAILY / WAVES are refused. Behind a strict NAT without TURN a P2P link may fail (PeerJS default STUN only).
+- **Step 2 (next)**: host streams enemy / projectile / pickup state (id-indexed snapshots at ~15 Hz, delta-by-quantised-position, guest renders enemies from
+  those via the existing instanced renderers in a read-only mode), guest sends inputs (move / aim / skill presses) which the host applies to a second
+  `world.player`-like entity (needs the player singleton generalised to 2 actors: targeting, damage, hp, XP / loot split), then boss trials.
+- **QA**: `window.__coop` (vite dev only) exposes host / join / leave / the stores for headless runs. Verified with two Playwright pages (see the
+  HANDOFF QA section pattern) on the BroadcastChannel transport and on PeerJS against a local `peer` server.
 
 ## 4. Open tasks and known issues
 
