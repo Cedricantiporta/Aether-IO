@@ -34,7 +34,9 @@
 // allocations (pools + scratch vectors; Vector3 clones only for discrete events).
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocEnemyProjectile, allocZone, allocFx } from '../world';
+import { world, allocEnemyProjectile, allocZone, allocFx, pass2 } from '../world';
+import { forEachHero, nearestHero, heroesFill, HL, isAlly } from '../heroes';
+import { coopRoom } from '../../net/coopRoom';
 import { events } from '../events';
 import type { Enemy, EnemyKind, EnemyProjectile, GroundFx, GroundFxKind, Zone, ZoneKind } from '../types';
 import type { HeroClass } from '../../types';
@@ -114,8 +116,8 @@ function slotOf(id: number): number { for (let k = 0; k < DARK_MAX; k++) if (SV[
 
 /** Skill shots (own pool, own collision: they pierce and hit the hero once). Tags drive the render look. */
 export const SHOT_GALE = 1, SHOT_LIGHT = 2, SHOT_FIRE = 3, SHOT_XSLASH = 4, SHOT_HOLY = 5, SHOT_BONE = 6, SHOT_SLASH = 7, SHOT_CLEAVE = 8;
-export interface DarkShot { active: boolean; own: number; tag: number; x: number; z: number; vx: number; vz: number; life: number; maxLife: number; r: number; dmg: number; hit: boolean; trail: number; n: number; big: boolean }
-export const darkShots: DarkShot[] = Array.from({ length: 36 }, () => ({ active: false, own: 0, tag: 0, x: 0, z: 0, vx: 0, vz: 0, life: 0, maxLife: 1, r: 1, dmg: 0, hit: false, trail: 0, n: 0, big: false }));
+export interface DarkShot { active: boolean; own: number; tag: number; x: number; z: number; vx: number; vz: number; life: number; maxLife: number; r: number; dmg: number; hit: boolean; /** co-op: the partner's own once-per-shot flag */ hitA: boolean; trail: number; n: number; big: boolean }
+export const darkShots: DarkShot[] = Array.from({ length: 36 }, () => ({ active: false, own: 0, tag: 0, x: 0, z: 0, vx: 0, vz: 0, life: 0, maxLife: 1, r: 1, dmg: 0, hit: false, hitA: false, trail: 0, n: 0, big: false }));
 /** Storm Orbs (wizard): positions of every hero's orbs, written each frame while they spin (compact list, 3 per wizard). */
 export const darkOrbs = { n: 0, x: new Array<number>(3 * DARK_MAX).fill(0), z: new Array<number>(3 * DARK_MAX).fill(0) };
 
@@ -128,7 +130,7 @@ function makeSt() {
     rainT: 0, rainX: 0, rainZ: 0, rainAcc: 0,
     orbT: 0, orbTick: 0,
     titanT: 0, stepT: 0, avatarT: 0, guardT: 0, rageT: 0,
-    golemId: -1, golemT: 0, ultArmed: false, spikeHit: false, healAcc: 0,
+    golemId: -1, golemT: 0, ultArmed: false, spikeHit: false, spikeHitA: false, healAcc: 0,
     /** thrown boomerang axes (barbarian) + their flight time; Raise Dead's rising spots; Bone Ward's timer */
     axes: [null, null, null] as (EnemyProjectile | null)[], axeT: [0, 0, 0], rX: [0, 0, 0], rZ: [0, 0, 0], wardT: 0,
   };
@@ -277,7 +279,7 @@ function shot(e: Enemy, tag: number, dx: number, dz: number, speed: number, life
   for (const s of darkShots) {
     if (s.active) continue;
     s.active = true; s.own = S.slot; s.tag = tag; s.x = e.pos.x + dx * ahead; s.z = e.pos.z + dz * ahead; s.vx = dx * speed; s.vz = dz * speed;
-    s.life = s.maxLife = life; s.r = r; s.dmg = dmg; s.hit = false; s.trail = 0; s.n = 0; s.big = big;
+    s.life = s.maxLife = life; s.r = r; s.dmg = dmg; s.hit = false; s.hitA = false; s.trail = 0; s.n = 0; s.big = big;
     return;
   }
 }
@@ -316,6 +318,7 @@ function warnLine(x: number, z: number, dx: number, dz: number, len: number, w: 
 }
 /** A telegraphed strike: the circle fills for `delay` s, then everything inside takes `dmg` (+ effects). */
 function strike(x: number, z: number, r: number, delay: number, dmg: number, eff: number, fx: string, color: number, dk: DamageKind = 'PHYSICAL', show = true): void {
+  if (pass2.on) return;
   for (const p of pend) {
     if (p.active) continue;
     p.active = true; p.t = delay; p.kind = 0; p.x = x; p.z = z; p.r = r; p.dmg = dmg; p.eff = eff; p.fx = fx; p.dk = dk;
@@ -325,6 +328,7 @@ function strike(x: number, z: number, r: number, delay: number, dmg: number, eff
 }
 /** A delayed expanding fire ring (Meteor Cataclysm). */
 function ringLater(x: number, z: number, delay: number, dmg: number): void {
+  if (pass2.on) return;
   for (const p of pend) {
     if (p.active) continue;
     p.active = true; p.t = delay; p.kind = 1; p.x = x; p.z = z; p.r = 0; p.dmg = dmg; p.eff = 0; p.fx = ''; p.dk = 'FIRE';
@@ -418,7 +422,7 @@ function wants(k: number, d: number): boolean {
 function begin(e: Enemy, k: number, px: number, pz: number): void {
   const d = aimAt(e, px, pz);
   e.pattern = k; enter(e, 'WINDUP'); e.vel.set(0, 0, 0);
-  S.tick = 0; S.flag = false; S.spikeHit = false;
+  S.tick = 0; S.flag = false; S.spikeHit = false; S.spikeHitA = false;
   const c = S.cls, P = pw(e);
   if (k !== SWING) announce(k);
   if (k === ULT) {
@@ -809,7 +813,7 @@ export function aiDarkHero(e: Enemy, dt: number, px: number, pz: number, d: numb
 
 /** Hard body separation: a champion never ends a frame inside the hero (melee: just outside its weapon-reach standoff). */
 function keepApart(e: Enemy): void {
-  const p = world.player;
+  const p = nearestHero(e.pos.x, e.pos.z);   // (co-op: the hero it is facing)
   if (!p.alive || e.state === 'DYING' || e.state === 'SPAWN' || S.inv > 0 && darkView.air > 0) return;
   const minD = RANGED[S.cls] ? e.radius + 1.4 : e.radius + 1.0;
   const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d2 = dx * dx + dz * dz;
@@ -932,14 +936,15 @@ function tickHero(e: Enemy, dt: number): void {
     S.orbTick -= dt;
     if (S.orbTick <= 0) {
       S.orbTick = 0.8;
-      const p = world.player;
-      if (p.alive && playerIn(e.pos.x, e.pos.z, 8)) {
-        const i = Math.floor(Math.random() * n);
-        tmp.set(darkOrbs.x[o0 + i], 1.6, darkOrbs.z[o0 + i]); tmp2.set(p.pos.x, 1.2, p.pos.z);
-        events.emit('lightning', { from: tmp.clone(), to: tmp2.clone() });
-        damagePlayer(P * 0.6, { pos: e.pos, kind: 'LIGHTNING' });
-        applyPlayerDebuff('DEFDOWN', 2);   // armor break, as the hero's zaps
-      }
+      const i = Math.floor(Math.random() * n);
+      forEachHero((p) => {   // (co-op: the storm zaps either hero in range)
+        if (p.alive && playerIn(e.pos.x, e.pos.z, 8)) {
+          tmp.set(darkOrbs.x[o0 + i], 1.6, darkOrbs.z[o0 + i]); tmp2.set(p.pos.x, 1.2, p.pos.z);
+          events.emit('lightning', { from: tmp.clone(), to: tmp2.clone() });
+          damagePlayer(P * 0.6, { pos: e.pos, kind: 'LIGHTNING' });
+          applyPlayerDebuff('DEFDOWN', 2);   // armor break, as the hero's zaps
+        }
+      });
     }
     if (S.orbT <= 0) darkView.orbR = 0;
   }
@@ -949,7 +954,7 @@ function tickHero(e: Enemy, dt: number): void {
     if (Math.hypot(e.vel.x, e.vel.z) > 0.5 && (S.stepT -= dt) <= 0) {
       S.stepT = 0.5;
       events.emit('quake', { pos: e.pos, radius: 4.5 }); events.emit('shake', { amount: 0.12 });
-      if (playerIn(e.pos.x, e.pos.z, 4.5)) damagePlayer(mdmg(e) * 0.45, { pos: e.pos, kind: 'PHYSICAL' });
+      forEachHero(() => { if (playerIn(e.pos.x, e.pos.z, 4.5)) damagePlayer(mdmg(e) * 0.45, { pos: e.pos, kind: 'PHYSICAL' }); });
     }
     if (S.titanT <= 0) {
       strike(e.pos.x, e.pos.z, 9, 0.9, mdmg(e) * 2.2, STUN | KNOCK, 'SLAM', C_BLOOD);
@@ -989,7 +994,7 @@ function hitPlayerShot(s: DarkShot, e: Enemy): void {
 }
 
 function tickShots(dt: number): void {
-  const p = world.player;
+  const cur = world.player;
   for (const s of darkShots) {
     if (!s.active) continue;
     if (SV[s.own].id < 0) { s.active = false; continue; }
@@ -997,9 +1002,15 @@ function tickShots(dt: number): void {
     const e = world.enemies[S.id];
     s.x += s.vx * dt; s.z += s.vz * dt; s.life -= dt;
     if (s.life <= 0) { s.active = false; continue; }
-    if (!s.hit && p.alive) {
-      const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.6;
-      if (dx * dx + dz * dz < rr * rr && p.invulnT <= 0 && !(p.dashIframes && (p.dashT > 0 || p.anim.dashing))) { s.hit = true; hitPlayerShot(s, e); }
+    if (!(s.hit && s.hitA)) {
+      const hn = heroesFill();   // (co-op: each hero can be hit once by a shot)
+      for (let hi = 0; hi < hn; hi++) {
+        const p = HL[hi], ally = hi === 1;
+        if ((ally ? s.hitA : s.hit) || !p.alive) continue;
+        const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.6;
+        if (dx * dx + dz * dz < rr * rr && p.invulnT <= 0 && !(p.dashIframes && (p.dashT > 0 || p.anim.dashing))) { if (ally) s.hitA = true; else s.hit = true; world.player = p; hitPlayerShot(s, e); }
+      }
+      world.player = cur;
     }
     // trails: Gale Arrow tornadoes, fireball flames
     s.trail -= dt;
@@ -1012,35 +1023,41 @@ function tickShots(dt: number): void {
 }
 
 function tickFields(dt: number): void {
-  const p = world.player;
+  const cur = world.player;
   for (const f of fields) {
     const z = f.z;
     if (!z) continue;
     if (!z.active || !z.hostile || z.kind !== f.kind || z.life <= 0) { f.z = null; continue; }
-    if (!p.alive) continue;
-    const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1e-3, R = z.radius;
     f.tick -= dt;
     const tick = f.tick <= 0;
     if (tick) f.tick = f.kind === 'BLACKHOLE' ? 0.35 : 0.5;
-    switch (f.kind) {
-      case 'TORNADO':   // Gale Arrow tornadoes tug the hero in
-        if (d < R * 1.8 && d > 0.6) shove(dx / d, dz / d, 2.6 * dt);
-        if (tick && d < R + 0.5) damagePlayer(f.dmg, { pos: z.pos, kind: 'PHYSICAL' });
-        break;
-      case 'BLACKHOLE': {   // Singularity: pull (strongest at the edge), slow, damage
-        if (d < R * 1.5 && d > 0.8) { const w = d >= R ? 1 : 0.35 + 0.65 * (d / R); shove(dx / d, dz / d, 3.4 * w * dt); }
-        if (d < R) slowPlayer(0.3);
-        if (tick && d < R) damagePlayer(f.dmg, { pos: z.pos, kind: 'MAGIC' });
-        break;
+    const hn = heroesFill();   // (co-op: the field works on both heroes; the partner's stand-in only gets the damage / slow ticks)
+    for (let hi = 0; hi < hn; hi++) {
+      const p = HL[hi], ally = hi === 1;
+      if (!p.alive) continue;
+      world.player = p;
+      const dx = z.pos.x - p.pos.x, dz = z.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1e-3, R = z.radius;
+      switch (f.kind) {
+        case 'TORNADO':   // Gale Arrow tornadoes tug the hero in
+          if (!ally && d < R * 1.8 && d > 0.6) shove(dx / d, dz / d, 2.6 * dt);
+          if (tick && d < R + 0.5) damagePlayer(f.dmg, { pos: z.pos, kind: 'PHYSICAL' });
+          break;
+        case 'BLACKHOLE': {   // Singularity: pull (strongest at the edge), slow, damage
+          if (!ally && d < R * 1.5 && d > 0.8) { const w = d >= R ? 1 : 0.35 + 0.65 * (d / R); shove(dx / d, dz / d, 3.4 * w * dt); }
+          if (d < R && (!ally || tick)) slowPlayer(0.3);
+          if (tick && d < R) damagePlayer(f.dmg, { pos: z.pos, kind: 'MAGIC' });
+          break;
+        }
+        case 'FROST_FIELD':   // slowing ice
+          if (d < R) { if (!ally || tick) slowPlayer(0.3); if (tick) damagePlayer(f.dmg, { pos: z.pos, kind: 'ICE' }); }
+          break;
+        case 'CURSE':   // Plague Ground: rot + slow
+          if (d < R) { if (!ally || tick) slowPlayer(0.3); if (tick) applyPlayerDebuff('POISON', 1.5, f.dmg * 2); }
+          break;
+        default: break;
       }
-      case 'FROST_FIELD':   // slowing ice
-        if (d < R) { slowPlayer(0.3); if (tick) damagePlayer(f.dmg, { pos: z.pos, kind: 'ICE' }); }
-        break;
-      case 'CURSE':   // Plague Ground: rot + slow
-        if (d < R) { slowPlayer(0.3); if (tick) applyPlayerDebuff('POISON', 1.5, f.dmg * 2); }
-        break;
-      default: break;
     }
+    world.player = cur;
   }
 }
 
@@ -1053,16 +1070,30 @@ function tickPending(dt: number): void {
     if (p.kind === 1) { spawnWave(p.x, p.z, 14, 22, 1.4, p.dmg, WAVE_FIRE, 0xc04aff); events.emit('shockwave', { pos: tmp.set(p.x, 0, p.z), radius: 22, color: 0xff7a3a }); continue; }
     if (p.fx) fx(p.fx, p.x, p.z, p.r);
     else events.emit('explosion', { pos: tmp.set(p.x, 0, p.z), radius: p.r, color: C_VIOLET });
-    if (playerIn(p.x, p.z, p.r)) {
-      damagePlayer(p.dmg, { pos: tmp.set(p.x, 0, p.z), kind: p.dk });
-      hitSpark();
-      effects(p.eff, p.dmg, p.x, p.z);
+    const hn = heroesFill(), cur = world.player;   // (co-op: everyone inside the circle)
+    for (let hi = 0; hi < hn; hi++) {
+      world.player = HL[hi];
+      if (playerIn(p.x, p.z, p.r)) {
+        damagePlayer(p.dmg, { pos: tmp.set(p.x, 0, p.z), kind: p.dk });
+        hitSpark();
+        effects(p.eff, p.dmg, p.x, p.z);
+      }
     }
+    world.player = cur;
   }
 }
 
 // Hostile ground fx (copies of the hero's): their hits land on the hero here, in sync with the visuals.
 hooks.hostileFx = (f: GroundFx): void => {
+  hostileFxOne(f);
+  const al = coopRoom.ally;   // (co-op) the same impact for the partner's stand-in with every spawn switched off (world.pass2): only his damage / effects apply
+  if (al && al.alive) {
+    const cur = world.player;
+    world.player = al; pass2.on = true;
+    try { hostileFxOne(f); } finally { pass2.on = false; world.player = cur; }
+  }
+};
+function hostileFxOne(f: GroundFx): void {
   let k = f.own >= 0 && f.own < DARK_MAX && SV[f.own].id >= 0 ? f.own : -1;   // the hero that made it (else any live one)
   if (k < 0) for (let q = 0; q < DARK_MAX; q++) if (SV[q].id >= 0) { k = q; break; }
   if (k >= 0) use(k);
@@ -1075,8 +1106,8 @@ hooks.hostileFx = (f: GroundFx): void => {
       break;
     case 'SPIKE':
       events.emit('fxImpact', { pos: fxPos.set(f.x, 0, f.z), kind: 'SPIKE', radius: f.radius });
-      if (f.dmg > 0 && !S.spikeHit && playerIn(f.x, f.z, f.radius)) {
-        S.spikeHit = true;   // one hit per fissure
+      if (f.dmg > 0 && !(pass2.on ? S.spikeHitA : S.spikeHit) && playerIn(f.x, f.z, f.radius)) {
+        if (pass2.on) S.spikeHitA = true; else S.spikeHit = true;   // one hit per fissure (and per hero)
         damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' });
         if (f.aux > 0) applyPlayerDebuff('STUN', f.aux);
       }
@@ -1108,7 +1139,7 @@ hooks.hostileFx = (f: GroundFx): void => {
       events.emit('crater', { pos: fxPos, radius: f.radius * 0.6, color: 0x120a18 });
       events.emit('shake', { amount: 0.6 });
       if (playerIn(f.x, f.z, f.radius)) { damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' }); effects(STUN | KNOCK, f.dmg, f.x, f.z); }
-      if (S.id >= 0) {
+      if (S.id >= 0 && !pass2.on) {
         const g = spawnEnemy('BONE_GOLEM', tmp.set(f.x, 0, f.z));
         if (g) { g.xp = 0; g.gold = 0; g.state = 'CHASE'; g.stateT = 0; g.attackCd = 1.5; S.golemId = g.id; S.golemT = 20; }
       }

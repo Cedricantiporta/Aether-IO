@@ -19,6 +19,7 @@ import { world } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
 import { damagePlayer, applyPlayerDebuff, knockHero, KB, staggerView, towerMode, towerCrystals, playerTrickImmune, SLOW_BOSS } from './combat';
+import { heroesFill, HL } from '../heroes';
 import { enter, requestYaw, fireEnemyProjectile, spawnEnemy, rollEliteShield, spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
 import { hooks } from './hooks';
 import { spawnPickup, dropCrystals } from './pickups';
@@ -117,7 +118,12 @@ function tickPending(dt: number): void {
     tmp.set(p.x, 0, p.z);
     events.emit('explosion', { pos: tmp.clone(), radius: p.r * 0.8, color: p.color });
     if (p.r > 4.5) events.emit('quake', { pos: tmp.clone(), radius: p.r });
-    if (playerIn(p.x, p.z, p.r)) { damagePlayer(p.dmg, { pos: tmp, kind: 'PHYSICAL' }); effects(p.eff, p.x, p.z); }
+    const hn = heroesFill(), cur = world.player;   // (co-op: everyone inside the circle)
+    for (let hi = 0; hi < hn; hi++) {
+      world.player = HL[hi];
+      if (playerIn(p.x, p.z, p.r)) { damagePlayer(p.dmg, { pos: tmp, kind: 'PHYSICAL' }); effects(p.eff, p.x, p.z); }
+    }
+    world.player = cur;
   }
 }
 
@@ -659,19 +665,26 @@ export function tickHumanBoss(dt: number): void {
 
   // Rook: snare traps root whoever steps on an armed one
   if (S.kind === 'ROOK') {
-    const p = world.player;
+    const cur = world.player;
     for (const t of humanTraps) {
       if (!t.active) continue;
       t.life -= dt; if (t.arm > 0) t.arm -= dt;
       if (t.life <= 0) { t.active = false; continue; }
-      if (t.arm <= 0 && p.alive && playerIn(t.x, t.z, t.r - 0.4)) {
-        t.active = false;
-        tmp.set(t.x, 0, t.z);
-        events.emit('explosion', { pos: tmp.clone(), radius: 2, color: 0xc8a050 });
-        damagePlayer(pw(e) * 0.8, { pos: tmp, kind: 'PHYSICAL' });
-        applyPlayerDebuff('ROOT', 1.8);
+      if (t.arm > 0) continue;
+      const hn = heroesFill();   // (co-op: either hero can step on it)
+      for (let hi = 0; hi < hn && t.active; hi++) {
+        const p = HL[hi];
+        world.player = p;
+        if (p.alive && playerIn(t.x, t.z, t.r - 0.4)) {
+          t.active = false;
+          tmp.set(t.x, 0, t.z);
+          events.emit('explosion', { pos: tmp.clone(), radius: 2, color: 0xc8a050 });
+          damagePlayer(pw(e) * 0.8, { pos: tmp, kind: 'PHYSICAL' });
+          applyPlayerDebuff('ROOT', 1.8);
+        }
       }
     }
+    world.player = cur;
   }
 }
 

@@ -37,6 +37,9 @@ import { spawnPickup } from './pickups';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { BT, addChill } from './bossFx';
 import { hz } from './biomeHazards';
+import { coopRoom } from '../../net/coopRoom';
+import { nearestHero } from '../heroes';
+import type { PlayerRuntime } from '../types';
 import { Vector3 } from 'three';
 
 export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7, LASER: 8 } as const;
@@ -49,18 +52,18 @@ export const rt = {
   nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   /** Frostpeak ice-laser turrets: idle (faces you, cd) -> telegraph (floor line, tracks then locks) -> beam -> rest */
-  nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
+  nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, hitA: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
   /** Void ghost shrine + its ghosts (ghosts are plain pooled visuals + a touch check: never enemies) */
   nShrine: 0, shrine: Array.from({ length: 2 }, () => ({ x: 0, z: 0, glow: 0, t: 0, nG: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   ghost: Array.from({ length: 8 }, () => ({ on: false, own: 0, x: 0, z: 0, vx: 0, vz: 0, state: 0, t: 0, cd: 0, ph: 0, poof: 0, dx: 0, dz: 0 })),
   /** Void gravity obelisk */
   nObelisk: 0, obelisk: Array.from({ length: 2 }, () => ({ x: 0, z: 0, glow: 0, t: 0, tick: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.25, flash: 0, hitSeq: 0 })),
-  nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, tick: 0 })),
+  nBar: 0, bar: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 1, len: 6.5, hitCd: 0, hitCd2: 0, tick: 0 })),
   /** HALLS only: a pillar with 2 - 4 long (7 - 12 m) flame arms that turn round it: idle -> telegraph (floor lines) -> rotating blaze.
    *  The arms are solid: they shove the hero (and monsters) along like a turning barricade. */
-  nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, n: 2, state: 0, t: 0, off: 3, hitCd: 0, tick: 0 })),
+  nBeam: 0, beam: Array.from({ length: 3 }, () => ({ x: 0, z: 0, a: 0, w: 0.5, len: 10, n: 2, state: 0, t: 0, off: 3, hitCd: 0, hitCd2: 0, tick: 0 })),
   nJet: 0, jet: Array.from({ length: 5 }, () => ({ x: 0, z: 0, ang: 0, len: 13, state: 0, t: 0, off: 4, tick: 0 })),
-  nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, seed: 0 })),
+  nVine: 0, vine: Array.from({ length: 5 }, () => ({ x: 0, z: 0, r: 2.2, state: 0, t: 0, touch: 0, touch2: 0, seed: 0 })),
   nPool: 0, pool: Array.from({ length: 4 }, () => ({ x: 0, z: 0, r: 2.8, acc: 0 })),
   /** boulders in flight (catapult): drawn by the renderer, the damage is the floor circle's */
   boulders: Array.from({ length: 6 }, () => ({ on: false, sx: 0, sz: 0, tx: 0, tz: 0, t: 0, T: 1 })),
@@ -540,11 +543,25 @@ export function setupBossBallistas(biome: number): void {
   rt.on = rt.nSiege > 0; rt.ver++;
 }
 
+// co-op (STEP 3): the traps see TWO heroes. Aiming traps (ballista, catapult, towers, lasers, statues, ghosts) fix on the hero nearest to them (`focus`); area
+// hazards (fire bars / beams / jets, vines, the laser lane, the statue cone, the obelisk core) test both heroes with their own cooldown slot. The stand-in's hits
+// are forwarded to the guest by combat.damagePlayer (world.player is swapped to him for the call).
+const HS: PlayerRuntime[] = [null as never, null as never];
+let HN = 1;
 export function updateRoomTraps(dt: number): void {
+  const host = world.player;
+  try { trapsTick(dt); } finally { world.player = host; }
+}
+function trapsTick(dt: number): void {
   const room = world.room;
   trapMods.grip = 1; trapMods.slow = 1; obPull.x = obPull.z = 0; obPull.on = false;
   if (!room.active || !rt.on) return;
-  const pl = world.player, alive = pl.alive, px = pl.pos.x, pz = pl.pos.z;
+  const host = world.player, al = coopRoom.ally;
+  HS[0] = host; HN = 1;
+  if (al && al.alive) { HS[1] = al; HN = 2; }
+  let pl = host, alive = pl.alive, px = pl.pos.x, pz = pl.pos.z;
+  const focus = (x: number, z: number): void => { const h = nearestHero(x, z); pl = h; alive = h.alive; px = h.pos.x; pz = h.pos.z; world.player = h; };
+  const refocus = (): void => { pl = host; alive = host.alive; px = host.pos.x; pz = host.pos.z; world.player = host; };
   const fighting = world.director.phase === 'FIGHT';
 
   for (let i = 0, n = trapCount(); i < n; i++) { const o = trapAt(i); if (o.flash > 0) o.flash = Math.max(0, o.flash - dt * 5); }
@@ -553,6 +570,7 @@ export function updateRoomTraps(dt: number): void {
   for (let i = 0; i < rt.nSiege; i++) {
     const s = rt.siege[i];
     if (s.dead) continue;
+    focus(s.x, s.z);
     const W = s.kind === 0 ? BALLISTA_WIND : CATAPULT_WIND;
     if (s.state === 0) {
       const dx = px - s.x, dz = pz - s.z, d = Math.hypot(dx, dz);
@@ -605,6 +623,7 @@ export function updateRoomTraps(dt: number): void {
   for (let i = 0; i < rt.nTower; i++) {
     const m = rt.tower[i];
     if (m.dead) continue;
+    focus(m.x, m.z);
     m.glow = Math.max(0, m.glow - dt * 2);
     if (m.state === 0) {
       if (!fighting || !alive) { m.cd = Math.max(m.cd, 1.5); continue; }
@@ -628,6 +647,7 @@ export function updateRoomTraps(dt: number): void {
   for (let i = 0; i < rt.nLaser; i++) {
     const l = rt.laser[i];
     if (l.dead) continue;
+    focus(l.x, l.z);
     l.glow = l.state === 1 ? Math.min(1, l.t / LASER_WARN) : l.state === 2 ? 1 : Math.max(0, l.glow - dt * 2.5);
     if (l.state === 0) {
       const dx = px - l.x, dz = pz - l.z, d = Math.hypot(dx, dz);
@@ -640,13 +660,17 @@ export function updateRoomTraps(dt: number): void {
       if (!fighting || !alive) { l.state = 0; l.cd = 2.5; continue; }
       if (l.t < LASER_AIM) { l.yaw += wrapPi(Math.atan2(px - l.x, pz - l.z) - l.yaw) * Math.min(1, dt * 8); l.lock = l.yaw; }   // aims at you, then the lane is locked
       else l.yaw = l.lock;
-      if (l.t >= LASER_WARN) { l.state = 2; l.t = 0; l.hit = false; addShake(0.12); }
+      if (l.t >= LASER_WARN) { l.state = 2; l.t = 0; l.hit = false; l.hitA = false; addShake(0.12); }
     } else if (l.state === 2) {
       l.t += dt; l.yaw = l.lock;
-      if (alive && !l.hit && pl.dashT <= 0 && armDist(px, pz, l.x + Math.sin(l.lock) * LASER_MUZZLE, l.z + Math.cos(l.lock) * LASER_MUZZLE, l.lock, LASER_LEN) < LASER_HALF_W + 0.35) {
-        l.hit = true;
+      for (let hi = 0; hi < HN; hi++) {   // (co-op: the beam lane hurts whoever stands in it, once each)
+        const h = HS[hi], ally = hi === 1;
+        if (!h.alive || (ally ? l.hitA : l.hit) || h.dashT > 0 || !(armDist(h.pos.x, h.pos.z, l.x + Math.sin(l.lock) * LASER_MUZZLE, l.z + Math.cos(l.lock) * LASER_MUZZLE, l.lock, LASER_LEN) < LASER_HALF_W + 0.35)) continue;
+        if (ally) l.hitA = true; else l.hit = true;
+        world.player = h;
         damagePlayer(dmgOf(LASER_DMG), { pos: tmp.set(l.x, 0, l.z), kind: 'ICE' });
-        if (freezePlayer(LASER_FREEZE)) { applyPlayerDebuff('SLOW', LASER_FREEZE + LASER_SLOW); events.emit('floatText', { pos: tmp.set(px, 2.2, pz), text: 'FROZEN', color: 0x8fe4ff, scale: 0.9, dy: 1.0 }); }
+        if (freezePlayer(LASER_FREEZE)) { applyPlayerDebuff('SLOW', LASER_FREEZE + LASER_SLOW); events.emit('floatText', { pos: tmp.set(h.pos.x, 2.2, h.pos.z), text: 'FROZEN', color: 0x8fe4ff, scale: 0.9, dy: 1.0 }); }
+        world.player = pl;
         addShake(0.2);
       }
       if (l.t >= LASER_ON) { l.state = 0; l.cd = (LASER_REST_MIN + Math.random() * LASER_REST_VAR) * (1 - 0.04 * l.tier); }
@@ -657,6 +681,7 @@ export function updateRoomTraps(dt: number): void {
   for (let i = 0; i < rt.nStatue; i++) {
     const q = rt.statue[i];
     if (q.dead) continue;
+    focus(q.x, q.z);
     q.glow = q.state === 1 ? Math.min(1, q.t / STATUE_WARN) : q.state === 2 ? 1 : Math.max(0, q.glow - dt * 2.5);
     if (q.state === 0) {
       const dx = px - q.x, dz = pz - q.z, d = Math.hypot(dx, dz);
@@ -676,7 +701,10 @@ export function updateRoomTraps(dt: number): void {
       q.tick -= dt;
       if (q.tick <= 0) {
         q.tick = q.kind === 0 ? FIRE_TICK : STATUE_TICK;   // (owner) fire breath: continuous direct hits while you stand in it
-        if (alive && coneHit(q, px, pz, 0.3)) {
+        for (let hi = 0; hi < HN; hi++) {   // (co-op: both heroes in the cone)
+          const h = HS[hi];
+          if (!h.alive || !coneHit(q, h.pos.x, h.pos.z, 0.3)) continue;
+          world.player = h;
           tmp.set(q.x, 0, q.z);
           if (q.kind === 0) {
             damagePlayer(maxHp() * 0.016 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: ticking hazard (x HERO_DOT_MUL)
@@ -684,9 +712,9 @@ export function updateRoomTraps(dt: number): void {
           } else {
             damagePlayer(maxHp() * 0.006 * scale / DMG_INFLATE, { pos: tmp, kind: 'ICE', env: true });
             applyPlayerDebuff('SLOW', 1.4);
-            q.acc += STATUE_TICK;
-            if (q.acc >= 0.8) { q.acc = 0; addChill(1); }
+            if (hi === 0) { q.acc += STATUE_TICK; if (q.acc >= 0.8) { q.acc = 0; addChill(1); } }
           }
+          world.player = pl;
         }
         const mx = q.x + Math.sin(q.yaw) * (STATUE_MOUTH + STATUE_LEN * 0.5), mz = q.z + Math.cos(q.yaw) * (STATUE_MOUTH + STATUE_LEN * 0.5);
         world.enemyGrid.query(mx, mz, STATUE_LEN * 0.5 + 3, ids);
@@ -713,6 +741,7 @@ export function updateRoomTraps(dt: number): void {
       const g = rt.ghost[i];
       if (!g.on) { if (g.poof > 0) g.poof = Math.max(0, g.poof - dt); continue; }
       const sh = rt.shrine[g.own];
+      focus(g.x, g.z);
       g.t += dt; g.cd -= dt;
       let tx: number, tz: number, sp: number, k: number;
       if (!fighting || !alive) {   // quiet: lazily orbit the shrine
@@ -741,6 +770,7 @@ export function updateRoomTraps(dt: number): void {
   }
 
   // ---- Void gravity obelisks: drag the hero in from anywhere (strength follows his walking speed); a dash feels only a fifth of it
+  refocus();
   for (let i = 0; i < rt.nObelisk; i++) {
     const o = rt.obelisk[i];
     o.t += dt;
@@ -754,24 +784,35 @@ export function updateRoomTraps(dt: number): void {
     const s = walk * (OB_FAR + (OB_NEAR - OB_FAR) * (1 - Math.min(1, d / OB_RANGE)));
     obPull.x += dx / d * s; obPull.z += dz / d * s; obPull.on = true;
     o.tick -= dt;
-    if (o.tick <= 0 && d < o.rad + OB_CORE && pl.dashT <= 0) {   // crushing core: ticking damage while you are held against it
-      o.tick = OB_TICK;
-      damagePlayer(maxHp() * OB_DMG * scale / DMG_INFLATE, { pos: tmp.set(o.x, 0, o.z), kind: 'MAGIC', env: true });
+    if (o.tick <= 0) {   // crushing core: ticking damage while you are held against it (co-op: either hero)
+      let any = false;
+      for (let hi = 0; hi < HN; hi++) {
+        const h = HS[hi];
+        if (!h.alive || h.dashT > 0 || Math.hypot(o.x - h.pos.x, o.z - h.pos.z) >= o.rad + OB_CORE) continue;
+        any = true; world.player = h;
+        damagePlayer(maxHp() * OB_DMG * scale / DMG_INFLATE, { pos: tmp.set(o.x, 0, o.z), kind: 'MAGIC', env: true });
+      }
+      world.player = host;
+      if (any) o.tick = OB_TICK;
     }
   }
 
   // ---- fire bars
   for (let i = 0; i < rt.nBar; i++) {
     const b = rt.bar[i];
-    b.a += b.w * dt; if (b.hitCd > 0) b.hitCd -= dt;
-    if (alive && b.hitCd <= 0 && pl.dashT <= 0) {
-      let hit = Math.hypot(px - b.x, pz - b.z) < 1.1;
-      for (let k = 0; k < 4 && !hit; k++) if (armDist(px, pz, b.x, b.z, b.a + k * Math.PI / 2, b.len) < 0.95) hit = true;
+    b.a += b.w * dt; if (b.hitCd > 0) b.hitCd -= dt; if (b.hitCd2 > 0) b.hitCd2 -= dt;
+    for (let hi = 0; hi < HN; hi++) {   // (co-op: each hero has his own hit cooldown)
+      const h = HS[hi], ally = hi === 1;
+      if (!h.alive || (ally ? b.hitCd2 : b.hitCd) > 0 || h.dashT > 0) continue;
+      let hit = Math.hypot(h.pos.x - b.x, h.pos.z - b.z) < 1.1;
+      for (let k = 0; k < 4 && !hit; k++) if (armDist(h.pos.x, h.pos.z, b.x, b.z, b.a + k * Math.PI / 2, b.len) < 0.95) hit = true;
       if (hit) {
-        b.hitCd = 0.9;
+        if (ally) b.hitCd2 = 0.9; else b.hitCd = 0.9;
+        world.player = h;
         tmp.set(b.x, 0, b.z);
         damagePlayer(dmgOf(0.06), { pos: tmp, kind: 'FIRE' });
         applyPlayerDebuff('BURN', 2.2, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+        world.player = host;
       }
     }
     b.tick += dt;
@@ -793,6 +834,7 @@ export function updateRoomTraps(dt: number): void {
     const m = rt.beam[i];
     m.t += dt;
     if (m.hitCd > 0) m.hitCd -= dt;
+    if (m.hitCd2 > 0) m.hitCd2 -= dt;
     if (!fighting && m.state > 0) { m.state = 0; m.t = 0; m.off = 99; }   // (the room is clear: the beams rest for good, the exits stay safe)
     if (m.state === 0) { if (m.t >= m.off && fighting && alive) { m.state = 1; m.t = 0; } }
     else if (m.state === 1) { if (m.t >= BEAM_WARN) { m.state = 2; m.t = 0; m.tick = 0; addShake(0.1); } }
@@ -805,6 +847,8 @@ export function updateRoomTraps(dt: number): void {
         near = Math.min(near, armDist(px, pz, m.x, m.z, a, m.len));
         if (alive) armShove(pl.pos, PLAYER_R, m.x, m.z, a, m.len * grow);   // the hero can't walk or dash through: the arm pushes him along
       }
+      let nearA = 99;   // (co-op: the partner's distance to the arms; his own screen does the shoving, here he only takes the burn)
+      if (HN > 1) for (let q = 0; q < m.n; q++) nearA = Math.min(nearA, armDist(HS[1].pos.x, HS[1].pos.z, m.x, m.z, m.a + q * step, m.len));
       world.enemyGrid.query(m.x, m.z, m.len + 1.5, ids);
       for (let k = 0; k < ids.length; k++) {
         const e = world.enemies[ids[k]];
@@ -815,6 +859,12 @@ export function updateRoomTraps(dt: number): void {
         m.hitCd = 1.0; tmp.set(m.x, 0, m.z);
         damagePlayer(dmgOf(0.05), { pos: tmp, kind: 'FIRE' });
         applyPlayerDebuff('BURN', 2.0, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+      }
+      if (HN > 1 && HS[1].alive && m.hitCd2 <= 0 && HS[1].dashT <= 0 && nearA < 0.95 + ARM_HALF) {
+        m.hitCd2 = 1.0; tmp.set(m.x, 0, m.z); world.player = HS[1];
+        damagePlayer(dmgOf(0.05), { pos: tmp, kind: 'FIRE' });
+        applyPlayerDebuff('BURN', 2.0, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+        world.player = pl;
       }
       m.tick += dt;
       if (m.tick >= 0.3) {
@@ -841,10 +891,13 @@ export function updateRoomTraps(dt: number): void {
       j.tick -= dt;
       if (j.tick <= 0) {
         j.tick = FIRE_TICK;
-        if (alive && armDist(px, pz, j.x, j.z, j.ang, j.len) < 1.05) {
-          tmp.set(j.x, 0, j.z);
+        for (let hi = 0; hi < HN; hi++) {   // (co-op: both heroes)
+          const h = HS[hi];
+          if (!h.alive || !(armDist(h.pos.x, h.pos.z, j.x, j.z, j.ang, j.len) < 1.05)) continue;
+          world.player = h; tmp.set(j.x, 0, j.z);
           damagePlayer(maxHp() * 0.02 * scale / DMG_INFLATE, { pos: tmp, kind: 'FIRE', env: true });   // env: a ticking hazard, x HERO_DOT_MUL like the others
           applyPlayerDebuff('BURN', 2, Math.max(2, 3 + world.director.wave * 0.5) * scale);
+          world.player = host;
         }
         world.enemyGrid.query(j.x + Math.sin(j.ang) * j.len * 0.5, j.z + Math.cos(j.ang) * j.len * 0.5, j.len * 0.5 + 2, ids);
         for (let k = 0; k < ids.length; k++) {
@@ -861,21 +914,28 @@ export function updateRoomTraps(dt: number): void {
   for (let i = 0; i < rt.nVine; i++) {
     const v = rt.vine[i];
     if (v.state === 2) { v.t -= dt; if (v.t <= 0) { v.state = 0; v.touch = 0; } continue; }
-    const dx = px - v.x, dz = pz - v.z, rr = v.r + 0.1;
-    if (alive && dx * dx + dz * dz < rr * rr) {
-      v.touch += dt;
-      if (v.touch >= 0.32) {
-        v.state = 2; v.t = VINE_REST;
-        tmp.set(v.x, 0, v.z);
-        damagePlayer(dmgOf(0.035), { pos: tmp, kind: 'PHYSICAL' });
-        applyPlayerDebuff('ROOT', 1.0);
-        events.emit('trick', { pos: new Vector3(v.x, 0, v.z), kind: 'ROOTS', radius: v.r * 2 });
-        events.emit('floatText', { pos: pl.pos, text: 'ENTANGLED!', color: 0x9be32a, scale: 0.9, dy: 2.4 });
-      }
-    } else v.touch = Math.max(0, v.touch - dt * 2);
+    const rr = v.r + 0.1;
+    for (let hi = 0; hi < HN && v.state !== 2; hi++) {   // (co-op: each hero builds up his own touch)
+      const h = HS[hi], ally = hi === 1, dx = h.pos.x - v.x, dz = h.pos.z - v.z;
+      let touch = ally ? v.touch2 : v.touch;
+      if (h.alive && dx * dx + dz * dz < rr * rr) {
+        touch += dt;
+        if (touch >= 0.32) {
+          v.state = 2; v.t = VINE_REST; touch = 0; v.touch2 = 0;
+          world.player = h; tmp.set(v.x, 0, v.z);
+          damagePlayer(dmgOf(0.035), { pos: tmp, kind: 'PHYSICAL' });
+          applyPlayerDebuff('ROOT', 1.0);
+          events.emit('trick', { pos: new Vector3(v.x, 0, v.z), kind: 'ROOTS', radius: v.r * 2 });
+          events.emit('floatText', { pos: h.pos, text: 'ENTANGLED!', color: 0x9be32a, scale: 0.9, dy: 2.4 });
+          world.player = host;
+        }
+      } else touch = Math.max(0, touch - dt * 2);
+      if (ally) v.touch2 = touch; else v.touch = touch;
+    }
   }
 
-  // ---- freezing pools: slip + chill build-up
+  // ---- freezing pools: slip + chill build-up (the host's own movement; the partner's screen has no pools)
+  refocus();
   let on = false;
   for (let i = 0; i < rt.nPool; i++) {
     const p = rt.pool[i];
@@ -903,8 +963,12 @@ function towerRing(m: { x: number; z: number; a0: number; tier: number; glow: nu
 
 /** A short stun on the hero where the boulder lands (inside the circle only). */
 function stunNear(x: number, z: number, r: number, sec: number): void {
-  const p = world.player;
-  if (!p.alive) return;
-  const dx = p.pos.x - x, dz = p.pos.z - z;
-  if (dx * dx + dz * dz < (r + 0.6) * (r + 0.6)) applyPlayerDebuff('STUN', sec);
+  const cur = world.player;
+  for (let hi = 0; hi < HN; hi++) {   // (co-op: either hero under the boulder)
+    const p = HS[hi];
+    if (!p.alive) continue;
+    const dx = p.pos.x - x, dz = p.pos.z - z;
+    if (dx * dx + dz * dz < (r + 0.6) * (r + 0.6)) { world.player = p; applyPlayerDebuff('STUN', sec); }
+  }
+  world.player = cur;
 }

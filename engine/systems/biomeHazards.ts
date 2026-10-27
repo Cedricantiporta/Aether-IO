@@ -17,6 +17,8 @@ import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus
 import { updateRoomTraps, trapMods, obPull } from './roomTraps';
 import { Vector3 } from 'three';
 import { iceAt, ice, ICE_MOB_LERP } from '../iceFloor';
+import { forEachHero, heroNear, randomHero, asHero } from '../heroes';
+import { coopRoom } from '../../net/coopRoom';
 
 export const HZ = { NONE: 0, GREEN: 1, FROST: 2, VOID: 3 } as const;
 const GREENWOOD = 0, FROSTPEAK = 4, VOID = 6;   // indices into BIOMES (see roomDefs.ts)
@@ -79,7 +81,7 @@ const maxHp = () => useGameStore.getState().stats.maxHealth;
 const psn: StatusEffect = { type: 'POISON', duration: 1.0, value: 3 };
 const riftOpts: DamageOpts = { kind: 'MAGIC', dot: true, env: 'HAZARD' };
 
-let brCd = 0, brHold = 0, riftCd = 0, icT = 3, plRiftCd = 0;
+let brCd = 0, brHold = 0, riftCd = 0, icT = 3, plRiftCd = 0, plRiftCd2 = 0;
 
 // ------------------------------------------------------------------ placement --
 const kx: number[] = [], kz: number[] = [], kr: number[] = [];   // keep-clear discs (arrival, station, exits) + everything placed so far
@@ -129,7 +131,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   hz.kind = HZ.NONE; hz.nBr = hz.nMu = hz.nIce = hz.nRift = 0;
   for (const c of hz.clouds) c.on = false;
   for (const i of hz.ic) i.on = false;
-  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; brCd = brHold = riftCd = plRiftCd = 0; icT = 3;
+  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; brCd = brHold = riftCd = plRiftCd = plRiftCd2 = 0; icT = 3;
   hz.ver++;
   if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue) return;
   const b = biome % BIOMES.length;
@@ -227,7 +229,7 @@ function tickBiomeHazards(dt: number): void {
       const m = hz.mu[i];
       if (m.auto > 0) { if (fighting) { m.cd -= dt; if (m.cd <= 0) { puff(m); m.cd = m.auto; } } continue; }   // boss-arena plant: swells for PLANT_WARN s (render), then puffs on its own
       if (m.cd > 0) { m.cd -= dt; continue; }
-      let trig = alive && (px - m.x) * (px - m.x) + (pz - m.z) * (pz - m.z) < SHROOM_TRIGGER * SHROOM_TRIGGER;
+      let trig = heroNear(m.x, m.z, SHROOM_TRIGGER) !== null;   // (co-op: either hero)
       if (!trig) {
         world.enemyGrid.query(m.x, m.z, SHROOM_TRIGGER + 2, ids);
         for (let k = 0; k < ids.length; k++) {
@@ -248,7 +250,7 @@ function tickBiomeHazards(dt: number): void {
       c.tick -= dt;
       if (c.tick > 0) continue;
       c.tick += CLOUD_TICK;
-      if (alive && (px - c.x) * (px - c.x) + (pz - c.z) * (pz - c.z) < CLOUD_R * CLOUD_R) applyPlayerDebuff('POISON', 1.0, maxHp() * CLOUD_HERO / DMG_INFLATE / 0.5);
+      forEachHero((h) => { if (h.alive && (h.pos.x - c.x) * (h.pos.x - c.x) + (h.pos.z - c.z) * (h.pos.z - c.z) < CLOUD_R * CLOUD_R) applyPlayerDebuff('POISON', 1.0, maxHp() * CLOUD_HERO / DMG_INFLATE / 0.5); });   // (co-op: poisons both heroes)
       world.enemyGrid.query(c.x, c.z, CLOUD_R + 4, ids);
       for (let k = 0; k < ids.length; k++) {
         const e = world.enemies[ids[k]];
@@ -261,13 +263,13 @@ function tickBiomeHazards(dt: number): void {
     }
   } else if (hz.kind === HZ.FROST) {
     // ---- icicles: telegraph circle, then a crash (damage + chill/freeze), every ~3-5 s near the hero, sometimes in clusters
-    if (fighting && alive) {
+    if (fighting && (alive || (coopRoom.ally && coopRoom.ally.alive))) {
       icT -= dt;
       if (icT <= 0) {
         icT = 3 + Math.random() * 2;
         const n = Math.random() < 0.3 ? 3 : 1;
-        const a0 = Math.random() * 6.28, d0 = 1.5 + Math.random() * 6.5;
-        const bx = px + Math.cos(a0) * d0, bz = pz + Math.sin(a0) * d0;
+        const a0 = Math.random() * 6.28, d0 = 1.5 + Math.random() * 6.5, tg = randomHero();   // (co-op: near either hero)
+        const bx = tg.pos.x + Math.cos(a0) * d0, bz = tg.pos.z + Math.sin(a0) * d0;
         for (let q = 0; q < n; q++) {
           const a = Math.random() * 6.28, d = q === 0 ? 0 : 1.8 + Math.random() * 2.2;
           const x = bx + Math.cos(a) * d, z = bz + Math.sin(a) * d;
@@ -285,18 +287,19 @@ function tickBiomeHazards(dt: number): void {
       if (!ic.hit && ic.t >= ICICLE_WARN) {
         ic.hit = true;
         addShake(0.25);
-        if (alive && (px - ic.x) * (px - ic.x) + (pz - ic.z) * (pz - ic.z) < ICICLE_R * ICICLE_R) {
+        forEachHero((h) => {
+          if (!h.alive || (h.pos.x - ic.x) * (h.pos.x - ic.x) + (h.pos.z - ic.z) * (h.pos.z - ic.z) >= ICICLE_R * ICICLE_R) return;
           tmp.set(ic.x, 0, ic.z);
           damagePlayer(maxHp() * ICICLE_DMG / DMG_INFLATE, { pos: tmp, kind: 'ICE' });
           applyPlayerDebuff('SLOW', 2.0);
           freezePlayer(0.4);
-        }
+        });
       } else if (ic.t >= ICICLE_WARN + ICICLE_STAY) ic.on = false;
     }
   }
   if (hz.nRift > 0) {
     // ---- black holes: a violent pull + ticking damage for the hero inside the radius (dash to escape); monsters get a gentle pull and an HP drain in the core
-    riftCd -= dt; plRiftCd -= dt; inRift = false;
+    riftCd -= dt; plRiftCd -= dt; plRiftCd2 -= dt; inRift = false;
     const tick = riftCd <= 0; if (tick) riftCd = RIFT_TICK;
     for (let i = 0; i < hz.nRift; i++) {
       const r = hz.rift[i];
@@ -319,6 +322,11 @@ function tickBiomeHazards(dt: number): void {
           inRift = true;
           if (plRiftCd <= 0 && pl.dashT <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true }); }   // 4% max HP / 0.5 s while caught (not flagged dot: that would x4, HERO_DOT_MUL)
         }
+      }
+      const al = coopRoom.ally;
+      if (al && al.alive && live && plRiftCd2 <= 0 && al.dashT <= 0 && !r.vis) {   // (co-op: the partner caught in the hole takes the ticks too; his own screen has no pull)
+        const dx2 = r.x - al.pos.x, dz2 = r.z - al.pos.z;
+        if (dx2 * dx2 + dz2 * dz2 < RIFT_PULL_R * RIFT_PULL_R) { plRiftCd2 = RIFT_TICK; tmp.set(r.x, 0, r.z); asHero(al, () => damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true })); }
       }
       world.enemyGrid.query(r.x, r.z, RIFT_PULL_R + 4, ids);
       for (let k = 0; k < ids.length; k++) {

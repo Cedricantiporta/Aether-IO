@@ -57,3 +57,13 @@ export function asHero(h: PlayerRuntime, fn: () => void): void {
 
 /** true for the guest's stand-in (the per-hero timers / once-per-phase flags of a mechanic use a second slot for him) */
 export const isAlly = (p: PlayerRuntime): boolean => p === coopRoom.ally;
+
+/** Allocation-free hero iteration for per-frame loops: `const n = heroesFill(); for (let i = 0; i < n; i++) { const p = HL[i]; world.player = p; ... }` then restore `world.player`
+ *  (do not nest: it is one shared array). HL[0] is the host hero (solo: `world.player`), HL[1] the partner's stand-in. */
+export const HL: PlayerRuntime[] = [HOST, HOST];
+export function heroesFill(): number {
+  const a = coopRoom.ally;
+  if (!a || !a.alive) { HL[0] = world.player; return 1; }
+  HL[0] = HOST; HL[1] = a;
+  return 2;
+}
