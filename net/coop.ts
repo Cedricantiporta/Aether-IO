@@ -360,8 +360,11 @@ export function coopTick(): void {
 
 // Dev hook for headless tests (vite dev only): drive / inspect co-op from the page.
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
-  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats, loot: lootStats, zones: zoneStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
+  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), partnerState: () => ({ pFlags, pSeen, now: nowMs(), partner: coopRoom.partner(), live: coopRoom.live(), reviveOut: coopRoom.reviveOut }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats, loot: lootStats, zones: zoneStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
     import('../engine/game').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.game = m; }).catch(() => { /* ignore */ });
     import('../engine/systems/enemies').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.enemies = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/combat').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.combat = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/bossMech').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.mech = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/pickups').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.pickups = m; }).catch(() => { /* ignore */ });
   }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
 }

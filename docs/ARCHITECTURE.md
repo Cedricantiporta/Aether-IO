@@ -96,6 +96,9 @@ Pure TS beside `engine/`: the host simulates the world (monsters, bosses, hazard
 Per-frame partner state is `world.remote` (written by `net/coop.ts coopTick()`, called from `updateGame`); the UI slice `net/coopStore.ts` changes only at discrete moments.
 The engine talks to the net layer only through `net/coopRoom.ts` (a few `if (coopRoom.guest)` / `world.player === coopRoom.ally` checks in `combat.ts`, `enemies.ts`, `zones.ts`,
 `director.ts`, `game.ts`, all dead branches in single player). Co-op hot paths use preallocated Uint16 buffers, no per-entity allocation. Details: HANDOFF 3.11.
+Global mechanics that hurt "the player" (boss mechanics / phases, void fields, dark heroes, human bosses, room traps, biome hazards, boss fx) go through `engine/heroes.ts` (`forEachHero`, `nearestHero`,
+`heroesFill()` + `HL[]` for per-frame loops) so they also hit the partner's stand-in (`coopRoom.ally`): `world.player` is swapped to him for the call and `combat.damagePlayer & co.` forward the blow. Never loop
+over heroes by hand in new engine code: use those helpers (solo they are one plain call).
 
 ## Performance rules (all agents)
 1. No `new Vector3()` / closures / array allocs in per-entity per-frame loops —

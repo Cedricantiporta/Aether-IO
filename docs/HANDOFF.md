@@ -473,17 +473,17 @@ bosses (Malakar) far too weak, "the original iteration was better". Enemies use 
 Kept from that pass: Ascension first-clear rewards (`ascension.ASC_REWARDS`), dark hero faster skills (HP now boss-like, see 'Dark heroes' in 3.3), and
 a harder Tower family (x1.6 HP / x1.4 damage, +15% / +10% per cleared Ascension, `enemies.spawnEnemy`).
 
-### 3.11 Online co-op (step 2 of 4: fighting together; `net/`, owner-approved 2026-10-26)
+### 3.11 Online co-op (step 3 of 4: loot, cards, downed + revive; `net/`, owner-approved 2026-10-26)
 2-player, host-authoritative world, WebRTC. Only ADVENTURE runs (boss trials come with step 4); the town stays solo. Each player brings their own hero.
 Approved rules for the whole feature: monsters / bosses +75% HP with 2 players (damage unchanged); each player's own loot; both full gold / XP; each picks own
 cards; host picks the door; downed + 3 s revive by the partner, both down = run ends, own Ankh works; guest drops -> host continues; host drops -> guest to
-town keeping loot. Step 2 (done) = combat only; step 3 = loot / cards / downed / disconnect rules; step 4 = boss trials + polish.
-- **Files**: `net/protocol.ts` (wire format, `COOP_VERSION` 2, code alphabet, sanitisers, enum tables), `net/transport.ts` (one `Transport` interface, two
+town keeping loot. Step 2 (done) = combat only; step 3 (done) = loot / cards / downed / door / disconnect rules / both-hero boss mechanics / partner zones / partner HUD; step 4 = boss trials + polish.
+- **Files**: `net/protocol.ts` (wire format, `COOP_VERSION` 3, code alphabet, sanitisers, enum tables), `net/transport.ts` (one `Transport` interface, two
   implementations), `net/coop.ts` (session: `hostCoop / joinCoop / leaveCoop`, heartbeat, room + position messages, message routing, `coopTick()`, bandwidth
   meter), `net/coopStore.ts` (tiny Zustand slice for the UI), `net/coopRoom.ts` (dependency-free bridge: every hook the engine calls), STEP 2:
   `net/coopHost.ts` (stand-in hero, snapshots, applying the guest's hits), `net/coopGuest.ts` (monster mirror, hit claims, kill rewards),
-  `net/coopGhosts.ts` (partner projectiles as harmless copies), `net/coopWire.ts` (Uint16 <-> base64, FX event codec). UI: `ui/screens/CoopLobby.tsx`,
-  `ui/hud/CoopHud.tsx` (partner name, ping, partner HP bar from `world.remote.hp`), PauseMenu "Leave co-op". Render: `render/RemoteHero.tsx`.
+  `net/coopGhosts.ts` (partner projectiles as harmless copies), `net/coopWire.ts` (Uint16 <-> base64, FX event codec), STEP 3: `net/coopLoot.ts` (own loot + card rewards), `net/coopZones.ts` (partner ground zones), `engine/heroes.ts` (`forEachHero & co.`). UI: `ui/screens/CoopLobby.tsx`,
+  `ui/hud/CoopHud.tsx` (partner name, ping, partner HP bar from `world.remote.hp`, STEP 3: down / revive banner, arrow to a downed friend, "Host is choosing..."), PauseMenu "Leave co-op". Render: `render/RemoteHero.tsx`, `render/ReviveRing.tsx` (ring + fill round a downed hero).
 - **Signalling**: `peerjs` npm package (default; the free public cloud broker is used ONLY to meet, then a P2P DataChannel, JSON serialisation). Host peer id =
   `'aether-' + 4-letter code` (alphabet `ACDEFGHJKLMNPQRTUVWXY`). `?coopPeer=host:port[:s]` targets another broker. `?coopTransport=bc` = BroadcastChannel dev
   transport (two pages of one browser profile). `?coopTimeout=ms` raises the 10 s link timeout (headless tests). `?coopStats=1` turns the bandwidth meter on (always on in dev).
@@ -516,19 +516,61 @@ town keeping loot. Step 2 (done) = combat only; step 3 = loot / cards / downed /
   - **Bandwidth** (JSON bytes, BroadcastChannel run, `window.__coop.stats()`): 3 KB/s host -> guest with ~6 monsters (SNAP 2 KB/s), 20 KB/s worst case with 45 monsters + 16 shots + 7 zones;
     guest -> host 0.4 to 1 KB/s (POS 0.4, hit claims 0.1, ghosts 0.2). One monster costs ~0.4 KB/s.
 - **Remote hero**: `world.remote` (active, x, z, facing, blend, flags, hp, rx) from POS at 16 Hz, interpolated from a 16-slot ring buffer 100 ms in the past.
-- **Disconnect**: guest drops -> host notified and carries on solo (stand-in removed, new monsters unscaled, existing ones keep their HP). Host drops / ends the run -> the guest goes
-  back to town with a message. A guest who dies ends HIS run (back to town, the host keeps fighting). "Leave co-op" in the pause menu = polite BYE.
-- **Step 2 limits (simplified / not synced)**: pickups, crates / breakables, loot items (host's), spawn markers, dark-hero HP bars + illusion bars, room events / traps / biome hazards /
-  global boss mechanics (`voidFx`, `bossMech`, `bossPhases`, `darkHero`, `humanBosses`, `roomTraps`, `biomeHazards`, `bossFx` breath / waves) only ever hurt the HOST's hero (the guest
-  still sees their hostile `Zone`s and projectiles); the partner's skill zones / ground FX (fire fields, arrow rain, meteors) are not drawn, only his projectiles + cosmetic FX events;
-  boss render state that lives in engine modules (hydra heads, wards) may look plain on the guest; monster damage scales with the HOST's hero level (`monsterLevel`); status
-  durations applied by the guest's hits use the HOST's run cards / stats; a paused guest still takes hits; melee classes (Barbarian) land fewer hits through the 100 ms mirror delay.
-  TOWER / DAILY / WAVES are refused. A strict NAT without TURN may block P2P (PeerJS default STUN only).
-- **Step 3 plan**: per-player loot (pickups owned per hero, `ITEM` drops rolled per player, chests / crystal rooms), per-player run cards (each picks; the host's choice does not block the
-  guest), downed state (3 s revive by the partner, both down = run ends, own Ankh), host-picks-the-door UI on the guest, disconnect rules (host drop -> guest keeps loot), mirror the
-  remaining global boss mechanics (give `voidFx` / `bossMech` / `bossFx` a `forEachHero`), mirror pickups + spawn markers, partner skill zones / ground FX.
+- **Disconnect**: guest drops -> host notified and carries on solo (stand-in removed, `coopRoom.two` false so NEW monsters are unscaled, existing ones keep their +75% HP; a downed host with
+  no partner left dies normally). Host drops / ends the run -> the guest goes back to town with a message and keeps EVERYTHING (`coop.toTown`: loot still on his floor is banked
+  (`pickups.collectAllPickups`), then `store.abandonRun` banks the wave gold / class xp; his own pickups were already in his bag). A guest who reaches 0 HP is DOWNED (step 3), not sent home.
+  "Leave co-op" in the pause menu = polite BYE.
+- **STEP 3 (done): own loot per player** (`net/coopLoot.ts`). Every player collects only the pickups of HIS OWN `world.pickups`. The host's world stays the only one that rolls room / kill / chest /
+  boss drops: `pickups.spawnPickup` calls `coopRoom.fwdDrop` (host, partner present, not XP, not `droppedItems`, not while `coopRoom.noFwd > 0`) -> DROP `[kind, x, z, value, item]` and the guest
+  spawns HIS copy at the same spot: gold / gem / crystal / shard carry their value (collect pays with his gold-find), hearts / mana orbs are sent as a share of max HP / MP, gear (WEAPON, ARMOR,
+  HELMET, GLOVES, BOOTS, ACCESSORY) is RE-ROLLED with his own `store.rollItemDrop(rarity)` (his class / level; the "+N" plus levels of the host's roll are not copied), potions / cores / loot /
+  trophies are rebuilt from the catalog by name (`ITEMS_POOL`, `LOOT`). Kill gold is NOT in KILL any more (`gold` field is 0): the coins the kill dropped arrive as pickups, so there is no double pay.
+  Crates / barrels / harvest nodes exist on both screens and every player breaks his own copy (`crates.breakCrate` wraps its drops in `coopRoom.noFwd`); the host pet's loot burp is not shared.
+  Treasure chests / the fountain / room rewards: ONE interaction by the host pays both (chest + reward spawns are forwarded, the fountain sends REWARD 1 and the guest heals + gets his own random
+  blessing). The guest cannot open chests / stations (his `scanNearby` only shows loot + harvest pills; `interactRoom` refuses nodes < 100 on the guest), but he DOES loot items (E), auto-loots,
+  and `director.guestDirector` runs the clear-sweep (coins fly in `VACUUM_AFTER` after the mirrored CLEARED phase). A guest following the host to the next room banks the floor first (`collectAllPickups`, like `finishLeave`).
+- **STEP 3: own run cards, non-blocking** . `store.openWaveReward` (room-clear / boss reward) calls `coopRoom.fwdReward(0, bonus)`: the guest opens HIS OWN card choice (his own `generateUpgradeOptions`,
+  independent of the host's; `selectUpgrade` is already local). `engine/game.updateGame` keeps simulating in status LEVEL_UP while `coopRoom.live()` (host: partner in the run; guest: linked): the picker's
+  input is zeroed (`holdHeroStill`), `invulnT` is held and `damagePlayer` ignores hits unless PLAYING, so the picker is untouchable and the partner's world never freezes (solo is unchanged: frozen
+  behind the card screen). A ROOM message is applied even while the guest picks.
+- **STEP 3: downed + revive** (`combat.damagePlayer`, `player.ts`, `coop.ts reviveTick`, `render/ReviveRing.tsx`). At 0 HP (after Phoenix / Death Defiance) `coopRoom.canBeDowned()` (linked and
+  `partner() === 1`) -> `p.downed = true`, `p.alive = false` (so every system treats him as dead; the hero lies in the death pose, `RemoteHero` too). The Ankh prompt still appears first (copy changes
+  to "Wait for my friend"). The death flow waits while `p.downed && partner() === 1`; it ends the run when the partner is downed / dead / gone (`partner()` = 0 gone: no POS for 8 s `PARTNER_GRACE_MS`, so a
+  room change does not count; 1 up; 2 downed from POS flag `F_DOWN` 16). Both downed = each side runs its normal death flow (game-over summary on both). Revive: the reviver stands within
+  `REVIVE_RANGE` 2.6 u of the downed partner for `REVIVE_TIME` 3 s (`coopRoom.reviveOut` 0..1, reset when he walks away / is hit out of range); the progress rides POS (9th field `*100`) so the downed
+  one sees it (`world.remote.reviveIn`); at 1 the reviver sends REVIVE and `combat.reviveByFriend` stands the downed one up at 30% HP, 3 s invulnerability, `playerRevive` source FRIEND, run-death flow reset
+  (`hooks.onRevive`). A downed stand-in has `alive = false`, so monsters ignore him. No downed timeout.
+- **STEP 3: host picks the door.** The guest runs no portal logic (step 1 already pulled him along). `RST` got a last field `hl` (the exit the host stands next to, from `scanNearby`, `coopRoom.hlHost`)
+  and CoopHud shows "Host is choosing... heading for <room>" / "Following the host..." on the guest.
+- **STEP 3: both heroes take the global mechanics** (`engine/heroes.ts`). `forEachHero(fn)` runs a hero-effect block once per living hero with `world.player` swapped to him (the host hero, then the stand-in:
+  `combat.damagePlayer / applyPlayerDebuff / knockHero / freezePlayer / slowHero` forward the stand-in's blow to the guest, who applies HIS defence). Solo it is one plain call. Helpers: `nearestHero`,
+  `randomHero`, `heroNear(x, z, r)`, `asHero(h, fn)`, `isAlly(p)`, and the allocation-free `heroesFill()` + `HL[]` loop for per-frame code. Wired into `voidFx` (lasers, gravity, meteors, bombs, event horizon,
+  burns), `bossMech` (rain / quake / crush impacts, the rain's clusters aim at both heroes), `bossPhases` (avalanche, pinball, spores, tidal, sand, lava, lights-out: per-hero once-per-phase flags / timers use
+  the `*A` second slot), `bossFx` (rings, breath, shrinking void, hail, echoes, portals aim at the nearer hero), `darkHero` (orbs, titan quake, shots, fields, delayed strikes, hostile ground fx),
+  `humanBosses` (strikes, snare traps), `roomTraps` (aiming traps fix on the nearest hero via `focus`; area hazards test both heroes with a second cooldown slot) and `biomeHazards` (clouds, icicles,
+  rifts, mushrooms). Boss telegraph zones with a `trick` (`zones.expire`) resolve for the nearer hero with full effect, then for the other hero with `world.pass2.on` (every zone / projectile / prop / wall /
+  pending-strike spawn switched off: only his damage + debuffs apply). Pulls that move the hero (gravity, wind, rifts) only move the HOST hero; the stand-in just takes the damage / slow ticks.
+- **STEP 3: partner ground zones** (`net/coopZones.ts`). Each side sends its own live friendly zones (`CURSE FIRE BLACKHOLE FROST_NOVA TORNADO FROST_FIELD METEOR_SHADOW SHOCKWAVE`) and non-hostile
+  ground fx (`RAIN_ARROW METEOR SPIKE ...`) as PZ (~8 Hz, flat number arrays, stamp-based add / remove); the receiver draws `Zone.ghost` / `GroundFx.ghost` copies (aged only: `zones.updateZones` and
+  `abilities.stepFx` skip them; `inCurse` ignores them).
+- **STEP 3: partner HUD** (`ui/hud/CoopHud.tsx`): partner HP bar (empty red when down), a banner ("You are down. <friend> can revive you: 48%" / "Reviving <friend>..." / "<friend> is down! Stand next
+  to them to revive." / "Host is choosing...") with a progress bar, and a rotating arrow (screen-space from `world.camera.yaw`) pointing at a downed friend farther than 7 u. All written to DOM refs from
+  `useRaf`, no per-frame setState.
+- **Protocol v3 additions**: REVIVE 19 `[rv]`, DROP 20 `[rv, kind, x*10, z*10, value, item]`, REWARD 21 `[rv, what, bonus]`, PZ 22 `[rv, zones[], fx[]]`, POS gets flag `F_DOWN` and a 9th field (revive
+  progress * 100), RST a last field (`hl`). `COOP_VERSION` 3 (peers of another version refuse each other).
+- **Limits (simplified / not synced)**: the guest does not SEE room events / traps / biome hazards / roomTraps pieces (they are built on the host only; he just takes their damage through the forwarding:
+  watch the HUD), nor spawn markers, dark-hero HP bars / illusion bars, minions of the partner (necromancer skeletons / golem), the partner's earth wall; chests / stations / the fountain look unused on
+  the guest and only the host can use them (merchant / shrine / camp storage stay host-only); gear re-rolls do not copy the host's "+N"; pulls (gravity, wind, black holes, obelisks, beam shoves)
+  only move the host hero; Event Horizon's collapse / sand wind etc. treat the stand-in at the position of his last POS (100 ms behind); the stand-in has no dodge i-frames of his own beyond his dash flag;
+  a downed hero stays down while the host's world is paused; chill stacks (`bossFx.chill`) are shared by both heroes; boss render state that lives in engine modules (hydra heads, wards) may look plain on the
+  guest; monster damage scales with the HOST's hero level (`monsterLevel`); status durations applied by the guest's hits use the HOST's run cards / stats; a paused guest still takes hits; melee classes
+  (Barbarian) land fewer hits through the 100 ms mirror delay. TOWER / DAILY / WAVES and boss trials are refused. A strict NAT without TURN may block P2P (PeerJS default STUN only).
+- **Step 4 plan**: boss trials (BOSS_TRIAL mode) in co-op, polish + mobile perf (measure the PZ / DROP traffic + frame time on a real phone, throttle SNAP when the tab is backgrounded), see the
+  hazards / traps on the guest (seed-deterministic `setupBiomeHazards` / `setupRoomTraps` for the pieces, or snapshot them like zones), chest / merchant / shrine use by the guest, partner minions + earth wall,
+  pause handling (a paused host freezes the guest's mirror), revive polish (revive emote / sound, partner name over the ring).
 - **QA**: `window.__coop` (vite dev only) exposes host / join / leave / the stores, `game` (updateGame), `enemies` (spawnEnemy), `stats()` (bandwidth by message type + QA counters
-  `host.hitsApplied / blowsForwarded / kills`, `guest.claims / blowsIn / killsPaid`). Verified with two Playwright pages on the BroadcastChannel transport: software GL is starved by the
+  `host.hitsApplied / blowsForwarded / kills`, `guest.claims / blowsIn / killsPaid`, `loot` (DROP sent / got), `zones` (PZ sent / got)), `combat`, `pickups`, `mech` (`bossStrike`), `partnerState()`. STEP 3 tip: give each page its own
+  `setInterval(() => __coop.game.updateGame(1 / 30), 33)` instead of pumping in turns, or the partner's POS goes silent for > 8 s and a hero that is killed is NOT downed (`partner()` = 0). Verified with two Playwright pages on the BroadcastChannel transport: software GL is starved by the
   second page, so replace `window.requestAnimationFrame` by a slow timer (init script) and drive `__coop.game.updateGame(1 / 30)` by hand in both pages (`setTimeout` pacing); do not
   edit source files while the pages run (Vite full-reloads them); wait for a page to compile after `titleDone`, it can take minutes.
 
