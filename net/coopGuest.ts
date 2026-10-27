@@ -14,6 +14,8 @@ import { damagePlayer, applyPlayerDebuff, freezePlayer, slowHero, knockHero, gra
 import { grantGoldCoin } from '../engine/systems/pickups';
 import type { Enemy, EnemyKind, EnemyState, EliteAffix, EnemyProjectileKind, RoomPhase, ZoneKind, RoomPlan } from '../engine/types';
 import { coopRoom } from './coopRoom';
+import { useGameStore } from '../store';
+import { GameStatus } from '../types';
 import {
   MSG, HIT_STRIDE, DMG_KINDS, STATUS_TYPES, DEBUFF_TYPES, ENEMY_STATES, ROOM_PHASES, EP_KINDS, isNum,
   HF_DOT, HF_ENV, HF_NODOT, HF_PROJ, HF_CRIT, DF_CRIT, DF_DOT, DF_BASIC, DF_ABREAK, DF_FROST, DF_NOBACK, DF_PLAYER, DF_KNOCK, DF_LAUNCH,
@@ -328,7 +330,7 @@ export function guestOnMessage(d: unknown[]): void {
     case MSG.HIT: if (coopRoom.guest) onHit(d); return;
     case MSG.KILL: if (coopRoom.guest) onKill(d); return;
     case MSG.DEBUF: {
-      if (!coopRoom.guest || !isNum(d[2]) || !isNum(d[3]) || !isNum(d[4]) || !isNum(d[5])) return;
+      if (!coopRoom.guest || useGameStore.getState().status !== GameStatus.PLAYING || !isNum(d[2]) || !isNum(d[3]) || !isNum(d[4]) || !isNum(d[5])) return;
       const dur = Math.min(30, d[3] / 100), val = d[4] / 100;
       if (d[5] === 1) freezePlayer(dur);
       else if (d[5] === 2) slowHero(dur, val > 0 ? val : undefined);
@@ -336,7 +338,7 @@ export function guestOnMessage(d: unknown[]): void {
       return;
     }
     case MSG.KNOCK:
-      if (coopRoom.guest && isNum(d[2]) && isNum(d[3]) && isNum(d[4]) && isNum(d[5])) knockHero(d[2] / 10, d[3] / 10, Math.min(8, d[4] / 100), Math.min(5, d[5] / 100), d[6] === 1);
+      if (coopRoom.guest && useGameStore.getState().status === GameStatus.PLAYING && isNum(d[2]) && isNum(d[3]) && isNum(d[4]) && isNum(d[5])) knockHero(d[2] / 10, d[3] / 10, Math.min(8, d[4] / 100), Math.min(5, d[5] / 100), d[6] === 1);
       return;
     default: return;
   }
