@@ -4,9 +4,9 @@ export const hooks = {
   onCleanse: () => {},
   /** A giant fireball (Ignar) ended at (x, z): bosses2.ts leaves a capped fire patch + burst there. */
   fireImpact: (_x: number, _z: number, _r: number) => {},
-  /** Malakar's dark fireball: leaves a burning patch at (x, y). Set by malakarFx.ts. */
+  /** the Herald's dark fireball: leaves a burning patch at (x, y). Set by voidFx.ts. */
   burnTrail: (_x: number, _z: number) => {},
-  /** A dark (Malakar) giant fireball ended at (x, z). Set by malakarFx.ts. */
+  /** A dark (Herald) giant fireball ended at (x, z). Set by voidFx.ts. */
   darkImpact: (_x: number, _z: number, _r: number) => {},
   /** Invulnerable phases (bossPhases.ts): called every frame for a boss / the Slime King; starts the phase when its hp threshold is crossed. */
   phaseCheck: (_e: Enemy): void => {},

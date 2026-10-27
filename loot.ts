@@ -74,7 +74,7 @@ export const LOOT: LootDef[] = [
   d('mithril_ore', 'Mithril Ore', 'EPIC', 'nugget', ['#9fc8d8', '#f0fbff'], 'Light as a feather, hard as a promise.'),
   d('starfire_crystal', 'Starfire Crystal', 'LEGENDARY', 'crystal', ['#ffc83a', '#fff6c8'], 'Warm to the touch, even in the deepest dark.'),
   d('adamant_ore', 'Adamant Ore', 'LEGENDARY', 'nugget', ['#5a6a7a', '#ffd070'], 'No forge in the valley is hot enough. Yet.'),
-  d('soul_ember', "Malakar's Soul Ember", 'MYTHIC', 'orb', ['#c084fc', '#fff0ff'], 'What was left when the Undying finally died. Every Mythic weapon is forged around one.', 2),
+  d('soul_ember', "The Herald's Soul Ember", 'MYTHIC', 'orb', ['#c084fc', '#fff0ff'], 'What was left when the Void Herald finally fell. Every Mythic weapon is forged around one.', 2),
   d('abyssal_diamond', 'Abyssal Diamond', 'MYTHIC', 'crystal', ['#ff3a5a', '#ffe0f0'], 'Pulled from the bottom of the world.'),
   // fish from the lake (engine/systems/fishing.ts); sold to the Fishmonger on the beach (or any shop)
   ...FISH_DEFS(),
@@ -141,7 +141,7 @@ export const LOOT_TABLES: Record<string, string[]> = {
   CRYSTAL: ['raw_gem', 'echo_crystal'],
   CAVE_DEPTHS: ['deep_geode', 'mithril_ore', 'starfire_crystal', 'adamant_ore', 'abyssal_diamond'],   // (cave veins only, never rolled by rollLoot)
   ORE: ['ore_nugget', 'raw_gem'],
-  MALAKAR: ['soul_ember'],   // (very rare, only when Malakar falls for good: director.ts; never rolled by rollLoot)
+  MALAKAR: ['soul_ember'],   // (key kept for saves; very rare, only when the Void Herald falls for good: director.ts; never rolled by rollLoot)
 };
 
 /** Chance that a kill / break rolls any loot at all (bosses and elites always do). */

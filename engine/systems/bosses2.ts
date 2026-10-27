@@ -28,6 +28,12 @@ import {
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw,
 } from './bossFx';
 import { wardedBossId } from './bossMech';
+import { bp } from './bossPhaseState';
+import { spawnIllusions, clearDecoys } from './bossSpecials';
+import {
+  mfx, queueLaser, queueMeteor, queueHole, gravityBegin, gravityBusy, meteorsBusy, holesBusy, tickVoidFx, clearVoidFx, setTrailDamage,
+  eventHorizonBegin, ehBusy, soulMirrorBegin, mirrorBusy, spawnRune,
+} from './voidFx';
 
 export function isBoss2(k: EnemyKind): boolean {
   return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM' || k === 'BOSS_WARLORD' || k === 'BOSS_WARMACH' || k === 'BOSS_VOID';
@@ -70,6 +76,8 @@ export const S = {
   rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
   // Void Herald
   voidOn: false, gravT: 0, pushed: false,
+  /** form: 0 first form, 1 transforming (untouchable), 2 final form (huge wings); formT = transformation seconds left; sweep = laser sweep direction */
+  vform: 0, vformT: 0, sweep: 1,
 };
 /** Read-only view for the renderer. */
 export const bossView = S;
@@ -84,7 +92,7 @@ export function resetBosses2(): void {
   S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0; S.guardT = 0; S.shT = 0; S.dashPh = 2;
-  S.voidOn = false; S.gravT = 0; S.pushed = false;
+  S.voidOn = false; S.gravT = 0; S.pushed = false; S.vform = 0; S.vformT = 0; bp.xformId = -1;
 }
 
 // ------------------------------------------------------------------ helpers ---
@@ -231,6 +239,7 @@ hooks.damageMul = (e: Enemy): number => {
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
   if (e.kind === 'BOSS_HYDRA') return HYDRA_MUL[S.headsDead];
+  if (e.kind === 'BOSS_VOID') return S.vformT > 0 ? 0 : 1;   // transforming: untouchable
   if (e.kind === 'BOSS_WARLORD') return S.formT > 0 ? 0 : S.guardT > 0 ? 0.5 : 1;   // transforming: untouchable; Blazing Guard: half damage
   return 1;
 };
@@ -271,7 +280,8 @@ export function bossDied2(e: Enemy): void {
   const list = world.enemies;
   for (let i = 0; i < list.length; i++) { const a = list[i]; if (a.active && isBossAdd(a.kind)) poofAdd(a); }
   endBossFx();
-  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.formT = 0; S.guardT = 0; S.voidOn = false;
+  S.id = -1; S.bark = false; S.sub = false; S.air = false; S.blizzT = 0; S.enraged = false; S.formT = 0; S.guardT = 0; S.voidOn = false; S.vform = 0; S.vformT = 0;
+  if (e.kind === 'BOSS_VOID') { clearDecoys(); clearVoidFx(); }
   stat('BossDied');
 }
 
@@ -281,7 +291,6 @@ function checkPhase2(e: Enemy): void {
   switch (e.kind) {
     case 'BOSS_TREANT': S.wantBark = true; break;
     case 'BOSS_WYRM': S.wantBlizz = true; break;
-    case 'BOSS_VOID': arena.rate = 0.9 + 0.35 * e.phase; break;
     default: break;
   }
 }
@@ -1031,7 +1040,6 @@ function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
 
 // ============================================================ VOID HERALD =====
 const V_PORTALS = 0, V_GRAVITY = 1, V_ECHOES = 2;
-const HERALD_ORDER = [V_PORTALS, V_ECHOES, V_GRAVITY, V_PORTALS, V_ECHOES];
 
 /** (owner) the Dune Colossus' stomp knocks the hero down. */
 function stompKd(z: import('../types').Zone | null): void { if (z) { z.kb = KB.SLAM.kb; z.down = KB.SLAM.down; } }
@@ -1087,18 +1095,189 @@ LISTS.BOSS_VOID = [
   },
 ];
 
+// ---- the Herald's dark-purple gravity kit: one major skill at a time, every hit a share of the hero's MAX hp.
+const V_MIRRORS = 3, V_HORIZON = 4, V_SOUL = 5, V_LASERS = 6, V_HOLES = 7, V_WELL = 8, V_RING = 9, V_STORM = 10, V_METEORS = 11, V_CROSS = 12;
+const f2 = (): boolean => S.vform === 2;
+const DARKP = { dark: true } as const;
+LISTS.BOSS_VOID!.push(
+  { // Mirror Images: up to 4 illusions of the Herald (same bar, same shield, they crumble 3x faster) and one teleport into a ring round you.
+    name: 'Mirror Images!', wind: () => 0.8, act: () => 1.0, rec: () => 0.9,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    fire(e) { spawnIllusions(e, 4, f2() ? 30 : 22, 4); stat('Illusions'); },
+  },
+  { // Event Horizon: stand in a drifting light pocket or the collapse takes 85% max hp (form 2: a fast fan at you meanwhile).
+    name: 'Event Horizon!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xfff1a8); },
+    fire() { eventHorizonBegin(f2() ? 2 : 3); },
+    tick(e, dt, ux, uz) {
+      stand(e);
+      if (f2() && e.patternT === 0 && e.stateT >= 4.2) {
+        e.patternT = 1; const a0 = Math.atan2(ux, uz);
+        for (let i = -2; i <= 2; i++) { dirV.set(Math.sin(a0 + i * 0.22), 0, Math.cos(a0 + i * 0.22)); fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 15, e.projectileDamage * 0.5, { pct: 0.08, life: 3.5, radius: 1.0, ...DARKP }); }
+      }
+    },
+    done: (e) => e.stateT >= 0.8 && !ehBusy(),
+  },
+  { // Soul Mirror: spikes erupt where your mirror image stands.
+    name: 'Soul Mirror!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    fire() { if (f2()) soulMirrorBegin(4, 1.0, 1.35, 0.34); else soulMirrorBegin(3, 1.25, 1.6, 0.30); },
+    tick() { /* he stands while the spell runs */ },
+    done: (e) => e.stateT >= 0.8 && !mirrorBusy(),
+  },
+  { // Void Lasers: 3 aimed beams, then a sweep of 9 across an arc (each lane is a purple telegraph first) with a black hole drifting at you.
+    name: 'Void Lasers!', wind: () => 0.8, act: () => 4, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    fire() { /* timeline in tick */ },
+    tick(e) {
+      stand(e);
+      const pl = world.player.pos, t = e.stateT, dmg = f2() ? 0.34 : 0.30, sdmg = f2() ? 0.28 : 0.24;
+      if (e.patternT < 3 && t >= e.patternT * 0.5) {
+        const a = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z);
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.6, 0.8, dmg);
+        e.patternT++;
+      } else if (e.patternT >= 3 && e.patternT < 12 && t >= 1.9 + (e.patternT - 3) * 0.1) {
+        const k = e.patternT - 3;
+        if (k === 0) { queueHole(0.3); e.angle = Math.atan2(pl.x - e.pos.x, pl.z - e.pos.z); S.sweep = Math.random() < 0.5 ? 1 : -1; }
+        const a = e.angle + (k - 4) * 0.24 * S.sweep;
+        queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 45, 2.2, 0.75, sdmg);
+        e.patternT++;
+      }
+    },
+    done: (e) => e.patternT >= 12 && e.stateT >= 3.8,
+  },
+  { // Black Holes: warning circles follow you, each opens a hole under you that then drifts after you.
+    name: 'Black Holes!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    fire() { const n = f2() ? 3 : 2; for (let i = 0; i < n; i++) queueHole(i * 1.0); },
+    tick() { /* waits */ },
+    done: (e) => e.stateT >= 0.8 && !holesBusy(),
+  },
+  { // Gravity Well: an indicator, then the whole arena is pulled toward a core that explodes (35 / 42% max hp in the core).
+    name: 'Gravity Well!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
+    begin() { gravityBegin(world.player.pos.x, world.player.pos.z, f2() ? 0.42 : 0.35); },
+    fire() { /* the spell runs by itself */ },
+    tick() { /* waits */ },
+    done: (e) => e.stateT >= 0.8 && !gravityBusy(),
+  },
+  { // Dark Fireballs: 9 giant dark fireballs in 360 degrees (a second, offset ring in form 2).
+    name: 'Dark Fireballs!', wind: () => 0.8, act: () => 2, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.8, BT.VISUAL, 0, 0x7c3aed); e.angle = Math.random() * 6.283; },
+    fire() { /* rings in tick */ },
+    tick(e) {
+      stand(e);
+      const rings = f2() ? 2 : 1;
+      if (e.patternT < rings && e.stateT >= e.patternT * 0.9) {
+        const base = e.angle + e.patternT * (Math.PI / 9);
+        setTrailDamage(e.projectileDamage * 0.15);
+        if (e.patternT === 0 && f2()) queueHole(0.4);
+        for (let i = 0; i < 9; i++) {
+          const a = base + (i / 9) * Math.PI * 2;
+          dirV.set(Math.sin(a), 0, Math.cos(a));
+          fireEnemyProjectile(e.pos, dirV, 'BIG_FLAME', 10, e.projectileDamage * 0.9, { pct: f2() ? 0.24 : 0.2, life: 2.5, radius: 1.3, dark: true, trail: 1.4 });
+        }
+        events.emit('shockwave', { pos: e.pos.clone(), radius: 6, color: 0x7c3aed });
+        events.emit('shake', { amount: 0.3 });
+        e.patternT++;
+      }
+    },
+    done: (e) => e.patternT >= (f2() ? 2 : 1) && e.stateT >= ((f2() ? 2 : 1) - 1) * 0.9 + 1.8,
+  },
+  { // (final form) Wing Storm: the great wings beat out spiralling void feathers, then a void shockwave ring.
+    name: 'Wing Storm!', wind: () => 1.0, act: () => 3.4, rec: () => 1.1,
+    begin(e) { circle(e.pos.x, e.pos.z, 7, 1.0, BT.VISUAL, 0, 0xc084fc); e.angle = Math.random() * 6.283; e.patternT = 0; S.pushed = false; },
+    fire() { /* feathers in tick */ },
+    tick(e, dt) {
+      stand(e);
+      e.angle += 1.9 * dt;
+      if (e.stateT >= e.patternT * 0.14) {
+        e.patternT++;
+        for (let k = 0; k < 4; k++) {
+          const a = e.angle + (k * Math.PI) / 2;
+          dirV.set(Math.sin(a), 0, Math.cos(a));
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 11, e.projectileDamage * 0.6, { pct: 0.04, life: 5, radius: 0.9, ...DARKP });
+        }
+      }
+      if (S.pushed === false && e.stateT >= 1.8) {
+        S.pushed = true;
+        spawnWave(e.pos.x, e.pos.z, 20, 30, 2.2, pwr(e) * 1.2, WAVE_VOID, 0xc084fc, e.radius);
+        events.emit('shockwave', { pos: e.pos.clone(), radius: 14, color: 0xc084fc });
+        events.emit('shake', { amount: 0.5 });
+      }
+    },
+    done: (e) => e.stateT >= 3.4,
+    end() { S.pushed = false; },
+  },
+  { // (final form) Void Meteors: 3 tracking meteors, each indicator hunts you, locks, then a meteor falls.
+    name: 'Void Meteors!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    fire() { /* in tick */ },
+    tick(e) {
+      stand(e);
+      if (e.patternT < 3 && e.stateT >= e.patternT * 0.5) {
+        const side = e.patternT === 0 ? 0 : 5.5, a = Math.random() * 6.283;
+        queueMeteor(Math.sin(a) * side, Math.cos(a) * side, 0.32);
+        e.patternT++;
+      }
+    },
+    done: (e) => e.patternT >= 3 && !meteorsBusy(),
+  },
+  { // (final form) Void Cross: 4 long beams from him, then 4 more turned 45 degrees.
+    name: 'Void Cross!', wind: () => 0.9, act: () => 2.2, rec: () => 1.1,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.9, BT.VISUAL, 0, 0xc084fc); e.angle = Math.random() * 6.283; },
+    fire() { /* in tick */ },
+    tick(e) {
+      stand(e);
+      const fire = (off: number): void => { for (let k = 0; k < 4; k++) { const a = e.angle + off + (k * Math.PI) / 2; queueLaser(e.pos.x, e.pos.z, Math.sin(a), Math.cos(a), 40, 3.2, 0.95, 0.30); } };
+      if (e.patternT === 0) { e.patternT = 1; fire(0); }
+      if (e.patternT === 1 && e.stateT >= 0.85) { e.patternT = 2; fire(Math.PI / 4); }
+    },
+    done: (e) => e.patternT === 2 && e.stateT >= 2.1,
+  },
+);
+/** The final fight's HP pool = form 1 (1x the Void boss's HP) + form 2 (1.25x); the transformation starts when form 1's share is spent. */
+export const FINAL_SPLIT = 1.25 / 2.25;
+const HERALD_F1 = [V_PORTALS, V_LASERS, V_ECHOES, V_WELL, V_MIRRORS, V_RING, V_HOLES, V_HORIZON, V_GRAVITY, V_SOUL];
+const HERALD_F2 = [V_STORM, V_METEORS, V_LASERS, V_HORIZON, V_WELL, V_CROSS, V_MIRRORS, V_SOUL, V_HOLES, V_RING, V_STORM, V_GRAVITY];
+
+/** Starts the transformation at half health: an untouchable 3 s burst (wings tear open) that ends in a void nova and the final form. */
+function startTransform(e: Enemy): void {
+  const list = LISTS.BOSS_VOID!, a = list[e.pattern];
+  if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
+  enter(e, 'CHASE'); stand(e);
+  S.vformT = 3.0; S.vform = 1; e.attackCd = 1.0; bp.xformId = e.id;   // untouchable while the wings tear open
+  clearDecoys(); clearVoidFx();
+  circle(e.pos.x, e.pos.z, 12, 3.0, BT.VISUAL, 0, 0xc084fc);   // get clear of the nova
+  events.emit('shake', { amount: 0.7 });
+  events.emit('floatText', { pos: e.pos, text: 'THE VOID UNFOLDS...', color: 0xe9d5ff, scale: 1.4, dy: 5 });
+  notify('The Void Herald tears open his wings - get clear of the nova!', '#c084fc');
+  world.boss.ability = 'Final Form'; world.boss.abilityT = 3;
+  spawnRune(e.pos.x, e.pos.z, 6, 3.0);
+}
+
 function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_VOID!;
-  if (!S.voidOn) { // the arena ring starts closing in
-    S.voidOn = true;
-    const p = world.player.pos;
-    arena.shrink = true; arena.cx = (e.pos.x + p.x) * 0.5; arena.cz = (e.pos.z + p.z) * 0.5; arena.r = 60; arena.edgeT = 0; arena.rate = 0.9 + 0.35 * e.phase;
-    notify('The Void closes in - stay inside the ring!', '#c084fc');
+  tickVoidFx(dt);
+  mfx.major = e.state !== 'CHASE' && e.pattern >= V_HORIZON && S.vformT <= 0;   // his illusions hold their basic volleys during a major skill
+  if (S.vform === 0 && !bp.on && e.hp < e.maxHp * (world.boss.final ? FINAL_SPLIT : 0.5)) startTransform(e);
+  if (S.vformT > 0) {
+    S.vformT -= dt; stand(e);
+    if (Math.random() < dt * 6) events.emit('explosion', { pos: tv.set(e.pos.x + (Math.random() - 0.5) * 8, 1 + Math.random() * 5, e.pos.z + (Math.random() - 0.5) * 8).clone(), radius: 1.6, color: 0xa855f7 });
+    if (S.vformT <= 0) {
+      S.vform = 2; S.cycle = 0; bp.xformId = -1;
+      e.radius *= 1.15; e.scale *= 1.15; e.speed *= 1.2; e.projectileDamage *= 1.15; e.contactDamage *= 1.15; e.attackCd = 0.8;
+      world.boss.stage = 2;
+      spawnWave(e.pos.x, e.pos.z, 18, 26, 1.8, pwr(e) * 1.1, WAVE_VOID, 0xc084fc, e.radius);
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 22, color: 0xe9d5ff });
+      events.emit('shake', { amount: 1.0 });
+      events.emit('floatText', { pos: e.pos, text: 'FINAL FORM', color: 0xe9d5ff, scale: 1.6, dy: 5 });
+      notify('THE VOID HERALD - FINAL FORM!', '#e9d5ff');
+    }
+    return;
   }
-  clampToVoid(e.pos, 3);
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 10, 17, e.speed * (1 + 0.12 * e.phase), 0.45);
   if (e.attackCd > 0) return;
-  beginAtk(e, list, HERALD_ORDER[S.cycle++ % HERALD_ORDER.length], ux, uz, dist);
+  const order = S.vform === 2 ? HERALD_F2 : HERALD_F1;
+  beginAtk(e, list, order[S.cycle++ % order.length], ux, uz, dist);
 }
-

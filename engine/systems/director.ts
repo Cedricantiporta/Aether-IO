@@ -50,7 +50,7 @@ import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
 import { resetTricks } from './tricks';
 import { resetSpecials, setSlimeKing, initSpecial } from './bossSpecials';
-import { clearMalakarFx } from './malakarFx';
+import { clearVoidFx } from './voidFx';
 import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
 import type { Interactable } from './village';
@@ -128,6 +128,18 @@ let prebossKing = false;    // the Meadow's depth-10 Slime King      // the Lich
 let bossPending = false;
 let duelPending = false;          // DUEL room: the dark hero still has to rise
 let duelCls: HeroClass = 'KNIGHT';
+/** (owner 2026-10-26) several dark heroes at once: the classes of this room's squad (different classes where possible) + the next one to rise. */
+const duelQ: HeroClass[] = [];
+let duelQi = 0;
+/** Each dark hero's HP as a share of its biome guardian's HP when `n` of them fight at once: a solo duel hero 90% (80-100%), a squad 70% (2) down to 55% (6) each. */
+const SQUAD_HP = [0.9, 0.9, 0.7, 0.66, 0.62, 0.58, 0.55];
+/** How many dark heroes this duel room / champion floor holds: more with depth (adventure biome / tower floor), up to 6. The Gate of Shadows stays a solo duel. */
+function darkCount(): number {
+  if (plan.gate !== undefined || debugDuelCls) return 1;
+  if (runInfo.mode === 'TOWER') return Math.min(6, 1 + Math.floor(towerFloor / 15));   // floors 5 / 15 / 30 / 45 / 60 / 75: 1 / 2 / 3 / 4 / 5 / 6
+  const opts = [[1], [1, 2], [2], [2, 3], [3], [3, 4], [4, 5, 6]][Math.min(6, Math.max(0, biome))];
+  return opts[Math.floor(Math.random() * opts.length)];
+}
 let bossSpawned = false;
 let bossDeadT = -1;
 
@@ -159,8 +171,6 @@ export const bossKeyState = { has: false };
 const BOSS_KEY_DROPS = false;
 // final fight (after the Void boss) and endless tower state
 let finalFight = false, endingDone = false;
-/** Malakar is fought twice: stage 1 (slower, fewer adds); slain, he rises again as stage 2 (stronger, new attacks). */
-let finalStage = 1;
 /** A boss kind to spawn next in this room instead of the biome boss (currently unused - Ignar no longer has a second form); '' = the biome boss. */
 let nextBossKind: EnemyKind | '' = '';
 /** Elderroot guards Greenwood, Gorath the Marble Halls. */
@@ -168,11 +178,11 @@ function biomeBoss(b: number): EnemyKind { return biomeOf(b).boss; }
 /** The finale after stage 2 falls: 1 his last words, 2 his essence collapses and bursts, 3 a portal of light opens,
  *  4 the epilogue clearing (the Keeper of the Font), then the ending slides. Render: render/Finale.tsx. */
 export const finale = { step: 0, t: 0, x: 0, z: 0, blasts: 0 };
-const MALAKAR_LAST_WORDS = [
-  'Hah... so the village guard makes the Undying bleed. Again. You always do, eventually.',
-  'Did Aldric tell you? That he sent me into the Font to save her, then ordered me to give her back to the water when the light ran thin?',
-  'I would not. I held her light for ten years. I held it until it was the only thing left of me.',
-  'Take her home. Tell her the stars are still where I showed her. And tell her father... no. Tell him nothing.',
+const HERALD_LAST_WORDS = [
+  'So. The village guard unmakes the Void Herald. I was only ever the shape of something that could not stop grieving.',
+  'Did Aldric tell you? That he sent Malakar into the Font to save her, then ordered him to give her back to the water when the light ran thin?',
+  'He would not. He held her light for ten years, until it was the only thing left of him. I am what grew in the place where he used to be.',
+  'Take her home. Tell her the stars are still where he showed her. And tell her father... no. Tell him nothing.',
 ];
 let towerFloor = 0;
 export const towerState = { floor: 0 };
@@ -250,8 +260,8 @@ export function debugGate(g: number): void {
   gateState.on = true; enterRoom(biome, BOSS_INDEX, gatePlan(g, 0));
 }
 
-/** Debug / QA: straight into the Void throne room against Malakar (the final fight). */
-export function debugMalakar(): void {
+/** Debug / QA: straight into the Void throne room against the Void Herald (the final fight). */
+export function debugHerald(): void {
   world.room.fade = 1; finalFight = true; endingDone = false;
   enterRoom(FINAL_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' });
 }
@@ -295,7 +305,7 @@ function clearTransient(): void {
   world.boss.staggered = false;
   world.boss.stagger = 0;
   world.enemyGrid.clear();
-  resetTricks(); resetSpecials(); clearMalakarFx(); resetBossFx(); resetBosses2(); resetBossMech();
+  resetTricks(); resetSpecials(); clearVoidFx(); resetBossFx(); resetBosses2(); resetBossMech();
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
@@ -308,7 +318,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   // every biome after the first opens with a quiet camp: storage (the town warehouse) + a training post (skills)
   if (runInfo.mode === 'ADVENTURE' && idx === 0 && b > 0 && !finalFight && p.type !== 'BOSS' && !p.epilogue) p = { type: 'CAMP', reward: 'NONE' };
   biome = b; index = idx; plan = p;
-  if (finalFight && p.type === 'BOSS') { finalStage = 1; finale.step = 0; }
+  if (finalFight && p.type === 'BOSS') { finale.step = 0; }
   nextBossKind = '';
   if (!finalFight) world.boss.final = false;
   depth = runInfo.mode === 'TOWER' ? (daily.on ? dailyDepth(towerFloor) : waves.on ? waveDepth(towerFloor) : 2 + Math.round(towerFloor * 1.5)) : depthWave(b, idx) + (p.type === 'MINIBOSS' || p.type === 'ELITE' || p.type === 'DUEL' ? 1 : 0);
@@ -382,14 +392,14 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   }
   if (kind === 'MERCHANT') rollMerchantStock(depth);
   else clearMerchantStock();
-  r.enemiesLeft = unitN + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? 1 : 0);
+  r.enemiesLeft = unitN + fixedN + (miniPending ? 1 : 0) + (bossPending ? 1 : 0) + (duelPending ? Math.max(1, duelQ.length) : 0);
 
   st.setWave(depth);
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Undying Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
-  if (p.type === 'DUEL') st.addNotification(`A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`, '#c9a2ff', 'BOSS');
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Void Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
+  if (p.type === 'DUEL') st.addNotification(`${duelQ.length > 1 ? `${duelQ.length} dark champions step into the ring at once!` : `A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`}`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
   maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
@@ -592,6 +602,11 @@ function rollRoomSpawns(type: RoomType): void {
     case 'DUEL': {   // a dark hero alone: the Gate of Shadows is always your own class, other duels half the time
       const own = useGameStore.getState().hero as HeroClass;
       duelCls = debugDuelCls || (plan.gate !== undefined || Math.random() < 0.5 ? own : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)]);
+      const n = darkCount();
+      duelQ.length = 0; duelQi = 0; duelQ.push(duelCls);
+      const rest = DARK_CLASSES.filter((c) => c !== duelCls);
+      for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = rest[i]; rest[i] = rest[j]; rest[j] = t; }
+      for (let i = 1; i < n; i++) duelQ.push(i - 1 < rest.length ? rest[i - 1] : DARK_CLASSES[Math.floor(Math.random() * DARK_CLASSES.length)]);   // a different class each where possible
       debugDuelCls = '';
       duelPending = true;
       break;
@@ -738,7 +753,11 @@ function activeMarkers(): number {
 function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag: number): void {
   tmp.set(x, 0, z);
   if (tag === 2) { spawnBossAt(kind, x, z); return; }
-  if (tag === 3) { const e = spawnDarkHero(duelCls, x, z); if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP); e.hp = e.maxHp; } return; }   // dark hero duels are champions too
+  if (tag === 3) {   // dark hero duels are champions too; with several at once each has 55-70% of the biome guardian's hp
+    const cls = duelQ.length ? duelQ[duelQi++ % duelQ.length] : duelCls;
+    spawnDarkHero(cls, x, z, SQUAD_HP[Math.min(6, Math.max(1, duelQ.length))], biomeOf(biome).boss);   // (boss-like HP + armour: darkHero.ts / enemies.bossHpLike)
+    return;
+  }
   if (tag === 5) {   // humanoid mini boss: champion hp factor like a guardian (-25% more in the depth-10 pre-boss)
     const e = spawnHumanBoss(miniHuman || 'VARN', x, z);
     if (e && !waves.on) { e.maxHp = Math.round(e.maxHp * CHAMPION_HP * (prebossRoom ? 0.75 : 1)); e.hp = e.maxHp; world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; }
@@ -771,19 +790,15 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const d = dd();
   const e = spawnEnemy(kind, tmp.set(x, 0, z));
   if (!e) return;
-  const names = finalFight ? { name: 'Malakar the Undying', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
+  const names = finalFight ? { name: 'The Void Herald', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp; e.radius *= 1.25; e.scale *= 1.35; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the true villain (was x3.2 before spawnEnemy's boss HP doubled, 2026-10-26: same total)
+  if (finalFight) { e.maxHp = Math.round(e.maxHp * 2.25); e.hp = e.maxHp; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bosses2.ts FINAL_SPLIT; one bar, 2.25x)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title;
   hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
-  hud.final = finalFight && kind === 'BOSS_LICH'; hud.stage = hud.final ? finalStage : 1; hud.shieldCd = 14;   // Malakar: two fights, periodic shield (bosses.ts)
-  if (hud.final && finalStage === 2) {   // risen again: bigger, tougher, angrier
-    e.maxHp = Math.round(e.maxHp * 1.25); e.hp = e.maxHp; e.scale *= 1.15; e.radius *= 1.1; e.projectileDamage *= 1.2; e.contactDamage *= 1.2;
-    hud.hp = e.hp; hud.maxHp = e.maxHp; hud.title = 'Unbound';
-  }
+  hud.final = finalFight && kind === 'BOSS_VOID'; hud.stage = 1; hud.shieldCd = 14;   // the Void Herald's finale: two forms in ONE fight (bosses2.ts)
   events.emit('bossSpawn', { name: names.name, title: names.title });
   events.emit('shake', { amount: 0.5 });
   useGameStore.getState().addNotification(`${names.name}, the ${names.title}, approaches!`, '#ef4444', 'BOSS');
@@ -806,7 +821,7 @@ function tickSpawns(dt: number): void {
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
-    const kind = finalFight ? 'BOSS_LICH' : nextBossKind || debug.bossOverride || biomeBoss(biome);
+    const kind = finalFight ? 'BOSS_VOID' : nextBossKind || debug.bossOverride || biomeBoss(biome);
     if (isRootedBoss(kind)) { rootedHome(kind, R.radius, 0, rootTmp); placeMarker(kind, rootTmp.x, rootTmp.z, false, 1.8, 2); }   // (giant rooted boss: its marker sits on its root spot)
     else if (kind === 'BOSS_WARMACH' && shape.kind === 'SQUARE') placeMarker(kind, shape.fx * R.radius * 0.18, shape.fz * R.radius * 0.18, false, 1.8, 2);   // the 5x Colossus rises ahead of the hero's arrival side (never on top of the hero)
     else placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
@@ -819,7 +834,8 @@ function tickSpawns(dt: number): void {
   if (duelPending && roomT >= 1.0) {   // the dark hero rises in the middle of the ring
     duelPending = false;
     const [mx, mz] = stationPos(R.radius);
-    placeMarker('DARK_HERO', mx, mz - 2, false, 1.6, 3);
+    const nd = Math.max(1, duelQ.length), ring = nd === 1 ? 0 : Math.min(10, 3 + nd * 1.2), a0 = Math.random() * 6.283;
+    for (let i = 0; i < nd; i++) placeMarker('DARK_HERO', mx + Math.sin(a0 + (i / nd) * 6.283) * ring, mz - 2 + Math.cos(a0 + (i / nd) * 6.283) * ring, false, 1.6 + i * 0.12, 3);
   }
   if (miniPending && roomT >= 1.0) {
     {   // spawns in the open arena kept clear by roomgen (stationPos of a MINIBOSS room, radius 12)
@@ -873,7 +889,9 @@ const at = (x: number, z: number): Vector3 => tmp2.set(x, 0, z);
 
 function grantReward(kind: RewardKind, bonus: number): void {
   const st = useGameStore.getState();
-  if (runInfo.mode !== 'TOWER') { kind = capCard(kind, world.room.biome); if (kind === 'CARD') useCard(world.room.biome); }   // (owner) a limited number of upgrade cards per biome
+  if (runInfo.mode !== 'TOWER') { kind = capCard(kind, world.room.biome); if (kind === 'CARD') useCard(world.room.biome); }
+  else if (waves.on) { if (kind === 'GEMS' || kind === 'ITEM' || kind === 'SHARDS') kind = 'GOLD'; }   // (owner 2026-10-26) Endless Waves: gold only
+  else if (kind === 'GOLD' || kind === 'GEMS' || kind === 'ITEM') kind = 'SHARDS';                     // Tower / Daily: Aether Crystals only (SHARDS = the crystal pile)   // (owner) a limited number of upgrade cards per biome
   if (runCards.guardian > 0 && (plan.type === 'MINIBOSS' || plan.type === 'DUEL' || plan.gate !== undefined)) {   // Guardian's Spoils: these stages also give a card selection
     if (kind === 'CARD') runCards.extraPicks++; else st.openWaveReward(false);
   }
@@ -1021,7 +1039,7 @@ function showPortals(): void {
   if (shortcutOn) { const sp = r.portals[3]; sp.active = true; sp.t = 0; }
 }
 
-/** Malakar's finale (after his last words): his essence collapses and bursts, then a portal of light opens. */
+/** The Void Herald's finale (after his last words): his essence collapses and bursts, then a portal of light opens. */
 function tickFinale(dt: number): void {
   finale.t += dt;
   if (finale.step === 1 && !dialogueOpen() && finale.t > 1) { finale.step = 2; finale.t = 0; }   // (closed without the button)
@@ -1041,7 +1059,7 @@ function tickFinale(dt: number): void {
       for (const q2 of r.portals) q2.active = false;
       po.active = true; po.big = true; po.t = 0; po.x = finale.x; po.z = finale.z; po.plan = { type: 'CAMP', reward: 'NONE', epilogue: true };
       events.emit('portalsOpen', {});
-      useGameStore.getState().addNotification('Where Malakar stood, a door of pure light opens.', '#fff3c4', 'SYSTEM');
+      useGameStore.getState().addNotification('Where the Herald stood, a door of pure light opens.', '#fff3c4', 'SYSTEM');
     }
   }
 }
@@ -1143,7 +1161,7 @@ function towerCleared(): void {
   world.run.towerFloor = towerFloor;
   const best = st.recordTowerFloor(towerFloor);
   events.emit('towerFloor', { floor: towerFloor, best });
-  if (towerFloor % 5 === 0) for (let i = 0; i < 3; i++) spawnPickup('GEM', at(0, 0), 2 + Math.floor(towerFloor / 5));   // milestone gems
+  if (towerFloor % 5 === 0) dropCrystals(3 + Math.floor(towerFloor / 5), { x: 0, z: 0 });   // milestone crystals (the tower pays Aether Crystals only)
   if (towerFloor % 10 === 0 && best) st.addNotification(`Floor ${towerFloor} milestone reached! Claim its reward at the Endless Tower.`, '#ffd24a', 'BOSS');
 }
 
@@ -1188,35 +1206,20 @@ function onBossCleared(): void {
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
     bossRewards(); onCleared(); return;
   }
-  if (plan.gate !== undefined) {   // the Gate of the Herald: rewards, then the way back to the Gatekeeper
-    for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
-    events.emit('biomeClear', { biome });
-    useGameStore.getState().addNotification('The Void Herald falls!', '#fbbf24', 'BOSS');
-    bossRewards(); onCleared(); return;
-  }
   if (finalFight) {
     const body = d.bossId >= 0 ? world.enemies[d.bossId] : null;
     const bx = body ? body.pos.x : 0, bz = body ? body.pos.z : 0;
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
-    if (finalStage === 1) {   // he rises again: the second fight
-      finalStage = 2;
-      bossSpawned = false; bossDeadT = -1; bossPending = true; roomT = -2.6;   // (the new marker appears ~4 s later)
-      useGameStore.getState().addNotification('"You think death binds me? I AM the Void!" Malakar rises again!', '#c084fc', 'BOSS');
-      events.emit('floatText', { pos: at(bx, bz).clone(), text: 'MALAKAR RISES AGAIN', color: 0xc084fc, scale: 1.4, dy: 3 });
-      events.emit('shockwave', { pos: at(bx, bz).clone(), radius: 18, color: 0x7c3aed });
-      events.emit('shake', { amount: 0.8 });
-      return;
-    }
-    // Malakar falls for good: his last words, then the finale (tickFinale). Very rarely he leaves his Soul Ember (Mythic weapons)
+    // The Void Herald falls for good: his last words, then the finale (tickFinale) -> epilogue clearing -> ending slides + store.completeEnding. Very rarely he leaves his Soul Ember (Mythic weapons)
     if (Math.random() < SOUL_EMBER_CHANCE) {
       spawnPickup('ITEM', at(bx, bz).clone(), 0, lootItem(LOOT_BY_ID[SOUL_EMBER]));
-      useGameStore.getState().addNotification("Malakar's Soul Ember! (Mythic weapon material)", '#c084fc', 'ITEM');
+      useGameStore.getState().addNotification("The Herald's Soul Ember! (Mythic weapon material)", '#c084fc', 'ITEM');
     }
     d.phase = 'BIOME_DONE'; d.phaseT = 0; endingDone = true;
     vacuumT = VACUUM_AFTER; vacuumTick = 0;
     world.run.bossKills = Math.max(world.run.bossKills, 1);
     finale.step = 1; finale.t = 0; finale.x = bx; finale.z = bz; finale.blasts = 0;
-    openCustomDialogue('Malakar the Undying', 'his last words', '#c084fc', MALAKAR_LAST_WORDS, { label: 'Let him fade', accept: () => { if (finale.step === 1) { finale.step = 2; finale.t = 0; } } });
+    openCustomDialogue('The Void Herald', 'his last words', '#c084fc', HERALD_LAST_WORDS, { label: 'Let him fade', accept: () => { if (finale.step === 1) { finale.step = 2; finale.t = 0; } } });
     return;
   }
   d.phase = 'BIOME_DONE'; d.phaseT = 0;
@@ -1398,7 +1401,7 @@ function interactHub(node: number): void {
     if (gateState.done[g]) { st.addNotification(`${GATES[g].name} is already cleared.`, '#9aa0b4', 'SYSTEM'); return; }
     beginLeave(gatePlan(g, 0), biome, BOSS_INDEX);
   } else if (node === 55) {
-    if (gateState.keys >= GATE_KEYS_NEEDED) { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); }   // the Undying Throne
+    if (gateState.keys >= GATE_KEYS_NEEDED) { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); }   // the Void Throne
     else {
       st.addNotification(`The castle door is sealed: ${GATE_KEYS_NEEDED - gateState.keys} more Gate Key${GATE_KEYS_NEEDED - gateState.keys > 1 ? 's' : ''} needed.`, '#c9a2ff', 'SYSTEM');
       events.emit('floatText', { pos: world.player.pos, text: `SEALED ${gateState.keys}/${GATE_KEYS_NEEDED}`, color: 0xc9a2ff, scale: 1, dy: 2.4 });

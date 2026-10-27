@@ -246,6 +246,7 @@ export const SHORTCUT_COLOR = '#ff7a2e';
 export const shortcutPlan = (): RoomPlan => ({ type: 'BOSS', reward: 'NONE', shortcut: true });
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
+  if (runInfo.mode === 'TOWER') return { title: 'Next floor', sub: '', icon: '', color: '#9fd0ff' };   // (owner 2026-10-26) the tower's way up is a plain portal: no reward icon / label
   if (plan.gate !== undefined) {   // the next room of a Gatekeeper trial
     const g = GATES[plan.gate];
     return { title: g.name, sub: `Trial room ${(plan.step ?? 0) + 1}/${g.steps.length}`, icon: plan.type === 'BOSS' ? 'boss' : 'shrine', color: g.color };

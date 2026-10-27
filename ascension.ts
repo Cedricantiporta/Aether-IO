@@ -1,4 +1,4 @@
-// Ascension: after the ending (Malakar defeated) the hero can climb Ascension levels 1..10. Every level stacks one more
+// Ascension: after the ending (Void Herald defeated) the hero can climb Ascension levels 1..10. Every level stacks one more
 // hardship on top of the chosen difficulty and pays more (gold / loot luck / rank xp). Unlocked one level per clear, and the FIRST
 // clear of every level pays a big one-time reward (ASC_REWARDS below: gems, Aether Crystals, Legendary / Mythic gear, pets).
 
@@ -37,7 +37,7 @@ export function ascensionMods(lv: number, out: AscMods): AscMods {
 }
 
 // ------------------------------------------------------------------ first-clear rewards --
-/** One-time reward for the FIRST clear (Malakar defeated) at Ascension level `lv` (0 = the plain adventure). Gear is rolled for the hero
+/** One-time reward for the FIRST clear (Void Herald defeated) at Ascension level `lv` (0 = the plain adventure). Gear is rolled for the hero
  *  who finished the run; the pets are Legendary / Mythic companions. Paid by store.completeEnding. */
 export interface AscReward { gems: number; crystals: number; gear: Rarity[]; pets: Rarity[] }
 export const ASC_REWARDS: AscReward[] = [

@@ -219,7 +219,7 @@ export function Projectiles() {
       DARK_CRESCENT: mk([[darkCrescG, glow]], 40),
       DARK_ORB: mk([[orbG(0.34, '#12051e', '#5a1a9a'), glow]], MAXE),   // (owner 2026-10-26) corrupted Void monsters' shots: black cores, violet rims
       DARK_ARROW: mk([[darkArrow.body, lit], [darkArrow.glow, glow]], MAXE),
-      MAL_ORB: mk([[new GB([1, 1]).ico(0.34, [0, 0, 0], '#2c0b5e', 1, 1).ico(0.2, [0, 0, 0], '#f6eaff', 1, 0).build(), glow]], MAXE),   // (owner 2026-10-26) Malakar's shots: a bright lilac-white core in a dark violet shell
+      MAL_ORB: mk([[new GB([1, 1]).ico(0.34, [0, 0, 0], '#2c0b5e', 1, 1).ico(0.2, [0, 0, 0], '#f6eaff', 1, 0).build(), glow]], MAXE),   // (owner 2026-10-26) the Herald's shots: a bright lilac-white core in a dark violet shell
       BALLISTA: mk([[paGeo, glow]], 60),   // (owner) the siege bolt: a smaller Lightpiercer-style white arrow of light
     } as Record<string, InstancedMesh[]>;
     for (const k in S) if (k !== 'FIREBALL' && k !== 'STORM') S[k].forEach((m) => { if (m.material === lit) m.castShadow = false; });
@@ -457,7 +457,7 @@ export function Projectiles() {
       const x = p.pos.x, y = p.pos.y, z = p.pos.z, vx = p.vel.x, vy = p.vel.y, vz = p.vel.z;
       const hs = Math.hypot(vx, vz);
       const emit = dt > 0;
-      if (mal) {   // Malakar's shot: lilac-white core, dark violet shell, a violet halo and a dark smoke + lilac spark trail
+      if (mal) {   // the Herald's shot: lilac-white core, dark violet shell, a violet halo and a dark smoke + lilac spark trail
         const pu = (1 + 0.15 * Math.sin(t * 14 + n)) * Math.max(1, p.radius / 0.4) * 1.1;
         place(ims, i, x, y, z, t * 3, t * 2, 0, pu);
         pushHalo(x, y, z, 2.6 * Math.max(1, p.radius / 0.6), 1.0, 0.35, 2.2, 0.55, CELL.GLOW);

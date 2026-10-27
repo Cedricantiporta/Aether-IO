@@ -63,10 +63,7 @@ export const DailyCard: React.FC = () => {
         <div className="dcr-head"><span>{claimed ? "Today's reward: claimed" : "Today's reward"}</span>
           <em><Flame size={13} /> {nextStreak > 1 && !claimed ? `Day ${nextStreak} streak bonus +${Math.min(6, nextStreak - 1) * 10}%` : '+10% per streak day'}</em></div>
         <div className="dcr-row">
-          <div className="dcr-tile gold"><PaintImg file="gold" size="2.6rem" /><b>{rw.gold.toLocaleString()}</b><small>Gold</small></div>
-          <div className="dcr-tile gem"><PaintImg file="gem" size="2.6rem" /><b>{rw.gems}</b><small>Gems</small></div>
           <div className="dcr-tile cry"><PaintImg file="aether_crystal" size="2.6rem" /><b>{rw.crystals}</b><small>Aether Crystals</small></div>
-          {rw.bonusShards > 0 && <div className="dcr-tile epic"><PaintImg file="shard_EPIC" size="2.6rem" /><b>+{rw.bonusShards}</b><small>Epic shard</small></div>}
         </div>
         {claimed && <div className="dcr-done">Claimed today · play again for a better score</div>}
       </div>

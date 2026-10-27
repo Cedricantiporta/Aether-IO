@@ -35,7 +35,7 @@ let propCursor = 0;
 export interface Portal { active: boolean; x: number; z: number; t: number; open: number; life: number; shots: number; shotT: number; dmg: number; }
 export const portals: Portal[] = Array.from({ length: 8 }, () => ({ active: false, x: 0, z: 0, t: 0, open: 0.9, life: 4, shots: 0, shotT: 0, dmg: 0 }));
 
-/** Void echoes: kind 0 Gorath slam, 1 Malakar volley, 2 Elderroot ring, 3 Glacius ice line, 4 Ignar pillars. */
+/** Void echoes: kind 0 Gorath slam, 1 dark volley, 2 Elderroot ring, 3 Glacius ice line, 4 Ignar pillars. */
 export interface Echo { active: boolean; x: number; z: number; kind: number; t: number; fireAt: number; life: number; fired: boolean; dmg: number; }
 export const echoes: Echo[] = Array.from({ length: 4 }, () => ({ active: false, x: 0, z: 0, kind: 0, t: 0, fireAt: 1.2, life: 2.2, fired: false, dmg: 0 }));
 

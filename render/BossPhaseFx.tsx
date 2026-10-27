@@ -1,7 +1,7 @@
 // Visuals of the boss invulnerable phases (engine/systems/bossPhases.ts state `bp`, human versions from humanBosses.ts `humanView`):
 //   one big floor plane (shader) = Glacius' red Avalanche floor with glowing safe circles, and the wind / wave streaks with clear
 //   "lee" lanes behind rocks / pillars (Hydra Tidal Wave, Dune Colossus Sandstorm); instanced rocks / pillars / wrecks, spore pods,
-//   lava tiles, void-hand rings, Gorath's boulder, the solid-vs-flickering shadows of Malakar's illusions, Varn's giant shield and
+//   lava tiles, void-hand rings, Gorath's boulder, the solid-vs-flickering shadows of the Herald's illusions, Varn's giant shield and
 //   Sable's footprints. Everything is pooled / instanced and skipped when idle.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -232,20 +232,6 @@ export function BossPhaseFx() {
       } else if (bp.crackT > 0) pushHalo(e0.pos.x, e0.radius * 1.5, e0.pos.z, e0.radius * 3, 1.6, 1.2, 0.5, 0.45 + 0.2 * Math.sin(t * 12), CELL.GLOW);   // cracked: sparks
     }
     commitInst(S.ball, nball); commitInst(S.ballTop, nball);
-
-    // ---- Malakar: the real one's shadow is SOLID, the illusions' flicker
-    let nreal = 0, nfake = 0;
-    if (bp.on && kind === 'REAL') {
-      for (let i = 0; i < world.enemies.length; i++) {
-        const x = world.enemies[i]; if (!x.active || x.state === 'DYING') continue;
-        if (i === bp.id) { setInst(S.realDisc, nreal++, x.pos.x, 0.07, x.pos.z, 0, x.radius * 1.5, 1, x.radius * 1.5); }
-        else if (x.decoy && x.trickKind === 1 && nfake < 4) {
-          const fl = ((t * 9 + i * 1.7) % 1) < 0.55 ? 1 : 0.12;   // flickers
-          setInst(S.fakeDisc, nfake++, x.pos.x, 0.07, x.pos.z, 0, x.radius * 1.5 * fl, 1, x.radius * 1.5 * fl);
-        }
-      }
-    }
-    commitInst(S.realDisc, nreal); commitInst(S.fakeDisc, nfake);
 
     // ---- humans: Varn's giant shield, Sable's footprints
     const sh = S.shield;

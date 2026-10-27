@@ -1,4 +1,4 @@
-// The ending: shown a moment after Malakar falls in the Undying Throne. Story slides advance on their own (one per screen), then the
+// The ending: shown a moment after the Void Herald falls in the Void Throne. Story slides advance on their own (one per screen), then the
 // credits and the Ascension unlock; Continue banks the run (victory summary) and returns to town afterwards.
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ import { GameStatus } from '../../types';
 import { storyIdx } from '../../story';
 
 const STORY_BASE = [
-  'Malakar, the Undying, falls.',
+  'The Void Herald falls, and the grief that made him goes quiet.',
   'The jar of light breaks, and a girl steps out of it, and speaks to you as if she has done this many times before.',
   'In the Meadow, the first flowers open. In the Old Grove, Elderroot stirs in his sleep; in the Halls, Gorath is only a hill again.',
   'The village bells ring through the night. Hodge finally asks Lysa. She says "buy something first".',
@@ -50,7 +50,7 @@ export const EndingScreen: React.FC = () => {
       <div className="absolute inset-0 pe flex items-center justify-center" style={{ zIndex: 220, background: 'rgba(5,3,2,.6)' }} data-testid="tower-unlocked">
         <motion.div className="tower-note" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
           <div className="ending-title" style={{ fontSize: 'clamp(1.6rem, 3.6vw, 2.4rem)' }}>The Endless Tower is open</div>
-          <p>With Malakar gone, the old tower outside the village gate has woken. Climb it floor by floor, as high as you dare.</p>
+          <p>With the Void Herald gone, the old tower outside the village gate has woken. Climb it floor by floor, as high as you dare.</p>
           <p data-testid="hard-unlocked"><b>Hard mode unlocked.</b> Turn it on in Settings: tougher monsters, but +50% gold and XP and better item and card odds.</p>
           <button className="rpg-btn rpg-btn-primary ending-go" onClick={() => setTowerNote(false)} data-testid="tower-unlocked-ok">Onward</button>
         </motion.div>

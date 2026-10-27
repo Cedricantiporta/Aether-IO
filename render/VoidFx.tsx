@@ -1,10 +1,10 @@
-// Malakar's violet effects (engine/systems/malakarFx.ts `mfx`): laser beams (lilac-white core in a dark violet shell), teleport rune circles,
+// The Void Herald's violet effects (engine/systems/voidFx.ts `mfx`): laser beams (lilac-white core in a dark violet shell), teleport rune circles,
 // the gravity spell's indicator, falling meteors, Event Horizon light pockets, Soul Mirror line + soul + spike circles, telegraphed bombs. Pooled instanced meshes written from `mfx` each frame; everything is skipped when idle.
 import React, { useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BoxGeometry, Color, DoubleSide, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, type BufferGeometry } from 'three';
 import { world } from '../engine/world';
-import { mfx, GRAV_CORE, GRAV_IND, METEOR_FALL, METEOR_FOLLOW, LASER_FIRE, EH_IND, EH_DUR, EH_POCKET_R, MIR_LINE } from '../engine/systems/malakarFx';
+import { mfx, GRAV_CORE, GRAV_IND, METEOR_FALL, METEOR_FOLLOW, LASER_FIRE, EH_IND, EH_DUR, EH_POCKET_R, MIR_LINE } from '../engine/systems/voidFx';
 import { inView } from './view';
 import { CELL, pushHalo } from './fx';
 import { clamp, commitInst, setInst } from './util';
@@ -16,7 +16,7 @@ const mk = (g: BufferGeometry, color: Color | string, opacity: number, cap: numb
 const ring = (a: number, b: number, seg: number): BufferGeometry => new RingGeometry(a, b, seg).rotateX(-Math.PI / 2);
 const BEAM_Y = 1.5;
 
-export function MalakarFx() {
+export function VoidFx() {
   const S = useMemo(() => ({
     bOut: mk(new BoxGeometry(1, 1, 1), new Color(0.3, 0.08, 0.55), 0.85, 12),     // dark violet shell
     bMid: mk(new BoxGeometry(1, 1, 1), new Color(1.5, 0.7, 2.4), 0.9, 12),         // lilac glow

@@ -37,12 +37,12 @@ export const hz = {
   clouds: Array.from({ length: 8 }, () => ({ on: false, x: 0, z: 0, t: 0, tick: 0, seed: 0 })),
   nIce: 0, ice: Array.from({ length: 6 }, () => ({ x: 0, z: 0, r: 0 })),
   ic: Array.from({ length: 10 }, () => ({ on: false, x: 0, z: 0, t: 0, hit: false, seed: 0 })),
-  /** black holes: permanent ones (Void rooms, life = Infinity) and timed ones (Malakar's meteors / spell); k = 0..1 fade in / out */
+  /** black holes: permanent ones (Void rooms, life = Infinity) and timed ones (the Herald's meteors / spell); k = 0..1 fade in / out */
   nRift: 0, rift: Array.from({ length: 9 }, () => ({ x: 0, z: 0, life: Infinity, age: 0, k: 1, s: 1, vis: false, follow: 0 })),   // s = visual scale, vis = picture only (no pull / damage: Malakar's gravity spell), follow = chase speed
 };
 export const ICICLE_WARN_T = ICICLE_WARN, ICICLE_STAY_T = ICICLE_STAY, CLOUD_LIFE = CLOUD_T;
 export const BH_FORM = 0.9, BH_FADE = 0.6, BH_MAX_TIMED = 4;   // a timed black hole forms for 0.9 s (no pull yet), fades over its last 0.6 s; at most 4 alive
-/** A timed black hole (Malakar): the oldest timed one is recycled when 4 are already alive. Works in any room (the tick below runs whenever nRift > 0). */
+/** A timed black hole (the Herald): the oldest timed one is recycled when 4 are already alive. Works in any room (the tick below runs whenever nRift > 0). */
 export function spawnBlackHole(x: number, z: number, life: number, follow = 0): void {
   let timed = 0, oldest = -1;
   for (let i = 0; i < hz.nRift; i++) { const q = hz.rift[i]; if (q.life !== Infinity && !q.vis) { timed++; if (oldest < 0 || q.age > hz.rift[oldest].age) oldest = i; } }
@@ -54,7 +54,7 @@ export function spawnBlackHole(x: number, z: number, life: number, follow = 0): 
   r.x = x; r.z = z; r.life = life; r.age = 0; r.k = 0; r.s = 1; r.vis = false; r.follow = follow;
   hz.ver++;
 }
-/** A picture-only black hole `scale` times the normal size (Malakar's gravity spell: the pull / damage are applied by malakarFx). */
+/** A picture-only black hole `scale` times the normal size (the Herald's gravity spell: the pull / damage are applied by voidFx). */
 export function spawnGravityVisual(x: number, z: number, life: number, scale: number): void {
   if (hz.nRift >= hz.rift.length) return;
   const r = hz.rift[hz.nRift++];

@@ -3,6 +3,7 @@ import { PlayerPlate, Currency, MenuButtons, SubMenuButtons } from './TopBars';
 import { TownClock } from './TownClock';
 import { CornerButtons } from './CornerButtons';
 import { RoomPlaque, RoomFade } from './WaveInfo';
+import { SquadBars } from './SquadBars';
 import { BossBar } from './BossBar';
 import { RoomEventHud } from './RoomEventHud';
 import { BossPhaseHud } from './BossPhaseHud';
@@ -61,7 +62,7 @@ export const HUD: React.FC = () => {
     {!device.touch && <CornerButtons />}
 
     {/* boss bar floats above the boss (positioned every frame) */}
-    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /><BossBar illusion={0} /><BossBar illusion={1} /></div>
+    <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 3 }}><BossBar /><BossBar illusion={0} /><BossBar illusion={1} /><BossBar illusion={2} /><BossBar illusion={3} /><SquadBars /></div>
     <RoomEventHud />
     <BossPhaseHud />
     <StageTimer />

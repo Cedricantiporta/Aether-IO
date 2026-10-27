@@ -36,6 +36,7 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
 import { dailyMods } from '../../dailyChallenge';
 import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
 import { spawnPickup, dropCrystals } from './pickups';
+import { waves } from '../../endlessWaves';
 import { onEnemyDeath, crabArmor, shieldBlock, bossAlive, SHIELD_BACKSTAB_MULT, WINDED_DMG_MULT } from './enemies';
 import { popDecoy } from './bossSpecials';
 import { bossWarded } from './bossMech';
@@ -391,7 +392,6 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
-  if (e.decoy && e.trickKind === 1 && bp.on && bp.kind === 'REAL') { if (!o.dot) hooks.phaseHit(e); return; }   // Find the Real One: a fake pops
   if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
   let blockBackstab = false;
   if (!o.dot && e.kind === 'SHIELDBEARER') {   // braced shield: frontal hits deal 0 (BLOCKED); from behind / the side they bypass it for +50%
@@ -439,7 +439,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.boss) dealt *= hooks.damageMul(e) * hooks.phaseMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
-  else if (e.decoy && e.trickKind === 1) dealt *= 3;   // Malakar's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
+  else if (e.decoy && e.trickKind === 1) dealt *= 3;   // the Herald's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
                                                        // kept hitting them and half the bot fights never finished)
   if (e.shield > 0) {
     const sw = !e.boss && runCards.sunder > 0 ? 1 / (1 - runCards.sunder) : 1;   // Shieldbreaker: non-boss shields are weaker
@@ -528,7 +528,8 @@ export function killEnemy(e: Enemy): void {
   {
     let coins = 0, value = 10;
     const gd = GOLD_DROPPERS[e.kind];
-    if (e.kind === 'BOSS_LICH') { coins = 8; value = 12; }
+    if (waves.on) { coins = e.boss ? 8 : e.mini ? 4 : e.elite ? 2 : Math.random() < 0.3 ? 1 : 0; value = Math.round(8 + wave * 1.5); }   // Endless Waves pays gold only
+    else if (towerMode()) coins = 0;   // (tower / daily: Aether Crystals only, spawnPickup would drop the coins anyway)
     else if (gd) { value = gd[1]; coins = e.elite ? 2 : Math.random() < gd[0] ? 1 : 0; }
     for (let i = 0; i < coins; i++) {
       dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));

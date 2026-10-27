@@ -54,7 +54,7 @@ export const BEATS: readonly Beat[] = [
   { id: 'b_finale', story: 'lich', who: 'King Aldric', title: 'The King Waits',
     lines: ['A royal messenger bows so low outside your door that you can hear his back crack.', '"His Majesty asks for you. He says he has carried something alone for too long, and he would like to put it down."'] },
   { id: 'b_tower', story: 'tower', who: 'King Aldric', title: 'A Tower in the South',
-    lines: ['The page is back. The scroll is smaller this time, which is encouraging.', '"His Majesty says: Malakar has fallen, the Font shines, and there is a tower in the southern forest that nobody has ever finished. Go and be the first."'] },
+    lines: ['The page is back. The scroll is smaller this time, which is encouraging.', '"His Majesty says: the Void Herald has fallen, the Font shines, and there is a tower in the southern forest that nobody has ever finished. Go and be the first."'] },
   { id: 'b_rocks', side: ['erin_boulder', 'erin_frost'], who: 'Erin', title: 'A Pebble on the Pillow',
     lines: ['There is a smooth grey pebble on your pillow, with a tiny note tied to it.', '"There is a rockfall by the Crystal Cave that I cannot get past. I think someone behind it is calling. - Erin"'] },
   { id: 'b_heir', story: 'queen', who: 'Wren', title: 'Blank Pages',

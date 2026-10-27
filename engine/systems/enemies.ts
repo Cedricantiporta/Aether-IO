@@ -33,7 +33,7 @@ import {
   waveHpMult, waveDmgMult, waveSpeedMult, isAquatic,
   optionalForClear,
 } from '../enemyDefs';
-import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, combatStats, staggerView } from './combat';
+import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, freezePlayer, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion, minionDebuff, minionTraitHit } from './minions';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { hooks } from './hooks';
@@ -438,14 +438,14 @@ export function spawnEnemy(
   return e;
 }
 
-/** Malakar's dark wizard: a corrupted Cultist (dark purple-black tint, black-violet bolts, 2x damage, 1.3x size, sturdier). */
-export function spawnDarkWizard(pos: Vector3): Enemy | null {
-  const e = spawnEnemy('CULTIST', pos, { fixed: true });
-  if (!e) return null;
-  e.corrupt = true; e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3;
-  e.maxHp = Math.round(e.maxHp * 1.6); e.hp = e.maxHp;
-  return e;
+/** (owner 2026-10-26) The HP `bossKind` would have in the room the freshly spawned ordinary enemy `e` stands in (same depth / level / tower / biome scaling):
+ *  the dark heroes are sized against their biome's guardian with this. Call it right after spawnEnemy, before touching e.maxHp. */
+export function bossHpLike(e: Enemy, bossKind: EnemyKind): number {
+  const mods = runMods(useGameStore.getState().difficulty);
+  return Math.round(e.maxHp * (ENEMY_DEFS[bossKind].hp * 0.25 * 3.6 * mods.bossHp * WIND.bossHp) / (ENEMY_DEFS[e.kind].hp * 1.4));
 }
+/** Armour a boss of `bossKind` has at this wave (a dark hero's defence = the guardian's, not an elite's). */
+export function bossArmorLike(bossKind: EnemyKind, wave: number): number { return Math.round(armorFor(bossKind, wave, false) * BOSS_ARMOR_MUL); }
 
 /** Wave 5/15/25... mini-boss: elite-like unique (8x hp, +50% size) of a regional kind; drives world.boss HUD. */
 /** The enemy whose hp the boss bar shows (bosses win over minis). */
@@ -2116,6 +2116,7 @@ export function updateEnemyProjectiles(dt: number): void {
         if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
         if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
         else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
+        else if (p.debuff === 4) { if (Math.random() < 0.45) freezePlayer(0.8); }   // the dark ranger's Freezing Arrow
         if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);
         events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
       }

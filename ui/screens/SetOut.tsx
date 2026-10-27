@@ -49,7 +49,7 @@ export const SetOutWindow: React.FC = () => {
   const featLocked = (isDaily && dailyLocked) || (isWaves && wavesLocked);
   const asc = Math.min(progress.ascension, progress.ascensionMax);
   const best = progress.towerBest[hero] ?? 0;
-  const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Malakar defeated)
+  const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Void Herald defeated)
   const runLocked = tab === 'RUN' && mode === 'TOWER' && towerLocked;
   const claimed = progress.towerClaimed?.[hero] ?? [];
   // milestones: every reached, unclaimed 10th floor (claimable) + the next three ahead (locked)
@@ -88,7 +88,7 @@ export const SetOutWindow: React.FC = () => {
           <Castle size={26} />
           <b>Endless Tower</b>
           <span>Climb floor after floor. Elites every 3rd, a champion every 5th, a boss every 10th floor.</span>
-          <em>{towerLocked ? 'Sealed: finish a full adventure (defeat Malakar at the end of the Void) to open the tower.' : <><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</>}</em>
+          <em>{towerLocked ? 'Sealed: finish a full adventure (defeat the Void Herald at the end of the Void) to open the tower.' : <><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</>}</em>
         </div>}
         {mode === 'TOWER' && !towerLocked && (
           <div className="so-ms" data-testid="tower-milestones">
@@ -109,7 +109,7 @@ export const SetOutWindow: React.FC = () => {
         <div className="so-asc" data-testid="so-asc">
           <div className="text-[.72rem] mb-2" style={{ color: 'var(--text-dim)' }}>The Ascension level for your next adventure through the Adventure Portal.</div>
           {progress.ascensionMax === 0 ? (
-            <div className="so-asc-lock">Defeat Malakar at the end of the Void to unlock <b>Ascension</b>: harder runs with bigger rewards.</div>
+            <div className="so-asc-lock">Defeat the Void Herald at the end of the Void to unlock <b>Ascension</b>: harder runs with bigger rewards.</div>
           ) : (<>
             <div className="flex items-center justify-between">
               <span className="rpg-label !text-[.7rem]">Ascension</span>

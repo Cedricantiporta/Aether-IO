@@ -71,12 +71,12 @@ export interface NpcQuestDef {
 }
 
 export const NPC_QUESTS: NpcQuestDef[] = [
-  // ---- (owner 2026-10-26) the crown's one-time thank-you for the FIRST game clear (Malakar defeated). `giver` is switched to the
+  // ---- (owner 2026-10-26) the crown's one-time thank-you for the FIRST game clear (Void Herald defeated). `giver` is switched to the
   //      Queen once she replaces the King (npcQuestLogic syncGate). Old saves that already finished the game can claim it too.
   {
-    id: 'king_clear_gift', giver: 'King Aldric', title: 'The Crown\'s Thanks', summary: 'Claim the Crown\'s reward for ending Malakar',
+    id: 'king_clear_gift', giver: 'King Aldric', title: 'The Crown\'s Thanks', summary: 'Claim the Crown\'s reward for ending the Void Herald',
     cond: { ending: true },
-    intro: ['Malakar is fallen, and the Font shines. The whole realm owes you more than gold can say.', 'You:: Gold is a fine start.', 'Then take the treasury\'s thanks, hero. Accept it, then speak to me once more and it is yours.'],
+    intro: ['The Void Herald is fallen, and the Font shines. The whole realm owes you more than gold can say.', 'You:: Gold is a fine start.', 'Then take the treasury\'s thanks, hero. Accept it, then speak to me once more and it is yours.'],
     progress: 'Speak to the Crown again to claim your reward.',
     done: ['A realm saved deserves a reward to match.', 'You:: Is that the whole treasury?', 'Only the part I could carry. Spend it well, hero: 100,000 gold and 2,000 gems.'],
     objective: { type: 'LISTEN', count: 1 },
