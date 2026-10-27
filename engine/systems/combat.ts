@@ -868,7 +868,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   }
   // Aegis (card): the shield soaks the hit first; only what breaks through reaches health
   let toHp = reduced;
-  if (p.radiant > 0) {   // Knight Radiant shield (gold): soaks first and reflects 20% of the hit to the attacker
+  if (p.radiant > 0 && !crit) {   // (a mechanic hit ignores every soak shield: only the safe spot saves you) Knight Radiant shield (gold): soaks first and reflects 20% of the hit to the attacker
     const soak = Math.min(p.radiant, toHp);
     p.radiant -= soak; toHp -= soak;
     if (!isDot) reflectRadiant(reduced * 0.2, o?.src);
@@ -878,7 +878,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
       events.emit('shockwave', { pos: p.pos.clone(), radius: 3.4, color: 0xffe08a });
     }
   }
-  if (p.arcane > 0) {   // Wizard Arcane Shield (purple) soaks first
+  if (p.arcane > 0 && !crit) {   // Wizard Arcane Shield (purple) soaks first
     const soak = Math.min(p.arcane, toHp);
     p.arcane -= soak; toHp -= soak;
     if (p.arcane <= 0) {
@@ -888,7 +888,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
       events.emit('explosion', { pos: p.pos.clone(), radius: 1.6, color: 0xc084fc });
     }
   }
-  if (p.aegis > 0) {
+  if (p.aegis > 0 && !crit) {
     const soak = Math.min(p.aegis, toHp);
     p.aegis -= soak; toHp -= soak;
     if (p.aegis <= 0) { p.aegis = 0; p.aegisMax = 0; events.emit('floatText', { pos: p.pos, text: 'SHIELD BROKEN', color: 0x9fdcff, scale: 0.9, dy: 2.6 }); events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0x9fdcff }); }

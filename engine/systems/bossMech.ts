@@ -101,7 +101,7 @@ function resolve(s: (typeof strikes)[number]): void {
   const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.5;
   if (p.alive && dx * dx + dz * dz < rr * rr) {
     tv.set(s.x, 0, s.z);
-    damagePlayer(s.dmg, { pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL', ...(s.kd > 0 ? { kb: KB.SLAM.kb, down: s.kd } : null) });   // (owner) the quake ring and the aimed meteor knock the hero down
+    damagePlayer(th ? 1 : s.dmg, { ...(th ? { pct: RAIN_PCT[Math.min(2, s.pi >> 8)] } : null), pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL', ...(s.kd > 0 ? { kb: KB.SLAM.kb, down: s.kd } : null) });   // (owner) the quake ring and the aimed meteor knock the hero down
     if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? SLOW_BOSS : 0);
   }
   if (s.minDmg > 0) {
@@ -121,6 +121,8 @@ function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
  *  C  a cluster on / around the hero (one on them, one where they are running, the rest ringed round them): no camping.
  * Each wave warns ~1 s. Waves are queued (RQ) and fired from tickBossStrikes; impacts come from the pooled strike list.
  */
+/** share of MAX hp one rain impact takes (~10-15%: a mid-geared hero survives several, standing still through a cast does not) */
+const RAIN_PCT = [0.1, 0.12, 0.14];
 const RAIN_WAVE_GAP = 0.9, RAIN_WARN = [1.1, 1.0, 0.95];
 const RQ = { n: 3, t: 0, m: null as Mech | null, dmg: 0, big: 1, phase: 0, pi: 0 };
 const rainSeed = { th: 0, ox: 0, oz: 0 };
@@ -134,7 +136,7 @@ function place(x: number, z: number, r: number, t: number, kd = 0): void {
   if (liveStrikes >= RAIN_LIVE_CAP) return;
   liveStrikes++;
   const m = RQ.m!;
-  strike(x, z, r, t, RQ.dmg, RQ.dmg * 0.6, m.rain, m.rainDur, m.rainColor, kd, m, RQ.pi++);
+  strike(x, z, r, t, RQ.dmg, RQ.dmg * 0.6, m.rain, m.rainDur, m.rainColor, kd, m, (RQ.phase << 8) | (RQ.pi++ & 255));
 }
 function rainWave(w: number): void {
   const m = RQ.m; if (!m) return;
@@ -162,7 +164,7 @@ function rainWave(w: number): void {
       for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < (r * 0.8) ** 2) return false;
       rainX[rainN] = x; rainZ[rainN] = z; rainN++; place(x, z, rr, tw, kd); return true;
     };
-    put(p.pos.x, p.pos.z, r * 0.95, 1.0);   // on the hero (this one already knocked down before the rework)
+    put(p.pos.x, p.pos.z, r * 0.95, 0);   // on the hero (no knockdown for these small impacts)
     put(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, r * 0.9, 0);   // where they are running to
     for (let i = 2, tries = 0; i < n && tries < n * 14; tries++) {
       const a = Math.random() * Math.PI * 2, d = 2.5 + Math.random() * 7 * k;
@@ -268,4 +270,11 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
 /** Boss died / room left: drop the pending impacts. */
 export function bossMechDied(): void {
   resetBossMech();
+}
+
+if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {   // QA: cast the cataclysm now (`__bossRain.cast()`), `live()` = pending impacts
+  (window as unknown as Record<string, unknown>).__bossRain = {
+    cast: (): string => { for (const e of world.enemies) if (e.active && e.boss && MECH[e.kind as BossKind]) { rain(e, MECH[e.kind as BossKind]); return e.kind; } return 'none'; },
+    live: (): number => strikes.reduce((n, s) => n + (s.on ? 1 : 0), 0),
+  };
 }
