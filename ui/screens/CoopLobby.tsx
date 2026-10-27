@@ -8,6 +8,14 @@ import { CODE_LEN, normaliseCode } from '../../net/protocol';
 
 /** While the code box has focus, Enter in the (Enter = confirm) Set Out window submits the code instead of setting out. */
 export const lobbyInput = { submit: null as null | (() => void) };
+/** Copies text to the clipboard (modern API first, a hidden textarea as the fallback for http / old WebViews). */
+async function copyText(t: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(t); return true; } catch { /* fall through */ }
+  try {
+    const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select();
+    const ok = document.execCommand('copy'); document.body.removeChild(a); return ok;
+  } catch { return false; }
+}
 const cap = (s: string): string => s.charAt(0) + s.slice(1).toLowerCase();
 
 export const CoopLobby: React.FC = () => {
@@ -17,6 +25,8 @@ export const CoopLobby: React.FC = () => {
   const valid = normaliseCode(text) !== '';
   const go = () => { if (valid) { joinCoop(text); setJoining(false); } };
   const goRef = useRef(go); goRef.current = go;
+  const [copied, setCopied] = useState(false);
+  const copy = async () => { const ok = await copyText(code); setCopied(ok); if (ok) setTimeout(() => setCopied(false), 1800); };
   useEffect(() => () => { lobbyInput.submit = null; }, []);
 
   if (state === 'connected' && partner) {
@@ -36,7 +46,10 @@ export const CoopLobby: React.FC = () => {
         <div className="coop-code" data-testid="coop-code">{ready ? code.split('').map((c, i) => <b key={i}>{c}</b>) : <b className="dim">....</b>}</div>
         <div className="coop-note">{ready ? 'Tell your friend this code: they press Join at the portal and type it in. Waiting for your friend...' : 'Contacting the matchmaking service...'}</div>
         {error && <div className="coop-err">{error}</div>}
-        <button className="coop-btn ghost pe" onClick={leaveCoop} data-testid="coop-cancel">Cancel</button>
+        <div className="coop-row">
+          {ready && <button className="coop-btn pe" onClick={copy} data-testid="coop-copy">{copied ? 'Copied!' : 'Copy code'}</button>}
+          <button className="coop-btn ghost pe" onClick={leaveCoop} data-testid="coop-cancel">Cancel</button>
+        </div>
       </div>
     );
   }

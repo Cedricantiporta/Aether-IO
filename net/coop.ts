@@ -129,6 +129,14 @@ function tryHost(attempt: number): void {
   });
 }
 
+/** Plain-language text for a join failure (lobby shows it under the code box). */
+function joinErrorText(m: string): string {
+  if (m === 'nohost') return 'Room not found. Check the 4 letters, and that your friend still has the room open.';
+  if (m === 'full') return 'That room already has two players.';
+  if (/network|server-error|socket|disconnected|browser-incompatible/i.test(m)) return 'Can\'t reach the matchmaking service. Check your internet connection and try again.';
+  if (/webrtc|ice|negotiation/i.test(m)) return 'Could not connect to your friend. Some strict networks block direct links: try another network (mobile data or Wi-Fi) on one side.';
+  return `Could not connect (${m}). Try again.`;
+}
 export function joinCoop(raw: string): void {
   const st = useCoop.getState().state;
   if (st === 'hosting' || st === 'connected' || st === 'joining') return;
@@ -136,10 +144,10 @@ export function joinCoop(raw: string): void {
   if (!c) { coopSet({ state: 'error', error: 'Enter the 4-letter code from your friend.' }); return; }
   teardown(); tr = pickTransport(); role = 'guest'; code = c;
   coopSet({ state: 'joining', role: 'guest', code: c, ready: false, error: '', ping: 0, partner: null, transport: tr.name });
-  setupT = setTimeout(() => fail('No answer from that room. Check the code and that your friend is hosting.'), SETUP_MS);
+  setupT = setTimeout(() => fail('No answer from that room. Check the code and that your friend is hosting. On a strict network the direct link can fail: try mobile data or another Wi-Fi.'), SETUP_MS);
   handle = tr.join(c, {
     onOpen: (cn) => onLink(cn),
-    onError: (m) => fail(m === 'nohost' ? 'No room with that code. Check the letters.' : m === 'full' ? 'That room already has two players.' : `Could not connect (${m}).`),
+    onError: (m) => fail(joinErrorText(m)),
   });
 }
 
