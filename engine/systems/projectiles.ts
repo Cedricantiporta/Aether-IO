@@ -535,6 +535,7 @@ export function updateProjectiles(dt: number): void {
   for (let i = 0; i < pool.length; i++) {
     const p = pool[i];
     if (!p.active) continue;
+    if (p.ghost) { p.pos.x += p.vel.x * dt; p.pos.z += p.vel.z * dt; p.spin += dt * 10; p.life -= dt; if (p.life <= 0) p.active = false; continue; }   // co-op: the partner's projectile, drawn only (net/coopGhosts.ts)
 
     // Orbiting blades are driven entirely by skills.ts until launched.
     if (p.kind === 'ORBITAL_BLADE' && p.state === 0) continue;

@@ -12,6 +12,8 @@ import { activeChar } from '../characters';
 import { GameStatus } from '../types';
 import type { RoomPlan } from '../engine/types';
 import { coopRoom } from './coopRoom';
+import { hostBind, hostTick, hostReset, hostOnMessage, hostGuestSeen } from './coopHost';
+import { guestBind, guestTick, guestReset, guestOnMessage } from './coopGuest';
 import { useCoop, coopSet } from './coopStore';
 import { pickTransport, type Conn, type Handle, type Transport } from './transport';
 import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
@@ -59,13 +61,15 @@ function clearTimers(): void {
   if (setupT) { clearTimeout(setupT); setupT = null; }
 }
 function resetRemote(): void { count = 0; head = 0; world.remote.active = false; }
+/** the world of the co-op combat layer (monster mirror, stand-in hero, queues): `full` = also forget that a partner joined this run */
+function resetCombat(full: boolean): void { hostReset(full); if (full) guestReset(); else if (role === 'guest') guestReset(); }
 function teardown(): void {
   clearTimers();
   const c = conn; conn = null;
   if (c) { c.onClose = undefined; c.onData = undefined; try { c.close(); } catch { /* ignore */ } }
   const h = handle; handle = null;
   try { h?.close(); } catch { /* ignore */ }
-  resetRemote(); pending = null;
+  resetRemote(); resetCombat(true); pending = null;
 }
 function toTown(msg: string): void {
   const was = coopRoom.guest;
@@ -154,12 +158,20 @@ function heartbeat(): void {
   if (now - lastRx > TIMEOUT_MS) { partnerGone('Connection to your friend timed out.'); return; }
   send([MSG.PING, nowMs()]);
 }
-function send(m: unknown[]): void { try { conn?.send(m); } catch { /* link gone: the close handler cleans up */ } }
+function send(m: unknown[]): void {
+  if (stats.on) { try { const n = JSON.stringify(m).length; stats.tx += n; const k = String(m[0]); stats.txBy[k] = (stats.txBy[k] ?? 0) + n; } catch { /* ignore */ } }
+  try { conn?.send(m); } catch { /* link gone: the close handler cleans up */ }
+}
+// bandwidth meter (dev / QA: `?coopStats=1` or window.__coop.stats()): JSON bytes of every message sent / received
+const stats = { on: (() => { try { return new URLSearchParams(location.search).get('coopStats') === '1' || !!(import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV; } catch { return false; } })(), tx: 0, rx: 0, t0: 0, txBy: {} as Record<string, number>, rxBy: {} as Record<string, number> };
+const io = { send, rv: () => rv, connected };
+hostBind(io); guestBind(io);
 
 // ------------------------------------------------------------------ receive ---
 function onData(d: unknown): void {
   lastRx = nowMs();
   if (!Array.isArray(d)) return;
+  if (stats.on) { try { const n = JSON.stringify(d).length; stats.rx += n; const k = String(d[0]); stats.rxBy[k] = (stats.rxBy[k] ?? 0) + n; } catch { /* ignore */ } }
   switch (d[0]) {
     case MSG.HELLO: {
       if (d[1] !== COOP_VERSION) {
@@ -194,6 +206,15 @@ function onData(d: unknown): void {
     case MSG.LEAVING: if (role === 'guest' && coopRoom.guest && world.room.active) world.room.fadeTarget = 1; return;
     case MSG.POS: onPos(d); return;
     case MSG.END: if (role === 'guest' && coopRoom.guest) toTown('The host\'s adventure is over.'); return;
+    // ---- STEP 2 (combat): a message of another room is dropped
+    case MSG.SNAP: case MSG.META: case MSG.RST: case MSG.BOSS: case MSG.HIT: case MSG.DEBUF: case MSG.KNOCK: case MSG.KILL:
+      if (role === 'guest' && coopRoom.guest && d[1] === rv) guestOnMessage(d);
+      return;
+    case MSG.EVT: case MSG.GP:
+      if (d[1] !== rv) return;
+      if (role === 'guest' && coopRoom.guest) guestOnMessage(d); else if (role === 'host') hostOnMessage(d);
+      return;
+    case MSG.DMG: if (role === 'host' && d[1] === rv) hostOnMessage(d); return;
     default: return;
   }
 }
@@ -206,6 +227,7 @@ function onPos(d: unknown[]): void {
   ring[o] = nowMs(); ring[o + 1] = x / 100; ring[o + 2] = z / 100; ring[o + 3] = f / 100; ring[o + 4] = b / 100; ring[o + 5] = fl | 0; ring[o + 6] = hp / 100;
   head = (head + 1) % N; if (count < N) count++;
   world.remote.rx++;
+  if (role === 'host') hostGuestSeen();
 }
 
 // ------------------------------------------------------------ run / rooms ---
@@ -233,7 +255,7 @@ function applyPending(): void {
   if (!coopRoom.guest) { pending = null; return; }
   if (status !== GameStatus.PLAYING) return;   // paused / picking a card: enter when play resumes (coopTick retries)
   pending = null;
-  rv = p.rv; resetRemote();
+  rv = p.rv; resetRemote(); guestReset();
   coopRoom.forced = { b: p.b, idx: p.idx, plan: p.plan, seed: p.seed };
   world.room.fade = 1;
   coopRoom.enter?.(p.b, p.idx, p.plan);
@@ -242,15 +264,15 @@ function applyPending(): void {
 /** director.enterRoom -> here (hook): the host tells the guest which room to build. */
 coopRoom.onEnter = (b, idx, plan, seed) => {
   if (role !== 'host') return;
-  rv++; resetRemote();
+  rv++; resetRemote(); resetCombat(false);
   const first = runFresh; runFresh = false;
   if (!connected() || runInfo.mode !== 'ADVENTURE') return;
   send([MSG.ROOM, rv, b, idx, plan, seed, first ? 1 : 0, runInfo.mode]);
 };
 coopRoom.onLeaving = () => { if (role === 'host' && connected()) send([MSG.LEAVING, rv]); };
-events.on('runStart', () => { runFresh = true; resetRemote(); });
+events.on('runStart', () => { runFresh = true; resetRemote(); resetCombat(true); });
 events.on('runEnd', () => {
-  runFresh = false; resetRemote();
+  runFresh = false; resetRemote(); resetCombat(true);
   if (role === 'host' && connected()) send([MSG.END]);
   else if (role === 'guest') { coopRoom.guest = false; coopRoom.forced = null; }
 });
@@ -259,7 +281,7 @@ events.on('runEnd', () => {
 /** Called once per frame from engine/game.updateGame (before the status switch): sends my position, interpolates the partner. */
 export function coopTick(): void {
   if (!role) return;
-  if (!conn || useCoop.getState().state !== 'connected') { world.remote.active = false; return; }
+  if (!conn || useCoop.getState().state !== 'connected') { world.remote.active = false; if (coopRoom.ally || coopRoom.two) hostReset(true); return; }
   const st = useGameStore.getState().status, now = nowMs();
   if (pending) applyPending();
   const inRun = (role === 'host' ? runInfo.mode === 'ADVENTURE' && world.room.active : coopRoom.guest) && (st === GameStatus.PLAYING || st === GameStatus.PAUSED || st === GameStatus.LEVEL_UP);
@@ -272,9 +294,9 @@ export function coopTick(): void {
   }
   // ---- interpolate the partner (render time = now - INTERP_MS)
   const R = world.remote;
-  if (!inRun || count === 0) { R.active = false; return; }
+  if (!inRun || count === 0) { R.active = false; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
   const newest = (head - 1 + N) % N;
-  if (now - ring[newest * W] > 3000) { R.active = false; return; }
+  if (now - ring[newest * W] > 3000) { R.active = false; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
   const rt = now - INTERP_MS;
   let a = -1, b = -1;
   for (let k = 0; k < count; k++) {   // newest -> oldest
@@ -291,9 +313,10 @@ export function coopTick(): void {
   }
   const L = newest * W;
   R.x = x; R.z = z; R.facing = f; R.blend = bl; R.flags = ring[L + 5]; R.hp = ring[L + 6]; R.active = true;
+  if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun);   // STEP 2: stand-in hero + world snapshots (host) / hit claims + my projectiles (guest)
 }
 
 // Dev hook for headless tests (vite dev only): drive / inspect co-op from the page.
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
-  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }) }; }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
+  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } }; }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
 }

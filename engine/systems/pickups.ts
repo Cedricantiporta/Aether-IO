@@ -86,6 +86,14 @@ export function dropCrystals(n: number, at: { x: number; z: number }): void {
   for (let i = 0; i < k; i++) spawnPickup('CRYSTAL', crystalAt.set(at.x, 0, at.z), Math.floor(n / k) + (i < n % k ? 1 : 0));
 }
 
+/** Co-op: gold earned from a partner's kill (the same coin value the host's pickup would pay, with this player's own gold-find). */
+export function grantGoldCoin(value: number): void {
+  const st = useGameStore.getState();
+  const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')));
+  st.addGold(g); world.run.goldEarned += g;
+  events.emit('floatText', { pos: world.player.pos, text: `+${g} G`, color: 0xffd24a, scale: 0.8, dy: 2.0 });
+}
+
 /** Direct reward (pool exhausted fallback). */
 function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();

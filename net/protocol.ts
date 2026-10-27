@@ -2,7 +2,7 @@
 // Bump COOP_VERSION whenever a message layout / meaning changes: peers on different versions refuse each other with a clear message.
 import type { HeroClass } from '../types';
 
-export const COOP_VERSION = 1;
+export const COOP_VERSION = 2;
 /** Peer ids on the broker are 'aether-' + room code. */
 export const PEER_PREFIX = 'aether-';
 /** Unambiguous letters only (no I / O / B / S / Z / 0 / 1 / 5 / 8 lookalikes). */
@@ -18,7 +18,35 @@ export const MSG = {
   LEAVING: 5, // [5, rv]                           host -> guest: the host walked into a portal (fade out)
   POS: 6,     // [6, rv, x*100, z*100, facing*100, moveBlend*100, flags, hp%]   both ways, ~16 Hz (integers)
   END: 7,     // [7]                               host -> guest: the host's run is over (back in town)
+  // ---- STEP 2 (combat). Every message below starts with the room counter `rv`; a message of another room is dropped.
+  SNAP: 8,    // [8, rv, seq, base64(Uint16 records)]   host -> guest, ~15 Hz: enemies, enemy shots, ids of live hostile zones (layouts in coopHost.ts / coopGuest.ts)
+  META: 9,    // [9, rv, enemies[], zones[]]       host -> guest: the slow-changing half of new / changed entities (kind, max hp, scale ... / zone shape)
+  EVT: 10,    // [10, rv, ev, ev, ...]             both ways: discrete FX moments, ev = [eventIdx, ...fields] (coopEvents.ts)
+  DMG: 11,    // [11, rv, hits[], stats[]]         guest -> host, ~30 Hz: flat arrays, stride HIT_STRIDE / STAT_STRIDE; the guest's hits on the host's monsters
+  HIT: 12,    // [12, rv, amount, pct*1000, kind, flags, kb*100, down*100, slow, tr, x*10, z*10, srcId]   host -> guest: a blow on the guest's hero (he applies his own defence)
+  DEBUF: 13,  // [13, rv, type, dur*100, val*100, mode]   host -> guest: a status on the guest's hero (mode 0 normal, 1 freeze, 2 direct slow)
+  KNOCK: 14,  // [14, rv, fromX*10, fromZ*10, force*100, down*100, cancel]   host -> guest: shove / knockdown
+  KILL: 15,   // [15, rv, xp, gold, flags(1 elite, 2 boss), x*10, z*10]   host -> guest: a monster died, the guest earns the same XP / gold
+  RST: 16,    // [16, rv, phase, wave, enemiesLeft, alive, portals[[x, z, type, reward, big, pre]]]   host -> guest: room state (on change + 1 Hz)
+  BOSS: 17,   // [17, rv, active, hp, maxHp, phase, stagger*100, staggered, ability, abilityT, name, title, interrupt*100, interruptOn, interruptLabel, shield, shieldMax, final, stage, bossId]
+  GP: 18,     // [18, rv, base64]                  both ways, ~15 Hz: the sender's own projectiles, drawn as harmless copies on the partner's screen
 } as const;
+
+export const HIT_STRIDE = 11, STAT_STRIDE = 4;
+/** damagePlayer kinds / DamageKind (index on the wire) */
+export const DMG_KINDS = ['PHYSICAL', 'FIRE', 'ICE', 'POISON', 'MAGIC', 'LIGHTNING', 'TRUE'] as const;
+/** StatusEffectType (index on the wire) */
+export const STATUS_TYPES = ['SLOW', 'BURN', 'STUN', 'FREEZE', 'POISON', 'ARMOR_BREAK', 'CHILL'] as const;
+/** PlayerDebuff (index on the wire) */
+export const DEBUFF_TYPES = ['STUN', 'ROOT', 'SILENCE', 'DEFDOWN', 'BLIND', 'BURN', 'POISON', 'BLEED', 'SLOW'] as const;
+export const ENEMY_STATES = ['SPAWN', 'CHASE', 'KITE', 'WINDUP', 'ATTACK', 'RECOVER', 'DYING'] as const;
+export const ROOM_PHASES = ['FIGHT', 'CLEARED', 'LEAVING', 'BIOME_DONE'] as const;
+export const EP_KINDS = ['ARROW', 'ORB', 'SLOW_ORB', 'BOSS_ORB', 'ROCK', 'FLAME', 'AXE', 'FIRE_BOLT', 'BOLT', 'ICE_SHARD', 'POISON_ARROW', 'BALLISTA', 'BIG_FLAME', 'FIRE_CRESCENT', 'DARK_CRESCENT'] as const;
+export const PROJ_KINDS = ['ARROW', 'MAGIC', 'AXE', 'SLASH', 'HOLY_WAVE', 'FIREBALL', 'PIERCING_ARROW', 'BURNING_ARROW', 'FREEZING_ARROW', 'STORM', 'GIANT_AXE', 'ORBITAL_BLADE', 'PET_BOLT', 'RAIN_ARROW', 'GALE_ARROW', 'X_SLASH', 'SOUL_BOLT', 'BONE_SPEAR'] as const;
+/** HIT flags */
+export const HF_DOT = 1, HF_ENV = 2, HF_NODOT = 4, HF_PROJ = 8, HF_CRIT = 16;
+/** DMG hit flags (guest -> host) */
+export const DF_CRIT = 1, DF_DOT = 2, DF_BASIC = 4, DF_ABREAK = 8, DF_FROST = 16, DF_NOBACK = 32, DF_PLAYER = 64, DF_KNOCK = 128, DF_LAUNCH = 256;
 
 /** POS flags */
 export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8;
