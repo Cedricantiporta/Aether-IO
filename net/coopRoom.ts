@@ -63,6 +63,10 @@ export const coopRoom = {
   fwdPull: null as null | ((dx: number, dz: number) => void),
   /** GUEST (STEP 4): pressed E at a world interaction (chest, fountain, shrine, merchant ...): the host does the world side. */
   sendUse: null as null | ((what: number, a: number) => boolean),
+  /** GUEST (STEP 4): forget the mirrored traps / hazards / boss props (room change; net/coopHaz.ts). */
+  clearMirror: null as null | (() => void),
+  /** GUEST (STEP 4): a hit on a mirrored stationary (index into the host's trap list) is claimed on the host. */
+  sendTrapHit: null as null | ((index: number, dmg: number) => void),
   /** GUEST: per-frame mirror update (replaces updateEnemies / updateEnemyProjectiles in engine/game.ts). */
   mirror: null as null | ((dt: number) => void),
 };

@@ -19,6 +19,7 @@ import { u16ToB64, EV_H2G, EV_G2H, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 import { zonesTick, applyZones } from './coopZones';
 import { pullTick } from './coopPull';
+import { hazTick, hazReset, onTrapHit } from './coopHaz';
 import { coopUse, stationBits } from '../engine/systems/director';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
@@ -51,7 +52,7 @@ export const hostTwo = (): boolean => coopRoom.two;
 
 /** New room / run / disconnect: forget what the guest was sent. */
 export function hostReset(full: boolean): void {
-  sentKey.fill(0); sentZone.fill(0); evtQ.length = 0; rstKey = ''; bossKey = ''; lastSnap = 0; ghostReset();
+  sentKey.fill(0); sentZone.fill(0); evtQ.length = 0; rstKey = ''; bossKey = ''; lastSnap = 0; ghostReset(); hazReset();
   if (full) { guestSeen = false; coopRoom.ally = null; coopRoom.two = false; fwdOn = false; }
 }
 
@@ -155,7 +156,10 @@ export function hostOnMessage(d: unknown[]): void {
     case MSG.EVT: onEvt(d); return;
     case MSG.GP: if (typeof d[2] === 'string') applyGhosts(d[2]); return;
     case MSG.PZ: applyZones(d); return;
-    case MSG.USE: if (isNum(d[2]) && isNum(d[3]) && coopRoom.two) coopUse(d[2] | 0, d[3] | 0); return;   // (STEP 4) the guest pressed E at a chest / the fountain / the shrine
+    case MSG.USE:
+      if (!coopRoom.two || !isNum(d[2])) return;
+      if (d[2] === 2) onTrapHit(d); else if (isNum(d[3])) coopUse(d[2] | 0, d[3] | 0);
+      return;   // (STEP 4) the guest pressed E at a chest / the fountain / the shrine
     default: return;
   }
 }
@@ -179,6 +183,7 @@ export function hostTick(now: number, inRun: boolean, R: typeof world.remote): v
   coopRoom.ally = p;
   if (now - lastSnap >= SNAP_MS) { lastSnap = now; sendSnap(now); }
   zonesTick(now, true);   // (STEP 3) my own ground skill zones as harmless copies on his screen
+  hazTick(now);           // (STEP 4) traps / hazards / boss-phase props / room-event state as cosmetic mirrors on his screen
   pullTick(now);          // (STEP 4) pulls / pushes on the stand-in -> the guest's own hero
 }
 

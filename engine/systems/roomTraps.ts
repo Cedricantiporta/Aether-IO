@@ -109,7 +109,7 @@ export const trapLock = { obj: null as TrapObj | null };
 let curDepth = 0;
 export const lockedTrap = (): TrapObj | null => { const o = trapLock.obj; return o && !o.dead && (rt.on || o.proxy) && world.room.active ? o : null; };
 /** i-th live-or-dead stationary across the three pools (no allocation). */
-const trapAt = (i: number): TrapObj => {
+export const trapAt = (i: number): TrapObj => {
   if (i < rt.nSiege) return rt.siege[i]; i -= rt.nSiege;
   if (i < rt.nTower) return rt.tower[i]; i -= rt.nTower;
   if (i < rt.nStatue) return rt.statue[i]; i -= rt.nStatue;
@@ -167,6 +167,12 @@ function breakPiece(o: TrapObj): void {
 const hitOne = (o: TrapObj, x: number, z: number, r: number, dmg: number): boolean => {
   if (o.dead || (o.x - x) ** 2 + (o.z - z) ** 2 > (r + o.rad) ** 2) return false;
   dmg *= TRAP_DEF;
+  if (coopRoom.guest) {   // co-op guest: the piece is a mirror of the host's: claim the hit (net/coopHaz.ts), the host's hp / destruction comes back in the next state
+    for (let i = 0, n = trapCount(); i < n; i++) if (trapAt(i) === o) { coopRoom.sendTrapHit?.(i, dmg); break; }
+    o.flash = 1; o.hitSeq++;
+    events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
+    return true;
+  }
   o.hp -= dmg; o.flash = 1; o.hitSeq++;
   events.emit('floatText', { pos: tmp.set(o.x, 3, o.z), text: String(Math.round(dmg)), color: 0xffffff, scale: 0.8, dy: 1.2 });
   if (o.hp <= 0) breakPiece(o);

@@ -129,6 +129,15 @@ function placeTraps(): void {
   e.nTraps = n;
 }
 
+/** Co-op guest: the spike tiles of the host's room (tuning + tile size) so the renderer draws them like the host's. */
+export function mirrorTrapTuning(): void {
+  const marble = world.room.biome % BIOMES.length === MARBLE_BIOME;
+  TRAP_WARN = 0.0001; TRAP_FIRE = 0.3; TRAP_PERIOD = marble ? 1.0 : 0.85;
+  trapScale = marble ? 1.4 : 1; TRAP_R = TRAP_R0 * trapScale; TRAP_TILE = TRAP_R * 2; trapDrain = marble;
+}
+/** Seconds a spike tile's cycle lasts (the guest stops advancing a tile's clock there until the host's next message). */
+export const trapPeriod = (): number => TRAP_PERIOD;
+
 /** Trap phase for the renderer: 0 idle, 0..1 warning glow, 2 spikes up. */
 export function trapPhase(t: number): number {
   if (t < TRAP_WARN) return 0;
