@@ -428,6 +428,15 @@ if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: 
     import('../engine/systems/enemies').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.enemies = m; }).catch(() => { /* ignore */ });
     import('../engine/systems/combat').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.combat = m; }).catch(() => { /* ignore */ });
     import('../engine/systems/bossMech').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.mech = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/roomTraps').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.traps = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/biomeHazards').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.haz = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/bossPhaseState').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.bp = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/director').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.director = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/merchant').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.merchant = m; }).catch(() => { /* ignore */ });
+    import('../bossTrials').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.bt = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/roomEvents').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.roomEvents = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/minions').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.minions = m; }).catch(() => { /* ignore */ });
+    (window as unknown as { __coop: Record<string, unknown> }).__coop.trialInvite = coopInviteTrial;
     import('../engine/systems/pickups').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.pickups = m; }).catch(() => { /* ignore */ });
   }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
 }
