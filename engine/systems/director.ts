@@ -1381,6 +1381,7 @@ export function interactRoom(it: Interactable): void {
     p.mana = Math.min(st.stats.maxMana, p.mana + mp);
     events.emit('heal', { pos: p.pos, amount: p.hp - before });
     st.addNotification('The fountain restores 40% HP and MP.', '#5fd6ff', 'SYSTEM');
+    coopRoom.fwdReward?.(1, false);   // co-op: the partner drinks too (his own blessing)
     // ...and grants a random blessing for the rest of the run
     const kinds = ['FORTUNE', 'MIGHT', 'AEGIS', 'SWIFT', 'VITALITY', 'PRECISION'] as const;
     const kind = kinds[Math.floor(Math.random() * kinds.length)];

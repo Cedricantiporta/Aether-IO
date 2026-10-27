@@ -17,6 +17,7 @@ import {
 } from './protocol';
 import { u16ToB64, EV_H2G, EV_G2H, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
+import { zonesTick, applyZones } from './coopZones';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: HostIO | null = null;
@@ -69,7 +70,7 @@ coopRoom.fwdKnock = (fx, fz, force, down, cancel) => { if (io?.connected()) io.s
 coopRoom.onKill = (e, xp, gold) => {
   if (!io || !io.connected() || !coopRoom.two) return;
   hostStats.kills++;
-  io.send([MSG.KILL, io.rv(), Math.round(xp * 100) / 100, Math.round(gold), (e.elite ? 1 : 0) | (e.boss ? 2 : 0), Math.round(e.pos.x * 10), Math.round(e.pos.z * 10)]);
+  io.send([MSG.KILL, io.rv(), Math.round(xp * 100) / 100, 0 /* gold: the coins the host's kill dropped are forwarded as the guest's OWN pickups (net/coopLoot.ts) */, (e.elite ? 1 : 0) | (e.boss ? 2 : 0), Math.round(e.pos.x * 10), Math.round(e.pos.z * 10)]);
 };
 
 // ------------------------------------------------------- event forwarding ---
@@ -151,6 +152,7 @@ export function hostOnMessage(d: unknown[]): void {
     case MSG.DMG: if (coopRoom.two) onDmg(d); return;
     case MSG.EVT: onEvt(d); return;
     case MSG.GP: if (typeof d[2] === 'string') applyGhosts(d[2]); return;
+    case MSG.PZ: applyZones(d); return;
     default: return;
   }
 }
@@ -173,6 +175,7 @@ export function hostTick(now: number, inRun: boolean, R: typeof world.remote): v
   p.invulnT = 0;
   coopRoom.ally = p;
   if (now - lastSnap >= SNAP_MS) { lastSnap = now; sendSnap(now); }
+  zonesTick(now, true);   // (STEP 3) my own ground skill zones as harmless copies on his screen
 }
 
 const wrapPi = (a: number): number => a - Math.PI * 2 * Math.floor((a + Math.PI) / (Math.PI * 2));

@@ -13,6 +13,7 @@ import { useGameStore } from '../../store';
 import { damageEnemy, damageEnemiesInRadius, applyStatus, findNearestEnemy, healPlayer, inFight, addShake, type DamageOpts } from './combat';
 import { events } from '../events';
 import { spawnPickup } from './pickups';
+import { coopRoom } from '../../net/coopRoom';
 import type { Enemy } from '../types';
 import { spawnProjectile } from './projectiles';
 import { getMagnetRadius, petCollect } from './pickups';
@@ -470,7 +471,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
           const n = 1 + (Math.random() < 0.3 ? 1 : 0);
           for (let i = 0; i < n; i++) {
             tmpP.set(wp.pos.x + Math.sin(wp.facing) * 0.8, 0, wp.pos.z + Math.cos(wp.facing) * 0.8);
-            spawnPickup(Math.random() < 0.12 ? 'GEM' : 'GOLD', tmpP, Math.random() < 0.12 ? 1 : Math.round((10 + d.wave * 4) * lvMul));
+            coopRoom.noFwd++; spawnPickup(Math.random() < 0.12 ? 'GEM' : 'GOLD', tmpP, Math.random() < 0.12 ? 1 : Math.round((10 + d.wave * 4) * lvMul)); coopRoom.noFwd--;   // (my pet's own loot: not shared)
           }
           wp.attackT = 1;
           events.emit('floatText', { pos: wp.pos, text: 'BURP!', color: 0xffd23a, scale: 0.8, dy: 1.2 });

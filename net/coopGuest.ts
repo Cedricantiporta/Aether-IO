@@ -20,6 +20,8 @@ import {
 } from './protocol';
 import { b64ToU16, EV_G2H, EV_H2G, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
+import { zonesTick, applyZones } from './coopZones';
+import { onDrop, onReward } from './coopLoot';
 
 export interface GuestIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: GuestIO | null = null;
@@ -98,6 +100,7 @@ export function guestTick(now: number, inRun: boolean): void {
     const gp = packGhosts();
     if (gp) io.send([MSG.GP, io.rv(), gp]);
   }
+  zonesTick(now, true);   // (STEP 3) my own ground skill zones as harmless copies on his screen
 }
 
 // ----------------------------------------------------------- host -> guest ---
@@ -295,6 +298,9 @@ export function guestOnMessage(d: unknown[]): void {
     case MSG.BOSS: onBoss(d); return;
     case MSG.EVT: onEvt(d); return;
     case MSG.GP: if (typeof d[2] === 'string') applyGhosts(d[2]); return;
+    case MSG.PZ: applyZones(d); return;
+    case MSG.DROP: onDrop(d); return;
+    case MSG.REWARD: onReward(d); return;
     case MSG.HIT: if (coopRoom.guest) onHit(d); return;
     case MSG.KILL: if (coopRoom.guest) onKill(d); return;
     case MSG.DEBUF: {

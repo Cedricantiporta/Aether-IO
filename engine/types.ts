@@ -278,6 +278,8 @@ export interface GroundFx {
   color: number;
   hostile: boolean;           // dark hero copy of a hero effect: visual only here, its hit is resolved by darkHero.ts (hooks.hostileFx)
   own: number;                // (hostile fx) the dark hero slot that made it, -1 none
+  /** co-op: a copy of the partner's ground effect (drawn and aged only, no damage; net/coopZones.ts) */
+  ghost?: boolean;
 }
 
 // ---------------------------------------------------------------- pickups --
@@ -352,6 +354,8 @@ export interface PlayerAnim {
 
 export interface PlayerRuntime {
   alive: boolean;
+  /** co-op: lying at 0 HP (alive is false too) until the partner revives us; the run only ends when nobody can (net/coop.ts, player.ts) */
+  downed: boolean;
   pos: Vector3;
   vel: Vector3;
   facing: number;        // yaw radians (towards aim)

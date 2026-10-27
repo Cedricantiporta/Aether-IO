@@ -12,6 +12,7 @@ import { GameStatus } from '../../types';
 import { PICKAXE_ID } from '../../itemClass';
 import { PICKAXES, pickTierOf } from '../../toolTiers';
 import { spawnPickup, dropCrystals } from './pickups';
+import { coopRoom } from '../../net/coopRoom';
 import { dropLoot } from './loot';
 import { CRATE_HP, isHarvestNode } from '../mapgen';
 import { damageEnemiesInRadius, addShake, type DamageOpts } from './combat';
@@ -107,7 +108,12 @@ function explode(c: Crate): void {
   }
 }
 
+/** (co-op) a crate / harvest node breaks on each screen on its own: its loot is not forwarded to the partner (he breaks his own copy). */
 export function breakCrate(c: Crate): void {
+  coopRoom.noFwd++;
+  try { breakCrateInner(c); } finally { coopRoom.noFwd--; }
+}
+function breakCrateInner(c: Crate): void {
   if (!c.active) return;
   c.active = false;
   c.respawnT = 60 + Math.random() * 30;

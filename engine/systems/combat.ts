@@ -382,13 +382,29 @@ export function reviveWithAnkh(): boolean {
   ankhOffer.open = false;
   if (towerMode() || ankhCooldownLeft() > 0 || !st.consumeItem((i) => i.type === 'REVIVE')) return false;
   startAnkhCooldown();
-  p.alive = true; p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
+  p.alive = true; p.downed = false; p.hp = st.stats.maxHealth * 0.5; p.mana = Math.max(p.mana, st.stats.maxMana * 0.5);
   p.invulnT = Math.max(p.invulnT, 5);
   p.reviveFx = 1;
   hooks.onRevive();
   st.addNotification('REVIVED BY THE ANKH OF LIFE!', COLORS.rarityEpic, 'SYSTEM');
   events.emit('playerRevive', { pos: p.pos, source: 'ANKH' });
   return true;
+}
+/** Co-op: the partner finished reviving this DOWNED hero (net/coop.ts MSG.REVIVE): back on his feet at ~30% HP with a short invulnerability. */
+export const REVIVE_HP = 0.3;
+export function reviveByFriend(): void {
+  const st = useGameStore.getState(), p = world.player;
+  if (!p.downed) return;
+  ankhOffer.open = false;
+  p.alive = true; p.downed = false;
+  p.hp = Math.max(1, st.stats.maxHealth * REVIVE_HP);
+  p.mana = Math.max(p.mana, st.stats.maxMana * 0.3);
+  p.invulnT = Math.max(p.invulnT, 3);
+  p.stunT = 0; p.rootT = 0; p.downT = 0; p.knockT = 0;
+  p.reviveFx = 1;
+  hooks.onRevive();
+  st.addNotification('Your friend got you back on your feet!', '#9be7ff', 'SYSTEM');
+  events.emit('playerRevive', { pos: p.pos, source: 'FRIEND' });
 }
 function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS; try { localStorage.setItem(ANKH_KEY, String(ankhReadyAt)); } catch { /* ignore */ } }
 
@@ -977,6 +993,10 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   p.hp = 0;
   p.alive = false;
   p.vel.set(0, 0, 0);
+  if (coopRoom.canBeDowned()) {   // co-op: with the partner still on his feet we go DOWN instead of dying; he can revive us (3 s next to us), see net/coop.ts reviveTick + player.ts death flow
+    p.downed = true;
+    st.addNotification('You are down! Your friend can revive you.', '#ff9a9a', 'WARNING');
+  }
   events.emit('playerDeath', { pos: p.pos });
   addShake(0.5);
 }

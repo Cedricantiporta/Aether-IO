@@ -1050,6 +1050,7 @@ function stepFx(dt: number): void {
     const f = list[i];
     if (!f.active) continue;
     f.t += dt;
+    if (f.ghost) { if (f.t >= f.life) f.active = false; continue; }   // co-op: the partner's ground effect, drawn only (net/coopZones.ts)
     if (f.kind === 'RING' && !f.hostile) {
       const k = Math.min(1, f.t / f.life);
       const r = f.aux * Math.pow(k, 0.75);

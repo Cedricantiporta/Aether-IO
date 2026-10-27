@@ -32,6 +32,25 @@ export const coopRoom = {
   /** HOST: an enemy was killed (pays the partner the same XP / gold). */
   onKill: null as null | ((e: Enemy, xp: number, gold: number) => void),
 
+  // ------------------------------------------------------------------ STEP 3 (both sides) ---
+  /** A partner is fighting beside us right now (host: `two`; guest: linked to a host). The simulation then keeps running during a card pick and
+   *  a hero at 0 HP goes DOWN instead of dying (assigned by net/coop.ts). */
+  live: (() => false) as () => boolean,
+  /** 0 = the partner is gone (left / no position for a while), 1 = on his feet, 2 = downed (assigned by net/coop.ts from his position stream). */
+  partner: (() => 0) as () => 0 | 1 | 2,
+  /** A hero at 0 HP: true when the partner is up (we go DOWN and wait for a revive); false = die as usual. */
+  canBeDowned: (() => false) as () => boolean,
+  /** while > 0 the pickups spawned by the engine are NOT forwarded (a crate / harvest node breaks on each screen on its own: each player gets that loot himself) */
+  noFwd: 0,
+  /** HOST: the world dropped a pickup (engine/systems/pickups.spawnPickup): the guest rolls his own copy. */
+  fwdDrop: null as null | ((kind: string, x: number, z: number, value: number, item: import('../types').Item | undefined) => void),
+  /** HOST: a reward that must open on the guest's own client (a card choice, the fountain's boon). */
+  fwdReward: null as null | ((what: number, bonus: boolean) => void),
+  /** host's choice of door as the guest sees it (index into world.room.portals, -1 = none); written by net/coopGuest from RST */
+  hl: -1,
+  /** how far (0..1) I have got reviving my downed partner (the HUD / ring read it) and the partner's position when he went down */
+  reviveOut: 0,
+
   // ------------------------------------------------------------ GUEST side (STEP 2) ---
   /** GUEST: claim a hit / status on a mirrored monster (combat.guestHit / applyStatus). */
   sendHit: null as null | ((e: Enemy, amount: number, o: DamageOpts, knockRoll: boolean, fromX: number, fromZ: number) => void),

@@ -10,13 +10,17 @@ import { useGameStore } from '../store';
 import { useUiStore } from '../ui/uiStore';
 import { activeChar } from '../characters';
 import { GameStatus } from '../types';
+import { reviveByFriend } from '../engine/systems/combat';
+import { collectAllPickups } from '../engine/systems/pickups';
 import type { RoomPlan } from '../engine/types';
 import { coopRoom } from './coopRoom';
 import { hostBind, hostTick, hostReset, hostOnMessage, hostGuestSeen, hostStats } from './coopHost';
+import { zonesReset, zonesBind } from './coopZones';
+import { lootBind } from './coopLoot';
 import { guestBind, guestTick, guestReset, guestOnMessage, guestStats } from './coopGuest';
 import { useCoop, coopSet } from './coopStore';
 import { pickTransport, type Conn, type Handle, type Transport } from './transport';
-import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
+import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, F_DOWN, PARTNER_GRACE_MS, REVIVE_TIME, REVIVE_RANGE, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
 
 const POS_HZ = 16, POS_EVERY_MS = 1000 / POS_HZ;
 const INTERP_MS = 100;          // render the partner this far in the past (buffer for jitter)
@@ -34,6 +38,9 @@ let lastRx = 0, lastTx = 0, beat: ReturnType<typeof setInterval> | null = null, 
 let rv = 0;                     // room counter: host bumps it per room, guest copies it; POS of another room is ignored
 let runFresh = false;           // the next room the host enters opens a run
 let pending: { rv: number; b: number; idx: number; plan: RoomPlan; seed: number; first: boolean } | null = null;
+
+// ---- the partner's last known state (survives room changes: a downed hero must not give up while the friend is only loading a room)
+let pFlags = 0, pSeen = 0, reviveGot = 0, lastRevAt = 0;
 
 // ---- remote position ring buffer (no allocation after load): t, x, z, facing, blend, flags, hp
 const N = 16, W = 7;
@@ -60,21 +67,26 @@ function clearTimers(): void {
   if (beat) { clearInterval(beat); beat = null; }
   if (setupT) { clearTimeout(setupT); setupT = null; }
 }
-function resetRemote(): void { count = 0; head = 0; world.remote.active = false; }
+function resetRemote(): void { count = 0; head = 0; world.remote.active = false; world.remote.reviveIn = 0; }
 /** the world of the co-op combat layer (monster mirror, stand-in hero, queues): `full` = also forget that a partner joined this run */
-function resetCombat(full: boolean): void { hostReset(full); if (role === 'guest') guestReset(); }   // (guestReset wipes the monster pools: only ever on the guest, whose monsters are a mirror)
+function resetCombat(full: boolean): void { hostReset(full); zonesReset(); if (role === 'guest') guestReset(); }   // (guestReset wipes the monster pools: only ever on the guest, whose monsters are a mirror)
 function teardown(): void {
   clearTimers();
   const c = conn; conn = null;
   if (c) { c.onClose = undefined; c.onData = undefined; try { c.close(); } catch { /* ignore */ } }
   const h = handle; handle = null;
   try { h?.close(); } catch { /* ignore */ }
-  resetRemote(); resetCombat(true); pending = null;
+  resetRemote(); resetCombat(true); pending = null; pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0; coopRoom.hl = -1;
 }
 function toTown(msg: string): void {
   const was = coopRoom.guest;
   coopRoom.guest = false; coopRoom.forced = null;
-  if (was && useGameStore.getState().status !== GameStatus.MENU) useGameStore.getState().resetGame();
+  const st = useGameStore.getState();
+  if (was && st.status !== GameStatus.MENU) {
+    // the host is gone: everything this hero already picked up is his (his loot went straight into HIS bag / purse); loot still on the floor is banked too
+    if (st.status === GameStatus.PLAYING || st.status === GameStatus.PAUSED || st.status === GameStatus.LEVEL_UP) { try { collectAllPickups(); } catch { /* ignore */ } st.abandonRun(); }
+    else st.resetGame();
+  }
   if (msg) notify(msg, '#ffd08a');
 }
 function fail(msg: string): void {
@@ -165,7 +177,7 @@ function send(m: unknown[]): void {
 // bandwidth meter (dev / QA: `?coopStats=1` or window.__coop.stats()): JSON bytes of every message sent / received
 const stats = { on: (() => { try { return new URLSearchParams(location.search).get('coopStats') === '1' || !!(import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV; } catch { return false; } })(), tx: 0, rx: 0, t0: 0, txBy: {} as Record<string, number>, rxBy: {} as Record<string, number> };
 const io = { send, rv: () => rv, connected };
-hostBind(io); guestBind(io);
+hostBind(io); guestBind(io); lootBind(io); zonesBind(io);
 
 // ------------------------------------------------------------------ receive ---
 function onData(d: unknown): void {
@@ -205,12 +217,15 @@ function onData(d: unknown): void {
     case MSG.ROOM: if (role === 'guest') onRoomMsg(d); return;
     case MSG.LEAVING: if (role === 'guest' && coopRoom.guest && world.room.active) world.room.fadeTarget = 1; return;
     case MSG.POS: onPos(d); return;
-    case MSG.END: if (role === 'guest' && coopRoom.guest) toTown('The host\'s adventure is over.'); return;
+    case MSG.END: if (role === 'guest' && coopRoom.guest && useGameStore.getState().status !== GameStatus.GAME_OVER) toTown('The host\'s adventure is over.'); return;   // (a guest looking at his own game-over summary goes home by himself)
     // ---- STEP 2 (combat): a message of another room is dropped
-    case MSG.SNAP: case MSG.META: case MSG.RST: case MSG.BOSS: case MSG.HIT: case MSG.DEBUF: case MSG.KNOCK: case MSG.KILL:
+    case MSG.SNAP: case MSG.META: case MSG.RST: case MSG.BOSS: case MSG.HIT: case MSG.DEBUF: case MSG.KNOCK: case MSG.KILL: case MSG.DROP: case MSG.REWARD:
       if (role === 'guest' && coopRoom.guest && d[1] === rv) guestOnMessage(d);
       return;
-    case MSG.EVT: case MSG.GP:
+    case MSG.REVIVE:   // (STEP 3) my friend finished reviving me
+      if (d[1] === rv && world.player.downed) reviveByFriend();
+      return;
+    case MSG.EVT: case MSG.GP: case MSG.PZ:
       if (d[1] !== rv) return;
       if (role === 'guest' && coopRoom.guest) guestOnMessage(d); else if (role === 'host') hostOnMessage(d);
       return;
@@ -221,11 +236,13 @@ function onData(d: unknown): void {
 
 function onPos(d: unknown[]): void {
   if (d.length < 8 || d[1] !== rv) return;
+  const rin = isNum(d[8]) ? d[8] / 100 : 0;
   const x = d[2], z = d[3], f = d[4], b = d[5], fl = d[6], hp = d[7];
   if (!isNum(x) || !isNum(z) || !isNum(f) || !isNum(b) || !isNum(fl) || !isNum(hp)) return;
   const o = head * W;
   ring[o] = nowMs(); ring[o + 1] = x / 100; ring[o + 2] = z / 100; ring[o + 3] = f / 100; ring[o + 4] = b / 100; ring[o + 5] = fl | 0; ring[o + 6] = hp / 100;
   head = (head + 1) % N; if (count < N) count++;
+  pFlags = fl | 0; pSeen = nowMs(); world.remote.reviveIn = rin > 0 ? Math.min(1, rin) : 0;
   world.remote.rx++;
   if (role === 'host') hostGuestSeen();
 }
@@ -253,7 +270,7 @@ function applyPending(): void {
     return;
   }
   if (!coopRoom.guest) { pending = null; return; }
-  if (status !== GameStatus.PLAYING) return;   // paused / picking a card: enter when play resumes (coopTick retries)
+  if (status !== GameStatus.PLAYING && status !== GameStatus.LEVEL_UP) return;   // paused: enter when play resumes (coopTick retries); a card pick does not hold the room change back
   pending = null;
   rv = p.rv; resetRemote(); guestReset();
   coopRoom.forced = { b: p.b, idx: p.idx, plan: p.plan, seed: p.seed };
@@ -270,12 +287,36 @@ coopRoom.onEnter = (b, idx, plan, seed) => {
   send([MSG.ROOM, rv, b, idx, plan, seed, first ? 1 : 0, runInfo.mode]);
 };
 coopRoom.onLeaving = () => { if (role === 'host' && connected()) send([MSG.LEAVING, rv]); };
-events.on('runStart', () => { runFresh = true; resetRemote(); resetCombat(true); });
+events.on('runStart', () => { runFresh = true; resetRemote(); resetCombat(true); pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0; });
 events.on('runEnd', () => {
-  runFresh = false; resetRemote(); resetCombat(true);
+  runFresh = false; resetRemote(); resetCombat(true); pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0;
   if (role === 'host' && connected()) send([MSG.END]);
   else if (role === 'guest') { coopRoom.guest = false; coopRoom.forced = null; }
 });
+
+// ------------------------------------------------------- downed + revive ---
+// A hero at 0 HP lies DOWN (combat.damagePlayer / player.ts) while the partner is up. The partner revives him by standing next to him for REVIVE_TIME seconds
+// (progress shown on both screens; walking away resets it). Each side runs only the half where HE is the reviver; the downed one gets MSG.REVIVE.
+coopRoom.partner = (): 0 | 1 | 2 => {
+  if (!connected() || nowMs() - pSeen > PARTNER_GRACE_MS) return 0;
+  return (pFlags & F_DOWN) !== 0 ? 2 : (pFlags & F_ALIVE) !== 0 ? 1 : 0;
+};
+coopRoom.live = (): boolean => connected() && (role === 'host' ? coopRoom.two : role === 'guest' ? coopRoom.guest : false);
+coopRoom.canBeDowned = (): boolean => coopRoom.live() && coopRoom.partner() === 1;
+function reviveTick(now: number, st: GameStatus): void {
+  const dt = lastRevAt ? Math.min(0.1, (now - lastRevAt) / 1000) : 0; lastRevAt = now;
+  const p = world.player, R = world.remote;
+  const can = p.alive && !p.downed && st === GameStatus.PLAYING && R.active && (R.flags & F_DOWN) !== 0 && Math.hypot(R.x - p.pos.x, R.z - p.pos.z) <= REVIVE_RANGE;
+  if (!can) { coopRoom.reviveOut = 0; return; }
+  coopRoom.reviveOut = Math.min(1, coopRoom.reviveOut + dt / REVIVE_TIME);
+  if (coopRoom.reviveOut >= 1) {
+    coopRoom.reviveOut = 0;
+    send([MSG.REVIVE, rv]);
+    pFlags = F_ALIVE; pSeen = now;   // (he stands up: until his next position says so, do not start another revive)
+    R.flags = F_ALIVE;
+    notify(`You revived ${useCoop.getState().partner?.n ?? 'your friend'}!`, '#9be7ff');
+  }
+}
 
 // ------------------------------------------------------------- per frame ---
 /** Called once per frame from engine/game.updateGame (before the status switch): sends my position, interpolates the partner. */
@@ -290,13 +331,13 @@ export function coopTick(): void {
     lastTx = now;
     const p = world.player, a = p.anim, hpMax = Math.max(1, useGameStore.getState().stats.maxHealth);
     send([MSG.POS, rv, Math.round(p.pos.x * 100), Math.round(p.pos.z * 100), Math.round(p.facing * 100), Math.round(a.moveBlend * 100),
-      (p.alive ? F_ALIVE : 0) | (a.attackT > 0.5 ? F_ATTACK : 0) | (a.dashing ? F_DASH : 0) | (a.castT > 0.5 ? F_CAST : 0), Math.round(Math.max(0, Math.min(1, p.hp / hpMax)) * 100)]);
+      (p.alive ? F_ALIVE : 0) | (a.attackT > 0.5 ? F_ATTACK : 0) | (a.dashing ? F_DASH : 0) | (a.castT > 0.5 ? F_CAST : 0) | (p.downed ? F_DOWN : 0), Math.round(Math.max(0, Math.min(1, p.hp / hpMax)) * 100), Math.round(coopRoom.reviveOut * 100)]);
   }
   // ---- interpolate the partner (render time = now - INTERP_MS)
   const R = world.remote;
-  if (!inRun || count === 0) { R.active = false; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
+  if (!inRun || count === 0) { R.active = false; coopRoom.reviveOut = 0; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
   const newest = (head - 1 + N) % N;
-  if (now - ring[newest * W] > 3000) { R.active = false; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
+  if (now - ring[newest * W] > 3000) { R.active = false; coopRoom.reviveOut = 0; if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun); return; }
   const rt = now - INTERP_MS;
   let a = -1, b = -1;
   for (let k = 0; k < count; k++) {   // newest -> oldest
@@ -313,6 +354,7 @@ export function coopTick(): void {
   }
   const L = newest * W;
   R.x = x; R.z = z; R.facing = f; R.blend = bl; R.flags = ring[L + 5]; R.hp = ring[L + 6]; R.active = true;
+  reviveTick(now, st);
   if (role === 'host') hostTick(now, inRun, R); else guestTick(now, inRun);   // STEP 2: stand-in hero + world snapshots (host) / hit claims + my projectiles (guest)
 }
 

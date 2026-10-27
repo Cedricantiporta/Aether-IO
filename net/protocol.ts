@@ -2,7 +2,7 @@
 // Bump COOP_VERSION whenever a message layout / meaning changes: peers on different versions refuse each other with a clear message.
 import type { HeroClass } from '../types';
 
-export const COOP_VERSION = 2;
+export const COOP_VERSION = 3;
 /** Peer ids on the broker are 'aether-' + room code. */
 export const PEER_PREFIX = 'aether-';
 /** Unambiguous letters only (no I / O / B / S / Z / 0 / 1 / 5 / 8 lookalikes). */
@@ -30,7 +30,18 @@ export const MSG = {
   RST: 16,    // [16, rv, phase, wave, enemiesLeft, alive, portals[[x, z, type, reward, big, pre]]]   host -> guest: room state (on change + 1 Hz)
   BOSS: 17,   // [17, rv, active, hp, maxHp, phase, stagger*100, staggered, ability, abilityT, name, title, interrupt*100, interruptOn, interruptLabel, shield, shieldMax, final, stage, bossId]
   GP: 18,     // [18, rv, base64]                  both ways, ~15 Hz: the sender's own projectiles, drawn as harmless copies on the partner's screen
+  // ---- STEP 3 (loot, cards, downed)
+  REVIVE: 19, // [19, rv]                          both ways: "your friend finished reviving you" (the receiver stands up at ~30% HP)
+  DROP: 20,   // [20, rv, kind, x*10, z*10, value, item]   host -> guest: the host's world dropped something; the guest gets HIS OWN copy (items are re-rolled for his class)
+  REWARD: 21, // [21, rv, what, bonus]             host -> guest: a room reward only the guest's own client can open (0 = card choice, 1 = fountain)
+  PZ: 22,     // [22, rv, zones[], fx[]]           both ways, ~8 Hz: the sender's own ground skill zones / falling arrows / meteors, drawn as harmless copies on the partner's screen
 } as const;
+/** DROP kinds (index on the wire; XP is never forwarded: kills pay both players directly) */
+export const DROP_KINDS = ['GOLD', 'GEM', 'HEALTH', 'MANA', 'ITEM', 'SHARD', 'CRYSTAL'] as const;
+/** how long a friend stays "there" without a position (room changes / hiccups) before a downed hero gives up waiting for him */
+export const PARTNER_GRACE_MS = 8000;
+/** seconds the partner must stand next to a downed hero, and the radius (u) he has to stay inside */
+export const REVIVE_TIME = 3, REVIVE_RANGE = 2.6;
 
 export const HIT_STRIDE = 11, STAT_STRIDE = 4;
 /** damagePlayer kinds / DamageKind (index on the wire) */
@@ -49,7 +60,7 @@ export const HF_DOT = 1, HF_ENV = 2, HF_NODOT = 4, HF_PROJ = 8, HF_CRIT = 16;
 export const DF_CRIT = 1, DF_DOT = 2, DF_BASIC = 4, DF_ABREAK = 8, DF_FROST = 16, DF_NOBACK = 32, DF_PLAYER = 64, DF_KNOCK = 128, DF_LAUNCH = 256;
 
 /** POS flags */
-export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8;
+export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8, F_DOWN = 16;
 
 /** What the other player needs to draw your hero (all small). */
 export interface HeroSnap {

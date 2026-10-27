@@ -17,6 +17,7 @@ import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFin
 /** (owner) gold coins picked up from the ground are worth 70% less (kills, crates, bosses, rewards). */
 const GOLD_LOOT_MUL = 0.3;
 import { healPlayer, grantKillXp } from './combat';
+import { coopRoom } from '../../net/coopRoom';
 
 const GRAVITY = 28;
 const REST_Y = 0.4;
@@ -51,6 +52,10 @@ function towerBlocks(kind: PickupKind, item?: Item): boolean {
 }
 export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?: Item): void {
   if (towerBlocks(kind, item)) return;
+  // co-op (STEP 3): every player gets HIS OWN loot. The host's world drops something -> the guest is sent a DROP and spawns his own copy (items re-rolled for his class);
+  // each side only ever collects the pickups of its own world. XP is never forwarded (kills pay both players directly); crates / harvest nodes / the pet are
+  // not forwarded either (coopRoom.noFwd): they exist on both screens and every player breaks his own copy.
+  if (coopRoom.fwdDrop && coopRoom.noFwd === 0 && kind !== 'XP' && !(item && droppedItems.has(item.id))) coopRoom.fwdDrop(kind, pos.x, pos.z, value, item);
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);
@@ -84,6 +89,12 @@ export function dropCrystals(n: number, at: { x: number; z: number }): void {
   if (n <= 0) return;
   const k = Math.min(5, n);
   for (let i = 0; i < k; i++) spawnPickup('CRYSTAL', crystalAt.set(at.x, 0, at.z), Math.floor(n / k) + (i < n % k ? 1 : 0));
+}
+
+/** Co-op: pick up everything still lying on the floor into the bag (a guest leaving a room / going home; the host does it in director.finishLeave). */
+export function collectAllPickups(): void {
+  const pk = world.pickups, st = useGameStore.getState();
+  for (let i = 0; i < pk.length; i++) if (pk[i].active) collect(pk[i], st);
 }
 
 /** Co-op: gold earned from a partner's kill (the same coin value the host's pickup would pay, with this player's own gold-find). */

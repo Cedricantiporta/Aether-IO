@@ -26,6 +26,7 @@ import { iceAt, ICE_ACCEL, ICE_FRICTION, ICE_SPEED_MUL } from '../iceFloor';
 import { queryColliders, edgeLimit, bounds, pushOutOfCrates, clampToDeck, roomHalls, type Collider } from '../mapgen';
 import { hallsPush, halls } from '../roomHalls';
 import { sacWalkGoal } from './director';
+import { coopRoom } from '../../net/coopRoom';
 import { isTownWater } from '../townData';
 import { Vector3 } from 'three';
 import { navActive, navClear, navFindPath, navPath } from '../roomNav';
@@ -224,6 +225,7 @@ export function updatePlayer(dt: number): void {
     if (deathT >= DEATH_DELAY && !ended) {
       // an Ankh of Life in the bag (off cooldown): offer it on the death screen first (ui/screens/AnkhPrompt.tsx)
       if (!showcase.on && !ankhOffer.declined && ankhAvailable()) { ankhOffer.open = true; return; }
+      if (p.downed && coopRoom.partner() === 1) return;   // co-op: DOWN while my friend is up: lie here until he revives me (net/coop.ts); both down (or he is gone) = the run ends
       ended = true;
       st.endRun({ ...world.run, wave: world.director.wave });
     }

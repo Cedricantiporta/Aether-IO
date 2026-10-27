@@ -3,6 +3,7 @@
 // Anything that changes every frame lives in engine/world.ts. See storeTypes.ts.
 // ============================================================================
 import { GOLD_SCALE } from './constants';
+import { coopRoom } from './net/coopRoom';
 import { abilityMana, activeDefs, dashKey, ACTIVE_ORDER } from './abilityDefs';
 import { debug } from './engine/debug';
 import { runCards, rollRunCards, takeRunCard, rarityUpCard, canRarityUp, trendCounts, polishCost, SHIP_DECKS, deckCards } from './engine/runCards';
@@ -1132,6 +1133,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     openWaveReward: (bonus = false) => {
       const s = get();
+      coopRoom.fwdReward?.(0, bonus);   // co-op host: the guest opens his OWN card choice too (net/coopLoot.ts; a no-op solo and on the guest)
       const extraCard = bonus;
       if (extraCard) notify('Bonus reward card!', COLORS.uiAccent, 'SYSTEM');
       set({

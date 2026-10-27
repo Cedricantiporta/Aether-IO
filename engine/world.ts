@@ -75,7 +75,7 @@ function makeCrate(id: number): Crate {
 
 export function makePlayerRuntime(): PlayerRuntime {
   return {
-    alive: true, pos: v(), vel: v(), facing: 0, aim: new Vector3(0, 0, -10),
+    alive: true, downed: false, pos: v(), vel: v(), facing: 0, aim: new Vector3(0, 0, -10),
     hp: 100, mana: 100,
     dashT: 0, dashDir: v(), dashIframes: true, dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
     cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
@@ -98,7 +98,7 @@ export const CAM_PITCH0 = 50 * Math.PI / 180;   // (owner) Echoes-of-Wisdom top-
 
 export const world = {
   /** The co-op partner's hero (net/coop.ts writes the interpolated values every frame; render/RemoteHero.tsx reads them). Preallocated, never reassigned. */
-  remote: { active: false, x: 0, z: 0, facing: 0, blend: 0, /** net/protocol F_* bits */ flags: 0, hp: 1, /** bumps on every position the partner sent (render wakes) */ rx: 0 },
+  remote: { active: false, x: 0, z: 0, facing: 0, blend: 0, /** net/protocol F_* bits */ flags: 0, hp: 1, /** 0..1: how far the partner has got reviving ME (he stands next to my downed hero) */ reviveIn: 0, /** bumps on every position the partner sent (render wakes) */ rx: 0 },
   /** screen anchor above the current target's head (written by CameraRig, read by the TargetFrame) */
   targetAnchor: { on: false, sx: 0, sy: 0 },
   time: 0,              // total simulated seconds (only advances while PLAYING)
@@ -242,7 +242,7 @@ export function allocZone(): Zone | null {
 export function allocFx(): GroundFx | null {
   const f = grab(world.fx, 'fx');
   if (!f) return null;
-  f.t = 0; f.done = false; f.launch = false; f.hostile = false; f.own = -1; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
+  f.t = 0; f.done = false; f.launch = false; f.hostile = false; f.ghost = false; f.own = -1; f.aux = 0; f.sx = f.sz = 0; f.seed = Math.random(); f.color = 0xffffff;
   return f;
 }
 
