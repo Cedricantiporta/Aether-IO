@@ -2,7 +2,7 @@
 // Bump COOP_VERSION whenever a message layout / meaning changes: peers on different versions refuse each other with a clear message.
 import type { HeroClass } from '../types';
 
-export const COOP_VERSION = 3;
+export const COOP_VERSION = 4;
 /** Peer ids on the broker are 'aether-' + room code. */
 export const PEER_PREFIX = 'aether-';
 /** Unambiguous letters only (no I / O / B / S / Z / 0 / 1 / 5 / 8 lookalikes). */
@@ -35,6 +35,15 @@ export const MSG = {
   DROP: 20,   // [20, rv, kind, x*10, z*10, value, item]   host -> guest: the host's world dropped something; the guest gets HIS OWN copy (items are re-rolled for his class)
   REWARD: 21, // [21, rv, what, bonus]             host -> guest: a room reward only the guest's own client can open (0 = card choice, 1 = fountain)
   PZ: 22,     // [22, rv, zones[], fx[]]           both ways, ~8 Hz: the sender's own ground skill zones / falling arrows / meteors, drawn as harmless copies on the partner's screen
+  // ---- STEP 4 (boss trials, mirrors, pulls, interactions, minions)
+  TRIAL: 23,  // [23, boss]                        host -> guest: "let us fight boss `boss` together" (the guest checks his own daily try / ticket)
+  TRIALR: 24, // [24, boss, ok, reason]            guest -> host: answer to TRIAL (reason 0 ok, 1 not unlocked, 2 already won today (no ticket), 3 busy / in a run)
+  TWIN: 25,   // [25, rv]                          host -> guest: the trial boss is down, claim YOUR loot (own roll, own class) and go back to the portal
+  PULL: 26,   // [26, rv, kind, dx*100, dz*100, force*100, dur*100]   host -> guest: a pull / push on the guest's hero (gravity well, black hole, wind, beam shove ...)
+  USE: 27,    // [27, rv, what, a, b]              guest -> host: "I pressed E at this" (what: 0 chest at station, 1 extra chest a, 2 fountain, 3 shrine, 4 merchant); the host does the world side
+  USER: 28,   // [28, rv, what, ok, stockSeed...]  host -> guest: answer to USE (merchant: the stock list, fountain / shrine / chest: the guest's own reward)
+  HAZ: 29,    // [29, rv, kind, rows[]]            host -> guest: cosmetic mirrors of room traps / biome hazards / boss props (on change + ~2 Hz state, see coopHaz.ts)
+  MIN: 30,    // [30, rv, rows[]]                  both ways, ~8 Hz: my own minions (skeletons / summons / pet) as harmless ghosts on the partner's screen
 } as const;
 /** DROP kinds (index on the wire; XP is never forwarded: kills pay both players directly) */
 export const DROP_KINDS = ['GOLD', 'GEM', 'HEALTH', 'MANA', 'ITEM', 'SHARD', 'CRYSTAL'] as const;
@@ -60,7 +69,7 @@ export const HF_DOT = 1, HF_ENV = 2, HF_NODOT = 4, HF_PROJ = 8, HF_CRIT = 16;
 export const DF_CRIT = 1, DF_DOT = 2, DF_BASIC = 4, DF_ABREAK = 8, DF_FROST = 16, DF_NOBACK = 32, DF_PLAYER = 64, DF_KNOCK = 128, DF_LAUNCH = 256;
 
 /** POS flags */
-export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8, F_DOWN = 16;
+export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8, F_DOWN = 16, F_PAUSED = 32;
 
 /** What the other player needs to draw your hero (all small). */
 export interface HeroSnap {

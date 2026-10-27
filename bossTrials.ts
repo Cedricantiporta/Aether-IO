@@ -59,3 +59,12 @@ export function untilReset(now: Date = new Date()): string {
   const m = Math.max(0, Math.ceil((next.getTime() - now.getTime()) / 60000)), h = Math.floor(m / 60);
   return h > 0 ? `${h}h ${m % 60}m` : `${m}m`;
 }
+
+/** Can this hero start the trial of `boss` now? 'ok' = the daily try is free, 'ticket' = already won today but a ticket pays the rematch,
+ *  'locked' = won today and no ticket, 'asleep' = the portal is not open yet (no game clear). Pure; used by the window, the store and co-op (both players must pass). */
+export type TrialAccess = 'ok' | 'ticket' | 'locked' | 'asleep';
+export function trialAccess(endings: number, trialDay: Record<string, string> | undefined, tickets: number, boss: number, today: string = trialDayKey()): TrialAccess {
+  if (endings <= 0) return 'asleep';
+  if (!fought(trialDay, boss, today)) return 'ok';
+  return tickets > 0 ? 'ticket' : 'locked';
+}

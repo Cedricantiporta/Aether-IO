@@ -234,11 +234,12 @@ export function updateGame(rawDt: number): void {
     return;
   }
   // co-op (STEP 3): a card pick never freezes the world: the partner keeps fighting (and the one who picks is untouchable: damagePlayer ignores hits unless PLAYING, and he cannot move or act behind the card screen)
-  if (status !== GameStatus.PLAYING && !(status === GameStatus.LEVEL_UP && coopRoom.live())) {
+  // (STEP 4) a pause menu is the same: the pauser stands still and untouchable, the partner's screen keeps running ("partner paused" shows there)
+  if (status !== GameStatus.PLAYING && !((status === GameStatus.LEVEL_UP || status === GameStatus.PAUSED) && coopRoom.live())) {
     clearPressed();
     return;
   }
-  if (status === GameStatus.LEVEL_UP) { world.player.invulnT = Math.max(world.player.invulnT, 0.3); holdHeroStill(); }
+  if (status === GameStatus.LEVEL_UP || status === GameStatus.PAUSED) { world.player.invulnT = Math.max(world.player.invulnT, 0.3); holdHeroStill(); }
   // Ultimate wind-up: the simulation is frozen (render keeps running) until the effect releases.
   if (tickUltWindup(Math.min(rawDt, 0.1))) { clearPressed(); return; }
   const dt = Math.min(rawDt, MAX_DT) * feel.timeScale;

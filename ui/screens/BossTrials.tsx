@@ -11,6 +11,8 @@ import { useRaf } from '../hooks/useRaf';
 import { world } from '../../engine/world';
 import { BOSS_PORTAL } from '../../engine/townData';
 import { biomeOf, bossNameIn, BIOMES } from '../../engine/roomDefs';
+import { useCoop } from '../../net/coopStore';
+import { coopInviteTrial } from '../../net/coop';
 import { TRIAL_BOSSES, TICKET_NAME, fought, untilReset, trialDayKey, TRIAL_MYTHIC, TRIAL_BONUS_ITEM } from '../../bossTrials';
 
 /** A cute emoji per biome boss (Elderroot, Gorath, Dune Colossus, Tide Hydra, Glacius, Ignar, Void Herald). */
@@ -32,7 +34,11 @@ export const BossTrialsWindow: React.FC = () => {
     trialDay: s.progress.trialDay, endings: s.progress.endings, startBossTrial: s.startBossTrial,
     tickets: s.inventory.reduce((n, i) => (i.type === 'LOOT' && i.name === TICKET_NAME ? n + (i.quantity || 1) : n), 0),
   })));
+  const withFriend = useCoop((s) => s.state === 'connected' && s.role === 'host');
+  const friend = useCoop((s) => s.partner?.n ?? '');
+  const guestOn = useCoop((s) => s.state === 'connected' && s.role === 'guest');
   if (!open) return null;
+  const go = (i: number): void => { if (withFriend) { if (coopInviteTrial(i)) setOpen(false); } else if (startBossTrial(i)) setOpen(false); };
   const today = trialDayKey(), reset = untilReset();
   return (
     <Modal open={open} title="Boss Trials" ribbon tone="purple" width="min(34rem, calc(100vw - 1.5rem))" z={160} onClose={() => setOpen(false)}>
@@ -54,14 +60,16 @@ export const BossTrialsWindow: React.FC = () => {
                   <em>Drops: <i>{t.icon} {t.slotLabel}</i></em>
                 </div>
                 <div className="bt-act">
-                  {!done && <Button variant="primary" size="sm" data-testid={`bt-fight-${i}`} onClick={() => { if (startBossTrial(i)) setOpen(false); }}>Fight</Button>}
+                  {!done && <Button variant="primary" size="sm" disabled={guestOn} data-testid={`bt-fight-${i}`} onClick={() => go(i)}>{withFriend ? `Fight with ${friend}` : 'Fight'}</Button>}
                   {done && !canTicket && <small className="bt-wait" data-testid={`bt-done-${i}`}>Won today<br />resets in {reset}</small>}
-                  {canTicket && <Button variant="blue" size="sm" data-testid={`bt-ticket-${i}`} onClick={() => { if (startBossTrial(i)) setOpen(false); }}>Use ticket</Button>}
+                  {canTicket && <Button variant="blue" size="sm" disabled={guestOn} data-testid={`bt-ticket-${i}`} onClick={() => go(i)}>Use ticket</Button>}
                 </div>
               </div>
             );
           })}
         </div>
+        {withFriend && <div className="bt-intro" data-testid="bt-coop-note">Co-op: <b>{friend}</b> fights beside you. The boss gets +75% HP, and each of you needs this boss's daily try (or a ticket) and gets his <b>own</b> loot.</div>}
+        {guestOn && <div className="bt-intro">Your friend hosts this co-op: only they can start a trial for both of you.</div>}
         {endings <= 0 && <div className="bt-intro">The portal is asleep.</div>}
       </div>
     </Modal>

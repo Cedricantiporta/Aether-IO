@@ -10,6 +10,8 @@ import { useGameStore } from '../store';
 import { useUiStore } from '../ui/uiStore';
 import { activeChar } from '../characters';
 import { GameStatus } from '../types';
+import { trialAccess, TICKET_NAME, TRIAL_BOSSES } from '../bossTrials';
+import { trialBossCleared } from '../engine/systems/trialRun';
 import { reviveByFriend } from '../engine/systems/combat';
 import { collectAllPickups } from '../engine/systems/pickups';
 import type { RoomPlan } from '../engine/types';
@@ -20,7 +22,7 @@ import { lootBind, lootStats } from './coopLoot';
 import { guestBind, guestTick, guestReset, guestOnMessage, guestStats } from './coopGuest';
 import { useCoop, coopSet } from './coopStore';
 import { pickTransport, type Conn, type Handle, type Transport } from './transport';
-import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, F_DOWN, PARTNER_GRACE_MS, REVIVE_TIME, REVIVE_RANGE, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
+import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, F_DOWN, F_PAUSED, PARTNER_GRACE_MS, REVIVE_TIME, REVIVE_RANGE, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
 
 const POS_HZ = 16, POS_EVERY_MS = 1000 / POS_HZ;
 const INTERP_MS = 100;          // render the partner this far in the past (buffer for jitter)
@@ -37,7 +39,7 @@ let code = '';
 let lastRx = 0, lastTx = 0, beat: ReturnType<typeof setInterval> | null = null, setupT: ReturnType<typeof setTimeout> | null = null;
 let rv = 0;                     // room counter: host bumps it per room, guest copies it; POS of another room is ignored
 let runFresh = false;           // the next room the host enters opens a run
-let pending: { rv: number; b: number; idx: number; plan: RoomPlan; seed: number; first: boolean } | null = null;
+let pending: { rv: number; b: number; idx: number; plan: RoomPlan; seed: number; first: boolean; trial: boolean } | null = null;
 
 // ---- the partner's last known state (survives room changes: a downed hero must not give up while the friend is only loading a room)
 let pFlags = 0, pSeen = 0, reviveGot = 0, lastRevAt = 0;
@@ -76,7 +78,7 @@ function teardown(): void {
   if (c) { c.onClose = undefined; c.onData = undefined; try { c.close(); } catch { /* ignore */ } }
   const h = handle; handle = null;
   try { h?.close(); } catch { /* ignore */ }
-  resetRemote(); resetCombat(true); pending = null; pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0; coopRoom.hl = -1;
+  resetRemote(); resetCombat(true); pending = null; invite = null; pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0; coopRoom.hl = -1;
 }
 function toTown(msg: string): void {
   const was = coopRoom.guest;
@@ -230,6 +232,10 @@ function onData(d: unknown): void {
       if (role === 'guest' && coopRoom.guest) guestOnMessage(d); else if (role === 'host') hostOnMessage(d);
       return;
     case MSG.DMG: if (role === 'host' && d[1] === rv) hostOnMessage(d); return;
+    // ---- STEP 4
+    case MSG.TRIAL: if (role === 'guest') onTrialInvite(d); return;
+    case MSG.TRIALR: if (role === 'host') onTrialReply(d); return;
+    case MSG.TWIN: if (role === 'guest' && coopRoom.guest && d[1] === rv) trialBossCleared(true); return;
     default: return;
   }
 }
@@ -251,8 +257,8 @@ function onPos(d: unknown[]): void {
 function onRoomMsg(d: unknown[]): void {
   const plan = sanitizePlan(d[4]);
   if (!plan || !isNum(d[5])) return;
-  if (d[7] !== 'ADVENTURE') { notify('Your friend started a mode that co-op does not support yet.', '#ffd08a'); return; }
-  pending = { rv: clampInt(d[1], 0, 1e9), b: clampInt(d[2], 0, 20), idx: clampInt(d[3], 0, 40), plan: plan as unknown as RoomPlan, seed: (d[5] as number) >>> 0, first: d[6] === 1 };
+  if (d[7] !== 'ADVENTURE' && d[7] !== 'BOSS_TRIAL') { notify('Your friend started a mode that co-op does not support yet.', '#ffd08a'); return; }
+  pending = { rv: clampInt(d[1], 0, 1e9), b: clampInt(d[2], 0, 20), idx: clampInt(d[3], 0, 40), plan: plan as unknown as RoomPlan, seed: (d[5] as number) >>> 0, first: d[6] === 1, trial: d[7] === 'BOSS_TRIAL' };
   applyPending();
 }
 function applyPending(): void {
@@ -266,11 +272,15 @@ function applyPending(): void {
     pending = null;
     coopRoom.guest = true; rv = p.rv; resetRemote();
     coopRoom.forced = { b: p.b, idx: p.idx, plan: p.plan, seed: p.seed };
+    if (p.trial) {   // (STEP 4) a co-op Boss Trial: my own daily try / ticket rules apply (the host asked first, TRIAL / TRIALR)
+      if (!st.startBossTrial(p.b)) { coopRoom.guest = false; coopRoom.forced = null; notify('Could not join the Boss Trial (already won today, or no ticket).', '#ffd08a'); }
+      return;
+    }
     st.startMode('ADVENTURE', 0);
     return;
   }
   if (!coopRoom.guest) { pending = null; return; }
-  if (status !== GameStatus.PLAYING && status !== GameStatus.LEVEL_UP) return;   // paused: enter when play resumes (coopTick retries); a card pick does not hold the room change back
+  if (status !== GameStatus.PLAYING && status !== GameStatus.LEVEL_UP && status !== GameStatus.PAUSED) return;   // (a card pick / the pause menu do not hold the room change back: the world runs on)
   pending = null;
   rv = p.rv; resetRemote(); guestReset();
   coopRoom.forced = { b: p.b, idx: p.idx, plan: p.plan, seed: p.seed };
@@ -283,9 +293,10 @@ coopRoom.onEnter = (b, idx, plan, seed) => {
   if (role !== 'host') return;
   rv++; resetRemote(); resetCombat(false);
   const first = runFresh; runFresh = false;
-  if (!connected() || runInfo.mode !== 'ADVENTURE') return;
+  if (!connected() || (runInfo.mode !== 'ADVENTURE' && runInfo.mode !== 'BOSS_TRIAL')) return;
   send([MSG.ROOM, rv, b, idx, plan, seed, first ? 1 : 0, runInfo.mode]);
 };
+coopRoom.trialWin = () => { if (role === 'host' && connected()) send([MSG.TWIN, rv]); };
 coopRoom.onLeaving = () => { if (role === 'host' && connected()) send([MSG.LEAVING, rv]); };
 events.on('runStart', () => { runFresh = true; resetRemote(); resetCombat(true); pFlags = 0; pSeen = 0; coopRoom.reviveOut = 0; });
 events.on('runEnd', () => {
@@ -293,6 +304,42 @@ events.on('runEnd', () => {
   if (role === 'host' && connected()) send([MSG.END]);
   else if (role === 'guest') { coopRoom.guest = false; coopRoom.forced = null; }
 });
+
+// ------------------------------------------------------------ boss trials ---
+// (STEP 4) The host picks a Boss Trial in the purple portal's window and asks his friend (TRIAL). The friend checks HIS OWN rules (the portal is open for him, the
+// daily try of that boss is free or he holds a ticket) and answers (TRIALR); only when he says yes does the host start the trial and the friend is pulled in by the
+// usual ROOM message (mode BOSS_TRIAL). Each side then runs the normal trial rules for himself; on the win the host sends TWIN and both roll their own loot.
+let invite: { boss: number; at: number } | null = null;
+const ticketsOf = (): number => useGameStore.getState().inventory.reduce((n, i) => (i.type === 'LOOT' && i.name === TICKET_NAME ? n + (i.quantity || 1) : n), 0);
+const myAccess = (boss: number) => { const s = useGameStore.getState(); return trialAccess(s.progress.endings, s.progress.trialDay, ticketsOf(), boss); };
+/** HOST: ask the friend to take part in the trial of `boss` (the window then waits for his answer). Returns false when it cannot be asked. */
+export function coopInviteTrial(boss: number): boolean {
+  if (role !== 'host' || !connected() || !(boss >= 0 && boss < TRIAL_BOSSES.length)) return false;
+  const a = myAccess(boss);
+  if (a === 'locked' || a === 'asleep') { notify('You cannot start this trial right now.', '#ffd08a'); return false; }
+  invite = { boss, at: nowMs() };
+  send([MSG.TRIAL, boss]);
+  notify(`Asking ${useCoop.getState().partner?.n ?? 'your friend'} to join the Boss Trial...`, '#c58cff');
+  return true;
+}
+function onTrialInvite(d: unknown[]): void {
+  const boss = isNum(d[1]) ? d[1] | 0 : -1;
+  const st = useGameStore.getState();
+  let reason = 0;
+  if (!(boss >= 0 && boss < TRIAL_BOSSES.length)) reason = 3;
+  else if (st.status !== GameStatus.MENU || !useUiStore.getState().titleDone || useUiStore.getState().charSelect) reason = 3;
+  else { const a = myAccess(boss); reason = a === 'asleep' ? 1 : a === 'locked' ? 2 : 0; }
+  send([MSG.TRIALR, boss, reason === 0 ? 1 : 0, reason]);
+  if (reason === 0) notify(`${useCoop.getState().partner?.n ?? 'Your friend'} is starting a Boss Trial. Get ready!`, '#c58cff');
+}
+function onTrialReply(d: unknown[]): void {
+  const iv = invite; if (!iv || d[1] !== iv.boss) return;
+  invite = null;
+  const who = useCoop.getState().partner?.n ?? 'Your friend';
+  if (d[2] === 1) { if (!useGameStore.getState().startBossTrial(iv.boss)) notify('Could not start the trial.', '#ffd08a'); return; }
+  const why = d[3] === 1 ? 'has not opened the Boss Portal yet' : d[3] === 2 ? 'already won this trial today and has no ticket' : 'cannot join right now (busy or not in town)';
+  notify(`${who} ${why}.`, '#ffd08a');
+}
 
 // ------------------------------------------------------- downed + revive ---
 // A hero at 0 HP lies DOWN (combat.damagePlayer / player.ts) while the partner is up. The partner revives him by standing next to him for REVIVE_TIME seconds
@@ -322,16 +369,17 @@ function reviveTick(now: number, st: GameStatus): void {
 /** Called once per frame from engine/game.updateGame (before the status switch): sends my position, interpolates the partner. */
 export function coopTick(): void {
   if (!role) return;
+  if (invite && nowMs() - invite.at > 6000) { invite = null; notify('No answer from your friend. Try again.', '#ffd08a'); }
   if (!conn || useCoop.getState().state !== 'connected') { world.remote.active = false; if (coopRoom.ally || coopRoom.two) hostReset(true); return; }
   const st = useGameStore.getState().status, now = nowMs();
   if (pending) applyPending();
-  const inRun = (role === 'host' ? runInfo.mode === 'ADVENTURE' && world.room.active : coopRoom.guest) && (st === GameStatus.PLAYING || st === GameStatus.PAUSED || st === GameStatus.LEVEL_UP);
+  const inRun = (role === 'host' ? (runInfo.mode === 'ADVENTURE' || runInfo.mode === 'BOSS_TRIAL') && world.room.active : coopRoom.guest) && (st === GameStatus.PLAYING || st === GameStatus.PAUSED || st === GameStatus.LEVEL_UP);
   // ---- send my state
   if (inRun && now - lastTx >= POS_EVERY_MS) {
     lastTx = now;
     const p = world.player, a = p.anim, hpMax = Math.max(1, useGameStore.getState().stats.maxHealth);
     send([MSG.POS, rv, Math.round(p.pos.x * 100), Math.round(p.pos.z * 100), Math.round(p.facing * 100), Math.round(a.moveBlend * 100),
-      (p.alive ? F_ALIVE : 0) | (a.attackT > 0.5 ? F_ATTACK : 0) | (a.dashing ? F_DASH : 0) | (a.castT > 0.5 ? F_CAST : 0) | (p.downed ? F_DOWN : 0), Math.round(Math.max(0, Math.min(1, p.hp / hpMax)) * 100), Math.round(coopRoom.reviveOut * 100)]);
+      (p.alive ? F_ALIVE : 0) | (a.attackT > 0.5 ? F_ATTACK : 0) | (a.dashing ? F_DASH : 0) | (a.castT > 0.5 ? F_CAST : 0) | (p.downed ? F_DOWN : 0) | (st === GameStatus.PAUSED ? F_PAUSED : 0), Math.round(Math.max(0, Math.min(1, p.hp / hpMax)) * 100), Math.round(coopRoom.reviveOut * 100)]);
   }
   // ---- interpolate the partner (render time = now - INTERP_MS)
   const R = world.remote;

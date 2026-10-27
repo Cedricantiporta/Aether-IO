@@ -12,7 +12,7 @@ import { coopRoom } from '../../net/coopRoom';
 import { world } from '../../engine/world';
 import { portalLabel } from '../../engine/roomDefs';
 import { useRaf } from '../hooks/useRaf';
-import { F_ALIVE, F_DOWN, REVIVE_RANGE } from '../../net/protocol';
+import { F_ALIVE, F_DOWN, F_PAUSED, REVIVE_RANGE } from '../../net/protocol';
 
 const anyPortal = (): boolean => { const p = world.room.portals; for (let i = 0; i < p.length; i++) if (p[i].active) return true; return false; };
 /** green < 80 ms, amber < 180 ms, red above */
@@ -41,7 +41,8 @@ export const CoopHud: React.FC = () => {
       kind = 'friend'; prog = coopRoom.reviveOut;
       const d = Math.hypot(R.x - me.pos.x, R.z - me.pos.z);
       txt = coopRoom.reviveOut > 0 ? `Reviving ${name}...` : d <= REVIVE_RANGE + 6 ? `${name} is down! Stand next to them to revive.` : `${name} is down! Run to them.`;
-    } else if (coopRoom.guest && inRoom && world.director.phase === 'CLEARED' && anyPortal()) {
+    } else if (R.active && ((R.flags | 0) & F_PAUSED) !== 0) { kind = 'pause'; txt = `${name} paused (the game keeps running)`; }
+    else if (coopRoom.guest && inRoom && world.director.phase === 'CLEARED' && anyPortal()) {
       kind = 'door';
       const hl = coopRoom.hl, po = hl >= 0 && hl < world.room.portals.length ? world.room.portals[hl] : null;
       if (po && po.active) { const l = portalLabel(po.plan, world.room.biome); txt = `Host is choosing... heading for ${l.sub ? `${l.title} · ${l.sub}` : l.title}`; }

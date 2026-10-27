@@ -1510,6 +1510,7 @@ function guestDirector(dt: number): void {
     if (vacuumT > 0) { vacuumT -= dt; vacuumTick = 0; }
     else { vacuumTick -= dt; if (vacuumTick <= 0) { vacuumTick = 0.3; vacuumLoot(); } }
   }
+  tickTrial(dt);   // (co-op Boss Trial: the host told me the boss fell, my own summary follows after the loot beat)
   scanNearby();
   harvestCd = Math.max(0, harvestCd - dt);
   if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);

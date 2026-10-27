@@ -57,6 +57,12 @@ export const coopRoom = {
   /** GUEST: claim a hit / status on a mirrored monster (combat.guestHit / applyStatus). */
   sendHit: null as null | ((e: Enemy, amount: number, o: DamageOpts, knockRoll: boolean, fromX: number, fromZ: number) => void),
   sendStatus: null as null | ((e: Enemy, effect: StatusEffect) => void),
+  /** HOST (STEP 4): the trial boss is down -> the guest claims his own loot and is sent home. */
+  trialWin: null as null | (() => void),
+  /** HOST: a pull / push on the stand-in hero (voidFx gravity wells, black holes, wind ...) is forwarded to the guest, who moves his own hero. */
+  fwdPull: null as null | ((kind: number, dx: number, dz: number, force: number, dur: number) => void),
+  /** GUEST (STEP 4): pressed E at a world interaction (chest, fountain, shrine, merchant ...): the host does the world side. */
+  sendUse: null as null | ((what: number, a: number) => boolean),
   /** GUEST: per-frame mirror update (replaces updateEnemies / updateEnemyProjectiles in engine/game.ts). */
   mirror: null as null | ((dt: number) => void),
 };
