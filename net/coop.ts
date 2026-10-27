@@ -320,5 +320,6 @@ export function coopTick(): void {
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
   setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
     import('../engine/game').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.game = m; }).catch(() => { /* ignore */ });
+    import('../engine/systems/enemies').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.enemies = m; }).catch(() => { /* ignore */ });
   }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
 }

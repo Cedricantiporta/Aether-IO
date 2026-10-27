@@ -91,7 +91,7 @@ export function guestTick(now: number, inRun: boolean): void {
   if (now - lastFlush >= 33) {
     lastFlush = now;
     if (hq.length || sq.length) { io.send([MSG.DMG, io.rv(), hq.slice(), sq.slice()]); hq.length = 0; sq.length = 0; }
-    if (evtQ.length && now - lastGp >= 60) io.send([MSG.EVT, io.rv(), ...evtQ]), evtQ.length = 0;
+    if (evtQ.length) { io.send([MSG.EVT, io.rv(), ...evtQ]); evtQ.length = 0; }
   }
   if (now - lastGp >= 66) {
     lastGp = now;
