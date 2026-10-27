@@ -92,8 +92,10 @@ pointer) every frame — the engine never touches the camera.
   Enemies scale with depth and with hero level.
 
 ## Online co-op (`net/`)
-Pure TS beside `engine/`: the host simulates, the guest renders. Per-frame partner state is `world.remote` (written by `net/coop.ts coopTick()`, called from
-`updateGame`); the UI slice `net/coopStore.ts` changes only at discrete moments. The director talks to the net layer only through `net/coopRoom.ts`. Details: HANDOFF 3.11.
+Pure TS beside `engine/`: the host simulates the world (monsters, bosses, hazards); the guest simulates only his own hero and renders a mirror of the host's monsters.
+Per-frame partner state is `world.remote` (written by `net/coop.ts coopTick()`, called from `updateGame`); the UI slice `net/coopStore.ts` changes only at discrete moments.
+The engine talks to the net layer only through `net/coopRoom.ts` (a few `if (coopRoom.guest)` / `world.player === coopRoom.ally` checks in `combat.ts`, `enemies.ts`, `zones.ts`,
+`director.ts`, `game.ts`, all dead branches in single player). Co-op hot paths use preallocated Uint16 buffers, no per-entity allocation. Details: HANDOFF 3.11.
 
 ## Performance rules (all agents)
 1. No `new Vector3()` / closures / array allocs in per-entity per-frame loops —

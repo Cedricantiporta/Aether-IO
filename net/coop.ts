@@ -62,7 +62,7 @@ function clearTimers(): void {
 }
 function resetRemote(): void { count = 0; head = 0; world.remote.active = false; }
 /** the world of the co-op combat layer (monster mirror, stand-in hero, queues): `full` = also forget that a partner joined this run */
-function resetCombat(full: boolean): void { hostReset(full); if (full) guestReset(); else if (role === 'guest') guestReset(); }
+function resetCombat(full: boolean): void { hostReset(full); if (role === 'guest') guestReset(); }   // (guestReset wipes the monster pools: only ever on the guest, whose monsters are a mirror)
 function teardown(): void {
   clearTimers();
   const c = conn; conn = null;
