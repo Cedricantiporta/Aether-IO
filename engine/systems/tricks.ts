@@ -6,7 +6,7 @@
 // telegraph or dashing (i-frames) avoids it.
 // ============================================================================
 import { Vector3 } from 'three';
-import { world, allocZone } from '../world';
+import { world, allocZone, pass2 } from '../world';
 import { events } from '../events';
 import type { Enemy, EnemyKind, Zone, ZoneKind } from '../types';
 import { applyPlayerDebuff, damagePlayer, KB } from './combat';
@@ -199,6 +199,7 @@ export function resolveTrick(z: Zone): void {
 // ------------------------------------------------------------ crystal wall --
 const WALL_LIFE = 4;
 export function raiseWallAt(x: number, zz: number, r: number, life: number, rock = false): boolean {
+  if (pass2.on) return false;
   const w = world.walls.find((q) => !q.active);
   if (!w) return false;
   w.x = x; w.z = zz; w.r = r; w.t = 0; w.life = life; w.rot = Math.random() * 6.28; w.rock = rock;

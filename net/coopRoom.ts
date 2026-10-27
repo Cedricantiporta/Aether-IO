@@ -48,6 +48,8 @@ export const coopRoom = {
   fwdReward: null as null | ((what: number, bonus: boolean) => void),
   /** host's choice of door as the guest sees it (index into world.room.portals, -1 = none); written by net/coopGuest from RST */
   hl: -1,
+  /** HOST: the exit the host stands next to right now (0..3, index into world.room.portals; -1 none): shown to the guest as "your friend heads for ..." */
+  hlHost: -1,
   /** how far (0..1) I have got reviving my downed partner (the HUD / ring read it) and the partner's position when he went down */
   reviveOut: 0,
 

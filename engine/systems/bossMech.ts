@@ -23,6 +23,7 @@ import { spawnEnemy, spawnTelegraphCircle, onEnemyDeath } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { firePatch } from './bossFx';
 import { useGameStore } from '../../store';
+import { forEachHero, nearestHero } from '../heroes';
 
 interface Mech {
   cc: PlayerDebuff; ccDur: number;      // signature crowd control (quake + crush)
@@ -86,7 +87,6 @@ export const bossStrike = strike;
 export const bossPwr = pwr;
 let fxN = 0;
 function resolve(s: (typeof strikes)[number]): void {
-  const p = world.player;
   // impact: a dust ring + scorch every time, a full explosion only on every third (a rain of 25 must not white out)
   tv.set(s.x, 0, s.z);
   const th = s.th;
@@ -98,12 +98,15 @@ function resolve(s: (typeof strikes)[number]): void {
     events.emit('shockwave', { pos: tv.clone(), radius: s.r * 1.1, color: 0x8a7a6a });
     if ((fxN++ % 3) === 0) events.emit('explosion', { pos: tv.clone(), radius: s.r * 0.7, color: 0xa04a1a });
   }
-  const dx = p.pos.x - s.x, dz = p.pos.z - s.z, rr = s.r + 0.5;
-  if (p.alive && dx * dx + dz * dz < rr * rr) {
-    tv.set(s.x, 0, s.z);
-    damagePlayer(th ? 1 : s.dmg, { ...(th ? { pct: RAIN_PCT[Math.min(2, s.pi >> 8)] } : null), pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL', ...(s.kd > 0 ? { kb: KB.SLAM.kb, down: s.kd } : null) });   // (owner) the quake ring and the aimed meteor knock the hero down
-    if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? SLOW_BOSS : 0);
-  }
+  const rr = s.r + 0.5;
+  forEachHero((p) => {   // (co-op: the impact hurts either hero standing in it; the partner's blow is forwarded to his screen)
+    const dx = p.pos.x - s.x, dz = p.pos.z - s.z;
+    if (p.alive && dx * dx + dz * dz < rr * rr) {
+      tv.set(s.x, 0, s.z);
+      damagePlayer(th ? 1 : s.dmg, { ...(th ? { pct: RAIN_PCT[Math.min(2, s.pi >> 8)] } : null), pos: tv, kind: s.cc === 'BURN' ? 'FIRE' : s.cc === 'POISON' ? 'POISON' : s.cc === 'SLOW' ? 'ICE' : 'PHYSICAL', ...(s.kd > 0 ? { kb: KB.SLAM.kb, down: s.kd } : null) });   // (owner) the quake ring and the aimed meteor knock the hero down
+      if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? SLOW_BOSS : 0);
+    }
+  });
   if (s.minDmg > 0) {
     const M = world.minions;
     for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && (m.x - s.x) ** 2 + (m.z - s.z) ** 2 < rr * rr) damageMinion(i, s.minDmg); }
@@ -164,8 +167,10 @@ function rainWave(w: number): void {
       for (let i = 0; i < rainN; i++) if ((rainX[i] - x) ** 2 + (rainZ[i] - z) ** 2 < (r * 0.8) ** 2) return false;
       rainX[rainN] = x; rainZ[rainN] = z; rainN++; place(x, z, rr, tw, kd); return true;
     };
-    put(p.pos.x, p.pos.z, r * 0.95, 0);   // on the hero (no knockdown for these small impacts)
-    put(p.pos.x + p.vel.x * 1.1, p.pos.z + p.vel.z * 1.1, r * 0.9, 0);   // where they are running to
+    forEachHero((h) => {   // on each hero (co-op: both; no knockdown for these small impacts) and where he is running to
+      put(h.pos.x, h.pos.z, r * 0.95, 0);
+      put(h.pos.x + h.vel.x * 1.1, h.pos.z + h.vel.z * 1.1, r * 0.9, 0);
+    });
     for (let i = 2, tries = 0; i < n && tries < n * 14; tries++) {
       const a = Math.random() * Math.PI * 2, d = 2.5 + Math.random() * 7 * k;
       if (put(p.pos.x + Math.cos(a) * d, p.pos.z + Math.sin(a) * d, r * (0.85 + Math.random() * 0.15), 0)) i++;
@@ -249,7 +254,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
 
   // crush: heavy melee on the nearest unit (a summon if one is closer than the hero)
   if (S.crushCd <= 0) {
-    const p = world.player;
+    const p = nearestHero(e.pos.x, e.pos.z);   // (co-op: the nearer of the two heroes)
     const mi = nearestMinion(e.pos.x, e.pos.z, e.radius + CRUSH_RANGE);
     const pd = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
     let tx = NaN, tz = 0;

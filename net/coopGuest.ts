@@ -226,6 +226,7 @@ function onRst(d: unknown[]): void {
   if (!isNum(ph) || !isNum(wave) || !isNum(left) || !isNum(alive)) return;
   const dr = world.director, r = world.room;
   dr.phase = (ROOM_PHASES[ph | 0] ?? 'FIGHT') as RoomPhase; dr.wave = wave | 0; dr.aliveCount = alive | 0; r.enemiesLeft = Math.max(0, left | 0);
+  coopRoom.hl = isNum(d[7]) ? d[7] | 0 : -1;   // the door the host stands at ("Host is choosing..." text, ui/hud/CoopHud.tsx)
   const was = r.portals.map((p) => p.active);
   for (const po of r.portals) { po.active = false; po.pre = false; }
   if (Array.isArray(portals)) {

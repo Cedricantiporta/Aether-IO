@@ -116,6 +116,14 @@ function clearPressed(): void {
   for (const k in pr) pr[k] = false;
 }
 
+/** Co-op card pick: the picker's own hero stands still (no keys, mouse, stick or aim reach the simulation) while the world runs on. */
+function holdHeroStill(): void {
+  const i = world.input;
+  for (const k in i.keys) i.keys[k] = false;
+  i.mouseDown = false; i.joy.active = false; i.joy.x = i.joy.z = 0; i.aimStick.active = false; i.touchAim.active = false;
+  clearPressed();
+}
+
 function rebuildEnemyGrid(): void {
   const grid = world.enemyGrid;
   grid.clear();
@@ -225,10 +233,12 @@ export function updateGame(rawDt: number): void {
     clearPressed();
     return;
   }
-  if (status !== GameStatus.PLAYING) {
+  // co-op (STEP 3): a card pick never freezes the world: the partner keeps fighting (and the one who picks is untouchable: damagePlayer ignores hits unless PLAYING, and he cannot move or act behind the card screen)
+  if (status !== GameStatus.PLAYING && !(status === GameStatus.LEVEL_UP && coopRoom.live())) {
     clearPressed();
     return;
   }
+  if (status === GameStatus.LEVEL_UP) { world.player.invulnT = Math.max(world.player.invulnT, 0.3); holdHeroStill(); }
   // Ultimate wind-up: the simulation is frozen (render keeps running) until the effect releases.
   if (tickUltWindup(Math.min(rawDt, 0.1))) { clearPressed(); return; }
   const dt = Math.min(rawDt, MAX_DT) * feel.timeScale;

@@ -35,7 +35,7 @@ import { isHarvestNode, HARVEST_NAME } from '../mapgen';
 import { showcase, showcaseVictory, SHOWCASE_BIOME, SHOWCASE_DEPTH } from '../showcase';
 import { hitCrate } from './crates';
 import { buildRoom, roomRadius, startPos, stationPos, portalSlot, shortcutSlot } from '../roomgen';
-import { spawnPickup, dropCrystals, petCollect, lootPickup } from './pickups';
+import { spawnPickup, dropCrystals, petCollect, lootPickup, collectAllPickups } from './pickups';
 import { clearMinions } from './minions';
 import { LOOT_BY_ID, lootItem } from '../../loot';
 import { SOUL_EMBER } from '../../crafting';
@@ -473,7 +473,7 @@ function beginLeave(p: RoomPlan, nb: number, ni: number): void {
   for (const po of world.room.portals) po.active = false;
 }
 
-coopRoom.enter = (b, idx, p) => enterRoom(b, idx, p);
+coopRoom.enter = (b, idx, p) => { if (coopRoom.guest) collectAllPickups(); enterRoom(b, idx, p); };   // (co-op guest following the host: like finishLeave, what lies on the floor goes into his bag)
 
 function finishLeave(): void {
   // anything still on the floor goes into the bag (full bag: left behind)
@@ -1263,7 +1263,7 @@ function scanNearby(): void {
   // no interacting while monsters are still alive in the room (combat); harvesting works mid-fight (owner)
   let fighting = false;
   for (let i = 0; i < world.enemies.length && !fighting; i++) { const e = world.enemies[i]; if (e.active && e.state !== 'DYING') fighting = true; }
-  if (r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {
+  if (!coopRoom.guest && r.fade < 0.6 && d.phase !== 'LEAVING' && !fighting) {   // (co-op guest: only the loot / harvest pills below; doors, chests and stations are the host's)
     const q = (x: number, z: number) => (x - p.x) ** 2 + (z - p.z) ** 2;
     if (d.phase === 'CLEARED') {
       for (let i = 0; i < r.portals.length; i++) {
@@ -1324,6 +1324,7 @@ function scanNearby(): void {
     }
   }
   for (let i = 0; i < MAX_ROOM_NEARBY; i++) roomNearby[i].active = i < nearbyN;
+  coopRoom.hlHost = !coopRoom.guest && nearbyN > 0 && roomNearby[0].node >= 0 && roomNearby[0].node < 4 ? roomNearby[0].node : -1;   // (co-op host: the guest sees which door I am at)
 }
 const LOOT_R = 2.4;   // the E-loot prompt shows from the same distance auto loot grabs items (pickups ITEM_GRAB_R2)
 
@@ -1331,6 +1332,7 @@ const LOOT_R = 2.4;   // the E-loot prompt shows from the same distance auto loo
 export function interactRoom(it: Interactable): void {
   const d = dd(), r = world.room, st = useGameStore.getState();
   if (st.status !== GameStatus.PLAYING) return;
+  if (coopRoom.guest && it.node < 100) return;   // co-op guest: no doors, chests, stations (the host's)
   if (it.node >= 0 && it.node < 4) {
     const po = r.portals[it.node];
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
@@ -1452,7 +1454,7 @@ export function updateDirector(dt: number): void {
   if (!r.active) return;
   d.phaseT += dt;
   r.fade += Math.sign(r.fadeTarget - r.fade) * Math.min(Math.abs(r.fadeTarget - r.fade), dt / FADE_SECONDS);
-  if (coopRoom.guest) return;   // co-op guest: no fights, no rewards, no portals; the host decides, phase / enemy count / portals are mirrored from its snapshots (net/coopGuest.ts)
+  if (coopRoom.guest) { guestDirector(dt); return; }   // co-op guest: no fights, no rewards, no portals; the host decides, phase / enemy count / portals are mirrored from its snapshots (net/coopGuest.ts)
 
   if (rewardT >= 0) { rewardT -= dt; if (rewardT < 0) grantReward(rewardKind, rewardBonus); }
   tickDaily(dt); tickTrial(dt);
@@ -1493,6 +1495,21 @@ export function updateDirector(dt: number): void {
     return;
   }
   if (shipState.open) return;   // the captain's deck window is showing
+  scanNearby();
+  harvestCd = Math.max(0, harvestCd - dt);
+  if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);
+  if (world.input.pressed.KeyE && roomNearby[0].active && !st.isShopOpen && !st.isInventoryOpen && !st.isCharacterSheetOpen) interactRoom(roomNearby[0]);
+}
+
+/** Co-op GUEST: the room is the host's (phase / portals mirrored), but the loot is the guest's own: the clear-sweep that pulls coins in, the E loot / harvest pills and their keys. */
+let guestPhase = '';
+function guestDirector(dt: number): void {
+  const d = dd(), st = useGameStore.getState();
+  if (d.phase !== guestPhase) { guestPhase = d.phase; if (d.phase === 'CLEARED' || d.phase === 'BIOME_DONE') { vacuumT = VACUUM_AFTER; vacuumTick = 0; } }
+  if (d.phase === 'CLEARED' || d.phase === 'BIOME_DONE') {
+    if (vacuumT > 0) { vacuumT -= dt; vacuumTick = 0; }
+    else { vacuumTick -= dt; if (vacuumTick <= 0) { vacuumTick = 0.3; vacuumLoot(); } }
+  }
   scanNearby();
   harvestCd = Math.max(0, harvestCd - dt);
   if (world.input.keys.KeyE && !world.input.pressed.KeyE && roomNearby[0].active && roomNearby[0].node >= 100 && !st.isShopOpen) interactRoom(roomNearby[0]);

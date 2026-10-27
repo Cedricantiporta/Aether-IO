@@ -29,6 +29,7 @@ import { mfx } from './voidFx';
 import { hooks } from './hooks';
 import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, type PhaseKind } from './bossPhaseState';
 import { useGameStore } from '../../store';
+import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly } from '../heroes';
 
 const MECH: Record<string, PhaseKind> = {
   BOSS_WYRM: 'AVALANCHE', BOSS_GOLEM: 'PINBALL', BOSS_TREANT: 'SPORES', BOSS_HYDRA: 'TIDAL', BOSS_WARLORD: 'LAVA',
@@ -51,6 +52,8 @@ const D = { id: -1, n: 0, since: -1, lastEnd: -99, frameDt: 0.016 };
 // per-mechanic scratch
 const G = {
   stage: 0, t0: 0, hit: false, tick: 0,
+  // co-op: the partner's second slot of every per-hero timer / once-per-phase flag
+  hitA: false, tickA: 0, hitCdA: 0, slowA: 0,
   // pinball
   dx: 0, dz: 1, windT: 0, rollT: 0, legs: 0, legHit: false, dust: 0,
   // pods
@@ -125,7 +128,7 @@ function begin(e: Enemy, kind: PhaseKind): void {
   bp.dark = false; bp.ball = false; bp.crackT = 0; bp.realId = -1; bp.slimes.length = 0;
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
-  G.stage = 0; G.t0 = 0; G.hit = false; G.tick = 0; G.legs = 0; G.legHit = false; G.windT = 0; G.rootT = 0; G.hitCd = 0; G.handT = 0; G.dust = 0;
+  G.stage = 0; G.t0 = 0; G.hit = false; G.tick = 0; G.hitA = false; G.tickA = 0; G.hitCdA = 0; G.slowA = 0; G.legs = 0; G.legHit = false; G.windT = 0; G.rootT = 0; G.hitCd = 0; G.handT = 0; G.dust = 0;
   banner(kind);
   e.vel.set(0, 0, 0);
   events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 3 + 4, color: bp.color });
@@ -199,7 +202,6 @@ function outsideCircles(x: number, z: number, pad: number): boolean {
   return true;
 }
 function avaHit(e: Enemy): void {
-  const p = world.player;
   bp.flash = 1; bp.floor = 0.6;
   events.emit('shake', { amount: 0.9 });
   events.emit('explosion', { pos: e.pos.clone(), radius: 10, color: 0xdff6ff });
@@ -207,10 +209,12 @@ function avaHit(e: Enemy): void {
     const a = Math.random() * 6.283, rim = rimAt(a, 3) * Math.random() * 0.9;
     events.emit('shockwave', { pos: new Vector3(Math.cos(a) * rim, 0, Math.sin(a) * rim), radius: 9, color: 0xe8f8ff });
   }
-  if (p.alive && outsideCircles(p.pos.x, p.pos.z, 0.2)) {
-    hitHero(CRIT_PCT, 'ICE', e.pos.x, e.pos.z, 4, 0.8, true);
-    applyPlayerDebuff('SLOW', 3.5, SLOW_BOSS);
-  }
+  forEachHero((p) => {
+    if (p.alive && outsideCircles(p.pos.x, p.pos.z, 0.2)) {
+      hitHero(CRIT_PCT, 'ICE', e.pos.x, e.pos.z, 4, 0.8, true);
+      applyPlayerDebuff('SLOW', 3.5, SLOW_BOSS);
+    }
+  });
   const M = world.minions;
   for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && outsideCircles(m.x, m.z, 0.2)) damageMinion(i, m.maxHp * 0.8); }
 }
@@ -221,7 +225,7 @@ function rayLen(x: number, z: number, dx: number, dz: number, m: number): number
   return s;
 }
 function startLeg(e: Enemy): void {
-  const p = world.player.pos;
+  const p = nearestHero(e.pos.x, e.pos.z).pos;
   let dx = p.x - e.pos.x, dz = p.z - e.pos.z, l = Math.hypot(dx, dz) || 1;
   dx /= l; dz /= l;
   if (G.legs > 0) {   // after a bounce: half the reflected direction, half toward the hero
@@ -235,7 +239,6 @@ function startLeg(e: Enemy): void {
 }
 const ROLL_SPEED = 21;
 function tickPinball(e: Enemy, dt: number): void {
-  const p = world.player;
   if (G.stage === 0) {   // wind-up: pillars rise, he crouches
     if (G.t0 === 0) { G.t0 = 1; placeProps(3, 1.9, 0.22, 0.7, 12, 0, e); }
     if (bp.t >= 1.1) { G.stage = 1; G.t0 = 0; startLeg(e); }
@@ -248,8 +251,9 @@ function tickPinball(e: Enemy, dt: number): void {
     e.pos.x += G.dx * ROLL_SPEED * dt; e.pos.z += G.dz * ROLL_SPEED * dt;
     bp.spin += dt * ROLL_SPEED / Math.max(1, e.radius);
     G.dust -= dt; if (G.dust <= 0) { G.dust = 0.22; events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 1.3, color: 0xb8a890 }); }
-    if (!G.legHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 1.7) ** 2) {
-      G.legHit = true; hitHero(0.3, 'PHYSICAL', e.pos.x - G.dx, e.pos.z - G.dz, 5, 0.8);
+    const bonked = G.legHit ? null : heroNear(e.pos.x, e.pos.z, e.radius + 1.7);   // (co-op: whichever hero he rolls into)
+    if (bonked) {
+      G.legHit = true; asHero(bonked, () => hitHero(0.3, 'PHYSICAL', e.pos.x - G.dx, e.pos.z - G.dz, 5, 0.8));
       if (++G.legs >= 3) { G.stage = 3; G.t0 = bp.t; bp.ball = false; say(e, 'DIZZY...', 0xffe9a8, 1.0); return; }
       startLeg(e); return;   // he bonks off the hero and lines up again
     }
@@ -334,7 +338,6 @@ function popPod(e: Enemy, i: number, burst: boolean): void {
   spawnHostileZone('POISON_POOL', q.x, q.z, 4, 6, bossPwr(e) * 0.3, 0x84cc16);
 }
 function tickSpores(e: Enemy, dt: number): void {
-  const p = world.player;
   if (G.stage === 0) {
     if (bp.t >= 0.8) {
       G.stage = 1;
@@ -357,26 +360,25 @@ function tickSpores(e: Enemy, dt: number): void {
     const w = world.enemies[G.podId[i]];
     if (!w || !w.active || w.state === 'DYING') { popPod(e, i, false); continue; }   // popped by a hit
     q.h = Math.min(1, t / G.podT[i]);
-    if (p.alive && (p.pos.x - q.x) ** 2 + (p.pos.z - q.z) ** 2 < (q.r + 0.7) ** 2) { popPod(e, i, false); continue; }   // popped by touch
+    if (heroNear(q.x, q.z, q.r + 0.7)) { popPod(e, i, false); continue; }   // popped by touch (either hero)
     if (t >= G.podT[i]) { popPod(e, i, true); continue; }
     open++;
   }
   G.rootT -= dt;
-  if (G.rootT <= 0 && p.alive) {   // roots reach for the hero (a telegraphed ring, a brief root on touch)
-    G.rootT = 2.6;
-    bossStrike(p.pos.x, p.pos.z, 2.3, 1.2, bossPwr(e) * 0.5, 0, 'ROOT', 1.0, 0x84cc16);
+  if (G.rootT <= 0) {   // roots reach for the hero (a telegraphed ring, a brief root on touch)
+    const p = nearestHero(e.pos.x, e.pos.z);
+    if (p.alive) { G.rootT = 2.6; bossStrike(p.pos.x, p.pos.z, 2.3, 1.2, bossPwr(e) * 0.5, 0, 'ROOT', 1.0, 0x84cc16); }
   }
   if (open === 0) end(e);
 }
 
 function tickTidal(e: Enemy, dt: number): void {
-  const p = world.player;
   if (G.stage === 0) {
     if (bp.t >= 0.9) {
       G.stage = 1; G.t0 = bp.t;
       const a = Math.random() * 6.283; bp.wx = Math.cos(a); bp.wz = Math.sin(a);
       placeProps(4, 2.3, 0.12, 0.62, 9, 12, e);
-      bp.count = 4.2; bp.countMax = 4.2; G.hit = false;
+      bp.count = 4.2; bp.countMax = 4.2; G.hit = false; G.hitA = false;
     }
     return;
   }
@@ -387,12 +389,15 @@ function tickTidal(e: Enemy, dt: number): void {
   }
   if (G.stage === 2) {
     bp.wave = -1.1 + 2.3 * (bp.t - G.t0) / 1.6;
-    const R = 40, f = bp.wave * R, h = p.pos.x * bp.wx + p.pos.z * bp.wz;
-    if (!G.hit && p.alive && f >= h) {
-      G.hit = true;
-      if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) hitHero(CRIT_PCT, 'PHYSICAL', p.pos.x - bp.wx * 6, p.pos.z - bp.wz * 6, 6, 1.0, true);
-      else events.emit('floatText', { pos: p.pos, text: 'SAFE!', color: 0x86efac, scale: 1.0, dy: 2.6 });
-    }
+    const R = 40, f = bp.wave * R;
+    forEachHero((p) => {   // (co-op: the wave reaches each hero once; each one needs cover)
+      const ally = isAlly(p), h = p.pos.x * bp.wx + p.pos.z * bp.wz;
+      if (!(ally ? G.hitA : G.hit) && p.alive && f >= h) {
+        if (ally) G.hitA = true; else G.hit = true;
+        if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) hitHero(CRIT_PCT, 'PHYSICAL', p.pos.x - bp.wx * 6, p.pos.z - bp.wz * 6, 6, 1.0, true);
+        else if (!ally) events.emit('floatText', { pos: p.pos, text: 'SAFE!', color: 0x86efac, scale: 1.0, dy: 2.6 });
+      }
+    });
     const M = world.minions;
     for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && m.x * bp.wx + m.z * bp.wz <= f && m.x * bp.wx + m.z * bp.wz > f - 60 * dt && !covered(m.x, m.z, bp.wx, bp.wz)) damageMinion(i, m.maxHp * 0.6); }
     if (bp.wave >= 1.1) { G.stage = 3; G.t0 = bp.t; bp.wave = 2; }
@@ -405,7 +410,6 @@ function tickTidal(e: Enemy, dt: number): void {
 const SAND_TICK = 0.47, SAND_TICK_PCT = CRIT_PCT / 11;
 const SAND_A = 1.2, SAND_SHIFT = 3.8, SAND_B = 4.6, SAND_END = 7.2;
 function tickSand(e: Enemy, dt: number): void {
-  const p = world.player;
   if (G.stage === 0) {
     G.stage = 1;
     const a = Math.random() * 6.283; bp.wx = Math.cos(a); bp.wz = Math.sin(a);
@@ -424,17 +428,21 @@ function tickSand(e: Enemy, dt: number): void {
     bp.shiftT = Math.max(0, SAND_B - bp.t);
     if (bp.t >= SAND_B) { G.stage = 4; bp.wx = bp.nx; bp.wz = bp.nz; bp.windOn = true; bp.shiftT = 0; events.emit('shake', { amount: 0.3 }); }
   }
-  if (bp.windOn && p.alive) {
-    G.tick -= dt;
-    if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) {
-      if (!playerTrickImmune()) {   // pushed along the wind (a dash resists)
-        const k = (p.dashT > 0 ? 0.3 : 1) * 4.5 * dt;
-        p.pos.x += bp.wx * k; p.pos.z += bp.wz * k;
-        const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
-        if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
-      }
-      if (G.tick <= 0) { G.tick = SAND_TICK; hitHero(SAND_TICK_PCT, 'PHYSICAL', p.pos.x - bp.wx * 5, p.pos.z - bp.wz * 5, 0, 0, true); }
-    } else if (G.tick <= 0) G.tick = SAND_TICK;
+  if (bp.windOn) {
+    G.tick -= dt; G.tickA -= dt;
+    forEachHero((p) => {   // (co-op: the wind blows on both heroes; the partner's stand-in only takes the hits)
+      if (!p.alive) return;
+      const ally = isAlly(p), tk = ally ? G.tickA : G.tick;
+      if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) {
+        if (!ally && !playerTrickImmune()) {   // pushed along the wind (a dash resists)
+          const k = (p.dashT > 0 ? 0.3 : 1) * 4.5 * dt;
+          p.pos.x += bp.wx * k; p.pos.z += bp.wz * k;
+          const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
+          if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
+        }
+        if (tk <= 0) { if (ally) G.tickA = SAND_TICK; else G.tick = SAND_TICK; hitHero(SAND_TICK_PCT, 'PHYSICAL', p.pos.x - bp.wx * 5, p.pos.z - bp.wz * 5, 0, 0, true); }
+      } else if (tk <= 0) { if (ally) G.tickA = SAND_TICK; else G.tick = SAND_TICK; }
+    });
   }
   if (bp.t >= SAND_END) end(e);
 }
@@ -502,10 +510,9 @@ export function lavaVerify(): number {
   return bad;
 }
 function tickLava(e: Enemy, dt: number): void {
-  const p = world.player;
   if (G.stage === 0) { G.stage = 1; lavaBuild(); bp.count = LAVA_END; bp.countMax = LAVA_END; }
   bp.count = Math.max(0, LAVA_END - bp.t);
-  G.hitCd -= dt;
+  G.hitCd -= dt; G.hitCdA -= dt;
   const t0 = bp.t - dt;
   for (let i = 0; i < bp.nt; i++) {
     for (let k = 0; k < LAVA_HITS; k++) {
@@ -513,16 +520,21 @@ function tickLava(e: Enemy, dt: number): void {
       if (!(te > t0 && te <= bp.t)) continue;   // this tile erupts now
       tv.set(bp.tx[i], 0.4, bp.tz[i]);
       events.emit('explosion', { pos: tv.clone(), radius: 1.8, color: 0xff7a1a });
-      if (p.alive && G.hitCd <= 0 && Math.abs(p.pos.x - bp.tx[i]) < bp.tileHalf + 0.3 && Math.abs(p.pos.z - bp.tz[i]) < bp.tileHalf + 0.3) {
-        G.hitCd = LAVA_HIT_CD; hitHero(LAVA_PCT, 'FIRE', bp.tx[i], bp.tz[i], 2.5, 0);
-      }
+      const tx = bp.tx[i], tz = bp.tz[i];
+      forEachHero((p) => {
+        const ally = isAlly(p);
+        if (p.alive && (ally ? G.hitCdA : G.hitCd) <= 0 && Math.abs(p.pos.x - tx) < bp.tileHalf + 0.3 && Math.abs(p.pos.z - tz) < bp.tileHalf + 0.3) {
+          if (ally) G.hitCdA = LAVA_HIT_CD; else G.hitCd = LAVA_HIT_CD;
+          hitHero(LAVA_PCT, 'FIRE', tx, tz, 2.5, 0);
+        }
+      });
     }
   }
   if (bp.t >= LAVA_END) end(e);
 }
 
 function tickDark(e: Enemy, dt: number): void {
-  const p = world.player;
+  const p = randomHero();   // (co-op: the hands hunt either hero)
   if (!bp.dark && bp.t >= 0.4) { bp.dark = true; events.emit('shake', { amount: 0.3 }); }
   if (bp.t >= 1.7 && bp.t < 7.4) {
     G.handT -= dt;
@@ -544,7 +556,8 @@ function tickDark(e: Enemy, dt: number): void {
     if (h.t >= h.T) {
       h.on = false;
       events.emit('explosion', { pos: new Vector3(h.x, 0.6, h.z), radius: 3.2, color: 0xa060ff });
-      if (p.alive && (p.pos.x - h.x) ** 2 + (p.pos.z - h.z) ** 2 < 2.7 * 2.7) { hitHero(0.22, 'MAGIC', h.x, h.z, 2.5, 0); applyPlayerDebuff('SLOW', 1.8, SLOW_BOSS); }
+      const hit = heroNear(h.x, h.z, 2.7);   // (either hero caught under the hand)
+      if (hit) asHero(hit, () => { hitHero(0.22, 'MAGIC', h.x, h.z, 2.5, 0); applyPlayerDebuff('SLOW', 1.8, SLOW_BOSS); });
     }
   }
   bp.count = Math.max(0, 8.0 - bp.t);
@@ -573,7 +586,8 @@ export function tickPhase(dt: number): void {
       if (G.stage === 0) { if (bp.t >= 1.0) { G.stage = 1; G.t0 = bp.t; avaPlace(e); bp.floor = 1; bp.count = AVA_COUNT; bp.countMax = AVA_COUNT; events.emit('shake', { amount: 0.4 }); } }
       else if (G.stage === 1) {
         bp.count = Math.max(0, AVA_COUNT - (bp.t - G.t0));
-        const p = world.player; if (p.alive) slowHero(0.25, SLOW_BOSS);   // the cold: 60% slower while the countdown runs
+        G.slowA -= dt;
+        forEachHero((p) => { if (!p.alive) return; if (!isAlly(p)) slowHero(0.25, SLOW_BOSS); else if (G.slowA <= 0) { G.slowA = 0.12; slowHero(0.3, SLOW_BOSS); } });   // the cold: 60% slower while the countdown runs (the partner's slow is refreshed 8x a second)
         if (bp.count <= 0) { G.stage = 2; G.t0 = bp.t; bp.count = -1; avaHit(e); }
       } else if (bp.t - G.t0 > 1.4) end(e);
       break;
@@ -599,7 +613,7 @@ export function phaseOwns(e: Enemy): boolean {
 
 /** Replaces the AI of a phase owner for this frame; returns the yaw it wants. */
 export function phaseDrive(e: Enemy, dt: number): number {
-  const p = world.player.pos;
+  const p = nearestHero(e.pos.x, e.pos.z).pos;
   const dx = p.x - e.pos.x, dz = p.z - e.pos.z, d = Math.hypot(dx, dz) || 1;
   if (e.id !== bp.id) {
     if (e.kind === 'SLIME') {   // flee: away from the hero, bending along the wall instead of into it

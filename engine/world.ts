@@ -224,7 +224,11 @@ export function allocProjectile(): Projectile | null {
   return p;
 }
 
+/** co-op: while a boss telegraph resolves for the SECOND hero (zones.expire) nothing may spawn again (props, patches, shots, walls): only his damage / debuffs apply */
+export const pass2 = { on: false };
+
 export function allocEnemyProjectile(): EnemyProjectile | null {
+  if (pass2.on) return null;
   const p = grab(world.enemyProjectiles, 'ep');
   if (!p) return null;
   p.homing = 0; p.slow = 0; p.radius = 0.4; p.debuff = 0; p.pct = 0;
@@ -232,6 +236,7 @@ export function allocEnemyProjectile(): EnemyProjectile | null {
 }
 
 export function allocZone(): Zone | null {
+  if (pass2.on) return null;
   const z = grab(world.zones, 'z');
   if (!z) return null;
   z.tickT = 0; z.maxPull = 0; z.length = 0; z.dir.set(0, 0, 1); z.hostile = false;

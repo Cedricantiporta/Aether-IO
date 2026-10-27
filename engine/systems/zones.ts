@@ -3,7 +3,7 @@
 // Also ticks the wizard Earthwall timer (enemy push-out lives in the enemy system).
 // ============================================================================
 import { coopRoom } from '../../net/coopRoom';
-import { world, allocZone } from '../world';
+import { world, allocZone, pass2 } from '../world';
 import { useGameStore } from '../../store';
 import { events } from '../events';
 import { isAquatic, isStationary } from '../enemyDefs';
@@ -326,8 +326,15 @@ function expire(z: Zone): void {
   const ally = coopRoom.ally;   // co-op host: the partner's stand-in (damagePlayer forwards the blow to his screen)
   if (z.trick > 0) {
     // signature tricks / boss telegraphs spawn props and patches as they resolve, so they run once, on the hero nearest to the strike
-    if (ally && ally.alive && (!world.player.alive || (ally.pos.x - z.pos.x) ** 2 + (ally.pos.z - z.pos.z) ** 2 < (world.player.pos.x - z.pos.x) ** 2 + (world.player.pos.z - z.pos.z) ** 2)) {
-      const pl = world.player; world.player = ally; resolveZone(z); world.player = pl;
+    // (STEP 3) the strike also hurts the OTHER hero when he stands in it: a second pass with every spawn switched off (world.pass2), only his damage / debuffs apply
+    if (ally && ally.alive) {
+      const me = world.player;
+      const allyNearer = !me.alive || (ally.pos.x - z.pos.x) ** 2 + (ally.pos.z - z.pos.z) ** 2 < (me.pos.x - z.pos.x) ** 2 + (me.pos.z - z.pos.z) ** 2;
+      const first = allyNearer ? ally : me, second = allyNearer ? me : ally;
+      try {
+        world.player = first; resolveZone(z);
+        if (second.alive) { world.player = second; pass2.on = true; resolveZone(z); }
+      } finally { pass2.on = false; world.player = me; }
     } else resolveZone(z);
     z.active = false; return;
   }

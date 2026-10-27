@@ -250,12 +250,12 @@ function sendSnap(now: number): void {
   const d = world.director, r = world.room;
   let pk = '';
   for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) pk += `${Math.round(po.x * 10)},${Math.round(po.z * 10)},${po.plan.type},${po.plan.reward},${po.big ? 1 : 0},${po.pre ? 1 : 0},${po.active ? 1 : 0};`; }
-  const key = `${d.phase}|${d.wave}|${r.enemiesLeft}|${d.aliveCount}|${pk}`;
+  const key = `${d.phase}|${d.wave}|${r.enemiesLeft}|${d.aliveCount}|${pk}|${coopRoom.hlHost}`;
   if (key !== rstKey || now - lastRst > 1000) {
     rstKey = key; lastRst = now;
     const portals: unknown[][] = [];
     for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active || po.pre) portals.push([i, Math.round(po.x * 10), Math.round(po.z * 10), po.plan.type, po.plan.reward, po.big ? 1 : 0, po.pre ? 1 : 0, po.active ? 1 : 0, Math.round(po.t * 10)]); }
-    io.send([MSG.RST, rv, ROOM_PHASES.indexOf(d.phase), d.wave, r.enemiesLeft, d.aliveCount, portals]);
+    io.send([MSG.RST, rv, ROOM_PHASES.indexOf(d.phase), d.wave, r.enemiesLeft, d.aliveCount, portals, coopRoom.hlHost]);
   }
   // ---- boss bar (<= 10 Hz, on change)
   const b = world.boss;

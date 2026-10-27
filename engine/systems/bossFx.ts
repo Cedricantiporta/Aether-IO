@@ -5,7 +5,7 @@
 // arena modifiers (Void shrink, Glacius blizzard). The boss AIs (bosses2.ts) spawn into these pools; render/BossFx.tsx
 // draws them. Telegraphs themselves are ordinary hostile zones (Zone.trick = BT.*) resolved by resolveBossZone().
 // ============================================================================
-import { world } from '../world';
+import { world, pass2 } from '../world';
 import { events } from '../events';
 import { Vector3 } from 'three';
 import type { Zone } from '../types';
@@ -14,6 +14,7 @@ import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
+import { forEachHero, nearestHero, randomHero, isAlly } from '../heroes';
 
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
 export const BT = {
@@ -22,9 +23,9 @@ export const BT = {
 } as const;
 
 // ------------------------------------------------------------------ pools --
-export interface Wave { active: boolean; x: number; z: number; r: number; speed: number; maxR: number; thick: number; dmg: number; color: number; kind: number; hit: boolean; }
+export interface Wave { active: boolean; x: number; z: number; r: number; speed: number; maxR: number; thick: number; dmg: number; color: number; kind: number; hit: boolean; /** co-op: the partner's own once-per-ring flag */ hitA: boolean; }
 export const WAVE_THORN = 0, WAVE_VOID = 1, WAVE_INWARD = 2, WAVE_FIRE = 3, WAVE_FROST = 4, WAVE_TIDE = 5;   // FROST: chills; TIDE: slows
-export const waves: Wave[] = Array.from({ length: 12 }, () => ({ active: false, x: 0, z: 0, r: 0, speed: 0, maxR: 0, thick: 1, dmg: 0, color: 0xffffff, kind: 0, hit: false }));
+export const waves: Wave[] = Array.from({ length: 12 }, () => ({ active: false, x: 0, z: 0, r: 0, speed: 0, maxR: 0, thick: 1, dmg: 0, color: 0xffffff, kind: 0, hit: false, hitA: false }));
 
 /** kind: 0 root, 1 ice spike, 2 fire pillar, 3 acid glob (flies sx,sz -> x,z over `delay`), 4 thorn spike */
 export interface Prop { active: boolean; kind: number; x: number; z: number; sx: number; sz: number; t: number; delay: number; life: number; r: number; h: number; rot: number; }
@@ -74,11 +75,12 @@ export function spawnWave(x: number, z: number, speed: number, maxR: number, thi
   for (let i = 0; i < waves.length; i++) {
     const w = waves[i];
     if (w.active) continue;
-    w.active = true; w.x = x; w.z = z; w.r = startR; w.speed = speed; w.maxR = maxR; w.thick = thick; w.dmg = dmg; w.kind = kind; w.color = color; w.hit = false;
+    w.active = true; w.x = x; w.z = z; w.r = startR; w.speed = speed; w.maxR = maxR; w.thick = thick; w.dmg = dmg; w.kind = kind; w.color = color; w.hit = false; w.hitA = false;
     return;
   }
 }
 export function spawnProp(kind: number, x: number, z: number, delay: number, life: number, r: number, h: number, sx = 0, sz = 0): void {
+  if (pass2.on) return;
   for (let k = 0; k < props.length; k++) {
     const i = (propCursor + k) % props.length;
     const p = props[i];
@@ -102,7 +104,7 @@ export function spawnEcho(x: number, z: number, kind: number, dmg: number): void
     if (e.active) continue;
     e.active = true; e.x = x; e.z = z; e.kind = kind; e.t = 0; e.fireAt = 1.2; e.life = 2.3; e.fired = false; e.dmg = dmg;
     // telegraph shown at spawn: the attack lands at fireAt
-    const p = world.player.pos;
+    const p = nearestHero(x, z).pos;   // (co-op: the nearer hero)
     switch (kind) {
       case 0: { const zn = spawnTelegraphCircle(p.x, p.z, 5.2, 1.2, 0, 0x9ca3af); if (zn) { zn.trick = BT.ECHO_SLAM; zn.damage = dmg * 1.3; } break; }
       case 1: { const dx = p.x - x, dz = p.z - z, l = Math.hypot(dx, dz) || 1; const zn = spawnTelegraphLine(x, z, dx / l, dz / l, 30, 2.2, 1.2, 0xc084fc); if (zn) zn.trick = BT.VISUAL; break; }
@@ -277,16 +279,20 @@ export function updateBossFx(dt: number): void {
     if (!w.active) continue;
     w.r += w.speed * dt;
     if (w.speed > 0 ? w.r >= w.maxR : w.r <= w.maxR) { w.active = false; continue; }
-    if (w.hit || w.dmg <= 0 || !p.alive) continue;
-    const d = Math.hypot(pa.x - w.x, pa.z - w.z);
-    if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && p.air < 0.5) {
-      w.hit = true;
-      damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...(w.kind === WAVE_VOID || w.kind === WAVE_TIDE ? KB.SLAM : KB.PUSH) });   // (owner) the gravity push and the tidal surge knock down
-      if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS);
-      if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
-      if (w.kind === WAVE_FROST) addChill(1);
-      if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6 * 1.5, SLOW_BOSS);
-    }
+    if (w.dmg <= 0 || (w.hit && w.hitA)) continue;
+    forEachHero((h) => {   // (co-op: the ring hits each hero once)
+      const ally = isAlly(h);
+      if ((ally ? w.hitA : w.hit) || !h.alive) return;
+      const d = Math.hypot(h.pos.x - w.x, h.pos.z - w.z);
+      if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && h.air < 0.5) {
+        if (ally) w.hitA = true; else w.hit = true;
+        damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...(w.kind === WAVE_VOID || w.kind === WAVE_TIDE ? KB.SLAM : KB.PUSH) });   // (owner) the gravity push and the tidal surge knock down
+        if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS);
+        if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
+        if (w.kind === WAVE_FROST) addChill(1);
+        if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6 * 1.5, SLOW_BOSS);
+      }
+    });
   }
 
   // ---- eruption props are visual only
@@ -303,11 +309,13 @@ export function updateBossFx(dt: number): void {
     if (!q.active) continue;
     q.t += dt;
     if (q.t >= q.life) { q.active = false; continue; }
-    if (q.t < q.open || q.shots <= 0 || !p.alive) continue;
+    if (q.t < q.open || q.shots <= 0) continue;
+    const tgt = nearestHero(q.x, q.z);   // (co-op: the nearer hero)
+    if (!tgt.alive) continue;
     q.shotT -= dt;
     if (q.shotT <= 0) {
       q.shotT = 0.85; q.shots--;
-      const dx = pa.x - q.x, dz = pa.z - q.z, base = Math.atan2(dx, dz);
+      const dx = tgt.pos.x - q.x, dz = tgt.pos.z - q.z, base = Math.atan2(dx, dz);
       for (let k = -1; k <= 1; k++) {
         orbDir.set(Math.sin(base + k * 0.2), 0, Math.cos(base + k * 0.2));
         tv.set(q.x, 1.4, q.z);
@@ -327,7 +335,7 @@ export function updateBossFx(dt: number): void {
       q.fired = true;
       switch (q.kind) {
         case 1: {
-          const dx = pa.x - q.x, dz = pa.z - q.z, base = Math.atan2(dx, dz);
+          const eh = nearestHero(q.x, q.z).pos, dx = eh.x - q.x, dz = eh.z - q.z, base = Math.atan2(dx, dz);
           for (let k = -3; k <= 3; k++) { orbDir.set(Math.sin(base + k * 0.2), 0, Math.cos(base + k * 0.2)); tv.set(q.x, 1.4, q.z); fireEnemyProjectile(tv, orbDir, 'BOSS_ORB', 12, q.dmg * 0.8, { life: 3.2, radius: 0.5 }); }
           break;
         }
@@ -345,10 +353,12 @@ export function updateBossFx(dt: number): void {
     breath.tick -= dt;
     if (breath.tick <= 0) {
       breath.tick = 0.45;
-      if (p.alive && inCone(pa.x, pa.z, breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half)) {
-        damagePlayer(breath.dmg * 0.3 * BOSS_SKILL_MUL, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
-        addChill(1);
-      }
+      forEachHero((h) => {   // (co-op: the breath chills either hero standing in the cone)
+        if (h.alive && inCone(h.pos.x, h.pos.z, breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half)) {
+          damagePlayer(breath.dmg * 0.3 * BOSS_SKILL_MUL, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
+          addChill(1);
+        }
+      });
     }
     if (breath.t >= breath.dur) breath.active = false;
   }
@@ -359,14 +369,17 @@ export function updateBossFx(dt: number): void {
   if (arena.shrink) {
     if (arena.r > arena.minR) arena.r = Math.max(arena.minR, arena.r - arena.rate * dt);
     arena.edgeT -= dt;
-    if (arena.edgeT <= 0 && p.alive) {
+    if (arena.edgeT <= 0) {
       arena.edgeT = 0.4;
-      const d = Math.hypot(pa.x - arena.cx, pa.z - arena.cz);
-      if (d > arena.r) {
-        damagePlayer(Math.max(6, world.boss.maxHp * 0.0022), { pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true, noDotMul: true });
-        applyPlayerDebuff('SLOW', 0.6 * 1.5, SLOW_BOSS);
-        if (world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: p.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
-      }
+      forEachHero((h) => {   // (co-op: the closing void burns both heroes outside the ring)
+        if (!h.alive) return;
+        const d = Math.hypot(h.pos.x - arena.cx, h.pos.z - arena.cz);
+        if (d > arena.r) {
+          damagePlayer(Math.max(6, world.boss.maxHp * 0.0022), { pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true, noDotMul: true });
+          applyPlayerDebuff('SLOW', 0.6 * 1.5, SLOW_BOSS);
+          if (!isAlly(h) && world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: h.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
+        }
+      });
     }
   }
 
@@ -374,10 +387,11 @@ export function updateBossFx(dt: number): void {
   if (arena.blizzard) {
     arena.blizzardK = Math.min(1, arena.blizzardK + dt * 0.5);
     arena.hailT -= dt;
-    if (arena.hailT <= 0 && p.alive) {
+    const hh = arena.hailT <= 0 ? randomHero() : p;   // (co-op: the hail falls near either hero)
+    if (arena.hailT <= 0 && hh.alive) {
       arena.hailT = 2.4;
       const a = Math.random() * 6.283, r = 1.5 + Math.random() * 6;
-      const hz = spawnTelegraphCircle(pa.x + Math.sin(a) * r, pa.z + Math.cos(a) * r, 2.1, 1.0, 0, 0x93d8ff);
+      const hz = spawnTelegraphCircle(hh.pos.x + Math.sin(a) * r, hh.pos.z + Math.cos(a) * r, 2.1, 1.0, 0, 0x93d8ff);
       if (hz) { hz.trick = BT.HAIL; hz.damage = Math.max(world.boss.maxHp * 0.004, 10); }
     }
   } else arena.blizzardK = Math.max(0, arena.blizzardK - dt);
