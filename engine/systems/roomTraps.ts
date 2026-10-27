@@ -548,6 +548,10 @@ export function setupBossBallistas(biome: number): void {
 // are forwarded to the guest by combat.damagePlayer (world.player is swapped to him for the call).
 const HS: PlayerRuntime[] = [null as never, null as never];
 let HN = 1;
+// the focused hero of the current tick lives at module level (no per-frame closures: focus / refocus below)
+let tHost: PlayerRuntime = world.player, pl: PlayerRuntime = world.player, alive = true, px = 0, pz = 0;
+function focus(x: number, z: number): void { const h = nearestHero(x, z); pl = h; alive = h.alive; px = h.pos.x; pz = h.pos.z; world.player = h; }
+function refocus(): void { const host = tHost; pl = host; alive = host.alive; px = host.pos.x; pz = host.pos.z; world.player = host; }
 export function updateRoomTraps(dt: number): void {
   const host = world.player;
   try { trapsTick(dt); } finally { world.player = host; }
@@ -559,9 +563,7 @@ function trapsTick(dt: number): void {
   const host = world.player, al = coopRoom.ally;
   HS[0] = host; HN = 1;
   if (al && al.alive) { HS[1] = al; HN = 2; }
-  let pl = host, alive = pl.alive, px = pl.pos.x, pz = pl.pos.z;
-  const focus = (x: number, z: number): void => { const h = nearestHero(x, z); pl = h; alive = h.alive; px = h.pos.x; pz = h.pos.z; world.player = h; };
-  const refocus = (): void => { pl = host; alive = host.alive; px = host.pos.x; pz = host.pos.z; world.player = host; };
+  tHost = host; pl = host; alive = pl.alive; px = pl.pos.x; pz = pl.pos.z;
   const fighting = world.director.phase === 'FIGHT';
 
   for (let i = 0, n = trapCount(); i < n; i++) { const o = trapAt(i); if (o.flash > 0) o.flash = Math.max(0, o.flash - dt * 5); }
@@ -606,7 +608,7 @@ function trapsTick(dt: number): void {
         s.yaw += wrapPi(Math.atan2(tx - s.x, tz - s.z) - s.yaw) * Math.min(1, dt * 5);
         if (s.locked && !s.fired && s.t >= W - FLIGHT) {   // the boulder leaves the bucket
           s.fired = true;
-          const bo = rt.boulders.find((q) => !q.on);
+          let bo: (typeof rt.boulders)[number] | undefined; for (let k = 0; k < rt.boulders.length; k++) if (!rt.boulders[k].on) { bo = rt.boulders[k]; break; }
           if (bo) { bo.on = true; bo.sx = s.x; bo.sz = s.z; bo.tx = s.lx; bo.tz = s.lz; bo.t = 0; bo.T = FLIGHT; }
           events.emit('shake', { amount: 0.1 });
         }
