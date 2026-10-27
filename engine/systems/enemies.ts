@@ -26,7 +26,7 @@ import {
 } from '../world';
 import { events } from '../events';
 import type {
-  Enemy, EnemyKind, EnemyProjectileKind, EnemyState, EliteAffix, Zone,
+  Enemy, EnemyKind, EnemyProjectileKind, EnemyProjectile, EnemyState, EliteAffix, Zone,
 } from '../types';
 import {
   ENEMY_DEFS, SPAWN_TIME, BOSS_SPAWN_TIME, ENEMY_DMG_MUL, isBossKind, armorFor, isStationary, isRootedBoss, rootedHome,
@@ -62,6 +62,7 @@ import { aiDarkHero, darkHeroDied, tickDarkHero } from './darkHero';
 import { aiHumanBoss, humanBossDied, tickHumanBoss } from './humanBosses';
 import { TR, rollTraits, innateHinder } from '../enemyTraits';
 import { tickInterrupt, interruptView } from './interrupt';
+import { coopRoom } from '../../net/coopRoom';
 
 // ------------------------------------------------------------ tuning --------
 const DEATH_TIME = 0.6;
@@ -1837,6 +1838,20 @@ function packAndFlank(e: Enemy): void {
 const lodAcc = new Float32Array(MAX_ENEMIES);
 let lodTick = 0;
 
+// ---- co-op host (STEP 2): monsters pick the nearer of the two heroes; +75% HP with two players
+const tgtAlly = new Uint8Array(MAX_ENEMIES), hpScaled = new Uint8Array(MAX_ENEMIES);
+const COOP_HP_MUL = 1.75;
+/** The hero this monster fights this frame (20% hysteresis so it does not flip-flop between two equally near heroes). */
+function chooseHero(e: Enemy, p: typeof world.player, a: typeof world.player): typeof world.player {
+  if (!p.alive) return a;
+  const dp = (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2, da = (e.pos.x - a.pos.x) ** 2 + (e.pos.z - a.pos.z) ** 2;
+  const useAlly = tgtAlly[e.id] === 1 ? da < dp * 1.44 : da < dp * 0.64;
+  tgtAlly[e.id] = useAlly ? 1 : 0;
+  return useAlly ? a : p;
+}
+/** Clears the per-slot co-op bookkeeping (new room / run). */
+export function resetCoopTargets(): void { tgtAlly.fill(0); hpScaled.fill(0); }
+
 export function updateEnemies(dt: number): void {
   const player = world.player;
   px = player.pos.x;
@@ -1862,9 +1877,11 @@ export function updateEnemies(dt: number): void {
   const lodR2 = (V.r * 1.6) * (V.r * 1.6);
   const baseDecay = frameDecay, baseTick = frameDotTick;
   lodTick++;
+  const ally = coopRoom.ally, two = coopRoom.two, aOn = ally !== null && ally.alive;
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
-    if (!e.active) continue;
+    if (!e.active) { if (two) hpScaled[i] = 0; continue; }
+    if (two && hpScaled[i] === 0) { hpScaled[i] = 1; e.hp *= COOP_HP_MUL; e.maxHp *= COOP_HP_MUL; }   // 2 players: monsters and bosses +75% HP (damage unchanged)
     e.pullCount = 0;
     if (e.state === 'DYING') {
       e.deathT += dt;
@@ -1885,14 +1902,14 @@ export function updateEnemies(dt: number): void {
         const eff = lodAcc[i]; lodAcc[i] = 0;
         frameDt = eff; frameDecay = Math.pow(0.85, eff * 60);
         frameDotTick = Math.floor(world.time * 2) !== Math.floor((world.time - eff) * 2);
-        updateEnemy(e);
+        if (aOn) { const h = chooseHero(e, player, ally!); world.player = h; updateEnemy(e); world.player = player; } else updateEnemy(e);
         frameDt = dt; frameDecay = baseDecay; frameDotTick = baseTick;
         if (e.active && !isDying(e) && !optionalForClear(e.kind)) alive++;
         continue;
       }
     }
     lodAcc[i] = 0;
-    updateEnemy(e);
+    if (aOn) { const h = chooseHero(e, player, ally!); world.player = h; updateEnemy(e); world.player = player; } else updateEnemy(e);
     if (e.active && !isDying(e) && !optionalForClear(e.kind)) alive++;   // (owner 2026-10-25) tower archers / hydras / gargoyles are optional: they never hold up the room clear
   }
   world.director.aliveCount = alive;
@@ -2112,14 +2129,24 @@ export function updateEnemyProjectiles(dt: number): void {
       const r = p.radius + 0.7;
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
-        damagePlayer(p.damage, { ...(p.pct ? { pct: p.pct } : null), pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : p.kind === 'BIG_FLAME' ? KB.SLAM : null) });   // (owner) rocks knock you down
-        if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
-        if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
-        else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
-        else if (p.debuff === 4) { if (Math.random() < 0.45) freezePlayer(0.8); }   // the dark ranger's Freezing Arrow
-        if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);
-        events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
+        shotHitsHero(p);
       }
     }
+    // co-op host: the same shot can strike the partner's hero (a stand-in; the blow is forwarded to his screen)
+    if (coopRoom.ally && p.active && coopRoom.ally.alive && coopRoom.ally.invulnT <= 0 && p.damage > 0) {
+      const dx = p.pos.x - coopRoom.ally.pos.x, dz = p.pos.z - coopRoom.ally.pos.z, r = p.radius + 0.7;
+      if (dx * dx + dz * dz < r * r) { p.active = false; world.player = coopRoom.ally; shotHitsHero(p); world.player = player; }
+    }
   }
+}
+
+/** An enemy shot connects with `world.player` (the real hero, or the partner's stand-in in co-op). */
+function shotHitsHero(p: EnemyProjectile): void {
+  damagePlayer(p.damage, { ...(p.pct ? { pct: p.pct } : null), pos: p.pos, kind: ELEM_DMG[p.kind] ?? 'PHYSICAL', slow: p.slow, tr: p.traits, proj: true, srcId: p.owner ?? -1, ...(p.kind === 'ROCK' ? (p.debuff === 3 ? KB.BOULDER : KB.ROCK) : p.kind === 'BIG_FLAME' ? KB.SLAM : null) });   // (owner) rocks knock you down
+  if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
+  if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
+  else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
+  else if (p.debuff === 4) { if (Math.random() < 0.45) freezePlayer(0.8); }   // the dark ranger's Freezing Arrow
+  if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);
+  events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
 }

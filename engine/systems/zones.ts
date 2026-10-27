@@ -2,6 +2,7 @@
 // Ground zones: fire trails, black holes, telegraphs, poison pools, visual rings.
 // Also ticks the wizard Earthwall timer (enemy push-out lives in the enemy system).
 // ============================================================================
+import { coopRoom } from '../../net/coopRoom';
 import { world, allocZone } from '../world';
 import { useGameStore } from '../../store';
 import { events } from '../events';
@@ -309,23 +310,41 @@ function lineHitsPlayer(z: Zone): boolean {
   return perp < z.radius * 0.5 + PLAYER_RADIUS;
 }
 
+/** A telegraph's strike on `world.player` (the real hero or, in co-op, the partner's stand-in). */
+function circleHit(z: Zone): void {
+  const p = world.player;
+  const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
+  const rr = z.radius + PLAYER_RADIUS;
+  if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
+}
+function lineHit(z: Zone): void {
+  if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
+}
+function resolveZone(z: Zone): void { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); }
+
 function expire(z: Zone): void {
-  if (z.trick > 0) { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); z.active = false; return; }
+  const ally = coopRoom.ally;   // co-op host: the partner's stand-in (damagePlayer forwards the blow to his screen)
+  if (z.trick > 0) {
+    // signature tricks / boss telegraphs spawn props and patches as they resolve, so they run once, on the hero nearest to the strike
+    if (ally && ally.alive && (!world.player.alive || (ally.pos.x - z.pos.x) ** 2 + (ally.pos.z - z.pos.z) ** 2 < (world.player.pos.x - z.pos.x) ** 2 + (world.player.pos.z - z.pos.z) ** 2)) {
+      const pl = world.player; world.player = ally; resolveZone(z); world.player = pl;
+    } else resolveZone(z);
+    z.active = false; return;
+  }
   switch (z.kind) {
     case 'BLACKHOLE':   // no collapse explosion any more (it deals its damage while pulling): just fades out
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x6d28d9 });
       break;
     case 'TELEGRAPH_CIRCLE': {
-      const p = world.player;
-      const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
-      const rr = z.radius + PLAYER_RADIUS;
-      if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
+      circleHit(z);
+      if (ally && ally.alive) { const pl = world.player; world.player = ally; circleHit(z); world.player = pl; }
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius, color: z.color });
       addShake(Math.min(0.5, 0.1 + z.radius * 0.03));
       break;
     }
     case 'TELEGRAPH_LINE':
-      if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
+      lineHit(z);
+      if (ally && ally.alive) { const pl = world.player; world.player = ally; lineHit(z); world.player = pl; }
       break;
     default: break;
   }
@@ -390,6 +409,7 @@ export function updateZones(dt: number): void {
   for (let i = 0; i < zones.length; i++) {
     const z = zones[i];
     if (!z.active) continue;
+    if (z.ghost) { if (!z.permanent) { z.life -= dt; if (z.life <= 0) z.active = false; } continue; }   // co-op: a mirror of the partner's / host's zone (drawn only)
     if (z.permanent) {
       if (z.kind === 'PUDDLE') puddleUpdate(z, dt);
       else if (z.kind === 'GAS') {

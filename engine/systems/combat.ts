@@ -14,6 +14,7 @@ import { debug } from '../debug';
 import { dropLoot } from './loot';
 import { Vector3 } from 'three';
 import { world } from '../world';
+import { coopRoom } from '../../net/coopRoom';
 import { events, type DamageKind } from '../events';
 import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
@@ -118,6 +119,7 @@ export function resetCombat(): void { resetInterrupt(); xpAcc = 0; xpTextT = 0; 
 /** Big knockback: launches the enemy `dist` units away along (dx,dz); slam damage if it hits an obstacle while flying. */
 export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam = 0): void {
   if (!e.active || e.state === 'DYING' || e.boss || e.freezeT > 0) return;
+  if (coopRoom.guest) return;   // (a guest's launch rides on its hit: coopRoom.sendHit carries `launch`)
   const l = Math.sqrt(dx * dx + dz * dz) || 1;
   const resist = e.mini ? 0.25 : e.elite ? 0.5 : 1;
   const v = Math.min(150, dist * 9.5 * resist);
@@ -305,6 +307,7 @@ const statusActive = (e: Enemy, t: string): boolean =>
 
 export function applyStatus(e: Enemy, effect: StatusEffect): void {
   if (!e.active || e.state === 'DYING') return;
+  if (coopRoom.guest) { coopRoom.sendStatus?.(e, effect); return; }   // co-op guest: the host owns the monster
   const fresh = !statusActive(e, effect.type);
   applyStatusRaw(e, effect);
   if (fresh && statusActive(e, effect.type)) statusWord(e.pos, effect.type);
@@ -389,7 +392,28 @@ export function reviveWithAnkh(): boolean {
 }
 function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS; try { localStorage.setItem(ANKH_KEY, String(ankhReadyAt)); } catch { /* ignore */ } }
 
+/** Co-op GUEST side of damageEnemy: the enemies on this screen are a mirror of the host's, so a hit is only claimed here (combo, cards,
+ *  ult charge and life steal are the guest's own, the armour / shield / hp maths run on the host) and sent over the link. */
+function guestHit(e: Enemy, amount: number, o: DamageOpts): void {
+  if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.shellT > 0 || !(amount > 0) || !coopRoom.sendHit) return;
+  if (!o.dot && o.source !== 'PET') { amount *= comboMul(); registerHit(); }
+  if (o.source === 'PLAYER') amount *= cardDamageMul(e);
+  const p = world.player;
+  if (o.source === 'PLAYER') {
+    addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, amount / Math.max(1, e.maxHp)) + (o.dot ? 0 : o.basic ? ULT_PER_BASIC : ULT_PER_SKILL));
+    if (!o.dot) {
+      const ls = useGameStore.getState().stats.lifeSteal;
+      if (ls > 0) { lsAcc += Math.min(amount, 4000) * ls; if (lsAcc >= 2) { const h = Math.min(lsAcc, useGameStore.getState().stats.maxHealth * LS_SEC_CAP); if (h > 0) healPlayer(h); lsAcc = 0; } }
+    }
+  }
+  world.run.damageDealt += amount;
+  e.hitFlash = o.dot ? Math.max(e.hitFlash, 0.35) : 1;
+  const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE : true;
+  coopRoom.sendHit(e, amount, o, knockRoll, p.pos.x, p.pos.z);
+}
+
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
+  if (coopRoom.guest) { guestHit(e, amount, o); return; }   // co-op guest: the monsters live on the host, send it the hit (net/coopGuest.ts)
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
   if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
@@ -488,6 +512,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
 
 export function killEnemy(e: Enemy): void {
   if (!e.active || e.state === 'DYING') return;
+  if (coopRoom.guest) return;   // co-op guest: only the host kills
   if (e.decoy) { popDecoy(e); return; } // Death Clones: no rewards
   e.hp = 0; // state -> DYING is set by onEnemyDeath (Engine-B)
 
@@ -525,6 +550,7 @@ export function killEnemy(e: Enemy): void {
   const px = e.pos.x, pz = e.pos.z;
 
   // Gold coins: humanoids (+ the Lich) only. Others still drop their loot items.
+  let killGold = 0;   // (co-op: the partner is paid the same coins directly, see coopRoom.onKill)
   {
     let coins = 0, value = 10;
     const gd = GOLD_DROPPERS[e.kind];
@@ -535,6 +561,7 @@ export function killEnemy(e: Enemy): void {
       dropPos.set(px + (Math.random() - 0.5) * (e.boss ? 4 : 1.5), 0, pz + (Math.random() - 0.5) * (e.boss ? 4 : 1.5));
       spawnPickup('GOLD', dropPos, value);
     }
+    killGold = coins * value;
   }
 
   // Trade-goods loot: kind table (chance), elites always add an Elite table roll, bosses roll their table twice.
@@ -546,6 +573,7 @@ export function killEnemy(e: Enemy): void {
 
   // XP is granted instantly (no orbs), scaled by monster strength at spawn time (see spawnEnemy).
   if (e.xp > 0) grantKillXp(e.xp, e.pos);
+  coopRoom.onKill?.(e, e.xp, killGold);   // co-op host: the partner earns the same XP / gold
 
   if (Math.random() < 0.006) {   // heart drops: -80%
     dropPos.set(px + (Math.random() - 0.5), 0, pz + (Math.random() - 0.5));
@@ -667,6 +695,7 @@ export const SLOW_HERO = 0.45;
 export const SLOW_BOSS = 0.6;
 /** Direct slow (no debuff word / immunity): used by hit-with-slow paths. */
 export function slowHero(dur: number, pow = SLOW_HERO): void {
+  if (world.player === coopRoom.ally) { coopRoom.fwdDebuff?.('SLOW', dur, pow, 2); return; }
   const p = world.player;
   p.slowPow = p.slowT > 0 ? Math.max(p.slowPow, pow) : pow;
   p.slowT = Math.max(p.slowT, dur);
@@ -675,12 +704,14 @@ export function slowHero(dur: number, pow = SLOW_HERO): void {
 /** A freeze is a stun shown as ice (StatusFx): set by real freezes only, so other stuns (boar knockdown etc.) read as stuns. */
 export const playerFreeze = { until: 0 };
 export function freezePlayer(duration: number): boolean {
+  if (world.player === coopRoom.ally) { if (playerTrickImmune()) return false; coopRoom.fwdDebuff?.('STUN', duration, 0, 1); return true; }
   duration *= 1 - useGameStore.getState().stats.resFrost;   // Frost Resistance shortens freezes
   if (!applyPlayerDebuff('STUN', duration)) return false;
   playerFreeze.until = Math.max(playerFreeze.until, world.time + duration);
   return true;
 }
 export function applyPlayerDebuff(type: PlayerDebuff, duration: number, value = 0): boolean {
+  if (world.player === coopRoom.ally) { if (!playerTrickImmune()) coopRoom.fwdDebuff?.(type, duration, value, 0); return true; }
   const p = world.player;
   if (playerTrickImmune()) return false;
   {   // status resistance: burn / poison / slow (and freezes, via freezePlayer) last shorter
@@ -762,6 +793,7 @@ let knockWordT = -10;
  *  and, when `downSec` > 0, knocks it down for that long (no move / attack / skills, get up with GETUP_INVULN s of invulnerability).
  *  Shield Wall / Divine Avatar / giant form / ult / Radiant shield / heavy Bone Armor resist the knockdown and shorten the push. */
 export function knockHero(fromX: number, fromZ: number, force: number, downSec = 0, cancel = false): void {
+  if (world.player === coopRoom.ally) { coopRoom.fwdKnock?.(fromX, fromZ, force, downSec, cancel); return; }
   const p = world.player;
   if (!p.alive || force <= 0 && downSec <= 0) return;
   if (((p.dashT > 0 || p.anim.dashing) && p.dashIframes) || p.sprintT > 0 || p.invulnT > 0) return;   // i-frames: not even pushed
@@ -815,6 +847,7 @@ function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
 }
 
 export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number; /** MECHANIC-CHECK hit (Avalanche, Tidal Wave, Sandstorm, collapses): needs `pct`; dodge roll, dash / dodge i-frames and the Energy Shield do NOT stop it (only the safe spot does); no defence reduction; leaves 1 HP when the hero is above 50% max HP, can kill at or below it. Big red number + screen flash */ crit?: boolean }): void {
+  if (world.player === coopRoom.ally) { coopRoom.fwdHit?.(amount, o); return; }   // co-op host: this blow lands on the partner's hero (he applies his own defence)
   const p = world.player;
   const st = useGameStore.getState();
   if (!p.alive || (st.status !== GameStatus.PLAYING && !(world.village.cave.combat && world.village.area === 'CAVE'))) return;   // (deep cave floors fight too)

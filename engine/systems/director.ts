@@ -45,7 +45,7 @@ import { setupBiomeHazards, setupBossPlants } from './biomeHazards';
 import { setupRoomTraps, setupBossBallistas } from './roomTraps';
 import { setupLavaFloor } from '../lavaFloor';
 import { setupIceFloor } from '../iceFloor';
-import { spawnEnemy, spawnMiniBoss, isSpawnable, poofKind } from './enemies';
+import { spawnEnemy, spawnMiniBoss, isSpawnable, poofKind, resetCoopTargets } from './enemies';
 import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -306,7 +306,7 @@ function clearTransient(): void {
   world.boss.staggered = false;
   world.boss.stagger = 0;
   world.enemyGrid.clear();
-  resetTricks(); resetSpecials(); clearVoidFx(); resetBossFx(); resetBosses2(); resetBossMech();
+  resetTricks(); resetSpecials(); clearVoidFx(); resetBossFx(); resetBosses2(); resetBossMech(); resetCoopTargets();
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
@@ -1451,7 +1451,7 @@ export function updateDirector(dt: number): void {
   if (!r.active) return;
   d.phaseT += dt;
   r.fade += Math.sign(r.fadeTarget - r.fade) * Math.min(Math.abs(r.fadeTarget - r.fade), dt / FADE_SECONDS);
-  if (coopRoom.guest) { d.phase = 'CLEARED'; r.enemiesLeft = 0; return; }   // co-op guest: no fights, no rewards, no portals; the host decides (net/coop.ts)
+  if (coopRoom.guest) return;   // co-op guest: no fights, no rewards, no portals; the host decides, phase / enemy count / portals are mirrored from its snapshots (net/coopGuest.ts)
 
   if (rewardT >= 0) { rewardT -= dt; if (rewardT < 0) grantReward(rewardKind, rewardBonus); }
   tickDaily(dt); tickTrial(dt);

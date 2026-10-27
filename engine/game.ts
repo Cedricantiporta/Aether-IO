@@ -1,5 +1,6 @@
 import { CAM_PITCH0 } from './world';
 import { coopTick } from '../net/coop';
+import { coopRoom } from '../net/coopRoom';
 import { resetBossMech } from './systems/bossMech';
 import { PLAZA, TOWER, PORTAL, BOSS_PORTAL, PLAZA_ARRIVAL } from './townData';
 import { runInfo } from './runMods';
@@ -236,11 +237,10 @@ export function updateGame(rawDt: number): void {
   updatePlayer(dt);
   rebuildEnemyGrid();
   updateDirector(dt);
-  updateEnemies(dt);
-  updateRoomEvents(dt);
-  updateBiomeHazards(dt);
+  if (coopRoom.guest) coopRoom.mirror?.(dt);   // co-op guest: the monsters are the host's (net/coopGuest.ts): interpolate the mirror, no AI
+  else { updateEnemies(dt); updateRoomEvents(dt); updateBiomeHazards(dt); }
   updateMinions(dt);
-  updateEnemyProjectiles(dt);
+  if (!coopRoom.guest) updateEnemyProjectiles(dt);
   updateProjectiles(dt);
   updateSkills(dt);
   updateZones(dt);

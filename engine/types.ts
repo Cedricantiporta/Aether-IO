@@ -174,6 +174,8 @@ export interface Projectile {
   tint: number;          // basic arrow glow: 0 none, 1 blue (Piercing Shot), 2 white (Inspire)
   procLv: number;        // >0: on-hit proc payload (wizard thunder chain), value = skill level
   trailT: number;        // emitter accumulator (FIREBALL fire trail, particles)
+  /** co-op: a copy of the partner's projectile, drawn only (no hits, no expiry of its own; net/coopGuest + coopHost) */
+  ghost?: boolean;
 }
 
 // -------------------------------------------------------- enemy projectiles --
@@ -251,6 +253,8 @@ export interface Zone {
   aux: number;           // free: FIRE zones: 1 = real stacking burn
   kb: number;            // TELEGRAPH_CIRCLE: hero push distance on hit (0 none)
   down: number;          // TELEGRAPH_CIRCLE: hero knockdown seconds on hit (0 none) - heavy rock / slam strikes
+  /** co-op guest: a mirror of the host's zone (drawn and aged only; the host resolves its effect) */
+  ghost?: boolean;
 }
 
 // ------------------------------------------------------------- ground fx --

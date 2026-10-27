@@ -73,7 +73,7 @@ function makeCrate(id: number): Crate {
   return { id, active: false, kind: 'CRATE', pos: v(), hp: 1, maxHp: 1, rot: 0, hitFlash: 0, respawnT: 0 };
 }
 
-function makePlayer(): PlayerRuntime {
+export function makePlayerRuntime(): PlayerRuntime {
   return {
     alive: true, pos: v(), vel: v(), facing: 0, aim: new Vector3(0, 0, -10),
     hp: 100, mana: 100,
@@ -107,7 +107,7 @@ export const world = {
   /** Time of day of the current run (snapshot of townTime at run start; fixed for the whole run) and its phase: 0 day, 1 dusk, 2 night, 3 dawn. Tower / waves / daily stay day. Only biomes 0, 2, 3, 4 use it (render/biomeLook). */
   runTime: 0.25, runPhase: 0,
   frame: 0,
-  player: makePlayer(),
+  player: makePlayerRuntime(),
   // state: 0 FOLLOW, 1 FETCH, 2 ATTACK. carry = PickupKind being carried back (cosmetic), carryT = seconds left.
   pet: { pos: new Vector3(-1.5, 1, 1.5), facing: 0, attackT: 0, skillT: 0, state: 0, carry: '' as string, carryT: 0, sparkT: 0, atkCd: 0, stage: 1, stars: 0, xpBuf: 0 },
 
@@ -210,11 +210,17 @@ export function allocEnemy(): Enemy | null {
   return e;
 }
 
+/** Co-op guest mirror: reset a slot to a fresh enemy (same reset allocEnemy does) without searching the pool. */
+export function resetEnemySlot(e: Enemy): Enemy {
+  Object.assign(e, makeEnemy(e.id), { pos: e.pos.set(0, 0, 0), vel: e.vel.set(0, 0, 0), knock: e.knock.set(0, 0, 0), dir: e.dir.set(0, 0, 0) });
+  return e;
+}
+
 export function allocProjectile(): Projectile | null {
   const p = grab(world.projectiles, 'p');
   if (!p) return null;
   p.hitIds.length = 0; p.state = 0; p.spin = 0; p.homing = 0; p.trailT = 0; p.procLv = 0; p.tint = 0; p.emp = false;
-  p.bounces = 0; p.aoeRadius = 0; p.effect = undefined; p.knockback = 0; p.radius = 0.5;
+  p.ghost = false; p.bounces = 0; p.aoeRadius = 0; p.effect = undefined; p.knockback = 0; p.radius = 0.5;
   return p;
 }
 
@@ -229,7 +235,7 @@ export function allocZone(): Zone | null {
   const z = grab(world.zones, 'z');
   if (!z) return null;
   z.tickT = 0; z.maxPull = 0; z.length = 0; z.dir.set(0, 0, 1); z.hostile = false;
-  z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0; z.kb = 0; z.down = 0;
+  z.ghost = false; z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0; z.kb = 0; z.down = 0;
   return z;
 }
 
@@ -256,7 +262,7 @@ export function clearWorld(): void {
   for (const f of world.fx) f.active = false;
   for (const p of world.pickups) p.active = false;
   world.itemPickupsVersion++;
-  Object.assign(world.player, makePlayer(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
+  Object.assign(world.player, makePlayerRuntime(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
   world.village.sit.on = false; world.village.ride.on = false; world.village.ride.horse = -1; world.village.ride.dashT = 0; world.village.ride.dashCd = 0; world.village.ride.moveT = 0;
   world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1;
   for (const w of world.walls) w.active = false;
