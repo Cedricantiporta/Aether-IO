@@ -17,7 +17,7 @@ import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus
 import { updateRoomTraps, trapMods, obPull } from './roomTraps';
 import { Vector3 } from 'three';
 import { iceAt, ice, ICE_MOB_LERP } from '../iceFloor';
-import { forEachHero, heroNear, randomHero, asHero } from '../heroes';
+import { forEachHero, heroNear, randomHero, asHero, shoveHero } from '../heroes';
 import { coopRoom } from '../../net/coopRoom';
 
 export const HZ = { NONE: 0, GREEN: 1, FROST: 2, VOID: 3 } as const;
@@ -324,7 +324,11 @@ function tickBiomeHazards(dt: number): void {
         }
       }
       const al = coopRoom.ally;
-      if (al && al.alive && live && plRiftCd2 <= 0 && al.dashT <= 0 && !r.vis) {   // (co-op: the partner caught in the hole takes the ticks too; his own screen has no pull)
+      if (al && al.alive && live && !r.vis) {   // (co-op: the partner caught in the hole is dragged on his own screen (PULL) and takes the ticks too)
+        const dx2 = r.x - al.pos.x, dz2 = r.z - al.pos.z, d2 = Math.sqrt(dx2 * dx2 + dz2 * dz2);
+        if (d2 < RIFT_PULL_R && d2 > 0.05) { const s2 = (RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d2 / RIFT_PULL_R)) * r.k * dt; shoveHero(al, dx2 / d2 * s2, dz2 / d2 * s2); }
+      }
+      if (al && al.alive && live && plRiftCd2 <= 0 && al.dashT <= 0 && !r.vis) {
         const dx2 = r.x - al.pos.x, dz2 = r.z - al.pos.z;
         if (dx2 * dx2 + dz2 * dz2 < RIFT_PULL_R * RIFT_PULL_R) { plRiftCd2 = RIFT_TICK; tmp.set(r.x, 0, r.z); asHero(al, () => damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true })); }
       }

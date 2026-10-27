@@ -38,7 +38,7 @@ import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from '.
 import { BT, addChill } from './bossFx';
 import { hz } from './biomeHazards';
 import { coopRoom } from '../../net/coopRoom';
-import { nearestHero } from '../heroes';
+import { nearestHero, shoveHero } from '../heroes';
 import type { PlayerRuntime } from '../types';
 import { Vector3 } from 'three';
 
@@ -785,6 +785,7 @@ function trapsTick(dt: number): void {
     const walk = Math.max(6, useGameStore.getState().stats.moveSpeed * HERO_WALK);
     const s = walk * (OB_FAR + (OB_NEAR - OB_FAR) * (1 - Math.min(1, d / OB_RANGE)));
     obPull.x += dx / d * s; obPull.z += dz / d * s; obPull.on = true;
+    if (HN > 1) { const a = HS[1], ax = o.x - a.pos.x, az = o.z - a.pos.z, ad = Math.hypot(ax, az); if (ad > 0.05) { const as = s * (a.dashT > 0 ? 0.2 : 1) * dt; shoveHero(a, ax / ad * as, az / ad * as); } }   // (co-op: the guest's own hero is dragged too)
     o.tick -= dt;
     if (o.tick <= 0) {   // crushing core: ticking damage while you are held against it (co-op: either hero)
       let any = false;

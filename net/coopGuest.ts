@@ -22,6 +22,7 @@ import { b64ToU16, EV_G2H, EV_H2G, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 import { zonesTick, applyZones } from './coopZones';
 import { onDrop, onReward } from './coopLoot';
+import { onPull, pullStep } from './coopPull';
 
 export interface GuestIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: GuestIO | null = null;
@@ -89,6 +90,7 @@ EV_G2H.forEach((d, idx) => {
 
 /** Per frame (coopTick, guest): flush my hit claims at ~30 Hz, my FX moments and my projectiles at ~15 Hz. */
 export function guestTick(now: number, inRun: boolean): void {
+  if (inRun) pullStep(now);
   if (!io || !inRun) { if (hq.length) hq.length = 0; if (sq.length) sq.length = 0; if (evtQ.length) evtQ.length = 0; return; }
   if (now - lastFlush >= 33) {
     lastFlush = now;
@@ -302,6 +304,7 @@ export function guestOnMessage(d: unknown[]): void {
     case MSG.PZ: applyZones(d); return;
     case MSG.DROP: onDrop(d); return;
     case MSG.REWARD: onReward(d); return;
+    case MSG.PULL: onPull(d); return;
     case MSG.HIT: if (coopRoom.guest) onHit(d); return;
     case MSG.KILL: if (coopRoom.guest) onKill(d); return;
     case MSG.DEBUF: {

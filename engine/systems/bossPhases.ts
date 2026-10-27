@@ -29,7 +29,7 @@ import { mfx } from './voidFx';
 import { hooks } from './hooks';
 import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, type PhaseKind } from './bossPhaseState';
 import { useGameStore } from '../../store';
-import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly } from '../heroes';
+import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly, shoveHero } from '../heroes';
 
 const MECH: Record<string, PhaseKind> = {
   BOSS_WYRM: 'AVALANCHE', BOSS_GOLEM: 'PINBALL', BOSS_TREANT: 'SPORES', BOSS_HYDRA: 'TIDAL', BOSS_WARLORD: 'LAVA',
@@ -434,11 +434,14 @@ function tickSand(e: Enemy, dt: number): void {
       if (!p.alive) return;
       const ally = isAlly(p), tk = ally ? G.tickA : G.tick;
       if (!covered(p.pos.x, p.pos.z, bp.wx, bp.wz)) {
-        if (!ally && !playerTrickImmune()) {   // pushed along the wind (a dash resists)
+        if (!playerTrickImmune()) {   // pushed along the wind (a dash resists)
           const k = (p.dashT > 0 ? 0.3 : 1) * 4.5 * dt;
-          p.pos.x += bp.wx * k; p.pos.z += bp.wz * k;
-          const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
-          if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
+          if (ally) shoveHero(p, bp.wx * k, bp.wz * k);   // (co-op: the guest's own hero is pushed on his screen)
+          else {
+            p.pos.x += bp.wx * k; p.pos.z += bp.wz * k;
+            const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
+            if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
+          }
         }
         if (tk <= 0) { if (ally) G.tickA = SAND_TICK; else G.tick = SAND_TICK; hitHero(SAND_TICK_PCT, 'PHYSICAL', p.pos.x - bp.wx * 5, p.pos.z - bp.wz * 5, 0, 0, true); }
       } else if (tk <= 0) { if (ally) G.tickA = SAND_TICK; else G.tick = SAND_TICK; }

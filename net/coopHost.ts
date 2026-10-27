@@ -18,6 +18,7 @@ import {
 import { u16ToB64, EV_H2G, EV_G2H, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 import { zonesTick, applyZones } from './coopZones';
+import { pullTick } from './coopPull';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: HostIO | null = null;
@@ -176,6 +177,7 @@ export function hostTick(now: number, inRun: boolean, R: typeof world.remote): v
   coopRoom.ally = p;
   if (now - lastSnap >= SNAP_MS) { lastSnap = now; sendSnap(now); }
   zonesTick(now, true);   // (STEP 3) my own ground skill zones as harmless copies on his screen
+  pullTick(now);          // (STEP 4) pulls / pushes on the stand-in -> the guest's own hero
 }
 
 const wrapPi = (a: number): number => a - Math.PI * 2 * Math.floor((a + Math.PI) / (Math.PI * 2));

@@ -67,3 +67,10 @@ export function heroesFill(): number {
   HL[0] = HOST; HL[1] = a;
   return 2;
 }
+
+/** Displaces a hero (a pull / drag / wind push): the host hero moves directly; the partner's stand-in forwards the displacement (PULL) and the guest moves HIS own hero
+ *  (net/coopPull.ts). The caller keeps its own edge clamp for the host hero; the guest clamps on his side. */
+export function shoveHero(p: PlayerRuntime, dx: number, dz: number): void {
+  if (p === coopRoom.ally) { coopRoom.fwdPull?.(dx, dz); return; }
+  p.pos.x += dx; p.pos.z += dz;
+}

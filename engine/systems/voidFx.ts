@@ -16,7 +16,7 @@ import { events } from '../events';
 import type { Zone } from '../types';
 import { damagePlayer, applyPlayerDebuff, playerTrickImmune, KB } from './combat';
 import { hooks } from './hooks';
-import { forEachHero } from '../heroes';
+import { forEachHero, shoveHero } from '../heroes';
 import { coopRoom } from '../../net/coopRoom';
 import { spawnBlackHole, spawnGravityVisual } from './biomeHazards';
 import { bp } from './bossPhaseState';
@@ -137,12 +137,15 @@ function tickGravity(dt: number): void {
     if (!p.alive) return;
     const ally = p === coopRoom.ally;
     const dx = g.x - p.pos.x, dz = g.z - p.pos.z, d = Math.hypot(dx, dz) || 1e-3;
-    if (!ally && !playerTrickImmune() && d > 0.6) {   // the whole arena is pulled: ~1.5 u/s far away, up to ~12 u/s at the core (the hero walks ~6-8; a dash resists)
+    if (!playerTrickImmune() && d > 0.6) {   // the whole arena is pulled: ~1.5 u/s far away, up to ~12 u/s at the core (the hero walks ~6-8; a dash resists)
       const near = Math.max(0, 1 - d / R);
       const s = (1.5 + 10.5 * Math.pow(near, 1.4)) * g.ramp * (p.dashT > 0 ? 0.3 : 1) * dt;
-      p.pos.x += dx / d * s; p.pos.z += dz / d * s;
-      const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
-      if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
+      if (ally) shoveHero(p, dx / d * s, dz / d * s);   // (co-op: the guest's own hero is dragged on his screen)
+      else {
+        p.pos.x += dx / d * s; p.pos.z += dz / d * s;
+        const r = Math.hypot(p.pos.x, p.pos.z), lim = edgeLimit(p.pos.x, p.pos.z, 2);
+        if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
+      }
     }
     if (d < GRAV_CORE) {
       if (ally) {
@@ -297,10 +300,10 @@ function tickEventHorizon(dt: number): void {
     const ally = p === coopRoom.ally;
     const safe = p.alive && inPocket(p.pos.x, p.pos.z);
     if (p.alive && !safe && !playerTrickImmune()) {
+      const d = Math.hypot(p.pos.x, p.pos.z) || 1e-3, k = e.t / EH_DUR;
+      const s = (3.0 + 3.2 * k + 2.0 * Math.max(0, 1 - d / 22)) * Math.min(1, e.t / 0.5) * (p.dashT > 0 ? 0.3 : 1) * dt;   // ~3 u/s at first, ~8 u/s near the end at the core: pockets are reachable but you cannot idle
+      if (d > 0.8) { if (ally) shoveHero(p, -p.pos.x / d * s, -p.pos.z / d * s); else { p.pos.x -= p.pos.x / d * s; p.pos.z -= p.pos.z / d * s; } }   // (co-op: the guest's own hero is dragged on his screen)
       if (!ally) {
-        const d = Math.hypot(p.pos.x, p.pos.z) || 1e-3, k = e.t / EH_DUR;
-        const s = (3.0 + 3.2 * k + 2.0 * Math.max(0, 1 - d / 22)) * Math.min(1, e.t / 0.5) * (p.dashT > 0 ? 0.3 : 1) * dt;   // ~3 u/s at first, ~8 u/s near the end at the core: pockets are reachable but you cannot idle
-        if (d > 0.8) { p.pos.x -= p.pos.x / d * s; p.pos.z -= p.pos.z / d * s; }
         e.tick -= dt;
         if (e.tick <= 0) { e.tick = 0.5; damagePlayer(1, { pct: 0.02, pos: tmp.set(0, 0, 0), kind: 'MAGIC', env: true }); }   // the gravity wears you down outside the light
       } else {
