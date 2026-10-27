@@ -91,6 +91,10 @@ pointer) every frame — the engine never touches the camera.
 * Difficulty: no selector; Normal, plus the Hard toggle (unlocked by the first ending) and Ascension 1-10 (`engine/runMods.ts`).
   Enemies scale with depth and with hero level.
 
+## Online co-op (`net/`)
+Pure TS beside `engine/`: the host simulates, the guest renders. Per-frame partner state is `world.remote` (written by `net/coop.ts coopTick()`, called from
+`updateGame`); the UI slice `net/coopStore.ts` changes only at discrete moments. The director talks to the net layer only through `net/coopRoom.ts`. Details: HANDOFF 3.11.
+
 ## Performance rules (all agents)
 1. No `new Vector3()` / closures / array allocs in per-entity per-frame loops —
    use module-level scratch vectors.

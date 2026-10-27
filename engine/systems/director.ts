@@ -1,4 +1,5 @@
 import { feedReward } from '../../rewardFeed';
+import { coopRoom } from '../../net/coopRoom';
 import { runCards } from '../runCards';
 import { RARITY_LABEL_COLOR } from '../../constants';
 import { resetBossMech } from './bossMech';
@@ -309,6 +310,9 @@ function clearTransient(): void {
 }
 
 function enterRoom(b: number, idx: number, p: RoomPlan): void {
+  const coopForced = coopRoom.forced; coopRoom.forced = null;   // co-op GUEST: build exactly the room the host is in (net/coop.ts)
+  if (coopForced) { b = coopForced.b; idx = coopForced.idx; p = coopForced.plan; }
+  const guest = coopRoom.guest;
   clearWanderer(); removeAlly();
   if (idx === 0) bossKeyState.has = false;
   shortcutOn = false;
@@ -328,22 +332,24 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const st = useGameStore.getState();
   clearTransient();
 
-  const seed = daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
+  const seed = coopForced ? coopForced.seed : daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
   const R = waves.on ? WAVES_ARENA_R : runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);   // (Endless Waves: one boss-size arena)
   const campPath = p.type === 'CAMP' && !p.epilogue && !p.dream && runInfo.mode === 'ADVENTURE';   // the biome camp is a hand-authored transition path (engine/campPaths.ts)
   buildRoom(b, p.type, R, seed, idx, campPath, p.obj);
   world.room.radius = campPath && camp.cur ? Math.round(camp.cur.len / 2) : R;
-  startRoomEvent(p);   // objective / twist (roomEvents.ts)
-  setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
-  setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
+  if (!guest) startRoomEvent(p);   // objective / twist (roomEvents.ts)
+  if (!guest) setupBiomeHazards(b, p);   // brambles / ice / rifts ... (biomeHazards.ts)
+  if (!guest) setupRoomTraps(b, p, idx);   // ballista / catapult / magic tower / fire bars / jets / vines / freeze pools / bomb barrels (roomTraps.ts)
   const bossK = p.type === 'BOSS' && !finalFight ? (debug.bossOverride || biomeBoss(b)) : '';   // (boss arenas get their biome's hazards: bossArena notes in HANDOFF)
-  if (bossK === 'BOSS_TREANT') setupBossPlants();   // Elderroot: self-puffing poison plants
+  if (guest) { /* co-op guest: no boss props */ }
+  else if (bossK === 'BOSS_TREANT') setupBossPlants();   // Elderroot: self-puffing poison plants
   else if (bossK === 'BOSS_GOLEM') setupBossBallistas(b);   // Gorath: ballistas on the sides
   setupLavaFloor(b, p, seed, bossK === 'BOSS_WARLORD');   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts); Ignar's arena ~40% lava
   setupIceFloor(b, p, seed, bossK === 'BOSS_WYRM');   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;
+  coopRoom.onEnter?.(b, idx, p, seed);   // co-op host: tell the guest which room to build
   for (const po of r.portals) { po.active = false; po.pre = false; }
   if (shape.kind === 'HALLS' && !fixed.on && runInfo.mode !== 'TOWER' && p.type !== 'BOSS') {   // (owner) HALLS: the exit arches already stand in the last chamber, dormant until the room is cleared
     for (let i = 0; i < 2; i++) { portalSlot(i, 2, r.radius, slot); const po = r.portals[i]; po.pre = true; po.x = slot[0]; po.z = slot[1]; }
@@ -385,8 +391,8 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   unitN = 0; nextUnit = 0; bursts = 0; curBurst = 0; burstT = 0; miniPending = false; extraBosses = []; miniCount = 1; bossPending = false; bossSpawned = false; bossDeadT = -1; duelPending = false;
   groupIdx = 0; inGroup = 0; fixedN = 0;
 
-  rollRoomSpawns(p.type);
-  if (p.type === 'COMBAT' || p.type === 'ELITE' || p.type === 'TREASURE') {
+  if (!guest) rollRoomSpawns(p.type);   // (co-op guest: an empty room, the host fights)
+  if (!guest && (p.type === 'COMBAT' || p.type === 'ELITE' || p.type === 'TREASURE')) {
     for (let i = 0; i < feat.nTowers; i++) { fixedKind[fixedN] = 'GOBLIN_ARCHER'; fixedX[fixedN] = feat.tx[i]; fixedZ[fixedN] = feat.tz[i]; fixedN++; }
     for (let i = 0; i < feat.nHydras; i++) { fixedKind[fixedN] = 'LAKE_HYDRA'; fixedX[fixedN] = feat.hx[i]; fixedZ[fixedN] = feat.hz[i]; fixedN++; }
   }
@@ -402,7 +408,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   if (p.type === 'DUEL') st.addNotification(`${duelQ.length > 1 ? `${duelQ.length} dark champions step into the ring at once!` : `A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`}`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
-  maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
+  if (!guest) maybeAlly(b, idx, p.type, !finalFight && !gateBiome() && p.gate === undefined && !p.dream && !p.epilogue);   // once per biome: an adventurer joins this fight (systems/ally.ts)
   if (campPath && shipState.lock && idx === 0) {   // the ship start: Captain Rhea, not a random traveller
     placeShipCaptain(cx, cz + 5);
     st.addNotification('Captain Rhea waits by the fire. Talk to her (E) to choose your deck.', '#6fd0e0', 'SYSTEM');
@@ -461,10 +467,13 @@ function beginLeave(p: RoomPlan, nb: number, ni: number): void {
   leavePlan = p; leaveBiome = nb; leaveIndex = ni;
   d.phase = 'LEAVING'; d.phaseT = 0;
   world.room.fadeTarget = 1;
+  coopRoom.onLeaving?.();
   const st = useGameStore.getState();
   if (st.isShopOpen || st.isInventoryOpen || st.isCharacterSheetOpen) st.closeAllUI();
   for (const po of world.room.portals) po.active = false;
 }
+
+coopRoom.enter = (b, idx, p) => enterRoom(b, idx, p);
 
 function finishLeave(): void {
   // anything still on the floor goes into the bag (full bag: left behind)
@@ -1442,6 +1451,7 @@ export function updateDirector(dt: number): void {
   if (!r.active) return;
   d.phaseT += dt;
   r.fade += Math.sign(r.fadeTarget - r.fade) * Math.min(Math.abs(r.fadeTarget - r.fade), dt / FADE_SECONDS);
+  if (coopRoom.guest) { d.phase = 'CLEARED'; r.enemiesLeft = 0; return; }   // co-op guest: no fights, no rewards, no portals; the host decides (net/coop.ts)
 
   if (rewardT >= 0) { rewardT -= dt; if (rewardT < 0) grantReward(rewardKind, rewardBonus); }
   tickDaily(dt); tickTrial(dt);
