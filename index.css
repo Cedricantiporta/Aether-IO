@@ -4014,6 +4014,8 @@ select.dbg-in option { background: #2a2a32; color: #fff; }
 .coop-dot { width: .55rem; height: .55rem; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
 .coop-hud-name { font-weight: 700; color: #d9f6ff; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .coop-hud-sub { color: var(--z-dim, #c9c9d2); font-size: .7rem; }
+.coop-hud-hp { width: 3.2rem; height: .5rem; border-radius: 999px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.coop-hud-hp > i { display: block; height: 100%; width: 100%; border-radius: 999px; background: #6fe29b; }
 .coop-hud-leave { pointer-events: auto; height: 1.5rem; padding: 0 .7rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff; font-size: .7rem; font-weight: 700; cursor: pointer; }
 .coop-hud-leave:hover { background: rgba(255, 255, 255, .28); }
 .compact .coop-hud { top: .3rem; zoom: .8; }

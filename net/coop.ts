@@ -12,8 +12,8 @@ import { activeChar } from '../characters';
 import { GameStatus } from '../types';
 import type { RoomPlan } from '../engine/types';
 import { coopRoom } from './coopRoom';
-import { hostBind, hostTick, hostReset, hostOnMessage, hostGuestSeen } from './coopHost';
-import { guestBind, guestTick, guestReset, guestOnMessage } from './coopGuest';
+import { hostBind, hostTick, hostReset, hostOnMessage, hostGuestSeen, hostStats } from './coopHost';
+import { guestBind, guestTick, guestReset, guestOnMessage, guestStats } from './coopGuest';
 import { useCoop, coopSet } from './coopStore';
 import { pickTransport, type Conn, type Handle, type Transport } from './transport';
 import { COOP_VERSION, MSG, F_ALIVE, F_ATTACK, F_CAST, F_DASH, clampInt, isNum, makeCode, normaliseCode, sanitizePlan, sanitizeSnap, type HeroSnap } from './protocol';
@@ -318,5 +318,7 @@ export function coopTick(): void {
 
 // Dev hook for headless tests (vite dev only): drive / inspect co-op from the page.
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {
-  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } }; }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
+  setTimeout(() => { (window as unknown as Record<string, unknown>).__coop = { host: hostCoop, join: joinCoop, leave: leaveCoop, useCoop, world, events, store: useGameStore, coopRoom, ui: useUiStore, ring: () => ({ head, count, rv }), stats: () => ({ tx: stats.tx, rx: stats.rx, txBy: stats.txBy, rxBy: stats.rxBy, host: hostStats, guest: guestStats }), statsReset: () => { stats.tx = 0; stats.rx = 0; stats.txBy = {}; stats.rxBy = {}; } };
+    import('../engine/game').then((m) => { (window as unknown as { __coop: Record<string, unknown> }).__coop.game = m; }).catch(() => { /* ignore */ });
+  }, 0);   // (deferred: store.ts and engine/game.ts import each other, the store is not ready while this module loads)
 }

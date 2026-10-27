@@ -23,6 +23,8 @@ import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
 
 export interface GuestIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: GuestIO | null = null;
+/** QA counters (window.__coop.stats()) */
+export const guestStats = { claims: 0, blowsIn: 0, dmgIn: 0, killsPaid: 0, snaps: 0 };
 export function guestBind(g: GuestIO): void { io = g; }
 
 const INTERP_MS = 100;
@@ -66,6 +68,7 @@ coopRoom.sendHit = (e: Enemy, amount: number, o: DamageOpts, knockRoll: boolean,
     kx = o.knockDir.x; kz = o.knockDir.z;
     if (o.launch) { fl |= DF_LAUNCH; launch = o.launch; slam = o.slam ?? 0; } else if (o.knockback) { fl |= DF_KNOCK; kb = o.knockback; }
   }
+  guestStats.claims++;
   hq.push(e.id, Math.round(amount * 10), DK[o.kind] ?? 0, fl, Math.round((o.fromX ?? fx) * 10), Math.round((o.fromZ ?? fz) * 10), Math.round(kx * 100), Math.round(kz * 100), Math.round(kb * 100), Math.round(launch * 100), Math.round(slam * 10));
 };
 coopRoom.sendStatus = (e: Enemy, effect: StatusEffect): void => {
@@ -134,6 +137,7 @@ function onSnap(d: unknown[]): void {
   const n = b64ToU16(d[3], IN);
   if (n < 3) return;
   stamp = (stamp + 1) & 0xffff || 1;
+  guestStats.snaps++;
   const now = nowMs();
   let o = 0;
   // ---- monsters
@@ -257,10 +261,12 @@ function onHit(d: unknown[]): void {
   hitPos.set(v(10) / 10, 0, v(11) / 10); o.pos = hitPos;
   const sid = v(12) | 0; o.srcId = sid; o.src = sid >= 0 && sid < MAX_ENEMIES ? world.enemies[sid] : undefined;
   if (o.src && !o.src.active) o.src = undefined;
+  guestStats.blowsIn++; guestStats.dmgIn += amount;
   damagePlayer(amount, o);
 }
 
 function onKill(d: unknown[]): void {
+  guestStats.killsPaid++;
   const xp = isNum(d[2]) ? d[2] : 0, gold = isNum(d[3]) ? d[3] : 0, fl = isNum(d[4]) ? d[4] : 0;
   hitPos.set((isNum(d[5]) ? d[5] : 0) / 10, 0, (isNum(d[6]) ? d[6] : 0) / 10);
   const run = world.run;

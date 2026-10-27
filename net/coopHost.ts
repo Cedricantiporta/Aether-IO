@@ -25,6 +25,8 @@ export function hostBind(h: HostIO): void { io = h; }
 const SNAP_MS = 1000 / 15;
 const U = new Uint16Array(16384);
 const proxy = makePlayerRuntime();   // the guest's stand-in
+/** QA counters (window.__coop.stats()) */
+export const hostStats = { hitsApplied: 0, dmgApplied: 0, statusApplied: 0, blowsForwarded: 0, kills: 0 };
 let guestSeen = false;               // a POS of this run arrived: the guest is fighting beside us
 let lastSnap = 0, seq = 0, lastRst = 0, lastBossSent = 0, rstKey = '', bossKey = '';
 let prevX = 0, prevZ = 0, prevT = 0;
@@ -55,6 +57,7 @@ export function hostReset(full: boolean): void {
 const DK: Record<string, number> = {}; DMG_KINDS.forEach((k, i) => { DK[k] = i; });
 coopRoom.fwdHit = (amount, o) => {
   if (!io || !io.connected()) return;
+  hostStats.blowsForwarded++;
   const fl = (o?.dot ? HF_DOT : 0) | (o?.env ? HF_ENV : 0) | (o?.noDotMul ? HF_NODOT : 0) | (o?.proj ? HF_PROJ : 0) | (o?.crit ? HF_CRIT : 0);
   const srcId = o?.src ? o.src.id : o?.srcId ?? -1;
   io.send([MSG.HIT, io.rv(), Math.round(amount * 100) / 100, Math.round((o?.pct ?? 0) * 1000), DK[o?.kind ?? 'PHYSICAL'] ?? 0, fl, Math.round((o?.kb ?? 0) * 100), Math.round((o?.down ?? 0) * 100),
@@ -65,6 +68,7 @@ coopRoom.fwdDebuff = (type: PlayerDebuff, dur, val, mode) => { if (io?.connected
 coopRoom.fwdKnock = (fx, fz, force, down, cancel) => { if (io?.connected()) io.send([MSG.KNOCK, io.rv(), Math.round(fx * 10), Math.round(fz * 10), Math.round(force * 100), Math.round(down * 100), cancel ? 1 : 0]); };
 coopRoom.onKill = (e, xp, gold) => {
   if (!io || !io.connected() || !coopRoom.two) return;
+  hostStats.kills++;
   io.send([MSG.KILL, io.rv(), Math.round(xp * 100) / 100, Math.round(gold), (e.elite ? 1 : 0) | (e.boss ? 2 : 0), Math.round(e.pos.x * 10), Math.round(e.pos.z * 10)]);
 };
 
@@ -122,6 +126,7 @@ function onDmg(d: unknown[]): void {
         if (fl & DF_KNOCK) o.knockback = Math.min(8, num(hits[i + 8]) / 100);
         if (fl & DF_LAUNCH) { o.launch = Math.min(20, num(hits[i + 9]) / 100); o.slam = Math.max(0, num(hits[i + 10]) / 10); }
       }
+      hostStats.hitsApplied++; hostStats.dmgApplied += amt / 10;
       damageEnemy(e, Math.min(5e7, amt / 10), o);
     }
   }
@@ -133,6 +138,7 @@ function onDmg(d: unknown[]): void {
       const e = world.enemies[id | 0], type = STATUS_TYPES[t | 0];
       if (!e.active || !type) continue;
       statFx.type = type; statFx.duration = Math.min(30, dur / 100); statFx.value = val / 100;
+      hostStats.statusApplied++;
       applyStatus(e, statFx);
     }
   }
