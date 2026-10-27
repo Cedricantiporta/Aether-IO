@@ -33,6 +33,7 @@ import { CaveEntrance } from './CaveEntrance';
 import { caveLayout } from '../engine/caveData';
 import { Hero } from './Hero';
 import { RemoteHero } from './RemoteHero';
+import { ReviveRing } from './ReviveRing';
 import { Enemies } from './Enemies';
 import { Bosses } from './Bosses';
 import { Bosses2 } from './Bosses2';
@@ -112,6 +113,7 @@ export function Scene() {
       )}
       <Suspense fallback={null}><Hero q={q} /></Suspense>
       {gameplay && <Suspense fallback={null}><RemoteHero /></Suspense>}   {/* online co-op partner (net/coop.ts) */}
+      {gameplay && <ReviveRing />}   {/* co-op: the revive ring round a downed hero */}
       <FacingArrow />
       {!gameplay && <GuideArrow />}
       {gameplay && <StationaryArrow />}

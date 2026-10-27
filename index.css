@@ -4019,3 +4019,11 @@ select.dbg-in option { background: #2a2a32; color: #fff; }
 .coop-hud-leave { pointer-events: auto; height: 1.5rem; padding: 0 .7rem; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); color: #fff; font-size: .7rem; font-weight: 700; cursor: pointer; }
 .coop-hud-leave:hover { background: rgba(255, 255, 255, .28); }
 .compact .coop-hud { top: .3rem; zoom: .8; }
+/* co-op step 3: downed / revive / "host is choosing" banner + the arrow to a downed friend (Zelda-soft: round, bright) */
+.coop-banner { position: fixed; top: 3.1rem; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: .35rem .95rem; border-radius: 999px; background: rgba(30, 30, 34, .78); color: #fff; font-size: .82rem; font-weight: 700; pointer-events: none; box-shadow: 0 2px 10px rgba(0, 0, 0, .3); max-width: 92vw; text-align: center; }
+.coop-banner[data-kind='me'] { background: rgba(160, 40, 60, .85); }
+.coop-banner[data-kind='friend'] { background: rgba(200, 120, 30, .88); }
+.coop-banner[data-kind='door'] { background: rgba(40, 90, 150, .82); }
+.coop-banner-bar { display: block; width: 11rem; height: .5rem; border-radius: 999px; background: rgba(255, 255, 255, .28); overflow: hidden; }
+.coop-banner-bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: #9bffc8; transition: width .12s linear; }
+.coop-arrow { position: fixed; left: 50%; top: 50%; z-index: 29; width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 26px solid #ffb347; filter: drop-shadow(0 0 6px rgba(255, 179, 71, .9)); pointer-events: none; }
