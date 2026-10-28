@@ -70,6 +70,8 @@ data modules (root): constants.ts types.ts classLevels.ts talents.ts attributes.
 ## 3. Current game (what exists today)
 
 ### 3.1 Flow and screens
+
+**How a player reaches the co-op lobby (2026-10-28 fix)**: E at the Adventure Portal sets out at once (no window), so the lobby (the Co-op section of the Set Out window, `CoopLobby`) opens from the corner **Co-op** button (`cb-coop`, `TopBars.ModeIcons`, only in town) via `openSetOut { mode: 'ADVENTURE', remote: true }`. A connected guest pressing E at the portal only gets a 'your host sets out' notice.
 Title (`ui/components/TitleLogo.tsx`) -> **character select** (`ui/screens/CharacterSelect.tsx`): MMO-style slots, up to 6
 characters (`characters.ts`, `MAX_CHARS`), each its own save; a character's class is fixed (Archer / Wizard / Barbarian /
 Knight / Necromancer); name popup on Create -> town. First launch shows the prologue slides (`ui/screens/Story.tsx`).

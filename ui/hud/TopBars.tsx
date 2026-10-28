@@ -13,6 +13,7 @@ import { ItemArt } from '../components/ItemArt';
 import { StatusIcon } from '../components/StatusIcon';
 import type { LucideIcon } from '../components/GoldIcons';
 import { motion } from 'framer-motion';
+import { useCoop } from '../../net/coopStore';
 import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from '../components/GoldIcons';
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
@@ -218,10 +219,17 @@ const ModeIcons: React.FC = () => {
     if (g.status !== GameStatus.MENU) { g.addNotification('The trials are started from the town.', '#fff3c4', 'SYSTEM'); return; }
     events.emit('openSetOut', { mode: 'TOWER', tab, remote: true });
   };
+  const coopUp = useCoop((c) => c.state !== 'idle');
+  const coop = () => {   // (owner 2026-10-28: E at the portal sets out at once, so the co-op lobby needs its own door) opens the Set Out window's Co-op section
+    const g = useGameStore.getState();
+    if (g.status !== GameStatus.MENU) { g.addNotification('Co-op is set up in town, before an adventure.', '#fff3c4', 'SYSTEM'); return; }
+    events.emit('openSetOut', { mode: 'ADVENTURE', remote: true });
+  };
   const dLock = level < UNLOCK_LV.DAILY, wLock = level < UNLOCK_LV.WAVES, tLock = endings <= 0;
   return (<>
     <MenuBtn mini testid="cb-daily" icon={<CuteCalendar size={22} />} label={dLock ? `Daily Trial (unlocks at Lv ${UNLOCK_LV.DAILY})` : 'Daily Trial'} hint="" onClick={() => go('DAILY')} dot={dailyDot} locked={dLock} />
     <MenuBtn mini testid="cb-tower" icon={<CuteTower size={22} />} label={tLock ? 'Endless Tower (finish one adventure to open it)' : 'Endless Tower'} hint="" onClick={() => go('RUN')} locked={tLock} />
+    <MenuBtn mini testid="cb-coop" icon={<Swords size={22} />} label={coopUp ? 'Co-op (connected / waiting)' : 'Co-op: play with a friend'} hint="" onClick={coop} active={coopUp} />
     <MenuBtn mini testid="cb-waves" icon={<CuteWaves size={22} />} label={wLock ? `Endless Waves (unlocks at Lv ${UNLOCK_LV.WAVES})` : 'Endless Waves'} hint="" onClick={() => go('WAVES')} locked={wLock} />
   </>);
 };

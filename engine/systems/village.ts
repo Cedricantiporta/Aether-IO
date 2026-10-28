@@ -16,6 +16,7 @@ import { STORY, gateOpen } from '../../story';
 import { world, TRAINER_POS, MAX_CRATES } from '../world';
 import { events } from '../events';
 import { SHOP_POSITIONS, SHOP_TAB, RARITY_LABEL_COLOR } from '../../constants';
+import { useCoop } from '../../net/coopStore';
 import { useGameStore, potionCount, shopPrice, makeItemById } from '../../store';
 import { ITEMS_POOL } from '../../constants';
 import { updatePlayerVillage } from './player';
@@ -383,6 +384,7 @@ export function interact(it: Interactable): void {
     else if (it.act === 'npc') openDialogue(it.node);
     else if (it.act === 'gate') {   // adventure; sealed until the King's first task (main story)
       if (!gateOpen(st.story)) st.addNotification('The gate is sealed. Follow your main quest first.', '#f1d58e', 'WARNING');
+      else if (useCoop.getState().role === 'guest' && useCoop.getState().state === 'connected') st.addNotification('Your host sets out: wait for them at the portal.', '#c8ecff', 'SYSTEM');   // (a co-op guest never starts his own run)
       else if (readyForAdventure()) {   // (owner: no window, E at the portal sets out at once; Ascension is picked at the tower)
         const pg = st.progress;   // (2026-10-26) say which Ascension this run uses, and that a higher one waits at the tower
         if (pg.ascensionMax > 0) {
