@@ -135,7 +135,7 @@ export const world = {
   minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, shield: 0, shieldT: 0, hitT: 0, walk: 0, mv: 0, src: 0, born: 0, def: 0, skillT: 0, spin: 0, burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, stunT: 0, slowT: 0 })),   // (owner 2026-10-25) summons take burn / poison / stun / slow too (minions.minionDebuff)
   /** Co-op (STEP 4): the PARTNER's summons / pet as cosmetic ghosts (net/coopMinions.ts). Nothing in the simulation reads these: monsters never target them. */
   ghostMinions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, tx: 0, tz: 0, facing: 0, mv: 0, walk: 0, swing: 0, hp: 1, maxHp: 1, shield: 0, hitT: 0, spin: 0, rise: 0, life: 9, src: 0 })),
-  ghostPet: { on: false, x: 0, z: 0, tx: 0, tz: 0, rar: 0 },
+  ghostPet: { on: false, x: 0, z: 0, tx: 0, tz: 0, rar: 0, id: '' as string, stage: 1, stars: 0, facing: 0 },   // (id = the partner's pet template id; '' = unknown, drawn as a wisp)
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT' | 'SPEED', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',

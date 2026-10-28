@@ -50,7 +50,7 @@ import { TargetRing } from './TargetRing';
 import { TrickFx, CrystalWalls } from './TrickFx';
 import { Pickups } from './Pickups';
 import { Crates } from './Crates';
-import { Pet } from './Pet';
+import { Pet, GhostPet } from './Pet';
 import { VFX, HaloLayer } from './VFX';
 import { DamageNumbers } from './DamageNumbers';
 import { StatusFx } from './StatusFx';
@@ -158,6 +158,7 @@ export function Scene() {
           <Minions pool={world.ghostMinions} ghost />
           <Projectiles />
           <Pet />
+          <GhostPet />
         </>
       )}
       <VFX />

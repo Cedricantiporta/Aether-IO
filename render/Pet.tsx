@@ -1,5 +1,5 @@
 // Companion pets: one procedural model per pet id.
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useSyncExternalStore } from 'react';
 import { liftAt } from './lift';
 import { useFrame } from '@react-three/fiber';
 import { BufferGeometry, Material, Color, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, DoubleSide, Vector3 } from 'three';
@@ -232,6 +232,15 @@ function PetMeshes({ def, id, cast }: { def: PetDef; id: string; cast?: boolean 
   return <>{partsOf(def).map((p, i) => <mesh key={i} geometry={p.geo} material={petMat(p.mat, id, p.tint)} castShadow={cast && p.mat !== 'jelly'} renderOrder={p.mat === 'jelly' ? 3 : 0} />)}</>;
 }
 
+/** The co-op partner's pet (the real model, from the id they send); a pet the partner has but we can't resolve stays the wisp in Minions.tsx. */
+export function GhostPet() {
+  const id = useSyncExternalStore((cb) => { const t = setInterval(cb, 500); return () => clearInterval(t); }, () => (world.ghostPet.on ? world.ghostPet.id : ''));
+  const kit = useCreatureKit();
+  const def = useMemo(() => (id ? getDef(id, kit) : null), [id, kit]);
+  if (!def) return null;
+  return <PetActor key={id} id={id} def={def} ghost />;
+}
+
 export function Pet() {
   // Owned pets get unique instance ids, so resolve the model by template id / name.
   const id = useGameStore((s) => {
@@ -317,7 +326,9 @@ export function PetModel({ id }: { id: string }) {
   );
 }
 
-function PetActor({ id, def }: { id: string; def: PetDef }) {
+/** `ghost`: the co-op partner's pet (net/coopMinions.ts writes world.ghostPet): same model + motion, driven by a local copy of the pose. */
+const GHOST_SRC = { pos: new Vector3(), facing: 0, attackT: 0, carry: '' as string, carryT: 0, sparkT: 0, stage: 1, stars: 0 };
+function PetActor({ id, def, ghost }: { id: string; def: PetDef; ghost?: boolean }) {
   const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
   const legs = useRef<Group[]>([]);
   const lit = petMat('lit', id), glow = petMat('glow', id);
@@ -330,10 +341,12 @@ function PetActor({ id, def }: { id: string; def: PetDef }) {
   const carryMat = useMemo(() => new MeshBasicMaterial({ color: new Color(2, 2, 2), toneMapped: false }), []);
   useFrame(({ clock }, dtRaw) => {
     const status = useGameStore.getState().status;
-    if (isLobbyStatus(status) || (status === GameStatus.MENU && world.village.area !== 'TOWN')) { root.current.visible = false; return; }   // town hub: the pet follows you (hidden in the castle)
+    if (isLobbyStatus(status) || (status === GameStatus.MENU && world.village.area !== 'TOWN') || (ghost && !world.ghostPet.on)) { root.current.visible = false; return; }   // town hub: the pet follows you (hidden in the castle)
     root.current.visible = true;
     const dt = status === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
-    const pet = world.pet, s = S.current, t = clock.elapsedTime;
+    let pet = world.pet;
+    if (ghost) { const g = world.ghostPet; pet = GHOST_SRC as unknown as typeof world.pet; GHOST_SRC.pos.set(g.x, 1, g.z); GHOST_SRC.facing = g.facing; GHOST_SRC.stage = g.stage; GHOST_SRC.stars = g.stars; }
+    const s = S.current, t = clock.elapsedTime;
     if (!s.init) { s.prev.copy(pet.pos); s.init = true; }
     const sp = dt > 0 ? Math.hypot(pet.pos.x - s.prev.x, pet.pos.z - s.prev.z) / dt : 0;
     if (Math.hypot(pet.pos.x - s.prev.x, pet.pos.z - s.prev.z) > 8) { // teleported back to the player: poof

@@ -76,7 +76,7 @@ export function Minions({ pool = world.minions as unknown as typeof world.ghostM
 
   useFrame(({ clock, camera }) => {
     const t = clock.elapsedTime;
-    if (ghost && world.ghostPet.on) { const gp = world.ghostPet, c = PET_GHOST[gp.rar] ?? PET_GHOST[0]; pushHalo(gp.x, 1.3 + Math.sin(t * 3) * 0.15, gp.z, 1.5, c[0], c[1], c[2], 0.55, CELL.GLOW); }   // (the partner's pet: a glowing wisp in its rarity colour)
+    if (ghost && world.ghostPet.on && !world.ghostPet.id) { const gp = world.ghostPet, c = PET_GHOST[gp.rar] ?? PET_GHOST[0]; pushHalo(gp.x, 1.3 + Math.sin(t * 3) * 0.15, gp.z, 1.5, c[0], c[1], c[2], 0.55, CELL.GLOW); }   // (the partner's pet: a glowing wisp in its rarity colour)
     for (let i = 0; i < N; i++) {
       const S = slots[i], m = pool[i];
       S.outer.visible = m.active && m.src !== 6;   // (src 6 = the run ally, drawn by render/Ally.tsx)

@@ -4,6 +4,7 @@
 import { world } from '../engine/world';
 import { useGameStore } from '../store';
 import { MSG, isNum } from './protocol';
+import { PETS_POOL } from '../constants';
 import { rate } from './coopRate';
 
 export interface MinIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
@@ -27,13 +28,13 @@ export function minTick(now: number, dt: number): void {
     if (!m.active || m.src === 6) continue;
     flat.push(m.kind, Math.round(m.x * 10), Math.round(m.z * 10), Math.round(m.facing * 100), Math.round(m.mv * 100), Math.round(m.swing * 100), Math.round(Math.max(0, Math.min(1, m.maxHp > 0 ? m.hp / m.maxHp : 1)) * 100), m.shield > 0 ? 1 : 0, Math.round(m.spin * 100), Math.round(m.rise * 100));
   }
-  const eq = useGameStore.getState().equipment as unknown as Record<string, { rarity?: string } | null | undefined>;
+  const eq = useGameStore.getState().equipment as unknown as Record<string, { rarity?: string; name?: string; id?: string } | null | undefined>;
   const pet = eq?.pet, p = world.pet.pos;
-  const petRow = pet ? [1, Math.round(p.x * 10), Math.round(p.z * 10), Math.max(0, RAR.indexOf(pet.rarity ?? ''))] : null;
+  const petRow = pet ? [1, Math.round(p.x * 10), Math.round(p.z * 10), Math.max(0, RAR.indexOf(pet.rarity ?? '')), PETS_POOL.find((x) => x.name === pet.name)?.id ?? PETS_POOL.find((x) => x.id === pet.id)?.id ?? '', world.pet.stage, world.pet.stars] : null;   // (id / stage / stars: the partner draws the real pet)
   if (flat.length === 0 && !petRow && !sentAny) return;
   let key = flat.length * 7 + (petRow ? 1 : 0);
   for (let i = 0; i < flat.length; i++) key = (Math.imul(key, 31) + flat[i]) | 0;
-  if (petRow) key = (Math.imul(key, 31) + petRow[1] * 3 + petRow[2]) | 0;
+  if (petRow) key = (Math.imul(key, 31) + (petRow[1] as number) * 3 + (petRow[2] as number)) | 0;
   if (key === lastKey && now % 1000 > 300) return;   // nothing moved (a heartbeat gets through about once a second)
   lastKey = key; sentAny = flat.length > 0 || !!petRow;
   minStats.sent++;
@@ -59,6 +60,8 @@ export function onMinions(d: unknown[]): void {
   const gp = world.ghostPet;
   if (Array.isArray(pet) && pet[0] === 1 && isNum(pet[1]) && isNum(pet[2])) {
     gp.tx = pet[1] / 10; gp.tz = pet[2] / 10; gp.rar = isNum(pet[3]) ? pet[3] | 0 : 0;
+    gp.id = typeof pet[4] === 'string' && pet[4].length <= 40 ? pet[4] : '';
+    gp.stage = isNum(pet[5]) ? Math.max(1, Math.min(3, pet[5] | 0)) : 1; gp.stars = isNum(pet[6]) ? Math.max(0, Math.min(5, pet[6] | 0)) : 0;
     if (!gp.on) { gp.x = gp.tx; gp.z = gp.tz; }
     gp.on = true;
   } else gp.on = false;
@@ -73,7 +76,11 @@ function step(dt: number): void {
     g.walk += dt * 9 * g.mv;
   }
   const gp = world.ghostPet;
-  if (gp.on) { gp.x += (gp.tx - gp.x) * k; gp.z += (gp.tz - gp.z) * k; }
+  if (gp.on) {
+    const dx = gp.tx - gp.x, dz = gp.tz - gp.z;
+    if (dx * dx + dz * dz > 0.01) gp.facing = Math.atan2(dx, dz);
+    gp.x += dx * k; gp.z += dz * k;
+  }
 }
 
 export function minReset(): void {
