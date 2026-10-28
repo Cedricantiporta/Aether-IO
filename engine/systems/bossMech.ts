@@ -204,7 +204,15 @@ export function bossWarded(e: Enemy): boolean { return phaseImmune(e.id); }
 export function updateBossMech(e: Enemy, dt: number): boolean {
   const m = MECH[e.kind as BossKind];
   if (!m) return false;
-  if (S.id !== e.id) { resetBossMech(); S.id = e.id; }
+  if (S.id !== e.id) {
+    // ONE boss owns this single-boss state (barrier / rain / mend timers + the invulnerable phase `bp`). Extra bosses alive at once
+    // (Endless Waves, summons) run their plain AI: they must never reset it (owner 2026-10-28: the reset ran every frame, each
+    // frame re-began the phase and spammed hundreds of 'INVULNERABLE' texts). The room's own boss (director.bossId) may take it over.
+    const o = S.id >= 0 ? world.enemies[S.id] : null;
+    const ownerLive = !!o && o.active && o.state !== 'DYING' && o.boss && !!MECH[o.kind as BossKind];
+    if (ownerLive && !(world.director.bossId === e.id && world.director.bossId !== S.id)) return false;
+    resetBossMech(); S.id = e.id;
+  }
   if (e.state === 'SPAWN') return false;
   const hpF = e.hp / e.maxHp;
 
@@ -273,7 +281,8 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
 }
 
 /** Boss died / room left: drop the pending impacts. */
-export function bossMechDied(): void {
+export function bossMechDied(e?: Enemy): void {
+  if (e && S.id >= 0 && S.id !== e.id) return;   // an extra boss died: the owner's state stays
   resetBossMech();
 }
 

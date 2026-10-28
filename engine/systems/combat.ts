@@ -13,7 +13,7 @@ import { lockedEnemy, noteAttacker } from './target';
 import { debug } from '../debug';
 import { dropLoot } from './loot';
 import { Vector3 } from 'three';
-import { world } from '../world';
+import { world, MAX_ENEMIES } from '../world';
 import { coopRoom } from '../../net/coopRoom';
 import { events, type DamageKind } from '../events';
 import type { Enemy } from '../types';
@@ -100,6 +100,7 @@ const ARMOR_BREAK_FACTOR = 0.75;
 const ARMOR_BREAK_TIME = 6;
 let lastBackstabText = -10;
 let lastSlamText = -10;
+const immuneT = new Float64Array(MAX_ENEMIES).fill(-99);   // per enemy: last 'IMMUNE' text (>= 0.8 s apart, however many hits land)
 // instant-XP floating text: kills within a short window are summed into one "+N XP" number
 let xpAcc = 0, xpTextT = 0;
 const xpPos = new Vector3();
@@ -114,7 +115,7 @@ export function updateCombatFx(dt: number): void {
     xpAcc = 0; xpTextT = 0.45;
   }
 }
-export function resetCombat(): void { resetInterrupt(); xpAcc = 0; xpTextT = 0; lastBackstabText = -10; lastSlamText = -10; }
+export function resetCombat(): void { resetInterrupt(); xpAcc = 0; xpTextT = 0; lastBackstabText = -10; lastSlamText = -10; immuneT.fill(-99); }
 
 /** Big knockback: launches the enemy `dist` units away along (dx,dz); slam damage if it hits an obstacle while flying. */
 export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam = 0): void {
@@ -432,7 +433,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (coopRoom.guest) { guestHit(e, amount, o); return; }   // co-op guest: the monsters live on the host, send it the hit (net/coopGuest.ts)
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
-  if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && Math.random() < 0.25) events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); return; }   // ward up
+  if ((e.boss || e.mini) && bossWarded(e)) { if (!o.dot) hooks.phaseHit(e); if (!o.dot && world.time - immuneT[e.id] > 0.8 && Math.random() < 0.25) { immuneT[e.id] = world.time; events.emit('floatText', { pos: e.pos, text: 'IMMUNE', color: 0x8ab8ff, scale: 0.9, dy: 3.5 }); } return; }   // ward up
   let blockBackstab = false;
   if (!o.dot && e.kind === 'SHIELDBEARER') {   // braced shield: frontal hits deal 0 (BLOCKED); from behind / the side they bypass it for +50%
     const sb = o.fromX !== undefined ? shieldBlock(e, o.fromX, o.fromZ!) : shieldBlock(e, world.player.pos.x, world.player.pos.z);

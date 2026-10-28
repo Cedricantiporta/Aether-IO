@@ -49,6 +49,16 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
 
 const tv = new Vector3();
 const D = { id: -1, n: 0, since: -1, lastEnd: -99, frameDt: 0.016 };
+// per-boss phase counters (the room boss and the Slime King can both be up; each keeps its own, so they never reset each other)
+const DB = [{ id: -1, n: 0, since: -1, lastEnd: -99 }, { id: -1, n: 0, since: -1, lastEnd: -99 }, { id: -1, n: 0, since: -1, lastEnd: -99 }];
+let dbNext = 0;
+function dbOf(id: number): { id: number; n: number; since: number; lastEnd: number } {
+  for (let i = 0; i < DB.length; i++) if (DB[i].id === id) return DB[i];
+  const r = DB[dbNext]; dbNext = (dbNext + 1) % DB.length;
+  r.id = id; r.n = 0; r.since = -1; r.lastEnd = -99; return r;
+}
+// 'INVULNERABLE' / 'VULNERABLE' words: at most one per enemy per 1.5 s
+let sayT = -99, sayId = -1;
 // per-mechanic scratch
 const G = {
   stage: 0, t0: 0, hit: false, tick: 0,
@@ -81,6 +91,7 @@ function banner(kind: string): void {
   bp.name = i.name; bp.sub = i.sub; bp.color = i.color; bp.bannerT = 3.4;
 }
 function say(e: Enemy, text: string, color: number, scale = 1.2): void {
+  if (text === 'INVULNERABLE') { if (sayId === e.id && world.time - sayT < 1.5) return; sayId = e.id; sayT = world.time; }
   events.emit('floatText', { pos: e.pos, text, color, scale, dy: 5 });
 }
 
@@ -143,7 +154,7 @@ function end(e: Enemy | null, text = 'VULNERABLE!'): void {
   bp.realId = -1; bp.slimes.length = 0;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
   mfx.major = false; bp.tail = 0;
-  D.n++; D.lastEnd = world.time; D.since = -1;
+  const db = dbOf(bp.id); db.n++; db.lastEnd = world.time; db.since = -1;
   if (e && e.active && e.state !== 'DYING') {
     if (kind === 'SPLIT') e.scale = G.scale0;
     events.emit('explosion', { pos: e.pos.clone(), radius: e.radius * 2, color: INFO[kind]?.color ?? 0xffffff });
@@ -158,6 +169,8 @@ hooks.phaseReset = (): void => {
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
   D.id = -1; D.n = 0; D.since = -1; D.lastEnd = -99; mfx.major = false;
+  for (let i = 0; i < DB.length; i++) { DB[i].id = -1; DB[i].n = 0; DB[i].since = -1; DB[i].lastEnd = -99; }
+  sayT = -99; sayId = -1;
 };
 
 // ---------------------------------------------------------------- the trigger ----
@@ -168,12 +181,12 @@ hooks.phaseCheck = (e: Enemy): void => {
   if (world.director.bossId !== e.id && !isSlimeKing(e)) return;
   const kind: PhaseKind = isSlimeKing(e) ? 'SPLIT' : e.boss ? (MECH[e.kind] ?? '') : '';
   if (!kind) return;
-  if (D.id !== e.id) { D.id = e.id; D.n = 0; D.since = -1; D.lastEnd = -99; }
+  const db = dbOf(e.id);
   const th = kind === 'SPLIT' ? TH_SLIME : TH_BOSS;
-  if (D.n >= th.length || e.hp >= e.maxHp * th[D.n] || world.time - D.lastEnd < 3.5) return;
-  if (D.since < 0) D.since = world.time;
+  if (db.n >= th.length || e.hp >= e.maxHp * th[db.n] || world.time - db.lastEnd < 3.5) return;
+  if (db.since < 0) db.since = world.time;
   const busy = e.state === 'WINDUP' || e.state === 'ATTACK' || e.spKind !== 0 || false || e.freezeT > 0;
-  if (busy && world.time - D.since < 6) return;   // let the current attack resolve (up to 6 s), then cut in
+  if (busy && world.time - db.since < 6) return;   // let the current attack resolve (up to 6 s), then cut in
   if (e.state === 'WINDUP' || e.state === 'ATTACK') { e.state = 'CHASE'; e.stateT = 0; }
   begin(e, kind);
 };

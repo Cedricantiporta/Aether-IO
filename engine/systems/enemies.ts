@@ -508,7 +508,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (e.kind === 'HUMAN_BOSS') humanBossDied(e);
   if (e.boss) {
     bossDied2(e);
-    bossMechDied();
+    bossMechDied(e);
     clearDecoys();
     world.boss.active = false;
     world.boss.hp = 0;

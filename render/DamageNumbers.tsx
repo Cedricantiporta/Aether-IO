@@ -34,8 +34,8 @@ function atlas() {
   return tex;
 }
 
-interface Num { active: boolean; x: number; y: number; z: number; t: number; dur: number; n: number; g: Int8Array; r: number; gc: number; b: number; scale: number; dot: boolean; amount: number; crit: boolean; kind: string; vx: number; }
-const nums: Num[] = Array.from({ length: POOL }, () => ({ active: false, x: 0, y: 0, z: 0, t: 0, dur: 0.8, n: 0, g: new Int8Array(MAXG), r: 1, gc: 1, b: 1, scale: 1, dot: false, amount: 0, crit: false, kind: '', vx: 0 }));
+interface Num { active: boolean; x: number; y: number; z: number; t: number; dur: number; n: number; g: Int8Array; r: number; gc: number; b: number; scale: number; dot: boolean; amount: number; crit: boolean; kind: string; vx: number; code: number; }
+const nums: Num[] = Array.from({ length: POOL }, () => ({ active: false, x: 0, y: 0, z: 0, t: 0, dur: 0.8, n: 0, g: new Int8Array(MAXG), r: 1, gc: 1, b: 1, scale: 1, dot: false, amount: 0, crit: false, kind: '', vx: 0, code: 0 }));
 let cursor = 0;
 const _c = new Color();
 
@@ -65,9 +65,21 @@ function allow(amount: number, crit: boolean, toPlayer: boolean): boolean {
 }
 
 /** Free-form label (e.g. "+12 XP", "BACKSTAB", "SLAM"): supports the atlas glyphs only. */
+const LABEL_SAME_MAX = 3;   // at most this many live copies of the same word on screen
+let labelCode = 0;
 function spawnLabel(x: number, y: number, z: number, text: string, hex: number, scale: number, dy: number) {
+  // dedupe: the same word near the same spot within 0.6 s is one text, and a word never has more than LABEL_SAME_MAX live copies
+  let h = 7; for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+  let same = 0;
+  for (let i = 0; i < POOL && text.charCodeAt(0) !== 43; i++) {   // ('+12 G' / '+5 XP' pickup gains are never merged)
+    const q = nums[i];
+    if (!q.active || q.kind !== 'LABEL' || q.code !== h) continue;
+    if (q.t < 0.6 && Math.abs(q.x - x) < 3 && Math.abs(q.z - z) < 3) return;
+    if (++same >= LABEL_SAME_MAX) return;
+  }
+  labelCode = h;
   const n = nums[cursor]; cursor = (cursor + 1) % POOL;
-  n.active = true; n.t = 0; n.dur = 1.0; n.crit = false; n.dot = false; n.kind = 'LABEL'; n.amount = 0;
+  n.active = true; n.t = 0; n.dur = 1.0; n.crit = false; n.dot = false; n.kind = 'LABEL'; n.amount = 0; n.code = labelCode;
   n.x = x + (Math.random() - 0.5) * 0.5; n.y = y + 1.8 + dy; n.z = z; n.vx = (Math.random() - 0.5) * 0.6;
   _c.setHex(hex); n.r = _c.r; n.gc = _c.g; n.b = _c.b;
   n.scale = scale;
