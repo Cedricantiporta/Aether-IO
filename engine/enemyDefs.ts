@@ -238,6 +238,15 @@ export const optionalForClear = (k: EnemyKind): boolean => k === 'GOBLIN_ARCHER'
 export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHER' || k === 'LAKE_HYDRA' || k === 'BOSS_CRYSTAL'; }
 /** (owner) Giant ROOTED bosses: they never walk. Elderroot stands rooted in the arena, Glacius rises out of the far rim (head / neck / claws), the
  *  Hydra's body lies beyond the rim with its heads reaching in. They fight with arena-wide telegraphed patterns (systems/bosses2.ts). */
+/** Camera pull-back factor of a giant guardian's fight (render/CameraRig.tsx): 1 for everything else. Grows with the body radius
+ *  (Dune Colossus r5 = 1.6x; Gorath / Elderroot / Hydra / Glacius ~1.8-1.9x; Ignar / Void Herald ~1.5x). Humans, the Lich, the Slime King and mini-bosses stay 1. */
+export function bossCamZoom(k: EnemyKind): number {
+  switch (k) {
+    case 'BOSS_GOLEM': case 'BOSS_TREANT': case 'BOSS_HYDRA': case 'BOSS_WYRM': case 'BOSS_WARMACH': case 'BOSS_WARLORD': case 'BOSS_VOID':
+      return Math.min(1.9, 1 + 0.12 * ENEMY_DEFS[k].radius);
+    default: return 1;
+  }
+}
 export function isRootedBoss(k: EnemyKind): boolean { return k === 'BOSS_TREANT' || k === 'BOSS_HYDRA' || k === 'BOSS_WYRM'; }
 /** Home spot (x, z) of a rooted boss in a room of radius R: Elderroot a little behind the centre, Glacius's head just inside the far rim, the Hydra's
  *  body beyond it. `slot` offsets extra bosses (Endless Waves) sideways. The hero arrives on the +z side. */

@@ -11,6 +11,7 @@ import { useGameStore } from '../store';
 import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
 import { feel } from '../engine/game';
+import { bossCamZoom } from '../engine/enemyDefs';
 import { device } from '../engine/device';
 
 /** World height just above a boss's head: big bosses (Hydra, Colossus...) are sized by radius, not scale. */
@@ -77,9 +78,9 @@ export function CameraRig() {
     s.tele = damp(s.tele, free || lobby || useUiStore.getState().charSelect ? 1 : TELE, 3, dt);   // long lens: farther away + narrower FOV (same framing, flatter look)
     _tgt.x -= Math.sin(s.yaw) * LOOK_AHEAD; _tgt.z -= Math.cos(s.yaw) * LOOK_AHEAD;   // away from the camera = north when yaw 0
     s.uz = damp(s.uz, C.uz ?? 1, 10, dt);
-    // the Dune Colossus is 2.5x: pull the camera back during its fight so the machine and the hero both fit
+    // the giant guardians (Colossus-sized, enemyDefs.bossCamZoom): pull the camera back during their fight so the boss, its telegraphs and the hero all fit
     const bId = world.director.bossId, bE = bId >= 0 ? world.enemies[bId] : null;
-    s.bossK = damp(s.bossK, bE && bE.active && bE.kind === 'BOSS_WARMACH' && status === GameStatus.PLAYING ? 1.6 : 1, 1.5, dt);
+    s.bossK = damp(s.bossK, bE && bE.active && bE.state !== 'DYING' && !bE.mini && status === GameStatus.PLAYING ? bossCamZoom(bE.kind) : 1, 1.5, dt);   // every giant guardian (Gorath, Elderroot, Hydra, Glacius, Colossus, Ignar, Void Herald): eased in on spawn, out on death
     const R = CAM_DIST0 * s.bossK * s.zoom * s.uz * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 
