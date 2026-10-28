@@ -78,7 +78,7 @@ export interface GameEvents {
   biomeClear: { biome: number };
   captiveFreed: {};                             // a RESCUE room's captive was set free (main story rescue steps)
   gameEnding: Record<string, never>;            // the Void Herald (final boss) defeated: ending + credits
-  openSetOut: { mode: 'ADVENTURE' | 'TOWER'; /** the tower hub tab to open on (HUD corner icons) */ tab?: 'RUN' | 'DAILY' | 'WAVES'; /** opened from the HUD, not at the door: stays open when the hero is far away */ remote?: boolean };  // town gate: Adventure (+ Ascension) / the Endless Tower building
+  openSetOut: { mode: 'ADVENTURE' | 'TOWER'; /** the tower hub tab to open on (HUD corner icons) */ tab?: 'RUN' | 'DAILY' | 'WAVES' | 'ASC'; /** opened from the HUD, not at the door: stays open when the hero is far away */ remote?: boolean };  // town gate: Adventure (+ Ascension) / the Endless Tower building
   towerFloor: { floor: number; best: boolean }; // endless tower floor cleared
   bossSpawn: { name: string; title: string };
   bossPhase: { phase: number };

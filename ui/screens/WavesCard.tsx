@@ -1,7 +1,8 @@
 // Endless Waves card (Set Out window tab) + its run summary line. Data: endlessWaves.ts; records: progress.wavesBest /
 // wavesClaimed (per class).
 import React from 'react';
-import { Waves, Coins, Skull, Crown } from '../components/GoldIcons';
+import { Waves, Coins, Skull, Crown, Check, Lock } from '../components/GoldIcons';
+import { HubBanner } from './TowerHub';
 import { useGameStore } from '../../store';
 import { useShallow } from 'zustand/react/shallow';
 import { HERO_META } from '../lib/heroes';
@@ -10,31 +11,34 @@ import './daily.css';
 
 export const WavesCard: React.FC = () => {
   const { hero, best, claimed } = useGameStore(useShallow((s) => ({ hero: s.hero, best: s.progress.wavesBest[s.hero] ?? 0, claimed: s.progress.wavesClaimed[s.hero] })));
+  const next = WAVE_MILESTONES.find((w) => best < w);
   return (
-    <div className="dc" data-testid="waves-card">
-      <div className="dc-head">
-        <Waves size={24} />
-        <div>
-          <b>Endless Waves</b>
-          <small>Survival arena · {HERO_META[hero].title}</small>
-        </div>
-        <div className="dc-reset">Best wave<span data-testid="waves-best">{best || '-'}</span></div>
+    <div className="th-waves" data-testid="waves-card">
+      <HubBanner tone="waves" icon={<Waves size={30} />} title="Endless Waves" sub={`Survival arena · ${HERO_META[hero].title}`}
+        stat={<div className="th-bigstat"><small>Best wave</small><b data-testid="waves-best">{best || '-'}</b></div>} />
+      <div className="th-chips">
+        <span className="th-chip"><Skull size={12} /> Boss every 5th wave</span>
+        <span className="th-chip"><Crown size={12} /> Elites from wave 3</span>
+        <span className="th-chip"><Waves size={12} /> Every biome joins in</span>
       </div>
-      <div className="dc-route">One big arena, no exits. Waves swarm in from all sides, each one bigger: monsters of <i>every biome</i> join over time, elites from wave 3, <i>a biome boss every 5th wave</i> and champions in between; from wave 20 several bosses, champions and elites come at once. No potions or Ankh, healing -40%; monsters drop gold and Aether Crystals. The run ends when you fall.</div>
-      <div className="dc-label">First-time milestones · {HERO_META[hero].title}</div>
-      <div className="dc-mods" data-testid="waves-milestones">
+      <div className="th-note waves">
+        <span className="th-note-ic"><Coins size={22} color="#ffd24a" /></span>
+        <div><b>What you get: gold only</b><span>Monsters drop gold. No gear, no gems, no crystals. No potions or Ankh, healing -40%; the run ends when you fall.</span></div>
+      </div>
+      <div className="th-sec">First-time prizes <small>{next ? `next: wave ${next}` : 'all earned'} · best is kept per class</small></div>
+      <div className="th-track" data-testid="waves-milestones">
         {WAVE_MILESTONES.map((w) => {
-          const m = waveMilestone(w)!, got = claimed?.includes(w);
+          const m = waveMilestone(w)!, got = claimed?.includes(w), reached = best >= w;
           return (
-            <div key={w} className="dc-mod" style={{ ['--c' as string]: got ? '#9be86a' : best >= w ? '#ffd24a' : '#8a7a5a' }}>
-              <b>{w % 10 === 0 ? <Skull size={11} style={{ display: 'inline', verticalAlign: '-1px' }} /> : null} Wave {w}</b>
-              <span><Coins size={11} style={{ display: 'inline', verticalAlign: '-1px' }} color="#fbbf24" /> {milestoneText(m)}</span>
-              <span style={{ marginLeft: 'auto', color: got ? '#9be86a' : '#8f826a', fontSize: '.64rem' }}>{got ? 'Claimed' : 'Clear it once'}</span>
+            <div key={w} className={`th-ms ${got ? 'done' : reached ? 'claim' : 'locked'}`}>
+              <div className="th-ms-floor">Wave {w}</div>
+              <span className="th-ms-ic">{got ? <Check size={20} /> : reached ? <Coins size={22} color="#ffd24a" /> : <Lock size={18} />}</span>
+              <div className="th-ms-name">{milestoneText(m)}</div>
+              <i className={`th-ms-tag${got ? ' ok' : ''}`}>{got ? 'Claimed' : reached ? 'Clear it once' : `${w - best} waves away`}</i>
             </div>
           );
         })}
       </div>
-      <div className="dc-note"><Crown size={10} style={{ display: 'inline', verticalAlign: '-1px' }} /> Best wave is kept per class. Potions and the Ankh work as usual.</div>
     </div>
   );
 };

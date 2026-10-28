@@ -14,7 +14,7 @@ import { StatusIcon } from '../components/StatusIcon';
 import type { LucideIcon } from '../components/GoldIcons';
 import { motion } from 'framer-motion';
 import { useCoop } from '../../net/coopStore';
-import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy } from '../components/GoldIcons';
+import { ScrollText, User, Backpack, BookOpen, Store, Settings, Crosshair, Wand2, Axe, Sword, Swords, Wind, Megaphone, Mountain, Star, Anchor, VolumeX, ShieldOff, EyeOff, Flame, Droplet, Skull, ChevronsDown, Trophy, Crown } from '../components/GoldIcons';
 import { envSlow } from '../../engine/systems/zones';
 import { CoinGlyph, GemGlyph } from '../components/SkillIcons';
 import { OrnateRing } from '../components/Ornate';
@@ -214,7 +214,8 @@ export const MenuButtons: React.FC = () => {
 const ModeIcons: React.FC = () => {
   const level = useGameStore((s) => s.level), endings = useGameStore((s) => s.progress.endings);
   const dailyDot = useGameStore((s) => s.level >= UNLOCK_LV.DAILY && s.progress.daily.claimed !== dayKey());
-  const go = (tab: 'RUN' | 'DAILY' | 'WAVES') => {
+  const towerDot = useGameStore((s) => { const b = s.progress.towerBest[s.hero] ?? 0, c = s.progress.towerClaimed?.[s.hero] ?? []; for (let f = 10; f <= b; f += 10) if (!c.includes(f)) return s.progress.endings > 0; return false; });   // a floor prize is ready to claim
+  const go = (tab: 'RUN' | 'DAILY' | 'WAVES' | 'ASC') => {
     const g = useGameStore.getState();
     if (g.status !== GameStatus.MENU) { g.addNotification('The trials are started from the town.', '#fff3c4', 'SYSTEM'); return; }
     events.emit('openSetOut', { mode: 'TOWER', tab, remote: true });
@@ -228,7 +229,8 @@ const ModeIcons: React.FC = () => {
   const dLock = level < UNLOCK_LV.DAILY, wLock = level < UNLOCK_LV.WAVES, tLock = endings <= 0;
   return (<>
     <MenuBtn mini testid="cb-daily" icon={<CuteCalendar size={22} />} label={dLock ? `Daily Trial (unlocks at Lv ${UNLOCK_LV.DAILY})` : 'Daily Trial'} hint="" onClick={() => go('DAILY')} dot={dailyDot} locked={dLock} />
-    <MenuBtn mini testid="cb-tower" icon={<CuteTower size={22} />} label={tLock ? 'Endless Tower (finish one adventure to open it)' : 'Endless Tower'} hint="" onClick={() => go('RUN')} locked={tLock} />
+    <MenuBtn mini testid="cb-tower" icon={<CuteTower size={22} />} label={tLock ? 'Endless Tower (finish one adventure to open it)' : 'Endless Tower'} hint="" onClick={() => go('RUN')} locked={tLock} dot={towerDot} />
+    {endings > 0 && <MenuBtn mini testid="cb-asc" icon={<Crown size={22} />} label="Ascension: pick your adventure level" hint="" onClick={() => go('ASC')} />}
     <MenuBtn mini testid="cb-coop" icon={<Swords size={22} />} label={coopUp ? 'Co-op (connected / waiting)' : 'Co-op: play with a friend'} hint="" onClick={coop} active={coopUp} />
     <MenuBtn mini testid="cb-waves" icon={<CuteWaves size={22} />} label={wLock ? `Endless Waves (unlocks at Lv ${UNLOCK_LV.WAVES})` : 'Endless Waves'} hint="" onClick={() => go('WAVES')} locked={wLock} />
   </>);

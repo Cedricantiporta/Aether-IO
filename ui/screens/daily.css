@@ -1,11 +1,4 @@
 /* Daily Trial: Set Out tab, HUD badge, summary rows. Dark gunmetal + thin gold hairlines, sharp corners. */
-.so-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin-bottom: .7rem; border: 1px solid rgba(201, 162, 83, .35); }
-.so-tab { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; padding: .45rem .3rem; font-family: var(--font-title); font-size: .64rem;
-  letter-spacing: .04em; text-transform: uppercase; color: #a89a80; white-space: nowrap; background: linear-gradient(180deg, rgba(28, 30, 34, .92), rgba(12, 13, 15, .95)); position: relative; }
-.so-tab + .so-tab { border-left: 1px solid rgba(201, 162, 83, .25); }
-.so-tab.on { color: #f6e6bd; background: linear-gradient(180deg, rgba(48, 44, 36, .95), rgba(18, 17, 14, .96)); box-shadow: inset 0 -2px 0 #e9c46a; }
-.so-tab .dot { position: absolute; top: .3rem; right: .45rem; width: .42rem; height: .42rem; background: #ff4a3a; box-shadow: 0 0 6px #ff4a3a; }
-
 .dc { display: flex; flex-direction: column; gap: .55rem; color: #e6dcc4; }
 .dc-head { display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; border: 1px solid rgba(201, 162, 83, .45);
   background: linear-gradient(135deg, rgba(36, 38, 44, .95), rgba(14, 15, 18, .97)); box-shadow: inset 0 0 18px rgba(233, 196, 106, .08); }
@@ -42,10 +35,6 @@
 .dc-badge .clock { font-family: var(--font-num, monospace); color: #e8dcc0; font-size: .68rem; padding: .14rem .4rem; background: rgba(8, 9, 11, .66); border: 1px solid rgba(255, 255, 255, .1); }
 
 /* level-locked Set Out tabs (unlocks.ts) */
-.so-tab .so-lock { margin-left: .3rem; font-size: .62rem; color: #9a8f7a; letter-spacing: .04em; }
-.so-locked { display: flex; flex-direction: column; gap: .35rem; align-items: center; text-align: center; padding: 1.4rem .8rem; border: 1px solid rgba(200,150,46,.35); background: rgba(10,8,6,.6); }
-.so-locked b { font-family: var(--font-title); font-size: 1rem; color: var(--gold-light, #f1d58a); }
-.so-locked span { font-size: .8rem; color: #b8ad98; }
 /* (owner 2026-10-23) Daily Trial card: cute, clearer, a big reward list */
 .dc .dc-mods { display: flex; flex-direction: column; gap: .4rem; }
 .dc .dc-mod.dc-mod { display: grid; grid-template-columns: 6.2rem 1fr; align-items: center; gap: .6rem; padding: .5rem .7rem; border-radius: 14px !important;
@@ -75,22 +64,6 @@
 @media (min-width: 760px) { .dc-cols { grid-template-columns: 1.15fr 1fr; align-items: start; } .dc-colR .dcr { margin-top: 1.4rem; } }
 .dc-colR .dcr-row { flex-wrap: wrap; }
 .dc-colR .dcr-tile { min-width: 5.5rem; }
-/* tower hub: tabs as a left column */
-.so-split { display: grid; grid-template-columns: 1fr; gap: .9rem; }
-@media (min-width: 760px) {
-  .so-split { grid-template-columns: 11rem 1fr; align-items: start; }
-  .so-tabs.so-tabs-side.so-tabs-side { display: flex !important; flex-direction: column; gap: .35rem; width: auto; padding: .35rem; border-radius: 18px; background: rgba(255, 255, 255, .05); }
-  .so-tabs-side .so-tab { justify-content: flex-start; text-align: left; padding: .65rem .8rem !important; border-radius: 14px !important; font-size: .88rem; width: 100%; display: flex; align-items: center; gap: .45rem; }
-  .so-tabs-side .so-tab.on { background: rgba(255, 255, 255, .14) !important; color: #fff; }
-}
-.so-page { min-width: 0; }
-/* (owner 2026-10-24) the tower hub keeps ONE window size on every tab (the page scrolls inside), the side tabs never overflow */
-@media (min-width: 760px) {
-  .so-split { grid-template-columns: 12.5rem 1fr; width: min(52rem, calc(100vw - 4rem)); }
-  .so-split .so-page { height: min(30rem, calc(100vh - 12rem)); overflow-y: auto; overflow-x: hidden; padding-right: .2rem; }
-}
-.so-tabs-side .so-tab { white-space: nowrap; }
-.so-tabs-side .so-tab .so-lock { margin-left: auto; flex: none; }
 /* the daily header is never covered by the modifier list */
 .dc-head { flex-wrap: wrap; height: auto !important; min-height: 0; position: relative; z-index: 1; }
 .dc-head > div:first-of-type { min-width: 0; flex: 1 1 12rem; }
