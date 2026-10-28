@@ -27,6 +27,9 @@ function plan(floor: number): Plan {
 const shardQty = (floor: number, r: Rarity) => (r === 'MYTHIC' ? 1 : 2 + Math.floor((floor - 100) / 50));
 const cap = (r: Rarity) => r.charAt(0) + r.slice(1).toLowerCase();
 
+/** Kind + rarity of a milestone, for the popup's reward track icons. */
+export function milestoneInfo(floor: number): { kind: Kind; rarity: Rarity; extra?: 'ANKH' | 'PET' } { const p = plan(floor); return { kind: p.kind, rarity: p.rarity, extra: p.extra }; }
+
 /** What a milestone gives, for the popup. */
 export function milestoneLabel(floor: number): string {
   const p = plan(floor);

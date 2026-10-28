@@ -1,14 +1,15 @@
 // Town gate "Set out" window: pick the run mode. Adventure = the six biomes + the Undying Throne (Ascension level
 // selectable once the ending has been seen); Endless Tower = floor after floor, best floor recorded per class.
-import { milestoneLabel, TOWER_STEP } from '../../towerRewards';
 import React, { useState } from 'react';
-import { Swords, Castle, ChevronLeft, ChevronRight, Trophy } from '../components/GoldIcons';
+import { Swords, Castle } from '../components/GoldIcons';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGameStore } from '../../store';
+import { TOWER_STEP } from '../../towerRewards';
+import { TowerPage, AscensionPage, HubLock } from './TowerHub';
 import { useShallow } from 'zustand/react/shallow';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { useGameEvent } from '../hooks/useEvent';
-import { ASCENSIONS, ascRewardText } from '../../ascension';
 import { HERO_META } from '../lib/heroes';
 import { useRaf } from '../hooks/useRaf';
 import { world } from '../../engine/world';
@@ -55,85 +56,65 @@ export const SetOutWindow: React.FC = () => {
   const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Void Herald defeated)
   const runLocked = tab === 'RUN' && mode === 'TOWER' && towerLocked;
   const claimed = progress.towerClaimed?.[hero] ?? [];
-  // milestones: every reached, unclaimed 10th floor (claimable) + the next three ahead (locked)
-  const reachedTop = Math.floor(best / TOWER_STEP) * TOWER_STEP;
-  const ms: { floor: number; state: 'claim' | 'locked' }[] = [];
-  for (let f = TOWER_STEP; f <= reachedTop; f += TOWER_STEP) if (!claimed.includes(f)) ms.push({ floor: f, state: 'claim' });
-  for (let k = 1; k <= 3; k++) ms.push({ floor: reachedTop + k * TOWER_STEP, state: 'locked' });
+  let ready = false;   // a floor prize waits to be claimed (red dot on the Tower tab)
+  for (let f = TOWER_STEP; f <= best; f += TOWER_STEP) if (!claimed.includes(f)) { ready = true; break; }
   const go = () => { if (coopGuest && mode === 'ADVENTURE' && tab === 'RUN') return; if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode); };
-  return (
-    <Modal open={open} title={mode === 'TOWER' ? 'Endless Tower' : 'Set Out'} ribbon tone="gold" width={mode === 'TOWER' ? 'min(56rem, calc(100vw - 1.5rem))' : '24rem'} z={160} onClose={() => setOpen(false)} onConfirm={() => { if (lobbyInput.submit) lobbyInput.submit(); else go(); }}>
-      {/* (owner) the tower hub is wide: the tabs are a column on the left, the page on the right */}
-      <div className={mode === 'TOWER' ? 'so-split' : ''}>
-      {mode === 'TOWER' && (
-        <div className="so-tabs so-tabs-side" role="tablist">
-          <button className={`so-tab pe ${tab === 'RUN' ? 'on' : ''}`} onClick={() => setTab('RUN')} data-testid="so-tab-run"><Castle size={14} /> Tower</button>
-          <button className={`so-tab pe ${tab === 'DAILY' ? 'on' : ''}`} onClick={() => setTab('DAILY')} data-testid="so-tab-daily"><CalendarDays size={14} /> Daily Trial{dailyLocked ? <small className="so-lock">Lv {UNLOCK_LV.DAILY}</small> : dailyDot && <i className="dot" />}</button>
-          <button className={`so-tab pe ${tab === 'WAVES' ? 'on' : ''}`} onClick={() => setTab('WAVES')} data-testid="so-tab-waves"><Waves size={14} /> Endless Waves{wavesLocked && <small className="so-lock">Lv {UNLOCK_LV.WAVES}</small>}</button>
-          {progress.ascensionMax > 0 && <button className={`so-tab pe ${tab === 'ASC' ? 'on' : ''}`} onClick={() => setTab('ASC')} data-testid="so-tab-asc"><Swords size={14} /> Ascension</button>}
-        </div>
-      )}
-      <div className="so-page">
-      {((isDaily && dailyLocked) || (isWaves && wavesLocked)) && <div className="so-locked" data-testid="so-locked">
-        <b>{isDaily ? 'Daily Trial' : 'Endless Waves'}</b>
-        <span>Unlocks at level {isDaily ? UNLOCK_LV.DAILY : UNLOCK_LV.WAVES}. You are level {level}.</span>
-      </div>}
-      {isDaily && !dailyLocked && <DailyCard />}
-      {isWaves && !wavesLocked && <WavesCard />}
-      {!isDaily && !isWaves && !isAsc && <div className="so-modes one" data-testid="setout">
-        {mode === 'ADVENTURE' && <div className="so-card on" data-testid="so-adventure">
-          <Swords size={26} />
-          <b>Adventure</b>
-          <span>Seven realms, seven guardians, and the Undying Throne at the end of the Void.</span>
-          <em>{progress.endings > 0 ? `Ending seen ${progress.endings}x` : 'Ending not yet seen'}</em>
-        </div>}
-        {mode === 'ADVENTURE' && <CoopLobby />}
-        {mode === 'TOWER' && <div className="so-card on" data-testid="so-tower">
-          <Castle size={26} />
-          <b>Endless Tower</b>
-          <span>Climb floor after floor. Elites every 3rd, a champion every 5th, a boss every 10th floor.</span>
-          <em>{towerLocked ? 'Sealed: finish a full adventure (defeat the Void Herald at the end of the Void) to open the tower.' : <><Trophy size={11} /> Best floor ({HERO_META[hero].title}): {best || '-'}</>}</em>
-        </div>}
-        {mode === 'TOWER' && !towerLocked && (
-          <div className="so-ms" data-testid="tower-milestones">
-            <div className="rpg-label !text-[.65rem] mb-1">Milestone rewards · every {TOWER_STEP}th floor</div>
-            {ms.map((m) => (
-              <div key={m.floor} className={`so-ms-row ${m.state}`}>
-                <b>F{m.floor}</b>
-                <span>{milestoneLabel(m.floor)}</span>
-                {m.state === 'claim'
-                  ? <button className="so-ms-claim pe" onClick={() => claimTower(m.floor)} data-testid={`tower-claim-${m.floor}`}>Claim</button>
-                  : <i>Reach floor {m.floor}</i>}
-              </div>
+  const tabs: { id: typeof tab; label: string; icon: React.ReactNode; tid: string; dot?: boolean; lock?: number; hide?: boolean }[] = [
+    { id: 'RUN', label: 'Tower', icon: <Castle size={15} />, tid: 'so-tab-run', dot: !towerLocked && ready },
+    { id: 'DAILY', label: 'Daily Trial', icon: <CalendarDays size={15} />, tid: 'so-tab-daily', dot: dailyDot, lock: dailyLocked ? UNLOCK_LV.DAILY : undefined },
+    { id: 'WAVES', label: 'Endless Waves', icon: <Waves size={15} />, tid: 'so-tab-waves', lock: wavesLocked ? UNLOCK_LV.WAVES : undefined },
+    { id: 'ASC', label: 'Ascension', icon: <Swords size={15} />, tid: 'so-tab-asc', hide: progress.ascensionMax <= 0 },
+  ];
+  const goLabel = coopGuest && mode === 'ADVENTURE' && tab === 'RUN' ? 'Waiting for the host' : featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out';
+  const goBtn = <Button className="w-full" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked || (coopGuest && mode === 'ADVENTURE' && tab === 'RUN')} onClick={go} data-testid="so-go">{goLabel}</Button>;
+  const onConfirm = () => { if (lobbyInput.submit) lobbyInput.submit(); else go(); };
+  if (mode === 'TOWER') {
+    // the tower hub: a wide window, tabs as a pill column on the left (a row on top on narrow screens), one page on the right
+    return (
+      <Modal open={open} width="min(56rem, calc(100vw - 1.5rem))" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
+        <div className="th-split" data-testid="tower-hub">
+          <nav className="th-tabs" role="tablist">
+            <div className="th-brand"><Castle size={18} /><b>Tower Hub</b></div>
+            {tabs.filter((t) => !t.hide).map((t) => (
+              <button key={t.id} role="tab" aria-selected={tab === t.id} className={`th-tab t-${t.id.toLowerCase()} pe ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)} data-testid={t.tid}>
+                {tab === t.id && <motion.span layoutId="th-tab-bg" className="th-tab-bg" transition={{ type: 'spring', stiffness: 520, damping: 38 }} />}
+                <span className="th-tab-ic">{t.icon}</span>
+                <span className="th-tab-tx"><span className="th-tab-lb">{t.label}</span>{t.lock ? <small className="th-tab-lock"><span className="th-long">Unlocks at </span>Lv {t.lock}</small> : null}</span>
+                {!t.lock && t.dot ? <i className="th-dot" /> : null}
+              </button>
             ))}
-          </div>
-        )}
-      </div>}
-      {isAsc && (
-        <div className="so-asc" data-testid="so-asc">
-          <div className="text-[.72rem] mb-2" style={{ color: 'var(--text-dim)' }}>The Ascension level for your next adventure through the Adventure Portal.</div>
-          {progress.ascensionMax === 0 ? (
-            <div className="so-asc-lock">Defeat the Void Herald at the end of the Void to unlock <b>Ascension</b>: harder runs with bigger rewards.</div>
-          ) : (<>
-            <div className="flex items-center justify-between">
-              <span className="rpg-label !text-[.7rem]">Ascension</span>
-              <span className="flex items-center gap-2">
-                <button className="so-step pe" disabled={asc <= 0} onClick={() => setAscension(asc - 1)} aria-label="Lower"><ChevronLeft size={16} /></button>
-                <span className="rpg-num text-xl text-[var(--gold-light)] w-8 text-center" data-testid="so-asc-lv">{asc}</span>
-                <button className="so-step pe" disabled={asc >= progress.ascensionMax} onClick={() => setAscension(asc + 1)} aria-label="Raise"><ChevronRight size={16} /></button>
-                <span className="text-[.65rem]" style={{ color: 'var(--text-dim)' }}>/ {progress.ascensionMax}</span>
-              </span>
+          </nav>
+          <div className="th-main">
+            <div className="th-scroll">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div key={tab} className="th-page" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: .16 }}>
+                  {featLocked && <HubLock testid="so-locked" title={isDaily ? 'Daily Trial' : 'Endless Waves'} text={`Unlocks at level ${isDaily ? UNLOCK_LV.DAILY : UNLOCK_LV.WAVES}. You are level ${level}.`} />}
+                  {isDaily && !dailyLocked && <DailyCard />}
+                  {isWaves && !wavesLocked && <WavesCard />}
+                  {tab === 'RUN' && <TowerPage locked={towerLocked} heroTitle={HERO_META[hero].title} best={best} claimed={claimed} onClaim={claimTower} />}
+                  {isAsc && <AscensionPage asc={asc} max={progress.ascensionMax} claimed={progress.ascClaimed ?? []} onSelect={setAscension} />}
+                </motion.div>
+              </AnimatePresence>
             </div>
-            <ul className="so-asc-list">
-              {ASCENSIONS.slice(0, Math.max(1, asc)).map((a) => <li key={a.lv} className={a.lv <= asc ? 'on' : ''}><b>{a.lv}</b> {a.name} <span>- {a.hardship}</span></li>)}
-            </ul>
-            <div className="so-asc-reward">{asc > 0 ? `Rewards: +${Math.round(asc * 12)}% gold, loot luck and xp` : 'No Ascension: the standard adventure.'}</div>
-            <div className="so-asc-reward" data-testid="so-asc-first">{(progress.ascClaimed ?? []).includes(asc) ? `First-clear reward at Ascension ${asc}: claimed.` : `First clear of Ascension ${asc} pays: ${ascRewardText(asc)}.`}</div>
-          </>)}
+            <div className="th-foot">{goBtn}</div>
+          </div>
         </div>
-      )}
-      <Button className="w-full mt-3" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked || (coopGuest && mode === 'ADVENTURE' && tab === 'RUN')} onClick={go} data-testid="so-go">{coopGuest && mode === 'ADVENTURE' && tab === 'RUN' ? 'Waiting for the host' : featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out'}</Button>
-      </div>
+      </Modal>
+    );
+  }
+  return (
+    <Modal open={open} title="Set Out" ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
+      <div>
+        <div className="so-modes one" data-testid="setout">
+          <div className="so-card on" data-testid="so-adventure">
+            <Swords size={26} />
+            <b>Adventure</b>
+            <span>Seven realms, seven guardians, and the Undying Throne at the end of the Void.</span>
+            <em>{progress.endings > 0 ? `Ending seen ${progress.endings}x` : 'Ending not yet seen'}</em>
+          </div>
+          <CoopLobby />
+        </div>
+        <div className="mt-3">{goBtn}</div>
       </div>
     </Modal>
   );
