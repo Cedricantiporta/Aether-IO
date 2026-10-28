@@ -31,7 +31,9 @@ export function packGhosts(): string | null {
     U[n++] = q16((p.pos.x + 300) * 100); U[n++] = q16((p.pos.z + 300) * 100); U[n++] = q16((p.pos.y + 20) * 1000);
     U[n++] = q16(p.vel.x * 50 + 32768); U[n++] = q16(p.vel.z * 50 + 32768);
     U[n++] = q16(p.radius * 10000);
-    U[n++] = (p.tint & 3) | (p.emp ? 4 : 0) | (q16(Math.min(800, p.aoeRadius * 10)) << 3);
+    // (pet shots: the aoe bits carry the pet element instead - the ghost has no splash - so the partner sees the Phoenix fireball / Dragon flame / Wisp light / Leviathan water look)
+    const petEl = p.kind === 'PET_BOLT' && p.tint > 20 && p.tint < 40 ? p.tint - 20 : 0;
+    U[n++] = (p.tint & 3) | (p.emp ? 4 : 0) | ((p.kind === 'PET_BOLT' ? petEl : q16(Math.min(800, p.aoeRadius * 10))) << 3);
     c++;
   }
   if (c === 0 && !hadAny) return null;
@@ -65,6 +67,7 @@ export function applyGhosts(b64: string): void {
     p.vel.set((IN[o + 4] - 32768) / 50, 0, (IN[o + 5] - 32768) / 50);
     p.radius = IN[o + 6] / 10000;
     const x = IN[o + 7]; p.tint = x & 3; p.emp = (x & 4) !== 0; p.aoeRadius = (x >> 3) / 10;
+    if (p.kind === 'PET_BOLT') { const el = x >> 3; p.tint = el > 0 && el < 20 ? 20 + el : 0; p.aoeRadius = 0; }
     p.life = 0.6;   // dies by itself if the partner stops refreshing it
   }
   for (let i = 0; i < MAX_PROJECTILES; i++) {

@@ -238,7 +238,7 @@ export function GhostPet() {
   const kit = useCreatureKit();
   const def = useMemo(() => (id ? getDef(id, kit) : null), [id, kit]);
   if (!def) return null;
-  return <PetActor key={id} id={id} def={def} ghost />;
+  return <><PetActor key={id} id={id} def={def} ghost /><GhostPetFx /></>;
 }
 
 export function Pet() {
@@ -277,6 +277,37 @@ function PetFx() {
         beam.current.rotation.y = Math.atan2(BEAM.dx, BEAM.dz);
         beam.current.scale.set(1 + Math.sin(t * 30) * 0.08, 1, 1);
         beam.current.scale.x *= Math.max(0.1, k);
+      }
+    }
+  });
+  return (
+    <>
+      {[0, 1, 2].map((i) => <group key={i} ref={(r) => { marks.current[i] = r!; }} visible={false}><mesh material={markMat} rotation={[Math.PI, 0, 0]}><coneGeometry args={[0.28, 0.5, 4]} /></mesh></group>)}
+      <mesh ref={beam} visible={false} material={beamMat}><boxGeometry args={[3.4, 1.4, BEAM.len]} /></mesh>
+    </>
+  );
+}
+
+/** The partner's pet skills on our screen (cosmetic): the Leviathan's tidal beam + Shadow Cat marks, from world.ghostPet (net/coopMinions.ts). */
+function GhostPetFx() {
+  const marks = useRef<Group[]>([]), beam = useRef<Mesh>(null!);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime, gp = world.ghostPet;
+    for (let i = 0; i < 3; i++) {
+      const g = marks.current[i], m = gp.marks[i];
+      if (!g) continue;
+      const on = gp.on && m.t > 0;
+      g.visible = on;
+      if (on) { g.position.set(m.x, 2.6 + Math.sin(t * 4 + i) * 0.15, m.z); g.rotation.y = t * 3; }
+    }
+    if (beam.current) {
+      const on = gp.on && gp.beamT > 0;
+      beam.current.visible = on;
+      if (on) {
+        const k = Math.min(1, gp.beamT * 4, (1.2 - gp.beamT) * 6 + 0.3);
+        beam.current.position.set(gp.bx + gp.bdx * BEAM.len / 2, 0.9, gp.bz + gp.bdz * BEAM.len / 2);
+        beam.current.rotation.y = Math.atan2(gp.bdx, gp.bdz);
+        beam.current.scale.set((1 + Math.sin(t * 30) * 0.08) * Math.max(0.1, k), 1, 1);
       }
     }
   });
@@ -345,7 +376,7 @@ function PetActor({ id, def, ghost }: { id: string; def: PetDef; ghost?: boolean
     root.current.visible = true;
     const dt = status === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
     let pet = world.pet;
-    if (ghost) { const g = world.ghostPet; pet = GHOST_SRC as unknown as typeof world.pet; GHOST_SRC.pos.set(g.x, 1, g.z); GHOST_SRC.facing = g.facing; GHOST_SRC.stage = g.stage; GHOST_SRC.stars = g.stars; }
+    if (ghost) { const g = world.ghostPet; pet = GHOST_SRC as unknown as typeof world.pet; GHOST_SRC.pos.set(g.x, 1, g.z); GHOST_SRC.facing = g.facing; GHOST_SRC.attackT = g.attackT; GHOST_SRC.stage = g.stage; GHOST_SRC.stars = g.stars; }
     const s = S.current, t = clock.elapsedTime;
     if (!s.init) { s.prev.copy(pet.pos); s.init = true; }
     const sp = dt > 0 ? Math.hypot(pet.pos.x - s.prev.x, pet.pos.z - s.prev.z) / dt : 0;

@@ -115,8 +115,16 @@ function petBurst(x: number, z: number, el: number, tier: number, dmg: number): 
   const status = el === PET_EL.FIRE || el === PET_EL.GOLD ? (burstBurn.value = 4 + dmg * 0.15, burstBurn) : el === PET_EL.WATER ? burstSlow : el === PET_EL.LIGHT || el === PET_EL.CRYSTAL ? burstStun : undefined;
   damageEnemiesInRadius(x, z, r, dmg, burstOpts, status);
   events.emit('petBurst', { pos: burstPos.set(x, 0, z), el, r, tier });
+  petAtk(3, el, x, z, 0, 1, r, tier);
 }
 const burstPos = new Vector3();
+/** Records my pet's attack for the co-op partner's ghost of it (world.petAtk; net/coopMinions.ts sends it). Kinds: see world.petAtk. */
+export function petAtk(kind: number, el: number, x: number, z: number, dx: number, dz: number, a: number, tier: number): void {
+  const q = world.petAtk;
+  if (kind !== 3 && q.kind === 3 && world.time - q.t < 0.2) return;   // a burst and a basic hit in the same moment: the burst (bigger FX) is the one the partner sees
+  q.t = world.time;
+  q.seq = (q.seq + 1) & 0xffff; q.kind = kind; q.el = el; q.x = x; q.z = z; q.dx = dx; q.dz = dz; q.a = a; q.tier = tier;
+}
 let vx = 0, vz = 0;
 let scanT = 0;
 let target: Pickup | null = null;
@@ -256,6 +264,7 @@ export function updatePets(dt: number): void {
         const fire = el === PET_EL.FIRE, gold = el === PET_EL.GOLD, light = el === PET_EL.LIGHT, water = el === PET_EL.WATER;
         const p = spawnProjectile('PET_BOLT', wp.pos.x, wp.pos.z, ex / ed, ez / ed, fire ? 22 : water ? 24 : gold ? 26 : light ? 34 : 30, base,
           { life: 2.5, pierce: light ? 2 : 1, radius: el ? 1.8 : 1.5, homing: 6, y: wp.pos.y, aoe: Math.max(fire ? 2.6 : gold ? 1.8 : water ? 2.2 : 0, tier > 0 ? 2 : 0, prof.aoe ?? 0) });   // Legendary+: every shot splashes
+        petAtk(2, el, enemy.pos.x, enemy.pos.z, ex / ed, ez / ed, 0, 0);
         if (p && el) {
           p.tint = 20 + el;
           if (fire) { fxBurn.value = 4 + base * 0.25; p.effect = fxBurn; }
@@ -272,6 +281,7 @@ export function updatePets(dt: number): void {
         if (prof.ignite) applyStatus(enemy, { type: 'BURN', duration: 3, value: 4 + base * 0.2 });
         if (el === PET_EL.NATURE) { fxPoison.value = 1 + base * 0.15; applyStatus(enemy, fxPoison); }
         if (el) events.emit('petStrike', { pos: enemy.pos, el, dx: ex / ed, dz: ez / ed, big: prof.size > 1.2 });
+        petAtk(1, el, enemy.pos.x, enemy.pos.z, ex / ed, ez / ed, prof.size > 1.2 ? 1 : 0, 0);
       }
     }
   } else if (wp.state === FETCH && target) {
@@ -529,6 +539,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
         shield = value * lvMul + maxHp * 0.15;
         lastHp = pl.hp; wp.attackT = 1;
         events.emit('shieldBlock', { pos: pl.pos, radius: 3 });
+        petAtk(7, 0, pl.pos.x, pl.pos.z, 0, 1, 0, 0);
         events.emit('floatText', { pos: pl.pos, text: 'SHIELD', color: 0x7fd8ff, scale: 0.8, dy: 1.2 });
       }
       break;
@@ -546,7 +557,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
           for (let j = 0; j < 3; j++) if (MARKS[j].e === e) { idx = j; break; }
           if (idx >= 0) { if (MARKS[idx].t < 2) MARKS[idx].t = 6; continue; }
           if (abT < cd) continue;
-          for (let j = 0; j < 3; j++) if (MARKS[j].t <= 0) { MARKS[j].e = e; MARKS[j].t = 6; if (!fresh) fresh = e; events.emit('floatText', { pos: e.pos, text: 'MARKED', color: 0xc070ff, scale: 0.6, dy: 1 }); break; }
+          for (let j = 0; j < 3; j++) if (MARKS[j].t <= 0) { MARKS[j].e = e; MARKS[j].t = 6; if (!fresh) fresh = e; events.emit('floatText', { pos: e.pos, text: 'MARKED', color: 0xc070ff, scale: 0.6, dy: 1 }); petAtk(5, 0, e.pos.x, e.pos.z, 0, 1, 0, 0); break; }
         }
         if (fresh) {
           abT = 0;
@@ -590,6 +601,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
           const dx = e.pos.x - wp.pos.x, dz = e.pos.z - wp.pos.z, l = Math.hypot(dx, dz) || 1;
           const a0 = Math.atan2(dx, dz) - 0.55;           // sweep ~1.1 rad across the target
           BEAM.dx = Math.sin(a0); BEAM.dz = Math.cos(a0); BEAM.x = wp.pos.x; BEAM.z = wp.pos.z; BEAM.t = 1.2; beamTick = 0;
+          petAtk(4, 0, e.pos.x, e.pos.z, dx / l, dz / l, 0, 0);
           void l;
           events.emit('shake', { amount: 0.2 });
         } else abT = cd;

@@ -134,8 +134,15 @@ export const world = {
    *  cooldown); def = damage reduction 0..1; skillT = cleave cooldown (warriors); spin = cleave animation 1 -> 0. */
   minions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, facing: 0, life: 0, maxLife: 1, dmg: 0, atkT: 0, tgt: -1, retarget: 0, rise: 0, swing: 0, slot: 0, hp: 1, maxHp: 1, shield: 0, shieldT: 0, hitT: 0, walk: 0, mv: 0, src: 0, born: 0, def: 0, skillT: 0, spin: 0, burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, stunT: 0, slowT: 0 })),   // (owner 2026-10-25) summons take burn / poison / stun / slow too (minions.minionDebuff)
   /** Co-op (STEP 4): the PARTNER's summons / pet as cosmetic ghosts (net/coopMinions.ts). Nothing in the simulation reads these: monsters never target them. */
+  /** my pet's latest attack (engine/systems/pets.ts petAtk): the co-op partner replays it on his ghost of my pet. kind: 1 melee hit, 2 shot, 3 burst, 4 beam, 5 mark, 6 other (stretch only), 7 shield, 8 phoenix revive */
+  petAtk: { t: -9, seq: 0, kind: 0, el: 0, x: 0, z: 0, dx: 0, dz: 1, a: 0, tier: 0 },
   ghostMinions: Array.from({ length: 16 }, () => ({ active: false, kind: 0, x: 0, z: 0, tx: 0, tz: 0, facing: 0, mv: 0, walk: 0, swing: 0, hp: 1, maxHp: 1, shield: 0, hitT: 0, spin: 0, rise: 0, life: 9, src: 0 })),
-  ghostPet: { on: false, x: 0, z: 0, tx: 0, tz: 0, rar: 0, id: '' as string, stage: 1, stars: 0, facing: 0 },   // (id = the partner's pet template id; '' = unknown, drawn as a wisp)
+  ghostPet: {
+    on: false, x: 0, z: 0, tx: 0, tz: 0, rar: 0, id: '' as string, stage: 1, stars: 0, facing: 0,
+    /** the partner's pet attack (cosmetic): stretch 1 -> 0, last attack counter seen, tidal beam (Leviathan) and Shadow Cat marks */
+    attackT: 0, seq: -1, beamT: 0, bx: 0, bz: 0, bdx: 0, bdz: 1,
+    marks: [{ x: 0, z: 0, t: 0 }, { x: 0, z: 0, t: 0 }, { x: 0, z: 0, t: 0 }],
+  },   // (id = the partner's pet template id; '' = unknown, drawn as a wisp)
   /** Room objective / twist state (roomEvents.ts). state: 0 none, 1 running, 2 won, 3 lost, 4 waiting for E (rescue). */
   roomEvt: {
     obj: '' as '' | 'DEFEND' | 'RESCUE' | 'GOBLIN' | 'HUNT' | 'SPEED', twist: '' as '' | 'DARK' | 'CURSED' | 'TRAPS' | 'GOLDEN',
