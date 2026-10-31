@@ -150,6 +150,15 @@ let tdx = 0;       // vector enemy -> player (xz)
 let tdz = 0;
 let tdist = 0;
 let desiredYaw = 0;
+let heroYaw = 0;   // the default 'face the hero' yaw of the enemy being updated (compared with desiredYaw to tell a real override from the default aim)
+const aimOn = new Uint8Array(MAX_ENEMIES), aimYaw = new Float32Array(MAX_ENEMIES);
+/** max turn speed (rad/s) of a boss / mini-boss / elite; bigger = slower. Was: an uncapped exponential (rate 12 /s, a boss snapped onto the hero). */
+function turnCap(e: Enemy): number {
+  if (e.kind === 'HUMAN_BOSS' || e.kind === 'DARK_HERO') return 3.0;
+  if (e.boss) return e.radius < 1.2 ? 0 : e.radius >= 4 ? 1.0 : e.radius >= 2.5 ? 1.4 : 2.0;
+  if (e.mini) return 2.5;
+  return 5;   // elites
+}
 // necromancer minions draw aggro: a monster (not bosses / mini-bosses) within MINION_AGGRO of a risen minion goes for
 // it instead of the hero (px/pz become the minion's position for that monster's update)
 const MINION_AGGRO = 12;
@@ -264,15 +273,32 @@ let curShooter = -1;   // the enemy being updated (its projectiles remember it: 
 const MAGE_KINDS: ReadonlySet<string> = new Set(['CULTIST', 'SKELETON_MAGE', 'FROST_WISP', 'CINDER_SHAMAN', 'VOID_EYE']);
 export const MAGE_PROJ = { speed: 1.2, range: 2 };
 let curMage = false;
-const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
+const BOSS_TEL_R = 1.3;
+// (owner 2026-10-31: warning zones stay RED until the animated strike) the old 'boss telegraphs resolve 12% sooner' shortcut is gone:
+// the zone lives exactly as long as the windup passed in, and the enemy's WINDUP pose is driven by that same duration (windK below).
+/** the windup length (s) of the telegraph an enemy spawned last, and when (world.time): the WINDUP poses scale to it so the pose and the zone end together */
+const telDur = new Float32Array(MAX_ENEMIES), telAt = new Float32Array(MAX_ENEMIES);
+/** The zone resolves a hair AFTER the state machine leaves WINDUP (the zone ticks before the enemy in the same step): the strike never lands before the animation's strike frame. */
+const STRIKE_LAG = 0.04;
+function noteTel(life: number): number { if (curShooter < 0) return life; telDur[curShooter] = life; telAt[curShooter] = world.time; return life + STRIKE_LAG; }
+/** WINDUP progress 0..1 for the pose: uses the real zone duration when this enemy just telegraphed, else the pose's own default `def` seconds. */
+export function windK(e: Enemy, def: number): number {
+  const d = telDur[e.id];
+  const dur = d > 0.05 && world.time - telAt[e.id] <= d + 0.3 ? d : def;
+  const k = e.stateT / dur;
+  return k < 0 ? 0 : k > 1 ? 1 : k;
+}
+/** mark a TELEGRAPH_* zone as friendly / informational (heal ring, safe spot): it keeps its own colour */
+export function markSafe(zn: Zone | null): Zone | null { if (zn) zn.safe = true; return zn; }
 
 export function spawnTelegraphCircle(
   x: number, z: number, radius: number, life: number, damage: number, color: number,
 ): Zone | null {
-  if (bossTel) { radius *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); life *= BOSS_TEL_T; color = formColor(color); }
+  if (bossTel) { radius *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); color = formColor(color); }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
+  life = noteTel(life);
   zn.aux = curTraits;   // (trait on-hit debuffs ride on the strike)
   zn.active = true; zn.kind = 'TELEGRAPH_CIRCLE'; zn.hostile = true;
   zn.pos.set(x, 0, z); zn.radius = radius; zn.life = life; zn.maxLife = life;
@@ -285,10 +311,11 @@ export function spawnTelegraphCircle(
 export function spawnTelegraphLine(
   x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
 ): Zone | null {
-  if (bossTel) { width *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); length *= 1.12 * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; color = formColor(color); }
+  if (bossTel) { width *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); length *= 1.12 * (trial.on ? TRIAL_TELE : 1); color = formColor(color); }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
+  life = noteTel(life);
   zn.active = true; zn.kind = 'TELEGRAPH_LINE'; zn.hostile = true;
   zn.pos.set(x, 0, z); zn.dir.set(dirX, 0, dirZ); zn.length = length; zn.radius = width;
   zn.life = life; zn.maxLife = life; zn.damage = 0; zn.color = color;
@@ -300,9 +327,10 @@ export function spawnTelegraphLine(
 export function spawnTelegraphCone(
   x: number, z: number, dirX: number, dirZ: number, range: number, half: number, life: number, color: number, trick: number, damage: number,
 ): Zone | null {
-  if (bossTel) { range *= 1.2 * (trial.on ? TRIAL_TELE : 1) * formTel(); half = Math.min(1.5, half * (trial.on ? 1.15 * TRIAL_TELE : 1.15)); life *= BOSS_TEL_T; color = formColor(color); }
+  if (bossTel) { range *= 1.2 * (trial.on ? TRIAL_TELE : 1) * formTel(); half = Math.min(1.5, half * (trial.on ? 1.15 * TRIAL_TELE : 1.15)); color = formColor(color); }
   const zn = allocZone();
   if (!zn) return null;
+  life = noteTel(life);
   zn.active = true; zn.kind = 'TELEGRAPH_CONE'; zn.hostile = true;
   zn.pos.set(x, 0, z); zn.dir.set(dirX, 0, dirZ); zn.radius = range; zn.aux = half; zn.length = 0;
   zn.life = life; zn.maxLife = life; zn.damage = damage; zn.color = color; zn.trick = trick;
@@ -1630,7 +1658,7 @@ function updateEnemy(e: Enemy): void {
   // ---- AI
   const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0 || e.downT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
-  desiredYaw = Math.atan2(tdx, tdz);
+  desiredYaw = Math.atan2(tdx, tdz); heroYaw = desiredYaw;
   if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)
     const o = barOwner >= 0 ? world.enemies[barOwner] : null;
     if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) { barOwner = e.id; world.boss.shieldMax = 0; }
@@ -1749,8 +1777,19 @@ function updateEnemy(e: Enemy): void {
   e.pos.y = flopY(e);   // (Slime King Belly Flop: airborne)
 
   // ---- facing
+  // (owner 2026-10-31) AIM LOCK: a boss / mini / elite that winds up an attack keeps the aim it had when the windup began (the red zone is
+  // drawn there and the strike lands there): while WINDUP / ATTACK any 'face the hero' request is replaced by that locked aim. Skills that steer on
+  // purpose (a dash along e.dir, the flamethrower's sweep angle) request their own yaw and are left alone.
+  const big = e.boss || e.mini || e.elite;
+  if (big && (e.state === 'WINDUP' || e.state === 'ATTACK')) {
+    if (!aimOn[e.id]) { aimOn[e.id] = 1; aimYaw[e.id] = heroYaw; }
+    if (desiredYaw === heroYaw) desiredYaw = aimYaw[e.id];
+  } else aimOn[e.id] = 0;
   const diff = wrapPi(desiredYaw - e.facing);
-  e.facing = wrapPi(e.facing + diff * Math.min(1, (e.kind === 'ROCK_CRAB' ? CRAB.turn : e.kind === 'SHIELDBEARER' && e.state === 'KITE' ? SHIELD.turn : 12) * dt));
+  let dYaw = diff * Math.min(1, (e.kind === 'ROCK_CRAB' ? CRAB.turn : e.kind === 'SHIELDBEARER' && e.state === 'KITE' ? SHIELD.turn : 12) * dt);
+  const cap = big ? turnCap(e) * dt : 0;   // (bosses turn slowly: the hero can circle one and make it lag behind)
+  if (cap > 0) dYaw = dYaw > cap ? cap : dYaw < -cap ? -cap : dYaw;
+  e.facing = wrapPi(e.facing + dYaw);
 
   // ---- contact damage
   contactHit(e, locked);

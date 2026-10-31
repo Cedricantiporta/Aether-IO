@@ -4,7 +4,7 @@ import type { Enemy, EnemyKind } from '../engine/types';
 import { GB, TAU, clamp, lerp } from './util';
 import { makeBow } from './weapons';
 import { skeletonDef, glowOf } from './skeletonRig';
-import { meleeT, strikeT, MELEE_WINDUP } from '../engine/systems/enemies';
+import { meleeT, strikeT, windK, MELEE_WINDUP } from '../engine/systems/enemies';
 
 export type MatKey = 'lit' | 'lit2' | 'jelly' | 'glow' | 'ghost' | 'kit';
 export interface Part { geo: BufferGeometry; mat: MatKey }
@@ -192,7 +192,7 @@ function minionSkeleton(v: 'W' | 'M' | 'A'): ModelDef {
   return {
     parts, headY: 2.1, shadow: 0.6,
     pose(e, P, t) {
-      const ph = t * (mage ? 5 : 7), wk = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : 0, busy = e.state === 'WINDUP' || e.state === 'ATTACK' ? 1 : 0;
+      const ph = t * (mage ? 5 : 7), wk = e.state === 'WINDUP' ? windK(e, 0.6) : 0, busy = e.state === 'WINDUP' || e.state === 'ATTACK' ? 1 : 0;
       const rec = e.state === 'ATTACK' ? clamp(1 - e.stateT / 0.25, 0, 1) : 0;
       const mv = 1 - busy, sw = Math.sin(ph);
       const mw = meleeT[e.id] > 0 ? 1 - meleeT[e.id] / MELEE_WINDUP : 0, st = strikeT[e.id];
@@ -238,7 +238,7 @@ function raisedSkeleton(v: 'W' | 'M'): ModelDef {
     headY: 2.1, shadow: 0.6,
     pose(e, P, t) {
       const ph = t * (mage ? 5 : 7), moving = e.state === 'WINDUP' ? 0 : 1;
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.6) : 0;
       P.body(abs(sin(ph)) * 0.04 * moving, -0.08 * k, sin(ph) * 0.03 * moving, 1, 1);
       P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
       if (mage) P.part(2, 0.26, 1.38, 0, -0.5 - k * 1.2, 0, -0.1);
@@ -268,7 +268,7 @@ function boneGolem(): ModelDef {
     headY: 3.0, shadow: 1.1,
     pose(e, P, t) {
       const charge = e.state === 'ATTACK' ? 1 : 0;
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.9, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.9) : 0;
       const ph = t * (charge ? 11 : 3.6);
       P.body(abs(sin(ph)) * 0.08, -0.3 * k + 0.35 * charge, sin(ph) * 0.05, 1, 1);
       P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
@@ -299,7 +299,7 @@ function cultist(): ModelDef {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: sl, mat: 'lit' }, { geo: sl, mat: 'lit' }, { geo: orb, mat: 'glow' }, { geo: orb, mat: 'glow' }, { geo: big, mat: 'glow' }],
     headY: 2.5, shadow: 0.7,
     pose(e, P, t) {
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.8, 0, 1) : e.state === 'ATTACK' ? 1 : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.8) : e.state === 'ATTACK' ? 1 : 0;
       const hov = 0.12 + sin(t * 2.2) * 0.06;
       P.body(hov, k * -0.08, sin(t * 1.7) * 0.04, 1, 1);
       P.part(0, 0, 0, 0, 0, sin(t * 1.3) * 0.05, 0); P.part(1, 0, 0, 0);
@@ -339,7 +339,7 @@ function bomber(): ModelDef {
   return {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: legs(1), mat: 'lit' }, { geo: legs(-1), mat: 'lit' }, { geo: sack, mat: 'glow' }, { geo: spark, mat: 'glow' }], headY: 1.4, shadow: 0.7,
     pose(e, P, t) {
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 1.0, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 1.0) : 0;
       const rate = lerp(3, 14, k) * (k > 0.7 ? 1.5 : 1);
       const blink = 0.5 + 0.5 * sin(t * rate * TAU * 0.5 + (k > 0 ? e.stateT * 40 : 0));
       const sw = 1 + k * 0.28 + blink * 0.05 * (1 + k * 3);
@@ -379,7 +379,7 @@ function brute(): ModelDef {
     headY: 2.2, shadow: 0.9,
     pose(e, P, t) {
       const charge = e.state === 'ATTACK' ? 1 : 0;
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.9, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.9) : 0;
       const ph = t * (charge ? 13 : 4.5);
       const shake = k * sin(t * 55) * 0.02;
       P.body(abs(sin(ph)) * (charge ? 0.1 : 0.07), -0.4 * k + 0.42 * charge, sin(ph) * (charge ? 0.03 : 0.06) + shake, 1, 1);
@@ -412,7 +412,7 @@ function zombie(): ModelDef {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }],
     headY: 2.0, shadow: 0.8,
     pose(e, P, t) {
-      const ph = t * 3.2, k = e.state === 'WINDUP' ? clamp(e.stateT / 0.6, 0, 1) : e.state === 'ATTACK' ? 1 : 0;
+      const ph = t * 3.2, k = e.state === 'WINDUP' ? windK(e, 0.6) : e.state === 'ATTACK' ? 1 : 0;
       P.body(abs(sin(ph)) * 0.05, 0.1 + k * 0.28, sin(ph) * 0.09, 1, 1);
       P.part(0, 0, 0, 0);
       const up = -1.45 * lerp(0.55, 1, k);
@@ -440,7 +440,7 @@ function wraith(): ModelDef {
     parts: [{ geo: body.build(), mat: 'ghost' }, { geo: arm.build(), mat: 'ghost' }, { geo: arm.build(), mat: 'ghost' }, { geo: eyes.build(), mat: 'glow' }],
     headY: 2.4, shadow: 0.55,
     pose(e, P, t) {
-      const wind = e.state === 'WINDUP' ? clamp(e.stateT / 0.75, 0, 1) : 0;
+      const wind = e.state === 'WINDUP' ? windK(e, 0.75) : 0;
       const lunge = e.state === 'ATTACK' ? 1 : 0;
       const hov = 0.35 + sin(t * 2.4 + e.id) * 0.12;
       P.body(hov, 0.1 + lunge * 0.6, sin(t * 1.5) * 0.05, 1 - wind * 0.25, 1 + wind * 0.1 + lunge * 0.15);
@@ -506,7 +506,7 @@ function bandit(): ModelDef {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: arm, mat: 'lit' }, { geo: blade.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
     headY: 1.9, shadow: 0.6,
     pose(e, P, t) {
-      const ph = t * 12, wind = e.state === 'WINDUP' ? clamp(e.stateT / 0.5, 0, 1) : 0, dash = e.state === 'ATTACK' ? 1 : 0;
+      const ph = t * 12, wind = e.state === 'WINDUP' ? windK(e, 0.5) : 0, dash = e.state === 'ATTACK' ? 1 : 0;
       P.body(abs(sin(ph)) * 0.08 * (1 - dash), 0.15 + dash * 0.55 - wind * 0.25, sin(ph) * 0.08, 1, 1);
       P.part(0, 0, 0, 0);
       P.part(1, -0.32, 1.12, 0, sin(ph) * 0.8 * (1 - dash) + dash * 0.6, 0, 0.1);
@@ -536,7 +536,7 @@ function boar(): ModelDef {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
     headY: 1.7, shadow: 0.95,
     pose(e, P, t) {
-      const charge = e.state === 'ATTACK' ? 1 : 0, k = e.state === 'WINDUP' ? clamp(e.stateT / 0.7, 0, 1) : 0;
+      const charge = e.state === 'ATTACK' ? 1 : 0, k = e.state === 'WINDUP' ? windK(e, 0.7) : 0;
       const ph = t * (charge ? 17 : 6);
       // wind-up: lower head, paw the ground (rear up slightly then dip)
       P.body(abs(sin(ph)) * (charge ? 0.1 : 0.05) - k * 0.08, 0.1 * charge + 0.18 * k, sin(ph) * 0.03 + sin(t * 60) * 0.02 * k, 1, 1);
@@ -668,7 +668,7 @@ function goblinArcher(): ModelDef {
   return {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: armR, mat: 'lit' }, { geo: armLb.build(), mat: 'lit' }, { geo: legL, mat: 'lit' }, { geo: legL, mat: 'lit' }], headY: TOWER_Y + 1.8, shadow: 0.01,
     pose(e, P, t) {
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.75, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.75) : 0;
       const rec = e.state === 'RECOVER' ? clamp(1 - e.stateT / 0.45, 0, 1) : 0;
       P.body(TOWER_Y + abs(sin(t * 2.2)) * 0.03, -0.05 * k, 0, 1, 1);
       P.part(0, 0, 0, 0);
@@ -686,7 +686,7 @@ function lakeHydra(): ModelDef {
   return {
     parts: h.parts.map((p) => ({ geo: p.geo.clone(), mat: p.mat })), headY: 3.3, shadow: 0.01,   // own geometry copies (each kind gets its own flash attribute)
     pose(e, P, t) {
-      const k = e.state === 'WINDUP' ? clamp(e.stateT / 0.8, 0, 1) : 0;
+      const k = e.state === 'WINDUP' ? windK(e, 0.8) : 0;
       const sink = e.state === 'SPAWN' ? 0 : -1.55 + k * 0.45 + sin(t * 1.4 + e.id) * 0.12;
       P.body(sink, sin(t * 1.7 + e.id) * 0.12 - k * 0.35 + (e.state === 'RECOVER' ? 0.25 : 0), sin(t * 1.2 + e.id * 2) * 0.12, 1, 1);
       P.part(0, 0, 0, 0); P.part(1, 0, 0, 0);
@@ -750,7 +750,7 @@ function shieldbearer(): ModelDef {
     parts: [{ geo: body.build(), mat: 'lit' }, { geo: eyes.build(), mat: 'glow' }, { geo: armR.build(), mat: 'lit' }, { geo: shield.build(), mat: 'lit' }, { geo: leg, mat: 'lit' }, { geo: leg, mat: 'lit' }],
     headY: 2.3, shadow: 0.8,
     pose(e, P, t) {
-      const brace = e.state === 'KITE' ? clamp(e.stateT / 0.2, 0, 1) : 0;
+      const brace = e.state === 'KITE' ? windK(e, 0.2) : 0;
       const wind = e.state === 'WINDUP' ? 1 : 0, bash = e.state === 'ATTACK' ? 1 : 0, open = e.state === 'RECOVER' ? 1 : 0;
       const g = max(brace, wind, bash);
       const ph = t * (brace ? 3 : 6.5), mv = brace ? 0.35 : 1;
