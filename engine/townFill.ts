@@ -18,12 +18,13 @@
 import { HORSE_STATUES } from './qtVillage';
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
-  PORTAL, BOSS_PORTAL, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
+  PORTAL, BOSS_PORTAL, BOSS_PORTAL_S, ADV_VILLAGE, inAdvPlaza, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
   SIDE_GATES, PARK_EAST,
 } from './townData';
 import { TOWN_CHESTS } from './townChests';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
+import { AP_SOLIDS, AP_FLOWERS, AP_HAY, AP_CLUTTER, AP_TREES } from './adventurePlaza';
 import { BI_DAIS, BI_SOLIDS, BI_STATUES, BI_BOARD, BI_DECK, pathX } from './bossIsland';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { islandRadius } from './mapgen';
@@ -127,6 +128,9 @@ const distSeg = (x: number, z: number, x1: number, z1: number, x2: number, z2: n
   const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz, t = l2 > 0 ? Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / l2)) : 0;
   return Math.hypot(x - x1 - dx * t, z - z1 - dz * t);
 };
+/** (owner 2026-10-31) the Adventure Plaza + Lantern Lane are a cleared building site: no random forest / rock / bush lands there (only the dressing section below, with AP_OPEN, may). */
+let AP_OPEN = false;
+const inAdvSite = (x: number, z: number, pad: number): boolean => inAdvPlaza(x, z, pad) || (x > ADV_VILLAGE.x0 - pad && x < ADV_VILLAGE.x1 + pad && z > ADV_VILLAGE.z0 - pad && z < ADV_VILLAGE.z1 + pad);
 /** True when something solid or reserved is within `pad` of (x, z), or it is water / off the island. */
 function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   if (solidNear(x, z, pad)) return true;
@@ -138,6 +142,7 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   if (x > RIVER.x0 - 2 && x < RIVER.x1 + 2 && z > riverBank(x, 0) - 1.4 && z < riverBank(x, 1) + 1.4) return true;
   if (inCampYard(x, z, 1) || inCaveClear(x, z, 1)) return true;
   if (Math.hypot(x - TOWER.x, z - TOWER.z) < TOWER_KNOLL.r + 1) return true;
+  if (!AP_OPEN && inAdvSite(x, z, 0.8)) return true;
   if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6 || Math.hypot(x - BOSS_PORTAL.x, z - BOSS_PORTAL.z) < 8) return true;   // (the portal's clearing)
   return false;
 }
@@ -268,7 +273,7 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 // ---- the plaza (owner 2026-10-24: the Adventure Portal left it, the paved disc is open): four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
 // ---- the Adventure Portal (kit v3, scale PORTAL_S, front north, down the forest road) stands in the forest clearing south of the walls, where the Endless Tower used to be
 put('adventure_portal', PORTAL.x, PORTAL.z, PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);
-put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);   // (owner 2026-10-26: the Boss Trials portal on the south-west headland; Town.tsx tints it purple)
+put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTAL_S, BOSS_PORTAL_S, BOSS_PORTAL_S, 0);   // (owner 2026-10-26: the Boss Trials portal on the south-west headland; Town.tsx tints it purple)
 // ---- (owner 2026-10-31) the Boss Trials headland dressed as a place (layout data: engine/bossIsland.ts; the built pieces - dais, pillars, runes, banners, altar, lanterns, deck - are render/bossIsland.ts):
 // kit props here: boss statues, notice board, bench + trees / bushes / flowers (every tree gets a little undergrowth nest like the forest outskirts), rocks and tufts along the shore, flower patches along the path.
 {
@@ -298,6 +303,24 @@ put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, PORTAL_S, 
   for (let k = 0; k < 14; k++) { const x = -60 + r() * 42, z = 163.5 + r() * 2.2; prop(pick(PIECES.rock, r()), x, z, r() * TAU, 0.55 + r() * 0.5, undefined, 0.2); }
   for (let k = 0; k < 8; k++) prop(pick(PIECES.rock, r()), -62 + r() * 1.5, 132 + r() * 30, r() * TAU, 0.6 + r() * 0.5, undefined, 0.2);
   for (let k = 0; k < 22; k++) bloom(-58 + r() * 34, 130 + r() * 30, 0.7 + r() * 0.6);
+}
+// ---- (owner 2026-10-31) the Adventure Plaza + Lantern Lane: lamp / banner colliders, flower patches (the kit flower_patch), haystacks, crates, accent trees with a little undergrowth.
+// (houses, benches, beds, stalls, well, cart, fences, signposts, trees: townData; the built pieces: render/adventurePlaza.ts)
+{
+  AP_OPEN = true;
+  const r = rng(3110);
+  for (const [x, z, rr] of AP_SOLIDS) { addSolid(x, z, rr); claim(x, z, rr + 0.3); }
+  for (const [x, z, sc] of AP_FLOWERS) put(PIECES.flowers, x, z, r() * TAU, sc, sc * (0.9 + r() * 0.25), sc);
+  for (const [x, z, ry, sc] of AP_HAY) prop(PIECES.haystack, x, z, ry, sc, undefined, 0.2);
+  cluster(...AP_CLUTTER);
+  for (const [x, z, role] of AP_TREES) {
+    const piece = role === 0 ? PIECES.oak : role === 1 ? PIECES.blossom : role === 2 ? PIECES.fruit : PIECES.pine, p = pick(piece, r()), sc = 0.85 + r() * 0.25;
+    if (!prop(p, x, z, r() * TAU, sc, sc * (0.95 + r() * 0.15), 0.4)) continue;
+    const rad = (SOLID_R[p] ?? 0.7) * sc;
+    for (let k = 0; k < 2; k++) { const a = r() * TAU, d = rad + 0.5 + r() * 0.8; prop(pick(PIECES.bush, r()), x + Math.cos(a) * d, z + Math.sin(a) * d, r() * TAU, 0.45 + r() * 0.3, undefined, 0.1); }
+    for (let k = 0; k < 2; k++) { const a = r() * TAU, d = rad + 0.6 + r() * 1.2, fx = x + Math.cos(a) * d, fz = z + Math.sin(a) * d; if (!blocked(fx, fz, 0.1, 2.0)) put(PIECES.flowers, fx, fz, r() * TAU, 0.6 + r() * 0.35, undefined, 0.6 + r() * 0.35); }
+  }
+  AP_OPEN = false;
 }
 {
   const D = PLAZA_DECOR;

@@ -17,7 +17,7 @@ import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
 import { world, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import {
   GATE, WALL_RUNS, WALL_TOWERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
-  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, BOSS_PORTAL, TOWER, GRAVEYARD,
+  WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, BOSS_PORTAL, ADV_PLAZA, TOWER, GRAVEYARD,
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
 import { npcMarkers } from '../../engine/systems/npcQuestLogic';
@@ -144,6 +144,7 @@ function bakeTown(): void {
       g.beginPath(); g.moveTo(r.x1, r.z1); g.lineTo(r.x2, r.z2); g.stroke();
     }
     disc(g, PLAZA.x, PLAZA.z, PLAZA.r, C.roadPaved);
+    g.fillStyle = C.roadPaved; g.beginPath(); g.ellipse(ADV_PLAZA.x, ADV_PLAZA.z, ADV_PLAZA.rx, ADV_PLAZA.rz, 0, 0, Math.PI * 2); g.fill();   // (owner 2026-10-31) the Adventure Plaza
     disc(g, BI_DAIS.x, BI_DAIS.z, BI_DAIS.r, '#d4cce0');   // (owner 2026-10-31) the Boss Trials dais
     // forest: the town's trees and every tree-like obstacle merge into soft darker blobs
     for (const t of TOWN_TREES) blob(g, t.x, t.z, Math.max(1.6, t.s * 0.7), C.forest, C.forestHi);
