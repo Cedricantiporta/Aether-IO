@@ -54,6 +54,7 @@ import { resetSpecials, setSlimeKing, initSpecial } from './bossSpecials';
 import { clearVoidFx } from './voidFx';
 import { resetBossFx } from './bossFx';
 import { resetBosses2 } from './bosses2';
+import { applyFormHp } from './bossForms';
 import type { Interactable } from './village';
 import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { spawnHumanBoss, HUMAN_KINDS, debugHuman, type HumanKind } from './humanBosses';
@@ -805,7 +806,8 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const names = finalFight ? { name: 'The Void Herald', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
-  if (finalFight) { e.maxHp = Math.round(e.maxHp * 2.25); e.hp = e.maxHp; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bosses2.ts FINAL_SPLIT; one bar, 2.25x)
+  if (finalFight) { e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bossForms.ts finalHp: two separate bar stacks)
+  applyFormHp(e, finalFight);   // a transforming boss: form 1's HP share (bossForms.ts)
   d.bossId = e.id;
   const hud = world.boss;
   hud.active = true; hud.name = names.name; hud.title = names.title; hud.layers = BOSS_HP_X;   // (x5 HP drawn as 5 coloured bars)

@@ -240,10 +240,10 @@ export function isStationary(k: EnemyKind): boolean { return k === 'GOBLIN_ARCHE
  *  Hydra's body lies beyond the rim with its heads reaching in. They fight with arena-wide telegraphed patterns (systems/bosses2.ts). */
 /** Camera pull-back factor of a giant guardian's fight (render/CameraRig.tsx): 1 for everything else. Grows with the body radius
  *  (Dune Colossus r5 = 1.6x; Gorath / Elderroot / Hydra / Glacius ~1.8-1.9x; Ignar / Void Herald ~1.5x). Humans, the Lich, the Slime King and mini-bosses stay 1. */
-export function bossCamZoom(k: EnemyKind): number {
+export function bossCamZoom(k: EnemyKind, sizeMul = 1): number {
   switch (k) {
     case 'BOSS_GOLEM': case 'BOSS_TREANT': case 'BOSS_HYDRA': case 'BOSS_WYRM': case 'BOSS_WARMACH': case 'BOSS_WARLORD': case 'BOSS_VOID':
-      return Math.min(1.9, 1 + 0.12 * ENEMY_DEFS[k].radius);
+      return Math.min(2.1, 1 + 0.12 * ENEMY_DEFS[k].radius * sizeMul);   // (sizeMul = the live body radius / the def radius: a transforming boss's smaller first form zooms in, the bigger second form out)
     default: return 1;
   }
 }

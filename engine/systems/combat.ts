@@ -524,7 +524,10 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   events.emit('damage', { pos: e.pos, amount: dealt > 0 ? dealt : amount, crit: !!o.crit, kind: o.kind, toPlayer: false, dot: o.dot });
   if (!o.dot) events.emit('enemyHit', { pos: e.pos, kind: e.kind, dmgKind: o.kind, dir: o.knockDir });
 
-  if (e.hp <= 0) { killEnv = o.env; killEnemy(e); killEnv = undefined; }
+  if (e.hp <= 0) {
+    if (e.boss && hooks.bossFormDeath(e)) return;   // a transforming boss's first form: it respawns in form 2, no kill
+    killEnv = o.env; killEnemy(e); killEnv = undefined;
+  }
 }
 
 export function killEnemy(e: Enemy): void {
