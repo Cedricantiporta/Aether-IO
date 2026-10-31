@@ -304,7 +304,7 @@ export const ITEMS_POOL: Item[] = [
   { id: 'binding_seal', name: 'Binding Seal', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Blacksmith > Reforge: seals one bonus line so Reforge Stones and Tempering Oil skip it. The seal stays on the item (a gear piece keeps at least one open line).' },
   { id: 'augment_rune', name: 'Augment Rune', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1800, level: 1, description: 'Blacksmith > Reforge: adds a new bonus line into an empty slot (blue 1, purple 2, gold 3, mythic 4 slots).' },
   { id: 'erase_scroll', name: 'Erasure Scroll', type: 'LOOT', stats: {}, rarity: 'RARE', price: 700, level: 1, description: 'An old reforging tool, no longer used (reroll single lines with a Reforge Stone now). Sell it.' },
-  { id: 'boss_ticket', name: 'Boss Trial Ticket', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Boss Trials (the purple portal on the south-west headland): fight a boss again on a day you already won it. One ticket per rematch.' },
+  { id: 'boss_ticket', name: 'Boss Trial Ticket', type: 'LOOT', stats: {}, rarity: 'EPIC', price: 1500, level: 1, description: 'Boss Trials (the purple portal at the tip of the southern peninsula): fight a boss again on a day you already won it. One ticket per rematch.' },
   { id: 'revive_ankh', name: 'Ankh of Life', type: 'REVIVE', stats: {}, rarity: 'EPIC', price: 2000, level: 1, description: 'Auto-revive on death (50% HP). Long cooldown: 15 minutes between revives.' },
 
   // --- WEAPONS (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---

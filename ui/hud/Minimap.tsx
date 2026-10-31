@@ -10,7 +10,7 @@ import { clickMoveTo } from '../../engine/systems/target';
 import { walkTo } from '../../engine/systems/village';
 import { createPortal } from 'react-dom';
 import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
-import { BI_DAIS } from '../../engine/bossIsland';
+import { BI_DAIS, BI_OLD_PAD } from '../../engine/bossIsland';
 import { useGameStore } from '../../store';
 import { TAP } from '../../engine/tavernData';
 import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
@@ -150,6 +150,7 @@ function bakeTown(): void {
     disc(g, PLAZA.x, PLAZA.z, PLAZA.r, C.roadPaved);
     g.fillStyle = C.roadPaved; g.beginPath(); g.ellipse(ADV_PLAZA.x, ADV_PLAZA.z, ADV_PLAZA.rx, ADV_PLAZA.rz, 0, 0, Math.PI * 2); g.fill();   // (owner 2026-10-31) the Adventure Plaza
     disc(g, BI_DAIS.x, BI_DAIS.z, BI_DAIS.r, '#d4cce0');   // (owner 2026-10-31) the Boss Trials dais
+    disc(g, BI_OLD_PAD.x, BI_OLD_PAD.z, BI_OLD_PAD.r, '#d4cce0');   // (... and the old site's small seaside pad)
     // forest: the town's trees and every tree-like obstacle merge into soft darker blobs
     for (const t of TOWN_TREES) blob(g, t.x, t.z, Math.max(1.6, t.s * 0.7), C.forest, C.forestHi);
     const obs = world.obstacles;

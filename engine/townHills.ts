@@ -5,11 +5,11 @@
 // portal / tower). The fade uses a chamfer distance transform over a rasterised "flat" mask, so it stays cheap.
 // Walkable: the engine keeps y = 0; renderers add it via render/lift.ts liftAt(), the ground mesh via terrainFn.groundY.
 // ============================================================================
-import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, BOSS_PORTAL, TOWN_COLLIDERS, VILLAGE_NODES, ADV_PLAZA, ADV_VILLAGE, inAdvPlaza } from './townData';
+import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, BOSS_PORTAL, OLD_SPOT, TOWN_COLLIDERS, VILLAGE_NODES, ADV_PLAZA, ADV_VILLAGE, inAdvPlaza } from './townData';
 import { SHOP_POSITIONS } from '../constants';
 import { inCampYard } from './caveData';
 
-const X0 = -80, Z0 = -80, NX = 170, NZ = 345;   // grid covers x -80..90, z -80..265 (the forest south of the portal clearing + the tower clearing)
+const X0 = -80, Z0 = -80, NX = 170, NZ = 365;   // grid covers x -80..90, z -80..285 (+ the Boss Trials headland) (the forest south of the portal clearing + the tower clearing)
 let H: Float32Array | null = null;
 
 function noise(x: number, z: number): number {
@@ -43,7 +43,7 @@ function build(): Float32Array {
   // fields, the farm, buildings, the portal + tower clearings, harvest nodes, the mining camp
   for (const F of [...FIELDS, FARM]) rect(F.x - F.hw - 2, F.z - F.hd - 2, F.x + F.hw + 2, F.z + F.hd + 2);
   for (const s of SHOP_POSITIONS) circle(s.position[0], s.position[2], 7);
-  circle(TOWER.x, TOWER.z, 11); circle(TOWER.door.x, TOWER.door.z, 3); circle(PORTAL.x, PORTAL.z, 11); circle(PORTAL.front.x, PORTAL.front.z, 3); circle(BOSS_PORTAL.x, BOSS_PORTAL.z, 11); circle(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 3);
+  circle(TOWER.x, TOWER.z, 11); circle(TOWER.door.x, TOWER.door.z, 3); circle(PORTAL.x, PORTAL.z, 11); circle(PORTAL.front.x, PORTAL.front.z, 3); circle(BOSS_PORTAL.x, BOSS_PORTAL.z - 2, 13); circle(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 3); circle(OLD_SPOT.x, OLD_SPOT.z, 6);
   mark(ADV_PLAZA.x - ADV_PLAZA.rx - 1, ADV_PLAZA.z - ADV_PLAZA.rz - 1, ADV_PLAZA.x + ADV_PLAZA.rx + 1, ADV_PLAZA.z + ADV_PLAZA.rz + 1, (x, z) => inAdvPlaza(x, z, 1.5));   // (owner 2026-10-31) the Adventure Plaza is dead flat
   rect(ADV_VILLAGE.x0, ADV_VILLAGE.z0, ADV_VILLAGE.x1, ADV_VILLAGE.z1);   // ... and so is Lantern Lane
   for (const v of VILLAGE_NODES) circle(v.x, v.z, 3);

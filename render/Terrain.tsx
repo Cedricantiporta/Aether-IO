@@ -19,6 +19,7 @@ import { applyPathShader, dirtDiscs, pathMask } from './groundPath';
 import { inCaveClear } from '../engine/caveData';
 import { BEACH, beachSandK, DOCK, MAIN_BEACH, mainShoreOff, beachWobble } from '../engine/beachData';
 import { RIVER, riverBank } from '../engine/townData';
+import { headSandK } from '../engine/bossIsland';
 
 /** (owner 2026-10-24) a continuous sand strip along both river banks (gently wavy width, the whole length of the river). */
 function riverSandK(x: number, z: number): number {
@@ -32,7 +33,7 @@ function riverSandK(x: number, z: number): number {
   }
   return best;
 }
-const sandAt = (x: number, z: number): number => Math.max(beachSandK(x, z), riverSandK(x, z));
+const sandAt = (x: number, z: number): number => Math.max(beachSandK(x, z), riverSandK(x, z), headSandK(x, z));   // (+ the Boss Trials headland's beach, engine/bossIsland)
 /** Keep the shoreline boulders off the pier (and a little either side of it). */
 const nearDock = (x: number, z: number): boolean => x < DOCK.x0 + 4 && Math.abs(z - DOCK.z) < 7;
 
