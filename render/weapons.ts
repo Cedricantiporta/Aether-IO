@@ -107,7 +107,6 @@ export function makeBow(accent: string, tier: number, o?: WOpts): WeaponGeo {
   if (g >= 1 && L >= 1) for (const s of [-1, 1]) gl.sph(0.05, [0, s * 0.3, pt(s * 0.3)[1] + 0.07], accent, 1, 6);
   if (g >= 2 && L >= 1) for (const s of [-1, 1]) gl.sph(0.04, [0, s * 0.7, pt(s * 0.7)[1] + 0.07], accent, 1, 6);
   const spins: WeaponSpin[] = [];
-  if (L >= 5) { spins.push({ geo: halo(0.5, 0.025, accent, [0, 0, 0]), pos: [0, 0, -0.05], axis: 2, speed: 0.9 }); spins.push({ geo: shards(4 + g, 0.3, 0.3, accent), pos: [0, 0, 0.1], axis: 1, speed: 1.6 }); }
   return done(b, gl, [0, ty, tz], spins);
 }
 
@@ -149,21 +148,16 @@ export function makeStaff(accent: string, tier: number, o?: WOpts): WeaponGeo {
     for (const s of [-1, 1]) b.cone(0.06, 0.2, 5, [s * 0.3, top + 0.3, 0], gold, [0, 0, -s * 0.2]);
     b.torus(0.16, 0.03, [0, 1.84, 0], gold, [Math.PI / 2, 0, 0], 1, 12);
     orb(0.22 + 0.02 * g, 1.3);
-    spins.push({ geo: shards(3 + g, 0.42, 0.42, accent, 0.06), pos: [0, top, 0], axis: 1, speed: 1.3 });
   } else if (L === 4) {
     wing(b, 1, 0.12, 1.98, 4, 0.55, gold, '#fff0b0', 0.2); wing(b, -1, 0.12, 1.98, 4, 0.55, gold, '#fff0b0', 0.2);
     b.torus(0.17, 0.035, [0, 1.84, 0], gold, [Math.PI / 2, 0, 0], 1, 12);
     orb(0.22 + 0.02 * g, 1.9);
     gl.octa(0.07, [0, top + 0.42 + 0.03 * g, 0], '#ffffff', [1, 1.5, 1]);
-    spins.push({ geo: shards(2 + g, 0.4, 0.4, '#fff0b0', 0.05), pos: [0, top, 0], axis: 1, speed: 1.1 });
   } else {
     for (let i = 0; i < 6; i++) { const a = (i / 6) * TAU; b.cone(0.055, 0.5 + (i % 2) * 0.2, 5, [Math.cos(a) * 0.2, 1.95, Math.sin(a) * 0.2], i % 2 ? gold : '#e03a52', [Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5]); }
     wing(b, 1, 0.14, 1.9, 3, 0.5, '#ff6a7e', gold, 0.28); wing(b, -1, 0.14, 1.9, 3, 0.5, '#ff6a7e', gold, 0.28);
     b.torus(0.18, 0.035, [0, 1.82, 0], gold, [Math.PI / 2, 0, 0], 1, 12);
     orb(0.26 + 0.02 * g, 1.7);
-    spins.push({ geo: halo(0.62, 0.03, accent, [0, 0, 0]), pos: [0, top, 0], axis: 2, speed: 0.8 });
-    spins.push({ geo: halo(0.5, 0.02, '#ffd070', [Math.PI / 2, 0, 0]), pos: [0, top, 0], axis: 1, speed: -1.2 });
-    spins.push({ geo: shards(4 + g, 0.5, 0.5, accent), pos: [0, top, 0], axis: 1, speed: 1.7 });
   }
   if (g >= 2 && L >= 1) for (let i = 0; i < 3; i++) gl.sph(0.035, [0, 1.5 - i * 0.28, 0.07], accent, 1, 5);
   return done(b, gl, [0, top, 0], spins);
@@ -213,7 +207,6 @@ export function makeAxe(accent: string, tier: number, o?: WOpts): WeaponGeo {
   if (g >= 1 && L >= 2) { gl.sph(0.05, [0.1, hy + 0.35, 0.3], accent, 1, 6); gl.sph(0.05, [0.1, hy - 0.35, -0.3], accent, 1, 6); }
   if (g >= 2 && L >= 2) { gl.sph(0.045, [0.1, hy - 0.35, 0.3], accent, 1, 6); gl.sph(0.045, [0.1, hy + 0.35, -0.3], accent, 1, 6); gl.sph(0.04, [0.08, -0.35, 0], accent, 1, 6); }
   const spins: WeaponSpin[] = [];
-  if (L >= 5) { spins.push({ geo: halo(0.78, 0.03, accent, [0, Math.PI / 2, 0]), pos: [-0.12, hy, 0], axis: 0, speed: 0.9 }); spins.push({ geo: shards(4 + g, 0.4, 0.4, accent), pos: [0, hy + 0.1, 0], axis: 1, speed: 1.6 }); }
   return done(b, gl, [0, hy, L >= 2 ? 0.95 : 0.8], spins);
 }
 
@@ -254,7 +247,6 @@ export function makeShield(accent: string, tier: number, o?: WOpts): WeaponGeo {
   if (g >= 1 && L >= 1) { gl.sph(0.04, [-0.34, 0.46, 0.07], accent, 1, 6); gl.sph(0.04, [0.34, 0.46, 0.07], accent, 1, 6); }
   if (g >= 2 && L >= 1) { gl.sph(0.04, [-0.3, -0.12, 0.07], accent, 1, 6); gl.sph(0.04, [0.3, -0.12, 0.07], accent, 1, 6); gl.sph(0.04, [0, -0.5, 0.07], accent, 1, 6); }
   const spins: WeaponSpin[] = [];
-  if (L >= 5) { spins.push({ geo: halo(0.72, 0.03, accent, [0, 0, 0]), pos: [0, 0.1, -0.1], axis: 2, speed: 0.8 }); spins.push({ geo: shards(4 + g, 0.6, 0.3, accent), pos: [0, 0.1, 0.1], axis: 1, speed: 1.5 }); }
   return done(b, gl, [0, 0.2, 0.12], spins);
 }
 
@@ -291,6 +283,5 @@ export function makeSword(accent: string, tier: number, o?: WOpts): WeaponGeo {
   if (g >= 1 && L >= 1) gl.box(0.05, 0.14 * (1 + g), 0.075, [0, y0 + 0.1 + 0.07 * (1 + g), 0], accent);
   if (g >= 2 && L >= 1) for (const s of [-1, 1]) gl.sph(0.05, [s * 0.38, 0.2, 0], accent, 1, 6);
   const spins: WeaponSpin[] = [];
-  if (L >= 5) { spins.push({ geo: halo(0.58, 0.028, accent, [0, 0, 0]), pos: [0, 0.2, -0.05], axis: 2, speed: 0.9 }); spins.push({ geo: shards(4 + g, 0.36, 0.36, accent, 0.18), pos: [0, y0 + len * 0.6, 0], axis: 1, speed: 1.6 }); }
   return done(b, gl, [0, y0 + len + 0.2, 0], spins);
 }

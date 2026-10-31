@@ -651,9 +651,6 @@ export const WeaponImg: React.FC<{ slug: string; size: number | string; rarity: 
         style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', transform: 'scale(1.22)', filter: `${glow} drop-shadow(0 2px 2px rgba(0,0,0,.55))`.trim(), pointerEvents: 'none' }} />
       {L >= 3 && (
         <svg viewBox="0 0 64 64" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', transform: 'scale(1.22)' }}>
-          {L >= 5 && <><circle cx="32" cy="32" r="29" fill="none" stroke={c} strokeOpacity=".55" strokeWidth="1.6" strokeDasharray="5 4" className="wi-halo" />
-            {[0, 1, 2, 3].map((i) => <path key={i} d={`M${32 + Math.cos(i * 1.57 + 0.4) * 29} ${32 + Math.sin(i * 1.57 + 0.4) * 29 - 3} l2.2 3 l-2.2 3 l-2.2 -3z`} fill={c} className="wi-shard" style={{ animationDelay: `${i * 0.5}s` }} />)}</>}
-          {L === 4 && <circle cx="32" cy="32" r="28" fill="none" stroke={c} strokeOpacity=".35" strokeWidth="1.2" />}
           {W_SPARK.slice(0, nSpark).map(([x, y, r], i) => (
             <path key={i} d={`M${x} ${y - r} L${x + r * .3} ${y - r * .3} L${x + r} ${y} L${x + r * .3} ${y + r * .3} L${x} ${y + r} L${x - r * .3} ${y + r * .3} L${x - r} ${y} L${x - r * .3} ${y - r * .3}Z`}
               fill={L >= 4 ? '#fff6c4' : '#ffffff'} className="wi-spark" style={{ animationDelay: `${i * 0.37}s`, transformOrigin: `${x}px ${y}px` }} />
