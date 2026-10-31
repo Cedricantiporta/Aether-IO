@@ -20,6 +20,8 @@ Read first: `CLAUDE.md`, `docs/HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/RUN_DE
 
 - Town Plan v6 (2026-10-31): 3-tier kingdom (L1 lower town, L2 Middle Town h 1.8, L3 Castle Hill h 3.8), walls grew 51 m north, grand castle (keep + wings + towers + ring road + gardens). Data: `engine/townData.ts` (TIERS/CASTLE*), `engine/castleGrounds.ts`; render `render/castleExterior.ts`. Map: `docs/TOWN_PLAN.md`.
 
+- 2026-10-31 Extended hero kit: 10 new skills (2 per class, keys 4/5, class Lv 12/18) in engine/systems/heroExtra.ts; details in docs/HANDOFF.md 3.5. spGainAt raised in the 20s/30s/40s (sp4 migration).
+
 ## Open
 - Eggs: owner's "eggs without a container" request is unclear (farm egg nests vs pet icons).
 - Tower milestone prizes still include gear/pets while the UI says crystals only.

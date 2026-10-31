@@ -183,6 +183,8 @@ export interface SkillLevels {
     e: number;
     s3: number;
     s4: number;
+    s5: number;   // extended kit (keys 4 / 5, heroExtra.ts)
+    s6: number;
     ult: number;
     
     // Passive Skills

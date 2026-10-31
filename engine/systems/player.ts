@@ -94,7 +94,7 @@ export function initPlayer(): void {
   p.shieldCharges = p.maxShieldCharges;
   p.shieldCd = 0;
   p.dashCdMax = DASH_CD;
-  p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = 0;
+  p.cd.q = p.cd.e = p.cd.s3 = p.cd.s4 = p.cd.s5 = p.cd.s6 = 0;
   p.ult = 0;
   p.arcane = p.arcaneMax = p.arcaneT = 0; p.radiant = p.radiantMax = p.radiantT = 0;
   resetPlayerSystem();
@@ -243,7 +243,7 @@ export function updatePlayer(dt: number): void {
   p.cd.q = tickDown(p.cd.q, dt);
   p.cd.e = tickDown(p.cd.e, dt);
   p.cd.s3 = tickDown(p.cd.s3, dt);
-  p.cd.s4 = tickDown(p.cd.s4, dt);
+  p.cd.s4 = tickDown(p.cd.s4, dt); p.cd.s5 = tickDown(p.cd.s5, dt); p.cd.s6 = tickDown(p.cd.s6, dt);
   p.cryT = tickDown(p.cryT, dt);
   p.buffT = tickDown(p.buffT, dt);
   if (p.guardT > 0) p.guardT = tickDown(p.guardT, dt);   // Shield Wall (owner: no heal)
@@ -540,7 +540,7 @@ export function updatePlayerVillage(dt: number): void {
   a.attackT = tickDown(a.attackT, dt * 4);
   a.castT = tickDown(a.castT, dt * 3);
   // skills + class dash work in town too (free: mana stays full; no enemies to hit)
-  p.cd.q = tickDown(p.cd.q, dt); p.cd.e = tickDown(p.cd.e, dt); p.cd.s3 = tickDown(p.cd.s3, dt); p.cd.s4 = tickDown(p.cd.s4, dt);
+  p.cd.q = tickDown(p.cd.q, dt); p.cd.e = tickDown(p.cd.e, dt); p.cd.s3 = tickDown(p.cd.s3, dt); p.cd.s4 = tickDown(p.cd.s4, dt); p.cd.s5 = tickDown(p.cd.s5, dt); p.cd.s6 = tickDown(p.cd.s6, dt);
   if (p.maxDashCharges < 1) p.maxDashCharges = 1;
   if (p.dashCdMax <= 0) p.dashCdMax = DASH_CD;
   if (p.dashCharges < p.maxDashCharges) { p.dashCd -= dt; if (p.dashCd <= 0) { p.dashCharges++; p.dashCd = p.dashCharges < p.maxDashCharges ? p.dashCdMax : 0; } }

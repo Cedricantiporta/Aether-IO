@@ -26,7 +26,7 @@ type Settings = SettingsT;
 /** Every shortcut, shown in Settings > Controls (engine/input.ts is the source of truth). */
 const KEYS_KB: [string, string][] = [
   ['WASD', 'Move'], ['Mouse', 'Aim'], ['Left click', 'Target an enemy (click-to-move: walk there)'], ['Right drag', 'Rotate camera'],
-  ['Space', 'Class dash'], ['1 2 3', 'Abilities (hold to aim)'], ['R', 'Ultimate'], ['F', 'Hold: basic attack (no auto-attack; you can walk while attacking) · accept a quest offer'],
+  ['Space', 'Class dash'], ['1 2 3 4 5', 'Abilities (hold to aim; 4 and 5 unlock at Lv 12 / 18)'], ['R', 'Ultimate'], ['F', 'Hold: basic attack (no auto-attack; you can walk while attacking) · accept a quest offer'],
   ['Z / X', 'Health / mana potion'], ['E', 'Interact / talk / loot (hold: harvest)'], ['V', 'Reset camera'],
   ['I', 'Bag'], ['C', 'Hero'], ['J', 'Quests'], ['O', 'Achievements'], ['Tab', 'Run upgrades (in a run)'], ['Esc', 'Pause / Settings · close a window'],
 ];
@@ -118,7 +118,7 @@ export const SettingsDialog: React.FC = () => {
             {tog('Auto-aim', 'autoAim', 'Lock the nearest enemy. Off: mouse aim, or the right aim stick on touch.')}
             {tog('Hard mode', 'hardMode', hardUnlocked ? 'Enemies have +40% HP, deal +35% damage and come in greater numbers. Rewards: +50% gold and XP, better item and card rarity odds. Takes effect from your next run.' : 'Clear a full run to unlock', !hardUnlocked)}
             {tog('Auto: chase enemies', 'autoChase', 'With AUTO on, your hero walks to enemies anywhere in the room (not during boss fights). Off: AUTO only fights enemies in reach of an attack or skill; you do the walking.')}
-            {tog('Auto skills', 'autoSkills', 'Skills 1/2/3 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
+            {tog('Auto skills', 'autoSkills', 'Skills 1-5 and the ultimate cast themselves at nearby enemies. Dash stays manual.')}
             {tog('Aim skills at mouse', 'aimAtCursor', 'Off: skills and dash go where your hero is facing. On: hold the key to aim at the mouse cursor.')}
             {tog('Auto potions', 'autoPotions', 'Drink a potion at 70% HP / MP or lower.')}
             {tog('Click to move', 'clickMove', 'Left-click the ground to walk there (in town and on adventures). WASD still works; any key press cancels the walk.')}

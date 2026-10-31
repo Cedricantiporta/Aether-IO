@@ -78,7 +78,7 @@ export function makePlayerRuntime(): PlayerRuntime {
     alive: true, downed: false, pos: v(), vel: v(), facing: 0, aim: new Vector3(0, 0, -10),
     hp: 100, mana: 100,
     dashT: 0, dashDir: v(), dashIframes: true, dashCharges: 1, maxDashCharges: 1, dashCd: 0, dashCdMax: 4,
-    cd: { q: 0, e: 0, s3: 0, s4: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11 },
+    cd: { q: 0, e: 0, s3: 0, s4: 0, s5: 0, s6: 0 }, cdMax: { q: 7, e: 6, s3: 9, s4: 11, s5: 8, s6: 9 },
     ult: 0, ultT: 0, cryT: 0, buffT: 0, buffDmg: 0, buffDef: 0, buffHaste: 0, guardT: 0, guardRed: 0, avatarT: 0, titanT: 0, whirlT: 0, air: 0,
     aegis: 0, aegisMax: 0, arcane: 0, arcaneMax: 0, arcaneT: 0, radiant: 0, radiantMax: 0, radiantT: 0, shieldCharges: 1, maxShieldCharges: 1, shieldCd: 0, shieldCdMax: 40,
     invulnT: 0, knockT: 0, knockDur: 0.2, knockDist: 0, knockDx: 0, knockDz: 0, knockDone: 0, downT: 0, downMax: 0, knockImmuneT: 0, hawkT: 0, rageT: 0, sprintT: 0, vitalityT: 0,

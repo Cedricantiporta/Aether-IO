@@ -20,8 +20,8 @@ const noSummons = (): boolean => { for (const m of world.minions) if (m.active) 
 export const ActionBar: React.FC = () => {
   const { hero, skillLevels, heroLv } = useGameStore(useShallow((s) => ({ hero: s.hero, skillLevels: s.skillLevels, heroLv: s.level })));
   const dashOpen = heroLv >= DASH_UNLOCK_LV;   // the dash unlocks at class level DASH_UNLOCK_LV (6)
-  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4')] as const));
-  const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3] };
+  const costs = useGameStore(useShallow((s) => [s.getManaCost('q'), s.getManaCost('e'), s.getManaCost('s3'), s.getManaCost('s4'), s.getManaCost('s5'), s.getManaCost('s6')] as const));
+  const COST_OF: Record<ActiveSlot, number> = { q: costs[0], e: costs[1], s3: costs[2], s4: costs[3], s5: costs[4], s6: costs[5] };
   const cdr = useGameStore((s) => s.stats.cooldownReduction);
   const hpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Health') ? n + (i.quantity || 1) : n), 0));
   const mpQty = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.name.includes('Mana') ? n + (i.quantity || 1) : n), 0));

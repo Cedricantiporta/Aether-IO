@@ -192,10 +192,11 @@ const mpQty = (s: GS) => s.inventory.reduce((n, i) => (i.type === 'POTION' && i.
 // Skill wheel (MMO style): the big ATTACK button in the middle, skills on an arc around it (from the lower inner side over
 // the top), the ultimate at the top, dash on the outer upper side, Auto at the outer edge, potions below.
 const WC = 2.0, WR = 1.9;   // wheel centre (units from the outer-bottom corner) and arc radius
-const arc = (deg: number, size: number): At => { const a = (deg * Math.PI) / 180; return { cx: WC + WR * Math.cos(a) - size / 2, cy: WC + WR * Math.sin(a) - size / 2, size }; };
+const arc = (deg: number, size: number, R = WR): At => { const a = (deg * Math.PI) / 180; return { cx: WC + R * Math.cos(a) - size / 2, cy: WC + R * Math.sin(a) - size / 2, size }; };
 const G = {
   atk: { cx: WC - 0.8, cy: WC - 0.8, size: 1.6 },
   s1: arc(-12, 0.95), s2: arc(28, 0.95), s3: arc(64, 0.95),
+  s4: arc(14, 0.85, 3.2), s5: arc(50, 0.85, 3.2),   // extended kit (Lv 12 / 18) on an outer ring
   ult: arc(102, 1.1), dash: arc(140, 0.95), auto: arc(176, 0.62),
   hp: { cx: 4.25, cy: 0.5, size: 0.72 }, mp: { cx: 3.4, cy: 0.45, size: 0.72 },   // (centres high enough that the whole button stays on screen)
 };
@@ -233,6 +234,7 @@ export const TouchControls: React.FC = () => {
     }, 400);
     return () => window.clearInterval(id);
   }, [village]);
+  const lv4 = useGameStore((s) => (s.skillLevels[ACTIVE_ORDER[s.hero][3]] ?? 0) > 0), lv5 = useGameStore((s) => (s.skillLevels[ACTIVE_ORDER[s.hero][4]] ?? 0) > 0);   // the extended-kit buttons appear once learned
   const dashOpen = useGameStore((s) => s.level >= DASH_UNLOCK_LV);   // the dash button appears at class level DASH_UNLOCK_LV (6) (hook before the early return: panels opening on touch crashed the UI)
   if (!active) return null;
 
@@ -278,6 +280,8 @@ export const TouchControls: React.FC = () => {
         <SkillBtn skill="s1" label="Skill 1" at={G.s1} left={left} icon={icon(0)} {...sk(0)} onDrag={setDrag} />
         <SkillBtn skill="s2" label="Skill 2" at={G.s2} left={left} icon={icon(1)} {...sk(1)} onDrag={setDrag} />
         <SkillBtn skill="s3" label="Skill 3" at={G.s3} left={left} icon={icon(2)} {...sk(2)} onDrag={setDrag} />
+        {lv4 && <SkillBtn skill="s4" label="Skill 4" at={G.s4} left={left} icon={icon(3)} {...sk(3)} onDrag={setDrag} />}
+        {lv5 && <SkillBtn skill="s5" label="Skill 5" at={G.s5} left={left} icon={icon(4)} {...sk(4)} onDrag={setDrag} />}
  {dashOpen && <SkillBtn skill="dash" label="Dash" at={G.dash} left={left} accent="#7ad0ff" icon={<PaintedIcon id={dDef.icon} />} getCd={() => (world.village.ride.on ? { t: world.village.ride.dashCd, max: 6 } : { t: p.dashCd, max: p.dashCdMax })} testId="tc-dash" aimable={hero !== 'BARBARIAN'} onDrag={setDrag} />}
         {potion('hp')}
         {potion('mp')}

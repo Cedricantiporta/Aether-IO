@@ -13,7 +13,7 @@ export const START_SP = 3;
 export const SP_PER_LEVEL = 2;
 /** (owner 2026-10-25) skill points for reaching level L: 2 up to Lv 9, then 4 / 5 / 6 / 7 per level in the 10s / 20s / 30s / 40s,
  *  so every skill of a class can be maxed right at Lv 50 (a full class costs 239 SP; Lv 50 gives 246). */
-export const spGainAt = (L: number): number => (L < 10 ? 2 : L < 20 ? 4 : L < 30 ? 5 : L < 40 ? 6 : 7);
+export const spGainAt = (L: number): number => (L < 10 ? 2 : L < 20 ? 4 : L < 30 ? 6 : L < 40 ? 7 : 9);   // (2026-10-31: 20s +1, 30s +1, 40s +2 so the two extended-kit skills per class (+40 SP) stay trainable at Lv 50)
 /** Total skill points a class has earned by level `lv` (3 to start). */
 export function spTotalAt(lv: number): number { let n = START_SP; for (let L = 2; L <= lv; L++) n += spGainAt(L); return n; }
 export const MAX_LEVEL = 50;
@@ -26,11 +26,16 @@ export const ULT_UNLOCK_LV = 10;
 /** XP needed to go from `lv` to `lv + 1`. */
 export const xpNeed = (lv: number): number => Math.round(250 * Math.pow(Math.max(1, lv), 1.5));
 
+/** Class levels at which the two extended-kit skills (keys 4 / 5) unlock. */
+export const EXTRA_UNLOCK_LV = [12, 18] as const;
+
 /** Hero level a skill key unlocks at (0 = available from level 1). */
 export function unlockLevel(hero: HeroClass, key: string): number {
   const order = ACTIVE_ORDER[hero];
   if (key === order[1]) return 4;    // (owner: skill 2 at Lv 4)
-  if (key === order[2]) return 8;    // (owner: skill 3 - e.g. Judgment - at Lv 8)
+  if (key === order[2]) return 8;
+  if (key === order[3]) return EXTRA_UNLOCK_LV[0];   // extended kit (keys 4 / 5)
+  if (key === order[4]) return EXTRA_UNLOCK_LV[1];    // (owner: skill 3 - e.g. Judgment - at Lv 8)
   if (key === 'ult') return ULT_UNLOCK_LV;
   if (key === 'regen') return 2;
   const passives = Object.entries(SKILLS_INFO).filter(([k, i]) => (i as { type?: string; classType?: string }).type === 'PASSIVE' && (i as { classType?: string }).classType === hero && k !== 'dash').map(([k]) => k);
