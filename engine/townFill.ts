@@ -17,6 +17,7 @@
 // ============================================================================
 import { HORSE_STATUES } from './qtVillage';
 import { CG_BANNERS, CG_HEDGES, CG_STATUES, CG_PROPS, CG_TREES, CG_FLOWERS, CG_BEDS, CG_YARD_RACKS, CG_YARD_HAY, CG_SEATS } from './castleGrounds';
+import { TY_HEDGES, TY_TREES, TY_FLOWERS, TY_BOX } from './trainerYard';
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, tierRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, BOSS_PORTAL, BOSS_PORTAL_S, bossAt, ADV_VILLAGE, inAdvPlaza, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
@@ -390,7 +391,12 @@ grove(Z(-23, 8, 2.2, 2), 2, [OAKS(1, [0.7, 0.9]), BUSHES(2, [0.6, 0.8])], 819, 0
 // ---- the rises (cottages at both south corners)
 grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);   // (owner: no loose bushes on the town paving)
 // ---- chapel quarter: a cloister garden east of the chapel (hedged on three sides, beds inside), pines on the hill's north edge
-hedge(-22.6, -37.2, -13.4, -37.2); hedge(-13.4, -37.2, -13.4, -22.6);
+// (Town Plan v6.1, owner: the Skill Trainer moved off the stair landing) the cloister garden is now the Skill Trainer's TRAINING YARD (data: engine/trainerYard.ts):
+// hedge ring (south side = picket fence in townData FENCES, gates south + east), two trees, flower clumps; the tent / dummies / targets / rack are drawn by render/Town.tsx Station
+for (const [x1, z1, x2, z2] of TY_HEDGES) hedge(x1, z1, x2, z2);
+for (const [x, z, role] of TY_TREES) { const piece = role === 0 ? PIECES.oak : PIECES.blossom; prop(pick(piece, 0.3 + role * 0.4), x, z, 0.7 + role, 0.9, undefined, 0.3); }
+for (const [x, z, sc] of TY_FLOWERS) deco(PIECES.flowers, x, z, x * 7.3, sc, sc);
+rects.push([TY_BOX.x0 - 0.5, TY_BOX.z0 - 0.5, TY_BOX.x1 + 0.5, TY_BOX.z1 + 0.5]);   // (the loose groves below keep out of the yard)
 grove(Z(-31, -37.4, 5, 1.4), 4, [PINES(1, [0.8, 1])], 32, 1.0, 2.4);
 // ---- trainer yard (north of the street, west of the castle path): hay, crates, a verge of flowers
 // (owner 2026-10-22: loose barrels / crates are tucked against walls, never in the open: the hill's retaining wall, the terrace corner)

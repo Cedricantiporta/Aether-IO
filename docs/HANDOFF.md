@@ -161,7 +161,7 @@ town (and closes the open panel first).
   (depth 1-10), Desert, Coral Isles and Frostpeak take their time of day from the town clock at run start.
 - **Shops** (shopkeepers are the click targets; each has a name): Supplies (potions), Armory, Blacksmith (Upgrade / Craft /
   Reforge / Fuse / Shards), Pet Stable, Fortune Teller (Summon window), Warehouse (shared storage), Tech House (permanent
-  gem upgrades), Elixir Brewer, Fishmonger, Mining Supplies, Skill Trainer (Master Varek). Panels:
+  gem upgrades), Elixir Brewer, Fishmonger, Mining Supplies, Skill Trainer (Master Varek; since 2026-10-31 in the **training yard east of the chapel on the Middle Town**, tent (-16.2, -32), data `engine/trainerYard.ts`, docs/TOWN_PLAN.md v6.1). Panels:
   `ui/panels/shop/*`, `ui/panels/SummonWindow.tsx`. Prices: gear x4 at the Armory, pets x1.4; gear/pets sell for 90%,
   loot for 2x (`constants.ts`).
 - **Areas** (`world.village.area`): TOWN, CASTLE (King Aldric, throne dais), CHURCH (Sister Elowen), TAVERN, CAVE

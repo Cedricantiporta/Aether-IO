@@ -7,8 +7,7 @@
 // Coordinates are world x / z. A building's door faces +z at rot = 0 (facing vector = (sin rot, cos rot)).
 //
 // Layout (compact ~60% footprint, functional buildings spread out on their own spots):
-//   spawn / plaza (0, 2) -> north: castle path, Skill Trainer (-10.5,-19) on the open paving west of
-//   the castle steps (in front of the dark-roofed house at (-19.5,-14))
+//   spawn / plaza (0, 2) -> north: castle path, the Skill Trainer's training yard on the Middle Town east of the chapel (tent (-16.2, -32), engine/trainerYard.ts)
 //   west of the plaza Fortune Teller (-21, 1.5) / Pet Stable (-30, 2), east Blacksmith (27, 2), gate (0, 38) at the end of the
 //   main road. Outside the gate: a wide meadow, the Elixir Brewer's hut out in the west meadow (constants SHOP_POSITIONS
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Endless Tower at the road's end. The Adventure Portal is the plaza's centrepiece.
@@ -17,6 +16,7 @@
 import { CG_LAWNS, CG_LAMPS, CG_SEATS, CG_PLANTERS, CG_STATUES, CG_PROPS, CG_GAZEBO, CG_YARD_RACKS, CG_YARD_HAY } from './castleGrounds';
 import { HORSE_STATUES } from './qtVillage';
 import { SHRINE_POS, TRAINER_POS } from './world';
+import { TY_FENCES, TY_LAMPS, TY_SEATS, TY_GATE_E, TY_BOX } from './trainerYard';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { v3Ring, v3Disc } from './kitV3Data';
 import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff, lakeSouthZ } from './beachData';
@@ -338,6 +338,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: WELL_POS.x - 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 },
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
   ...CG_SEATS.map(([x, z, yaw]) => ({ x, z, yaw, y: 0.55 })),   // (Town Plan v6: the Royal Way lawns, the castle gardens)
+  ...TY_SEATS.map(([x, z, yaw]) => ({ x, z, yaw, y: 0.55 })),   // (the training yard: a bench watching the archery row, one on the approach)
   // (owner 2026-10-25) no benches on the south street or the avenue any more (they stood in the walkways)
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   { x: -5.8, z: 96, yaw: -Math.PI / 2, y: 0.55 }, { x: 5.8, z: 102, yaw: Math.PI / 2, y: 0.55 },   // (audit 2026-10-31) the long bare stretch of the forest road: a rest bench each side, facing the road
@@ -516,7 +517,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: -29.2, x2: 42.5, z2: -29.2, w: ROAD_W.lane },   // Tavern Row lane (the back row of houses faces it; from the Royal Way)
   { x1: -31, z1: -41.4, x2: 40, z2: -41.4, w: ROAD_W.lane },   // Terrace Street (the north row of Middle Town houses faces it; crosses the Royal Way)
   { x1: -30, z1: -41.4, x2: -30, z2: TERRACE.z1 + 0.3, w: ROAD_W.branch }, { x1: 30, z1: -41.4, x2: 30, z2: TERRACE.z1 + 0.3, w: ROAD_W.branch },   // to the side flights up to Castle Hill
-  { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (on the Middle Town, west of the Royal Way)
+  { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TY_BOX.z1 + 0.4, w: ROAD_W.street },   // the training yard's approach (3.4 m: street -> the x -16 flight -> the yard's south gate)
+  { x1: TY_BOX.x1 + 0.3, z1: TY_GATE_E.z, x2: 0, z2: TY_GATE_E.z, w: ROAD_W.lane },   // the yard's east gate -> the Royal Way (a lane, mirror of the Tavern Row lane)
   // the castle ring road: a loop all the way round the castle (walkable 360 degrees, 8+ m of garden each side), the side flights land on it
   { x1: CASTLE_RING.x0, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x1, z2: CASTLE_RING.zFront, w: CASTLE_RING.w }, { x1: CASTLE_RING.x0, z1: CASTLE_RING.zBack, x2: CASTLE_RING.x1, z2: CASTLE_RING.zBack, w: CASTLE_RING.w },
   { x1: CASTLE_RING.x0, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x0, z2: CASTLE_RING.zBack, w: CASTLE_RING.w }, { x1: CASTLE_RING.x1, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x1, z2: CASTLE_RING.zBack, w: CASTLE_RING.w },
@@ -594,6 +596,7 @@ export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: 
 const HAND_FENCES: [number, number, number, number][] = [
   // (owner 2026-10-31) Lantern Lane's yards: the back fence of the two south houses, a gate-less stub beside the well, the back fence behind the market stalls
   [-23.2, 159.8, -9.8, 159.8], [-23.2, 159.8, -23.2, 157.4], [-24.0, 136.6, -15.2, 136.6], [-15.2, 136.6, -15.2, 138.8],
+  ...TY_FENCES,   // (Town Plan v6.1: the training yard's south side, a gate gap for the x -16 approach)
   // (the avenue's fences made way for the market stalls; houses get their yard fences from YARD_FENCES below)
   // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
   [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
@@ -711,6 +714,7 @@ export const LAMPS: [number, number][] = [
   // the riverside park
   [22, riverBank(22, 0) - 3.4], [31, riverBank(31, 0) - 3.4],
   ...CG_LAMPS,   // (Town Plan v6: the Royal Way, the castle way and the ring road, engine/castleGrounds)
+  ...TY_LAMPS,   // (the training yard, engine/trainerYard)
 ];
 // (lamps never stand inside a cottage lot or in its gate opening)
 for (let i = LAMPS.length - 1; i >= 0; i--) {
@@ -1167,7 +1171,7 @@ export const NPCS: NpcDef[] = [
   {
     name: 'Wren', role: 'Scholar', model: 'WIZARD', tint: '#d7e0ff', scale: 1, prop: 'staff', accent: '#a9b8ff', home: [-17.4, -7.6],   // by the market stall (clear of the Skill Trainer's tent)
     talk: [
-      ['The Fortune Teller by the plaza answers wishes with fortune. Offer her gems and see who answers.', 'The Skill Trainer, by the castle steps on the west side, will sharpen what you already know.'],
+      ['The Fortune Teller by the plaza answers wishes with fortune. Offer her gems and see who answers.', 'The Skill Trainer drills in the training yard beside the chapel, up the steps west of the Royal Way. He will sharpen what you already know.'],
       ['Knowledge is the sharpest weapon. And a very good staff, if I may say.'],
     ],
     bubbles: ['Fascinating...', 'The Altar hums tonight.', 'Spend your skill points!'],
@@ -1363,9 +1367,9 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Crackle, crackle...', 'Mushrooms for supper.', 'Who goes there?'],
     gift: { quest: 'pip_secret', once: 'aether-survivor-hermit-v1', gold: 1000 /* x GOLD_SCALE = 10,000 */, text: 'Old Wend pats his pockets, finds a sack he forgot he owned, and drops it in your hands. "Coin is just heavy pebbles. Do not tell the Elder." (+10,000 gold)' },
   },
-  // the Skill Trainer beside the training tent west of the castle steps (talking opens the skill panel)
+  // the Skill Trainer beside the training tent in the training yard east of the chapel, Middle Town (talking opens the skill panel)
   {
-    name: 'Master Varek', role: 'Skill Trainer', model: 'KNIGHT', tint: '#ffe0b0', scale: 1.05, prop: 'spear', accent: '#ffb04a', home: [TRAINER_POS[0] + 3.1, TRAINER_POS[2] + 1.6], opens: 'SKILLS',
+    name: 'Master Varek', role: 'Skill Trainer', model: 'KNIGHT', tint: '#ffe0b0', scale: 1.05, prop: 'spear', accent: '#ffb04a', home: [TRAINER_POS[0] - 2.9, TRAINER_POS[2] + 2.1], opens: 'SKILLS',
     talk: [
       ['Footwork first, flourish later.', 'Spend your skill points here. Every point is a lesson you already paid for in blood.'],
       ['A new skill opens as you grow. Come back after every few levels.', 'Let\'s see what you have learned.'],
