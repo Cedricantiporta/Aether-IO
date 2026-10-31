@@ -75,17 +75,14 @@ export function treeFor(kind: number, h: number, x = 0, z = 0): NKPiece {
   return h < 0.25 ? 'tree_oak_big' : h < 0.62 ? 'tree_oak_small' : 'tree_birch';
 }
 
-/** Quaternius flowers (the nature pack) planted in a stone bed: rect of half extents hx, hz about (cx, cz) turned by ry, soil top at y. Replaces the kit's cube flowers + ball bushes. */
+/** The town's flower-on-mound patches (nature_kit_v1 flower_patch, r 0.9 at scale 1) planted in a stone bed: rect of half extents hx, hz about (cx, cz) turned by ry, soil top at y. About len/width patches along the
+ *  long side, squashed to the bed's width. Replaces the kit's cube flowers, the ball bushes and the single Quaternius flower cards (owner 2026-10-31). */
 function bedPlants(S: Sets, cx: number, cz: number, ry: number, hx: number, hz: number, y: number, k: number): void {
-  const c = Math.cos(ry), sn = Math.sin(ry), area = hx * hz * 4, n = Math.max(3, Math.min(9, Math.round(area * 2.4)));
-  const FL = ['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single'], r = mulberry32(Math.floor(cx * 91 + cz * 17 + k * 7 + 1000));
-  const long = hx >= hz, cols = long ? n : 1, rows = long ? 1 : n;
+  const c = Math.cos(ry), sn = Math.sin(ry), r = mulberry32(Math.floor(cx * 91 + cz * 17 + k * 7 + 1000));
+  const long = hx >= hz, len = Math.max(hx, hz), wid = Math.min(hx, hz), n = Math.max(1, Math.min(4, Math.round(len / Math.max(wid, 0.4)))), sc = Math.max(0.35, Math.min(1.0, wid / 0.85));
   for (let i = 0; i < n; i++) {
-    const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, jx = (r() - 0.5) * 0.35, jz = (r() - 0.5) * 0.5;
-    const lx = long ? t * (hx - 0.28) + jx * 0.4 : (r() - 0.5) * 2 * (hx - 0.28), lz = long ? (r() - 0.5) * 2 * (hz - 0.25) + jz * 0.2 : t * (hz - 0.28) + jz * 0.4;
-    const x = cx + lx * c + lz * sn, z = cz - lx * sn + lz * c, bush = i % 4 === 1, sc = (bush ? 0.75 : 0.55 + r() * 0.2);
-    put(S, QT_PREFIX + (bush ? 'Bush_Common_Flowers' : FL[Math.floor(r() * FL.length)]), P(x, y, z, r() * TAU, sc, sc));
-    void cols; void rows;
+    const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1, u = t * Math.max(0, len - sc * 0.8) + (r() - 0.5) * 0.2, lx = long ? u : 0, lz = long ? 0 : u;
+    put(S, 'flower_patch', P(cx + lx * c + lz * sn, y - 0.04, cz - lx * sn + lz * c, r() * TAU, sc * (0.9 + r() * 0.2), sc * (0.9 + r() * 0.3)));
   }
 }
 
@@ -358,12 +355,15 @@ function bushSwap(q: QualityCfg, out: Sets): void {
 
 /** Quaternius (render/qtNature.tsx) walk-through decor of the town + meadows (engine/townFill QT_DECOR), thinned on the lower tiers. */
 function qtDecor(q: QualityCfg, out: Sets): void {
+  const kept: number[] = [];   // x, z of the flower patches already placed (a patch is ~1.8 m wide: keep them 1.9 m apart so they read as separate mounds)
   QT_DECOR.forEach(([piece, [x, z, ry, sx, sy, sz]], i) => {
     if (q.name === 'LOW' ? i % 3 !== 0 : q.name === 'MEDIUM' ? i % 3 === 2 : false) return;
     if (inSea(x, z)) return;
+    if (FLOWER_QT.test(piece)) { for (let j = 0; j < kept.length; j += 2) if ((kept[j] - x) ** 2 + (kept[j + 1] - z) ** 2 < 3.6) return; kept.push(x, z); const k = Math.min(1.25, sx * 0.85); put(out, 'flower_patch', { x, y: groundAt(x, z) - 0.02, z, ry, sx: k, sy: k * (sy / sx), sz: k }); return; }   // (owner 2026-10-31: every flower is the mounded kit patch)
     put(out, piece, { x, y: groundAt(x, z) - 0.02, z, ry, sx, sy, sz });
   });
 }
+const FLOWER_QT = /^qt_(N_Flowers|Flower_[34]_(Group|Single))$/;
 
 /** EVERY tree of the town + outskirts (oak / birch / fruit / blossom / willow / the two layered pines / palms: TOWN_TREES, the grove + park tables of townFill, the forest ring, the beach palms)
  *  becomes a Quaternius pack 2 tree (`N_*`, public/models/nature_qt2.glb), sized like the toy tree it replaces (same height x 1.12 x 1.4, 4.8 .. 7.6 m, crowns widened with it): oak -> CommonTree /

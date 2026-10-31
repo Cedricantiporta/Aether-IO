@@ -1,16 +1,18 @@
 // (owner) The Font dream (director plan.dream): the Greenwood clearing turned into a garden - a sea of flowers either side
 // of the walk and a clear stream winding across it, with a little wooden footbridge where the walk to Aelia crosses it.
 // Decoration only (the stream is shallow: no colliders). Built once per dream room from where the hero woke.
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { AdditiveBlending, BufferAttribute, CanvasTexture, Points, PointsMaterial, SRGBColorSpace, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
 import { world } from '../engine/world';
 import { events } from '../engine/events';
 import { GB, litMat, mulberry32 } from './util';
 import { makeWaterMaterial } from './waterFx';
+import { FlowerPatches } from './FlowerPatches';
+import type { Place } from './natureKit';
 
 const PETALS = ['#ff9ec4', '#ffffff', '#ffd75e', '#b9a6ff', '#ff7a8a', '#8fd0ff', '#ffb36b', '#f6c8ff'];
-const MAX_FLOWERS = 1400;
+const MAX_FLOWERS = 230;   // (owner 2026-10-31: the kit's flower-on-mound patches, ~1.8 m wide each, instead of 1400 tiny procedural flowers)
 
 interface Garden { flowers: { x: number; z: number; s: number; r: number; c: number }[]; river: BufferGeometry; deco: BufferGeometry }
 
@@ -52,18 +54,10 @@ function buildGarden(): Garden {
     if (Math.abs(across - (Math.sin(along * 0.11) * 1.2)) < 2.4) continue;   // the walk
     const [rx, rz] = cl(across);
     if (Math.hypot(x - rx, z - rz) < W + 0.8) continue;                        // the stream
-    flowers.push({ x, z, s: 0.75 + rnd() * 0.6, r: rnd() * 6.28, c: (rnd() * PETALS.length) | 0 });
+    if (flowers.some((f) => (f.x - x) ** 2 + (f.z - z) ** 2 < 2.6)) continue;   // (patches stay apart)
+    flowers.push({ x, z, s: 0.95 + rnd() * 0.55, r: rnd() * 6.28, c: 0 });
   }
   return { flowers, river, deco: deco.build() };
-}
-
-function flowerGeo(): BufferGeometry {
-  const b = new GB([0.9, 1.08]);
-  b.cyl(0.02, 0.025, 0.36, 4, [0, 0.18, 0], '#3f8a3a');
-  b.box(0.16, 0.02, 0.07, [0.07, 0.12, 0], '#4f9a44', [0, 0, 0.5]);
-  for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; b.sph(0.075, [Math.cos(a) * 0.08, 0.38, Math.sin(a) * 0.08], '#ffffff', [1, 0.45, 1], 5); }
-  b.sph(0.05, [0, 0.4, 0], '#ffe9a0', 1, 5);
-  return b.build();
 }
 
 export function DreamGarden() {
@@ -81,20 +75,13 @@ export function DreamGarden() {
 }
 
 function GardenMeshes({ g }: { g: Garden }) {
-  const geo = useMemo(flowerGeo, []);
-  const mat = useMemo(() => litMat({ roughness: 0.8 }), []);
+  const patches = useMemo<Place[]>(() => g.flowers.map((f) => ({ x: f.x, y: 0, z: f.z, ry: f.r, sx: f.s, sy: f.s, sz: f.s })), [g]);
   const water = useMemo(() => { const m = makeWaterMaterial({ shore: 'attr', span: 1.3, shallow: '#6fe6e0', deep: '#3d9be0' }); m.side = DoubleSide; return m; }, []);
   const decoMat = useMemo(() => litMat({ roughness: 0.9 }), []);
-  const inst = useRef<InstancedMesh>(null!);
-  useEffect(() => {
-    const o = new Object3D(), c = new Color();
-    g.flowers.forEach((f, i) => { o.position.set(f.x, 0, f.z); o.rotation.set(0, f.r, 0); o.scale.setScalar(f.s); o.updateMatrix(); inst.current.setMatrixAt(i, o.matrix); inst.current.setColorAt(i, c.set(PETALS[f.c])); });
-    inst.current.count = g.flowers.length; inst.current.instanceMatrix.needsUpdate = true; if (inst.current.instanceColor) inst.current.instanceColor.needsUpdate = true;
-  }, [g]);
-  useEffect(() => () => { geo.dispose(); mat.dispose(); water.dispose(); decoMat.dispose(); }, [geo, mat, water, decoMat]);
+  useEffect(() => () => { water.dispose(); decoMat.dispose(); }, [water, decoMat]);
   return (
     <>
-      <instancedMesh ref={inst} args={[geo, mat, MAX_FLOWERS]} frustumCulled={false} receiveShadow />
+      <Suspense fallback={null}><FlowerPatches places={patches} /></Suspense>
       <mesh geometry={g.river} material={water} />
       <DreamMotes />
       <mesh geometry={g.deco} material={decoMat} castShadow receiveShadow />
