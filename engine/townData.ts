@@ -323,6 +323,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
   // (owner 2026-10-25) no benches on the south street or the avenue any more (they stood in the walkways)
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
+  { x: -5.8, z: 96, yaw: -Math.PI / 2, y: 0.55 }, { x: 5.8, z: 102, yaw: Math.PI / 2, y: 0.55 },   // (audit 2026-10-31) the long bare stretch of the forest road: a rest bench each side, facing the road
   // (owner) benches on the green looking out over the river (yaw 0 = facing south), two of them in the little east park
   ...[-30, -20, 22.6, 34, 39.6].map((x) => ({ x, z: riverBank(x, 0) - 3.2, yaw: 0, y: 0.55 })),   // (the east park's benches flank the gazebo)
 ];
@@ -330,9 +331,9 @@ export const TOWN_SEATS: SeatSpec[] = [
 /** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
 export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
 /** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
-export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-14, 122.6], [-24.0, 153.2]];   // (+ Lantern Lane's well)
+export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-11.4, 122.6], [-24.0, 153.2]];   // (+ Lantern Lane's well)
 /** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
-export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6], [-2.4, 138.6], [-24.6, 146.2]];   // (+ the Adventure Plaza's north entrance and Lantern Lane's corner)
+export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6], [-2.4, 138.6], [-24.6, 146.2], [3.6, 91.2], [-3.6, 110.2], [6.4, 131.6]];   // (+ the Adventure Plaza's north entrance and Lantern Lane's corner)
 /** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
 export const STEP_PATHS: [number, number, number, number][] = [
   [30.1, 100.2, 30.1, 101.6], [41.4, 102.0, 41.4, 103.4],   // farmhouse + barn doors
@@ -404,18 +405,18 @@ export const HOUSES: HouseSpec[] = [
   // the adventurer's house (HERO_HOUSE): West Rise, south row of the lane z 23.2, door north onto the lane, back to the south wall
   { ...VF('House_1', HERO_HOUSE.x, 25.6, Math.PI), wall: '#e9dfc8', door: '#8a2f22' },
   // North Street, south side (doors north onto the street, front line z -3.4): a west row and an east row
-  VF('House_1', -40, -3.4, Math.PI), VF('House_2', -33.7, -3.4, Math.PI), VF('House_1', -27.4, -3.4, Math.PI),
-  VF('House_2', 24, -3.4, Math.PI), VF('House_1', 30.3, -3.4, Math.PI), VF('House_1', 36.6, -3.4, Math.PI),
+  VF('House_1', -40, -3.4, Math.PI), VF('House_2', -33.48, -3.4, Math.PI), VF('House_1', -26.96, -3.4, Math.PI),
+  VF('House_2', 24, -3.4, Math.PI), VF('House_1', 30.52, -3.4, Math.PI), VF('House_1', 36.95, -3.4, Math.PI),
   // the rises: north rows face the lane z 23.2 from the north (front line z 20.8), south rows face it from the south (front line z 25.6; backs to the south wall)
   VF('House_1', -39.5, 20.8, 0), VF('House_1', 39.5, 20.8, 0), VF('House_1', 38.5, 25.6, Math.PI),
   // Market Row: south of the lane either side of the avenue, doors north (front line z 25.6)
-  VF('House_1', -26.2, 25.6, Math.PI), VF('House_1', -20.4, 25.6, Math.PI),   // (the chicken pen PEN fills x -16.4..-9)
-  VF('Inn', 11.8, 25.6, Math.PI), VF('House_1', 21.7, 25.6, Math.PI),
+  VF('House_1', -26.8, 26.4, Math.PI), VF('House_1', -20.4, 26.4, Math.PI),   // (the chicken pen PEN fills x -16.4..-9)
+  VF('Inn', 11.8, 26.4, Math.PI), VF('House_1', 21.7, 26.4, Math.PI),
   // Tavern Row: a row against the north wall, doors south onto the Tavern Row lane (z -29.2, ROADS), backs to the wall
   VF('House_1', 16, -31.6, 0), VF('House_1', 22.4, -31.6, 0), VF('House_1', 28.8, -31.6, 0), VF('House_1', 35.2, -31.6, 0),
   // Lantern Lane (owner 2026-10-31): the little village between the Adventure Plaza and the Boss Trials path. Doors face the lane (ADV_ROADS), each a different way / wall colour.
   { ...V('House_2', -21.0, 141.7, 0), wall: '#f2d9b8', door: '#2f5a7a' }, { ...V('House_1', -13.0, 154.5, Math.PI), wall: '#d9e6c8', door: '#8a2f22' }, { ...V('House_2', -20.2, 155.3, Math.PI), wall: '#f1c9c0', door: '#3e5a2e' },
-  { ...V('House_1', -32.6, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -24.8, 133.9, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
+  { ...V('House_1', -32.6, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -23.4, 133.2, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
 ];
 
 /** (no yards: the houses stand directly on the streets, see HOUSES) */
@@ -431,19 +432,19 @@ export interface ShopLook { extra: LookEntry[]; dress: LookEntry[]; nk: LookEntr
 export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
   // kit v3 signatures (owner 2026-10-21): every shop has its own pieces in `nk` (drawn through engine/townFill FILL, batched with the nature kit); the v2 `dress` entries are lamps / planters.
   // charm on all of them: potted_plant_a / b flanking the counter, an awning_red / green over the side window.
-  PETS: { note: 'doghouse in a little pen of pet_pen_fence behind the shop, bird_cage, flower boxes (2x2 west pair, south)', extra: [], dress: [['flower_planter', -2.9, 5.0, 0, 1, 0.8], ['flower_planter', 2.9, 5.0, 0, 1, 0.8]],
+  PETS: { note: 'doghouse in a little pen of pet_pen_fence behind the shop, bird_cage, flower boxes (2x2 west pair, south)', extra: [], dress: [['flower_planter', -2.2, 5.0, 0, 1, 0.8], ['flower_planter', 2.9, 5.0, 0, 1, 0.8]],
     nk: [['doghouse', 0.2, -4.4, 0.5, 1.0, 0.8], ['pet_pen_fence', 0, -6.3, 0, 1.0], ['pet_pen_fence', -2.2, -4.6, Math.PI / 2, 1.0], ['pet_pen_fence', 2.2, -4.6, Math.PI / 2, 1.0],
-      ['bird_cage', 2.7, 2.9, 0.3, 1.0, 0.4], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
+      ['bird_cage', 2.7, 2.9, 0.3, 1.0, 0.4], ['potted_plant_a', -2.4, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
   FORTUNE: { note: 'hanging lanterns (owner: no striped tent stuck between the houses) (2x2 west pair, north)', extra: [], dress: [['flower_planter', -2.8, 4.8, 0, 1, 0.8]],
     nk: [['hanging_lantern', -2.8, 4.4, 0, 1.0, 0.3], ['hanging_lantern', 2.8, 3.6, 0, 1.0, 0.3], ['potted_plant_b', -2.8, 3.4, 0, 1.0, 0.35], ['awning_red', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
   SUPPLIES: { note: 'herb garden box, a potion shelf cart and a bubbling cauldron', extra: [], dress: [['flower_planter', -3.6, 3.6, 0, 1, 0.8], ['lamp_post', 1.95, 4.5, 0, 0.72, 0.3], ['lamp_post', -1.95, 4.5, 0, 0.72, 0.3]],
-    nk: [['herb_garden_box', 0.4, -4.8, 0.1, 1.0, -0.55], ['potion_shelf_cart', 3.6, -4.2, -0.2, 1.0, -0.6], ['cauldron', -4.1, 3.4, 0.3, 1.0, 0.9], ['potted_plant_a', 3.8, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },   // (the shop stands between the graveyard aisle x -38 and the chapel road x -26: props in front + behind only)
+    nk: [['herb_garden_box', -1.9, -4.8, 0.1, 1.0, -0.55], ['potion_shelf_cart', 0.9, -5.0, -Math.PI / 2, 1.0, -0.6], ['cauldron', -4.1, 3.4, 0.3, 1.0, 0.9], ['potted_plant_a', 2.6, 3.4, 0, 1.0, 0.35], ['awning_green', 2.9, 0.0, Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },   // (the shop stands between the graveyard aisle x -38 and the chapel road x -26: props in front + behind only)
   ARMORY: { note: 'shield rack, armor stand, red banner poles (south of the south street, where the Pets shop stood; faces north)', extra: [], dress: [['lamp_post', 1.95, 4.5, 0, 0.72, 0.3], ['lamp_post', -1.95, 4.5, 0, 0.72, 0.3]],
     nk: [['shield_rack', -4.6, 2.4, 0.3, 1.0, -0.5], ['armor_stand', 4.6, 2.6, -0.4, 1.0, 0.6], ['banner_pole_red', -4.2, 4.6, 0, 0.9, 0.3], ['banner_pole_red', 4.3, 5.3, 0, 0.9, 0.3], ['potted_plant_b', 3.7, 3.4, 0, 1.0, 0.35], ['awning_red', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3]], cluster: [] },
   WAREHOUSE: { note: 'big crate stack + hay cart behind (2x2 east pair, south)', extra: [], dress: [['lamp_post', -1.95, 5.2, 0, 0.72, 0.3]],
-    nk: [['crate_stack_big', 1.5, -3.5, 0.2, 1.0, -0.75], ['cart_hay', -1.9, -3.6, 0.45, 1.0, -0.65], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 2.8, 3.4, 0, 1.0, 0.35]], cluster: [] },
+    nk: [['crate_stack_big', 0.1, -4.4, Math.PI / 2, 1.0, -0.75], ['cart_hay', -2.0, -3.4, 0.45, 1.0, -0.65], ['potted_plant_a', -2.8, 3.4, 0, 1.0, 0.35], ['potted_plant_b', 2.4, 3.4, 0, 1.0, 0.35]], cluster: [] },
   BLACKSMITH: { note: 'forge yard: forge_furnace + weapon_rack behind, anvil_big and grindstone by the counter, chimney smoke (2x2 east pair, north)', extra: [], dress: [],
-    nk: [['forge_furnace', -1.6, -3.6, 0.1, 1.0, -0.7], ['anvil_big', -2.6, 4.7, 0.7, 1.0, 0.8], ['grindstone', 2.9, 4.4, -0.7, 1.0, 0.6], ['weapon_rack', 2.4, -3.2, Math.PI / 2, 1.0, -0.4], ['potted_plant_a', 2.9, 3.0, 0, 1.0, 0.35]], cluster: [] },
+    nk: [['forge_furnace', -1.2, -3.6, 0.1, 1.0, -0.7], ['anvil_big', -2.2, 4.7, 0.7, 1.0, 0.8], ['grindstone', 2.9, 4.4, -0.7, 1.0, 0.6], ['weapon_rack', 2.4, -3.2, Math.PI / 2, 1.0, -0.4], ['potted_plant_a', 2.9, 3.0, 0, 1.0, 0.35]], cluster: [] },
   TECH: { note: 'lanterns (owner 2026-10-24: the little round tech tower is gone)', extra: [], dress: [['flower_planter', 3.0, 4.6, 0, 1, 0.8]],
     nk: [['potted_plant_b', -3.9, 3.5, 0, 1.0, 0.35], ['awning_green', -2.9, 0.0, -Math.PI / 2, 1.0, 0, 2.3], ['bush_cluster', 5.2, 1.8, 0, 0.8, 0.8]], cluster: [] },
 };
@@ -558,7 +559,7 @@ export const lotW = (l: { x: number; z: number; rot: number }, lx: number, lz: n
 // (owner 2026-10-21: no yards / lots: the arrays above stay empty so the scenery + fill code that reads them needs no changes)
 
 /** Houses that will become enterable (another agent may wire their interiors): the door spot is on the path just outside the front door, inside the lot's gate (any yaw); `yaw` = the way the house faces. */
-export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-40, -3.4, 'North Street Cottage'], [21.7, 25.6, 'Market Row House'], [-33.7, -3.4, 'West Row House']] as [number, number, string][]).flatMap(([hx, fz, name]) => {
+export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: number; z: number }; yaw: number }[] = ([[-40, -3.4, 'North Street Cottage'], [21.7, 26.4, 'Market Row House'], [-33.48, -3.4, 'West Row House']] as [number, number, string][]).flatMap(([hx, fz, name]) => {
   const h = HOUSES.find((q) => q.x === hx && !q.nk && Math.abs(q.z + (q.rot ? -1 : 1) * q.d / 2 - fz) < 0.05); if (!h) return [];
   const k = HOUSE_KIT[h.kit!] ?? HOUSE_KIT.house_small, s = h.s ?? 1, c = Math.cos(h.rot), n = Math.sin(h.rot), f = k.front * s + 0.9;
   return [{ name: name as string, x: h.x, z: h.z, door: { x: +(h.x + k.doorX * s * c + f * n).toFixed(2), z: +(h.z - k.doorX * s * n + f * c).toFixed(2) }, yaw: h.rot }];
@@ -618,11 +619,14 @@ for (let i = LAMPS.length - 1; i >= 0; i--) {
 export interface PlanterSpec { x: number; z: number; w: number; d: number; kind: 0 | 1 }
 export const PLANTERS: PlanterSpec[] = [
   // (owner 2026-10-31) the Adventure Plaza: long flower beds flanking the entrance road, two more on the inner arc, tree-ringed corner beds (the trees are ADV_TREES); Lantern Lane: door boxes
-  { x: 1.6, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: 8.4, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: -1.6, z: 144.4, w: 3.6, d: 1.3, kind: 1 }, { x: 11.2, z: 142.6, w: 3.6, d: 1.3, kind: 1 },
+  { x: 0.2, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: 8.4, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: -1.6, z: 144.4, w: 3.6, d: 1.3, kind: 1 }, { x: 11.2, z: 142.6, w: 3.6, d: 1.3, kind: 1 },
   { x: -1.2, z: 162.4, w: 4.0, d: 1.3, kind: 1 }, { x: 10.0, z: 162.4, w: 3.2, d: 1.3, kind: 1 },
   { x: -14.9, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -11.2, z: 151.1, w: 1.5, d: 0.9, kind: 0 }, { x: -22.6, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -18.9, z: 151.1, w: 1.5, d: 0.9, kind: 0 },
   // (owner 2026-10-23) the avenue to the gate: mirrored flower boxes on both edges, between the lamps
   { x: 3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: -3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: 3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 }, { x: -3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 },
+  // (audit 2026-10-31) the forest road between the bridge and the hamlet: mirrored flower boxes between the lamps, a bed beside the chapel yard tree
+  { x: 3.6, z: 88, w: 0.9, d: 2.2, kind: 1 }, { x: -3.6, z: 88, w: 0.9, d: 2.2, kind: 0 }, { x: 3.6, z: 105.6, w: 0.9, d: 2.2, kind: 0 }, { x: -3.6, z: 100.4, w: 0.9, d: 2.2, kind: 1 },
+  { x: -19.6, z: -9.4, w: 2.4, d: 1.1, kind: 1 },
   // (owner) flower boxes lining the summon + tech shop paths
   { x: 7.3, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 11.9, z: 15.4, w: 0.9, d: 2.0, kind: 1 }, { x: 14.9, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 19.5, z: 15.4, w: 0.9, d: 2.0, kind: 1 },
   // north street + castle path
@@ -648,8 +652,8 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: 49.5, z: 4.2, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // inside the walls: the park, the tavern square, the castle approach (the rest of the greenery is townFill.ts: groves, hedges, beds)
   { x: -27.6, z: 14.4, s: 3.3, kind: 0 }, { x: -17.4, z: 13.9, s: 3.0, kind: 0 }, { x: -27.4, z: 19.6, s: 3.0, kind: 0 },
-  { x: 20.6, z: -9.8, s: 3.4, kind: 0 }, { x: 33.4, z: -9.6, s: 3.2, kind: 0 }, { x: -9.6, z: -17.2, s: 3.3, kind: 0 }, { x: 9.8, z: -17.6, s: 3.2, kind: 0 },
-  { x: -43, z: -7.6, s: 3.0, kind: 2 },
+  { x: 20.6, z: -9.2, s: 3.4, kind: 0 }, { x: 33.4, z: -9.6, s: 3.2, kind: 0 }, { x: -9.6, z: -17.2, s: 3.3, kind: 0 }, { x: 9.8, z: -17.6, s: 3.2, kind: 0 },
+  { x: -43, z: -7.6, s: 3.0, kind: 2 }, { x: -22.6, z: -11.6, s: 3.1, kind: 0 }, { x: 17.4, z: -24.2, s: 3.2, kind: 0 },   // (audit 2026-10-31: the chapel yard + the tavern's back lawn were bare)
   
   // the meadow south of the gate: a few lone trees (the forest edge is pushed back, see ISLAND_BOXES)
   { x: -22, z: 57.5, s: 3.5, kind: 1 }, { x: 32.6, z: 42.6, s: 3.5, kind: 0 }, { x: 41, z: 52, s: 3.3, kind: 2 }, { x: -39, z: 58, s: 3.6, kind: 0 },
@@ -676,12 +680,14 @@ export const TOWN_TREES: TreeSpec[] = [
       t.push({ x: TOWER.x + Math.sin(a) * r, z: TOWER.z + Math.cos(a) * r, s: 3.4 + (i % 3) * 0.35, kind: ((i + 1) % 4) as 0 | 1 | 2 | 3 });
     }
     // (owner 2026-10-31) the Adventure Plaza + Lantern Lane are cleared of the forest; three oak accents stand in the plaza's corners (the rest of the greenery is townFill / adventurePlaza)
-    const keep = t.filter((q) => !inAdvPlaza(q.x, q.z, 2.2) && !(q.x > ADV_VILLAGE.x0 && q.x < ADV_VILLAGE.x1 && q.z > ADV_VILLAGE.z0 && q.z < ADV_VILLAGE.z1));
+    const keep = t.filter((q) => !inAdvPlaza(q.x, q.z, 2.2) && !(q.x > ADV_VILLAGE.x0 && q.x < ADV_VILLAGE.x1 && q.z > ADV_VILLAGE.z0 && q.z < ADV_VILLAGE.z1)
+      && !ROADS.some((r) => { const dx = r.x2 - r.x1, dz = r.z2 - r.z1, l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((q.x - r.x1) * dx + (q.z - r.z1) * dz) / l2)); return Math.hypot(q.x - r.x1 - dx * u, q.z - r.z1 - dz * u) < r.w / 2 + 1.9; }));   // (and no tree stands in or hugs any road / dirt path)
     keep.push({ x: -5.2, z: 142.2, s: 2.5, kind: 0 }, { x: 15.6, z: 141.0, s: 2.5, kind: 0 }, { x: -5.6, z: 159.0, s: 2.5, kind: 0 });
     return keep;
   })(),
   // the mainland across the bridge
   { x: -38, z: 82, s: 3.9, kind: 3 }, { x: -8, z: 83, s: 3.4, kind: 1 }, { x: -40, z: 96, s: 3.9, kind: 2 }, { x: -41, z: 106, s: 3.4, kind: 2 },
+  { x: -9.6, z: 90.4, s: 3.4, kind: 0 }, { x: -13.6, z: 98.6, s: 3.6, kind: 2 }, { x: -10.4, z: 102.4, s: 3.3, kind: 0 }, { x: -17.6, z: 109.4, s: 3.5, kind: 1 },   // (audit 2026-10-31) the forest road's bare west side
   { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 50.4, z: 84.2, s: 3.6, kind: 0 },
 ];
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
@@ -795,7 +801,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   for (let x = -49; x <= RIVER.x1 + 0.01; x += 0.8) if (Math.abs(x) > BRIDGE.dw + 0.5 && Math.abs(x - MINE_BRIDGE.x) > MINE_BRIDGE.dw + 0.5) c.push([x, riverBank(x, 0) - 0.2, 0.7], [x, riverBank(x, 1) + 0.2, 0.7]);   // (wavy banks, closing round at the east end)
   c.push([RIVER.x1 + 0.4, (RIVER.z0 + RIVER.z1) / 2, 1.2]);
   for (const sx of [-1, 1]) for (let z = BRIDGE.z0 + 0.6; z <= BRIDGE.z1 - 0.59; z += 0.8) c.push([sx * BRIDGE.rail, z, 0.5]);   // (on the kit railing line)
-  for (const sx of [-1, 1]) for (let z = MINE_BRIDGE.z0 + 0.5; z <= MINE_BRIDGE.z1 - 0.49; z += 0.7) c.push([MINE_BRIDGE.x + sx * MINE_BRIDGE.rail, z, 0.4]);   // footbridge railings
+  for (const sx of [-1, 1]) for (let z = MINE_BRIDGE.z0 + 0.5; z <= MINE_BRIDGE.z1 - 0.49; z += 0.7) c.push([MINE_BRIDGE.x + sx * (MINE_BRIDGE.rail + 0.1), z, 0.3]);   // footbridge railings
   c.push([CRYPT.x, CRYPT.z - 1, 1.3], [CRYPT.x, CRYPT.z + 1, 1.3], [-34.2, -38.4, 0.6]);   // crypt, dead tree
   for (const s of TOWN_SEATS) { if (s.x === CHURCH.x + CHURCH.w / 2 - 0.6) continue; const cx = Math.cos(s.yaw), sx = Math.sin(s.yaw); for (const o of [-0.6, 0.6]) c.push([s.x + cx * o, s.z - sx * o, 0.45]); }
   for (const s of SIGNS) c.push([s.x, s.z, 0.5]);
