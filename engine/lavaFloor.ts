@@ -22,6 +22,8 @@ export interface LDisc { x: number; z: number; r: number }
 export const EMBER_BIOME = 5, CELL = 0.5;
 export const lava = {
   on: false, heavy: false, ver: 0, coverage: 0,
+  /** bumps whenever `addLavaDisc` grows the floor (Ignar's creeping lava): render/Room.tsx re-rasterises the ground mask */
+  growVer: 0,
   /** normal: the lava discs; heavy: the ROCK discs (lava = the rest of the room) */
   discs: [] as LDisc[],
   grid: new Uint8Array(0), n: 0, o: 0,
@@ -49,7 +51,7 @@ function floorOk(x: number, z: number, r: number): boolean {
 
 /** `bossLava`: Ignar's arena (BOSS room) gets ~40% lava; normal Ember COMBAT / ELITE rooms aim for 35-50%. */
 export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, bossLava = false): void {
-  lava.on = false; lava.heavy = false; lava.discs = []; lava.ver++; lava.coverage = 0;
+  lava.on = false; lava.heavy = false; lava.discs = []; lava.ver++; lava.coverage = 0; lava.growVer = 0;
   lavaDbg.why = 'biome';
   if (((biome % 7) + 7) % 7 !== EMBER_BIOME) return;
   lavaDbg.why = 'plan';
@@ -65,6 +67,7 @@ export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, boss
   if (heavy) genHeavy(discs, rnd, sx, sz, stx, stz);
   else {
     keep(sx, sz, bossRoom ? 8 : 9.5); if (!bossRoom) keep(stx, stz, 6);
+    if (bossRoom) for (let k = 1; k <= 6; k++) keep(sx * (1 - k / 7), sz * (1 - k / 7), 3);   // (Ignar: a bare walking lane from the arrival spot to the middle, so the creeping lava never cuts the hero off)
     for (let i = 0; i < 3; i++) { portalSlot(i, 3, R, po); keep(po[0], po[1], 5.5); }
     for (let i = 0; i < 2; i++) { portalSlot(i, 2, R, po); keep(po[0], po[1], 5.5); }
     shortcutSlot(po); keep(po[0], po[1], 5);
@@ -86,6 +89,44 @@ export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, boss
   lava.discs = discs; lava.heavy = heavy; lava.on = true;
   buildGrid(discs, heavy);
   lava.coverage = measure();
+}
+
+// ------------------------------------------------------------------------------------------------ Ignar's creeping lava
+/** Share of the room floor that is lava right now (recounts the grid). */
+export function lavaCoverage(): number { lava.coverage = lava.on ? measure() : 0; return lava.coverage; }
+/**
+ * Plans one new lava patch for Ignar's arena (a main pool + 2 satellites) into `out` (cleared first, returns how many discs): it spreads from the
+ * existing lava or the arena edge, never on the arrival keep zone / the bare lane to the middle / the centre / colliders. 0 = no spot found.
+ */
+export function planLavaPatch(out: LDisc[], rnd: () => number): number {
+  out.length = 0;
+  if (!lava.on || lava.heavy) return 0;
+  const R = shape.baseR, rr = 3.4 + rnd() * 0.8;
+  for (let t = 0; t < 60; t++) {
+    const a = rnd() * 6.283, c = Math.cos(a), sn = Math.sin(a), d = (t < 30 ? 0.62 + rnd() * 0.33 : 0.2 + rnd() * 0.7) * shapeLimit(c, sn);
+    const x = c * d, z = sn * d;
+    if (gridAt(lava, x, z) || !free(x, z, rr, false, false)) continue;
+    // spreads outward: next to existing lava (a probe 1.6 r away on any side) or hugging the arena edge
+    let adj = d > 0.8 * shapeLimit(c, sn);
+    for (let k = 0; k < 8 && !adj; k++) { const b = (k / 8) * 6.283; if (gridAt(lava, x + Math.cos(b) * rr * 1.6, z + Math.sin(b) * rr * 1.6)) adj = true; }
+    if (!adj && t < 45) continue;
+    out.push({ x, z, r: rr });
+    for (let k = 0; k < 2; k++) {
+      const b = rnd() * 6.283, sx = x + Math.cos(b) * rr * 0.9, sz = z + Math.sin(b) * rr * 0.9, sr = rr * (0.6 + rnd() * 0.15);
+      if (free(sx, sz, sr, false, false)) out.push({ x: sx, z: sz, r: sr });
+    }
+    void R;
+    return out.length;
+  }
+  return 0;
+}
+/** Turns a disc of floor into lava now (grid + the ground mask refresh via `lava.growVer`). */
+export function addLavaDisc(x: number, z: number, r: number): void {
+  if (!lava.on || lava.heavy) return;
+  const d: LDisc = { x, z, r };
+  lava.discs.push(d);
+  fillGrid(lava.grid, lava.n, lava.o, [d], false);
+  lava.growVer++;
 }
 
 // ------------------------------------------------------------------------------------------------ normal

@@ -27,7 +27,7 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
-import { bossWarded } from './bossMech';
+import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
 
@@ -92,6 +92,7 @@ function clampToArena(v: Vector3, margin: number): void {
 export function updateBoss(e: Enemy, dt: number, distToPlayer: number): void {
   syncHud(e);
   checkPhase(e);
+  proxTick(e, dt);   // proximity pressure (bossMech): close skills only with someone near, more often the longer they stay
   if (e.kind === 'BOSS_GOLEM') golem(e, distToPlayer);
   else if (e.kind === 'BOSS_LICH') lich(e, dt, distToPlayer);
   else updateBoss2(e, dt, distToPlayer); // Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (bosses2.ts)
@@ -119,7 +120,7 @@ function golem(e: Enemy, dist: number): void {
     case 'CHASE': {   // keeps a step back so melee heroes don't end up inside the model
       if (dist > 4.5) setVel(e, ux, uz, e.speed * (1 + 0.25 * e.phase));
       else stop(e);
-      if (e.attackCd <= 0) beginGolemPattern(e, ux, uz);
+      if (e.attackCd <= 0 || closeDue(e)) beginGolemPattern(e, ux, uz);
       return;
     }
     case 'WINDUP': {
@@ -141,7 +142,7 @@ function golem(e: Enemy, dist: number): void {
         beginCharge(e, ux, uz);
         return;
       }
-      e.attackCd = GOLEM_CD[e.phase];
+      e.attackCd = GOLEM_CD[e.phase] / (1 + 0.35 * proxPressure(e));
       enter(e, 'CHASE');
       return;
     }
@@ -154,7 +155,13 @@ function golem(e: Enemy, dist: number): void {
 function rockTel(z: Zone | null): void { if (z) { z.kb = KB.ROCK.kb; z.down = KB.ROCK.down; } }
 
 function beginGolemPattern(e: Enemy, ux: number, uz: number): void {
-  e.pattern = (e.pattern + 1) % 3;
+  // (proximity) the rock ring is Gorath's close skill: only with someone near (more often under pressure), never otherwise
+  const near = bossNear(e);
+  if (closeDue(e)) { e.pattern = RING; closeUsed(e, 6.5, 'Rock Ring'); }
+  else {
+    e.pattern = (e.pattern + 1) % 3;
+    if (e.pattern === RING) { if (near && Math.random() < 0.5) closeUsed(e, 6.5, 'Rock Ring'); else e.pattern = (e.pattern + 1) % 3; }
+  }
   e.patternT = 0;
   if (e.pattern === SLAM) {
     // one circle right under the player, the rest ring around them
@@ -256,7 +263,7 @@ function lich(e: Enemy, dt: number, dist: number): void {
   switch (e.state) {
     case 'CHASE': {
       lichPosition(e, ux, uz, dist, 1);
-      hugBlinkT -= dt;
+      hugBlinkT -= dt * proxRate(e);   // (close skill: more often the longer the hero hugs him)
       if (dist < 6 && hugBlinkT <= 0) { hugBlinkT = HUG_BLINK_CD; startLichPattern(e, BLINK); return; } // don't let the player hug the lich (not every second)
       if (e.attackCd <= 0) {
         startLichPattern(e, (e.pattern + 1) % 3);

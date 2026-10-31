@@ -30,7 +30,7 @@ export const waves: Wave[] = Array.from({ length: 12 }, () => ({ active: false, 
 /** kind: 0 root, 1 ice spike, 2 fire pillar, 3 acid glob (flies sx,sz -> x,z over `delay`), 4 thorn spike */
 export interface Prop { active: boolean; kind: number; x: number; z: number; sx: number; sz: number; t: number; delay: number; life: number; r: number; h: number; rot: number; }
 export const PROP_ROOT = 0, PROP_ICE = 1, PROP_PILLAR = 2, PROP_GLOB = 3, PROP_THORN = 4;
-export const props: Prop[] = Array.from({ length: 110 }, () => ({ active: false, kind: 0, x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, r: 1, h: 1, rot: 0 }));
+export const props: Prop[] = Array.from({ length: 160 }, () => ({ active: false, kind: 0, x: 0, z: 0, sx: 0, sz: 0, t: 0, delay: 0, life: 1, r: 1, h: 1, rot: 0 }));
 let propCursor = 0;
 
 export interface Portal { active: boolean; x: number; z: number; t: number; open: number; life: number; shots: number; shotT: number; dmg: number; }
@@ -137,6 +137,28 @@ export function addChill(n: number): void {
   }
 }
 
+/** QA counters for the strong slow / freeze rolls (Glacius) and the burns (Ignar / Colossus). */
+export const ccStats = { slow: 0, freeze: 0, burn: 0 };
+/**
+ * Glacius' frost hit (owner 2026-10-31): the strong boss slow (SLOW_BOSS 60%, `slowDur` s, resFrost shortens it) plus a `chance` of a short
+ * FREEZE (1.2 s, resFrost / resCC shorten it). Anti-chain: no freeze while the 4 s freeze grace (chill.immuneT) runs or the hero is already
+ * stunned / frozen / down; a freeze that lands starts the grace.
+ */
+export function frostHit(slowDur: number, chance: number, freezeDur = 1.2): void {
+  const p = world.player;
+  if (!p.alive) return;
+  if (applyPlayerDebuff('SLOW', slowDur, SLOW_BOSS)) ccStats.slow++;
+  if (chill.immuneT > 0 || p.stunT > 0 || p.downT > 0 || Math.random() >= chance) return;
+  if (freezePlayer(freezeDur)) {
+    chill.immuneT = 4; chill.stacks = 0; ccStats.freeze++; stat('Freeze');
+    events.emit('floatText', { pos: p.pos, text: 'FROZEN', color: 0x8fe4ff, scale: 0.9, dy: 0.9 });
+    events.emit('trick', { pos: p.pos.clone(), kind: 'FREEZE', radius: 3 });
+  }
+}
+/** Ignar / Colossus burn (owner 2026-10-31): 3.6 s, refreshes while standing in / being hit by fire (the strongest dps wins). */
+export const BURN_DUR = 3.6;
+export function burnHit(dps: number): void { if (applyPlayerDebuff('BURN', BURN_DUR, Math.max(2, dps))) ccStats.burn++; }
+
 export function inCone(px: number, pz: number, ox: number, oz: number, dx: number, dz: number, range: number, half: number): boolean {
   const rx = px - ox, rz = pz - oz, d = Math.hypot(rx, rz);
   if (d > range + 0.6) return false;
@@ -187,7 +209,7 @@ export function resolveBossZone(z: Zone): void {
         // the breath starts now (ticks run in updateBossFx)
         breath.active = true; breath.x = z.pos.x; breath.z = z.pos.z; breath.dx = z.dir.x; breath.dz = z.dir.z;
         breath.range = z.radius; breath.half = z.aux; breath.t = 0; breath.tick = 0; breath.dmg = pw;
-        if (hit && p.alive) { damagePlayer(pw * 0.8, { pos: z.pos, kind: 'ICE' }); addChill(2); }
+        if (hit && p.alive) { damagePlayer(pw * 0.8, { pos: z.pos, kind: 'ICE' }); addChill(2); frostHit(3.5, 0.22); }
         events.emit('trick', { pos: z.pos.clone(), kind: 'BREATH', radius: z.radius });
       }
       break;
@@ -195,8 +217,14 @@ export function resolveBossZone(z: Zone): void {
     case BT.SPIKES: {
       // damage now; spikes erupt in sequence for the visual
       const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
-      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE', ...KB.SLAM }); addChill(2); applyPlayerDebuff('SLOW', 3 * 1.5, SLOW_BOSS); }   // (owner) ice spikes launch the hero: knockdown
-      for (let d = 1.5, i = 0; d < z.length; d += 2.4, i++) spawnProp(PROP_ICE, z.pos.x + z.dir.x * d, z.pos.z + z.dir.z * d, i * 0.035, 1.3, 1.1 + (i % 3) * 0.2, 3.2 + (i % 2) * 1.2);
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) { damagePlayer(pw, { pos: z.pos, kind: 'ICE', ...KB.SLAM }); addChill(2); frostHit(4.5, 0.25); }   // (owner) ice spikes launch the hero: knockdown, strong slow, 25% freeze
+      // (owner 2026-10-31) icicles ~2x bigger: a tall central row every 4.8 m with a flanking pair on every third row (the lane is 6.4 m wide)
+      const wide = Math.min(1, z.radius / 6.4), sx = z.dir.z, sz = -z.dir.x;
+      for (let d = 2.2, i = 0; d < z.length; d += 4.8, i++) {
+        const bx = z.pos.x + z.dir.x * d, bz = z.pos.z + z.dir.z * d, rr = 2.0 + (i % 3) * 0.4, hh = 7 + (i % 2) * 2.6;
+        spawnProp(PROP_ICE, bx, bz, i * 0.06, 1.4, rr, hh);
+        if (i % 3 === 1) for (let s = -1; s <= 1; s += 2) spawnProp(PROP_ICE, bx + sx * s * 2.1 * wide, bz + sz * s * 2.1 * wide, i * 0.06 + 0.05, 1.3, rr * 0.8, hh * 0.8);
+      }
       events.emit('trick', { pos: z.pos.clone(), kind: 'ICE_SPIKES', radius: z.radius });
       break;
     }
@@ -205,17 +233,17 @@ export function resolveBossZone(z: Zone): void {
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.8, color: 0xbfe8ff });
       events.emit('crater', { pos: z.pos.clone(), radius: z.radius * 0.7, color: 0x16303f });
       addShake(0.7);
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); addChill(2); applyPlayerDebuff('SLOW', 3 * 1.5, SLOW_BOSS); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); addChill(2); frostHit(4.5, 0.25); }
       diveLanded(z.pos.x, z.pos.z);
       break;
     case BT.PILLAR:
-      if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.PUSH }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
+      if (inside && p.air < 0.5) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.PUSH }); burnHit(pw * 0.14); }
       spawnProp(PROP_PILLAR, z.pos.x, z.pos.z, 0, 0.9, z.radius, 6.5);   // (owner rework: 20+ pillars at once, so a bit lower to keep the screen readable)
       firePatch(z.pos.x, z.pos.z, z.radius * 0.7, 2.4, pw * 0.12);
       events.emit('trick', { pos: z.pos.clone(), kind: 'PILLAR', radius: z.radius });
       break;
     case BT.FBURST:   // Ignar's Radiant Burst / Blazing Guard: a fiery knock-back burst around him that leaves a ring of embers
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.SLAM }); applyPlayerDebuff('BURN', 3, pw * 0.14); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'FIRE', ...KB.SLAM }); burnHit(pw * 0.14); }
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.5, color: 0xff7a2a });
       events.emit('explosion', { pos: z.pos.clone(), radius: z.radius * 0.8, color: 0xff6a1a });
       for (let k = 0; k < 6; k++) { const a = (k / 6) * 6.283 + z.pos.x; firePatch(z.pos.x + Math.sin(a) * z.radius * 0.75, z.pos.z + Math.cos(a) * z.radius * 0.75, 1.5, 2.2, pw * 0.1); }
@@ -242,7 +270,7 @@ export function resolveBossZone(z: Zone): void {
       addShake(0.3);
       break;
     case BT.HAIL:
-      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(2); }
+      if (inside) { damagePlayer(pw, { pos: z.pos, kind: 'ICE' }); addChill(2); frostHit(3, 0.2); }
       spawnProp(PROP_ICE, z.pos.x, z.pos.z, 0, 0.9, 0.9, 2.6);
       events.emit('trick', { pos: z.pos.clone(), kind: 'HAIL', radius: z.radius });
       break;
@@ -289,7 +317,7 @@ export function updateBossFx(dt: number): void {
         damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...(w.kind === WAVE_VOID || w.kind === WAVE_TIDE ? KB.SLAM : KB.PUSH) });   // (owner) the gravity push and the tidal surge knock down
         if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS);
         if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
-        if (w.kind === WAVE_FROST) addChill(1);
+        if (w.kind === WAVE_FROST) { addChill(1); frostHit(3, 0.22); }
         if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6 * 1.5, SLOW_BOSS);
       }
     });
@@ -356,7 +384,7 @@ export function updateBossFx(dt: number): void {
       forEachHero((h) => {   // (co-op: the breath chills either hero standing in the cone)
         if (h.alive && inCone(h.pos.x, h.pos.z, breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half)) {
           damagePlayer(breath.dmg * 0.3 * BOSS_SKILL_MUL, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
-          addChill(1);
+          addChill(1); frostHit(2.5, 0.08);
         }
       });
     }

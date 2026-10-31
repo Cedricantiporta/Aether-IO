@@ -48,7 +48,7 @@ import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
 import { bp } from './bossPhaseState';
-import { addChill } from './bossFx';
+import { addChill, frostHit, burnHit } from './bossFx';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -1220,7 +1220,7 @@ function aiFrostWisp(e: Enemy): void {
       stop(e);
       if (e.stateT >= WISP.windup) {
         const base = Math.atan2(ux, uz);
-        for (let i = -1; i <= 1; i++) { const a = base + i * WISP.spread; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ICE_SHARD', 14, e.projectileDamage, { life: 1.8, radius: 0.4 }); }
+        for (let i = -1; i <= 1; i++) { const a = base + i * WISP.spread; tmpV.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tmpV, 'ICE_SHARD', 14, e.projectileDamage, { life: 1.8, radius: 0.4, debuff: e.kind === 'BOSS_WYRMLING' ? 6 : 0 }); }
         e.attackCd = WISP.cd * (0.85 + Math.random() * 0.3);
         enter(e, 'RECOVER');
       }
@@ -1503,6 +1503,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
   const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
   damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.2 ? KB.PUSH : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits shove now and then
+  if (e.kind === 'BOSS_WYRMLING') frostHit(2.4, 0.2);   // (owner 2026-10-31) baby drake bites slow + may freeze
   if (charge) {
     world.player.slowT = Math.max(world.player.slowT, 0.6);
     if (world.player.downT > 0) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });
@@ -2114,7 +2115,7 @@ export function updateEnemyProjectiles(dt: number): void {
         p.active = false;
         damageMinion(hitM, p.damage);
         // (owner) elemental shots carry their effect onto summons too
-        if (p.kind === 'FIRE_BOLT' || p.debuff === 2) minionDebuff(hitM, 'BURN', 3, Math.max(2, p.damage * 0.12));
+        if (p.kind === 'FIRE_BOLT' || p.debuff === 2 || p.debuff === 5) minionDebuff(hitM, 'BURN', 3, Math.max(2, p.damage * 0.12));
         else if (p.kind === 'POISON_ARROW') minionDebuff(hitM, 'POISON', 3.5, Math.max(1.5, p.damage * 0.1));
         else if (p.kind === 'BOLT' || p.debuff === 1) minionDebuff(hitM, 'STUN', 0.6);
         else if (p.kind === 'ICE_SHARD') minionDebuff(hitM, 'SLOW', 1.2);
@@ -2148,6 +2149,8 @@ function shotHitsHero(p: EnemyProjectile): void {
   if (ELEM_DMG[p.kind]) elemHit(p.kind, p.damage);
   if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
   else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
+  else if (p.debuff === 5) burnHit(p.damage * 0.14);   // (owner 2026-10-31) Ignar / Colossus flames: 3.6 s burn, refreshes
+  else if (p.debuff === 6) frostHit(2.4, 0.22);        // Glacius' wyrmling shards: strong slow + 22% freeze
   else if (p.debuff === 4) { if (Math.random() < 0.45) freezePlayer(0.8); }   // the dark ranger's Freezing Arrow
   if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);
   events.emit('projectileImpact', { pos: p.pos, kind: 'ENEMY' });
