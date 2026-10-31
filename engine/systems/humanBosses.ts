@@ -43,9 +43,21 @@ const NAMES: Record<HumanKind, string[]> = {
   SABLE: ['', 'Arcane Ward!', 'Blink Strike!', 'Hex Circles!', 'Shadow Bolts!', ''],
   ROOK: ['', 'Shadow Roll!', 'Volley!', 'Snare Traps!', 'Hounds, to me!', 'Marked Shot!'],
 };
-const SWING = 4;      // Varn basic swing
+const BASIC = 6;      // quick basic attack (Varn sword combo, Sable dagger, Rook stab): pattern id, cooldown slot 0
 const BANNER = 5;     // Varn
+const BLINK_R = 4.8, HEX_R = 4.5;   // Sable Blink Strike burst / Hex Circle radius (were 3.4 / 3.2)
+const TRAP_N = 5;
+const VOLLEY_LEN = 22, VOLLEY_HALF = 0.72, MARK_W = 2.5;   // Rook Volley cone (was 17 / 0.5) / Marked Shot lane (was 1.8)
+const BASH_LEN = 19, BASH_W = 7, BASH_SPEED = 25, SLAM_R = 8.5;   // Varn Shield Bash lane (was 15 x 5) / Ground Slam radius (was 6)
 const MARKED = 5;     // Rook
+/** Basic attack numbers per kind: cone reach (m), half angle (rad), wind-up (s), damage x pw, hits in a combo [min, max], pause between combos (s), step-in cooldown (s). */
+const BASIC_DEF = {
+  VARN: { range: 4.6, half: 0.75, wind: 0.36, dmg: 0.8, combo: [2, 3], pause: [0.9, 1.4], stepCd: 1.2 },
+  SABLE: { range: 4.0, half: 0.62, wind: 0.3, dmg: 0.7, combo: [1, 2], pause: [0.9, 1.3], stepCd: 1.7 },
+  ROOK: { range: 3.8, half: 0.55, wind: 0.32, dmg: 0.7, combo: [1, 2], pause: [0.9, 1.3], stepCd: 1.9 },
+} as const;
+/** QA counters (headless): basic attacks / skills started, zero the fields to reset. */
+export const humanStats = { basic: 0, skill: 0, shots: 0 };
 
 /** Read by render/HumanBosses.tsx. atk / cast are pulse counters (a change = play the one-shot). */
 export const humanView = { id: -1, kind: 'VARN' as HumanKind, atk: 0, cast: 0, wall: 0, ward: 0, charge: 0, enraged: 0, bannerId: -1, roll: 0, turn: 0, vanish: 0, hunt: 0 };
@@ -57,11 +69,12 @@ export const humanTraps: HumanTrap[] = Array.from({ length: 10 }, () => ({ activ
 
 const S = {
   id: -1, kind: 'VARN' as HumanKind,
-  cd: [0, 0, 0, 0, 0, 0, 0], gap: 1.2, strafe: 1, strafeT: 2,
+  cd: [0, 0, 0, 0, 0, 0, 0], gap: 0.8, strafe: 1, strafeT: 2,
   t: 0, wind: 0, act: 0, dirX: 0, dirZ: 1, tick: 0, flag: false, inv: 0, blockText: 0,
   wallT: 0, lockYaw: 0, bannerId: -1, bannerDone: false, bannerArmed: false,
   wardUp: false, spotX: 0, spotZ: 0, houndId: -1, volley: 0,
   turnT: 0, turnYaw: 0, vanishT: 0, footT: 0, footN: 0, huntT: 0,
+  skillT: 2, combo: 0, hitN: 0, stepT: 0, stepCd: 0, shot: 1,
   markZ: null as ReturnType<typeof spawnTelegraphLine>,
 };
 const tmp = new Vector3(), tmp2 = new Vector3(), dirV = new Vector3();
@@ -119,6 +132,7 @@ function tickPending(dt: number): void {
     tmp.set(p.x, 0, p.z);
     events.emit('explosion', { pos: tmp.clone(), radius: p.r * 0.8, color: p.color });
     if (p.r > 4.5) events.emit('quake', { pos: tmp.clone(), radius: p.r });
+    if (p.r > 7) { events.emit('shake', { amount: 0.45 }); events.emit('shockwave', { pos: tmp.clone(), radius: p.r * 1.05, color: p.color }); }   // (heavy slam: screen shake + a ground ring)
     const hn = heroesFill(), cur = world.player;   // (co-op: everyone inside the circle)
     for (let hi = 0; hi < hn; hi++) {
       world.player = HL[hi];
@@ -145,10 +159,10 @@ export function spawnHumanBoss(kind: HumanKind, x: number, z: number): Enemy | n
   S.id = e.id; S.kind = kind;
   resetFight();
   const cd = S.cd;
-  cd[0] = 1.5;
-  if (kind === 'VARN') { cd[1] = 3; cd[2] = 5; cd[3] = 2; }
-  else if (kind === 'SABLE') { cd[1] = 0.4; cd[2] = 7; cd[3] = 3; cd[4] = 1.5; }
-  else { cd[1] = 6; cd[2] = 2.5; cd[3] = 5; cd[4] = 4; cd[5] = 8; }
+  cd[0] = 1.0;
+  if (kind === 'VARN') { cd[1] = 2.5; cd[2] = 4; cd[3] = 3; }
+  else if (kind === 'SABLE') { cd[1] = 0.4; cd[2] = 5; cd[3] = 3; cd[4] = 2.5; }
+  else { cd[1] = 4; cd[2] = 2.5; cd[3] = 4; cd[4] = 3; cd[5] = 6; }
   S.strafe = Math.random() < 0.5 ? 1 : -1;
   humanView.id = e.id; humanView.kind = kind;
   const b = world.boss;
@@ -161,7 +175,7 @@ export function spawnHumanBoss(kind: HumanKind, x: number, z: number): Enemy | n
 }
 
 function resetFight(): void {
-  S.cd.fill(0); S.gap = 1.2; S.t = 0; S.inv = 0; S.wallT = 0; S.bannerId = -1; S.bannerDone = false; S.bannerArmed = false;
+  S.cd.fill(0); S.gap = 0.8; S.skillT = 2.5; S.combo = 0; S.hitN = 0; S.stepT = 0; S.stepCd = 0; S.shot = 1; S.t = 0; S.inv = 0; S.wallT = 0; S.bannerId = -1; S.bannerDone = false; S.bannerArmed = false;
   S.wardUp = false; S.houndId = -1; S.volley = 0; S.markZ = null; S.flag = false;
   for (const p of pend) p.active = false;
   for (const t of humanTraps) t.active = false;
@@ -284,7 +298,7 @@ function retreatPoint(e: Enemy, px: number, pz: number, d: number, out: Vector3)
 function addTrap(x: number, z: number, arm: number): void {
   for (const t of humanTraps) {
     if (t.active) continue;
-    t.active = true; t.x = x; t.z = z; t.arm = arm; t.life = 16; t.r = 1.7;
+    t.active = true; t.x = x; t.z = z; t.arm = arm; t.life = 16; t.r = 2.4;
     return;
   }
 }
@@ -296,17 +310,17 @@ let nearNow = false;
 function wants(k: number, d: number): boolean {
   if (isCloseSkill(k) && !nearNow) return false;
   switch (S.kind) {
-    case 'VARN': return k === 1 ? d < 10 : k === 2 ? d > 4 && d < 16 : k === 3 ? d < 7.5 : false;
+    case 'VARN': return k === 1 ? d < 10 : k === 2 ? d > 4 && d < 20 : k === 3 ? d < 9.5 : false;
     case 'SABLE': return k === 1 ? false : k === 2 ? d > 3 && S.vanishT <= 0 : k === 3 ? d < 24 : k === 4 ? d < 22 : false;
-    default: if (S.huntT > 0) return k === MARKED; return k === 1 ? d < 5.5 : k === 2 ? d < 20 : k === 3 ? d < 22 : k === 4 ? !aliveId(S.houndId) : k === MARKED ? d > 6 && d < 30 : false;
+    default: if (S.huntT > 0) return k === MARKED; return k === 1 ? d < 5.5 : k === 2 ? d < 24 : k === 3 ? d < 24 : k === 4 ? !aliveId(S.houndId) : k === MARKED ? d > 6 && d < 30 : false;
   }
 }
 /** Cooldown (s) after skill k. */
 function cdOf(k: number): number {
   switch (S.kind) {
-    case 'VARN': return [0, 12, 8, 7, 1.3][k] ?? 5;
-    case 'SABLE': return [0, 20, 9, 10, 6][k] ?? 5;
-    default: return [0, 5, 8, 12, 26, 11][k] ?? 5;
+    case 'VARN': return [0, 7, 5, 4.5][k] ?? 4;
+    case 'SABLE': return [0, 14, 5, 5.5, 3.5][k] ?? 4;
+    default: return [0, 3.5, 5, 7, 16, 6.5][k] ?? 4;
   }
 }
 
@@ -316,65 +330,96 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
   e.pattern = k; enter(e, 'WINDUP'); e.vel.set(0, 0, 0);
   S.t = 0; S.tick = 0; S.flag = false; S.volley = 0;
   const P = pw(e), dx = S.dirX, dz = S.dirZ;
-  if (!(S.kind === 'VARN' && k === SWING)) announce(k);
+  if (k === BASIC) {   // quick basic: small cone in front, short wind-up, the regular attack animation (no cast pose, no ring / lane)
+    const B = BASIC_DEF[S.kind];
+    S.wind = B.wind * (S.hitN > 0 ? 0.85 : 1); S.act = 0.16; humanStats.basic++;
+    spawnTelegraphCone(e.pos.x, e.pos.z, dx, dz, B.range, B.half, S.wind, S.kind === 'ROOK' ? C_GREEN : S.kind === 'SABLE' ? C_VIOLET : C_STEEL, BT.VISUAL, 0);
+    return;
+  }
+  humanStats.skill++;
+  announce(k);
   humanView.cast++;
   if (S.kind === 'VARN') {
     if (k === 1) { S.wind = 0.35; S.act = 3.0; }
     else if (k === 2) {
       S.wind = 0.8; S.act = 0.5;
-      const zn = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, 15, 5, 0.8, C_STEEL); if (zn) zn.trick = BT.VISUAL;
-    } else if (k === 3) { S.wind = 0.9; S.act = 0.25; strike(e.pos.x, e.pos.z, 6, 0.9, P * 2.0, STUN | KNOCK, C_RED); }
-    else if (k === SWING) { S.wind = 0.45; S.act = 0.15; strike(e.pos.x + dx * 2.1, e.pos.z + dz * 2.1, 2.7, 0.45, P * 0.8, 0, C_STEEL); }
-    else { S.wind = 0.9; S.act = 0.2; warnCircle(e.pos.x, e.pos.z, 4, 0.9, 0xffd27a); }   // BANNER
+      S.act = BASH_LEN / BASH_SPEED;   // (he travels the whole telegraphed lane)
+      const zn = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, BASH_LEN, BASH_W, 0.8, C_STEEL); if (zn) zn.trick = BT.VISUAL;
+    } else if (k === 3) { S.wind = 0.9; S.act = 0.25; strike(e.pos.x, e.pos.z, SLAM_R, 0.9, P * 2.0, STUN | KNOCK, C_RED); }
+    else { S.wind = 0.9; S.act = 0.2; warnCircle(e.pos.x, e.pos.z, 5.5, 0.9, 0xffd27a); }   // BANNER
   } else if (S.kind === 'SABLE') {
-    if (k === 1) { S.wind = 0.7; S.act = 0.2; warnCircle(e.pos.x, e.pos.z, 3, 0.7, C_VIOLET); }
+    if (k === 1) { S.wind = 0.7; S.act = 0.2; warnCircle(e.pos.x, e.pos.z, 4.2, 0.7, C_VIOLET); }
     else if (k === 2) {   // vanish now, reappear behind the hero at the marked circle
       S.wind = 0.85; S.act = 0.25;
       const p = world.player, fx = Math.sin(p.facing), fz = Math.cos(p.facing);
       tmp.set(p.pos.x - fx * 2.8, 0, p.pos.z - fz * 2.8); clampIn(tmp, 3);
       S.spotX = tmp.x; S.spotZ = tmp.z;
-      warnCircle(S.spotX, S.spotZ, 3.4, S.wind, C_VIOLET);
+      warnCircle(S.spotX, S.spotZ, BLINK_R, S.wind, C_VIOLET);
       e.hideT = S.wind + 0.3;
-      blinkFx('BLINK', e.pos.x, e.pos.z, 3.5, S.spotX, S.spotZ);
-    } else if (k === 3) { S.wind = 0.6; S.act = 0.3; warnCircle(e.pos.x, e.pos.z, 2.4, 0.6, C_VIOLET); }
+      blinkFx('BLINK', e.pos.x, e.pos.z, 4.5, S.spotX, S.spotZ);
+    } else if (k === 3) { S.wind = 0.6; S.act = 0.3; warnCircle(e.pos.x, e.pos.z, 3.4, 0.6, C_VIOLET); }
     else { S.wind = 0.5; S.act = 1.2; }
   } else {
     if (k === 1) { S.wind = 0.05; S.act = 0.38; retreatPoint(e, px, pz, 9, dirV); aimAt(e, dirV.x, dirV.z); addTrap(e.pos.x, e.pos.z, 0.8); }
-    else if (k === 2) { S.wind = 0.9; S.act = 0.2; spawnTelegraphCone(e.pos.x, e.pos.z, dx, dz, 17, 0.5, 0.9, C_GREEN, BT.VISUAL, 0); }
+    else if (k === 2) { S.wind = 0.9; S.act = 0.2; spawnTelegraphCone(e.pos.x, e.pos.z, dx, dz, VOLLEY_LEN, VOLLEY_HALF, 0.9, C_GREEN, BT.VISUAL, 0); }
     else if (k === 3) { S.wind = 0.5; S.act = 0.2; }
     else if (k === 4) { S.wind = 0.7; S.act = 0.2; }
     else {   // Marked Shot: the line tracks the hero for the first 60% of the charge, then locks
       S.wind = 1.5; S.act = 0.2;
-      S.markZ = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, 36, 1.8, 1.5, C_RED);
+      S.markZ = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, 36, MARK_W, 1.5, C_RED);
       if (S.markZ) S.markZ.trick = BT.VISUAL;
     }
   }
 }
 
+/** A basic hit: cone in front of the boss (same shape as its small telegraph), every hero in it takes a light hit + flinch (no knockdown). */
+function basicHit(e: Enemy): void {
+  const B = BASIC_DEF[S.kind], P = pw(e) * (S.kind === 'VARN' && S.hitN >= 2 ? 1.0 : B.dmg);
+  const cosH = Math.cos(B.half), reach = B.range + 0.6;
+  const hn = heroesFill(), cur = world.player;
+  for (let hi = 0; hi < hn; hi++) {
+    const p = HL[hi];
+    if (!p.alive) continue;
+    const rx = p.pos.x - e.pos.x, rz = p.pos.z - e.pos.z, l = Math.hypot(rx, rz);
+    if (l > reach) continue;
+    if (l > 1.4 && (rx * S.dirX + rz * S.dirZ) / l < cosH) continue;
+    world.player = p;
+    tmp.set(e.pos.x, 0, e.pos.z);
+    damagePlayer(P, { pos: tmp, kind: 'PHYSICAL', ...KB.FLINCH });
+    if (S.kind === 'SABLE') applyPlayerDebuff('SLOW', 1.0, SLOW_BOSS);
+  }
+  world.player = cur;
+  tmp2.set(e.pos.x + S.dirX * B.range * 0.6, 0, e.pos.z + S.dirZ * B.range * 0.6);
+  events.emit('explosion', { pos: tmp2.clone(), radius: 1.1, color: S.kind === 'ROOK' ? C_GREEN : S.kind === 'SABLE' ? C_VIOLET : C_STEEL });
+  humanView.atk++;
+}
+
 function release(e: Enemy, px: number, pz: number): void {
   const k = e.pattern, P = pw(e);
   enter(e, 'ATTACK'); S.t = 0; humanView.charge = 0;
+  if (k === BASIC) { basicHit(e); return; }
   if (S.kind === 'VARN') {
     if (k === 1) { S.wallT = S.act; S.lockYaw = Math.atan2(S.dirX, S.dirZ); humanView.wall = 1; events.emit('shieldBlock', { pos: e.pos.clone(), radius: 3 }); }
-    else if (k === 3) { events.emit('shake', { amount: 0.25 }); humanView.atk++; }
+    else if (k === 3) { events.emit('shake', { amount: 0.5 }); humanView.atk++; tmp.set(e.pos.x, 0, e.pos.z); events.emit('quake', { pos: tmp.clone(), radius: SLAM_R }); }
     else if (k === BANNER) spawnBanner(e);
     else humanView.atk++;
   } else if (S.kind === 'SABLE') {
     if (k === 1) raiseWard(e);
     else if (k === 2) {   // appear behind the hero with a burst
-      blinkFx('BLINK', S.spotX, S.spotZ, 3.5, e.pos.x, e.pos.z);
+      blinkFx('BLINK', S.spotX, S.spotZ, 4.5, e.pos.x, e.pos.z);
       e.pos.x = S.spotX; e.pos.z = S.spotZ; e.hideT = 0;
       tmp2.set(S.spotX, 0, S.spotZ);
-      events.emit('explosion', { pos: tmp2.clone(), radius: 3.4, color: C_VIOLET });
-      if (playerIn(S.spotX, S.spotZ, 3.4)) { damagePlayer(P * 1.7, { pos: tmp2, kind: 'PHYSICAL' }); effects(KNOCK | STUN | SLOW, S.spotX, S.spotZ); }   // (owner) the Hexblade's blink strike knocks down
+      events.emit('explosion', { pos: tmp2.clone(), radius: BLINK_R, color: C_VIOLET });
+      events.emit('shake', { amount: 0.35 }); events.emit('quake', { pos: tmp2.clone(), radius: BLINK_R });
+      if (playerIn(S.spotX, S.spotZ, BLINK_R)) { damagePlayer(P * 1.7, { pos: tmp2, kind: 'PHYSICAL' }); effects(KNOCK | STUN | SLOW, S.spotX, S.spotZ); }   // (owner) the Hexblade's blink strike knocks down
       humanView.atk++;
     } else if (k === 3) {
       const p = world.player;
-      strike(p.pos.x, p.pos.z, 3.2, 0.9, P * 1.2, SLOW | STUN | KNOCK, C_VIOLET);   // (owner) the hex aimed at the hero knocks down
-      for (let i = 0; i < 4; i++) {
-        const a = Math.random() * 6.283, r = 3 + Math.random() * 5;
+      strike(p.pos.x, p.pos.z, HEX_R, 0.9, P * 1.2, SLOW | STUN | KNOCK, C_VIOLET);   // (owner) the hex aimed at the hero knocks down
+      for (let i = 0; i < 5; i++) {
+        const a = Math.random() * 6.283, r = 4 + Math.random() * 6.5;
         tmp.set(p.pos.x + Math.cos(a) * r, 0, p.pos.z + Math.sin(a) * r); clampIn(tmp, 3);
-        strike(tmp.x, tmp.z, 3.2, 1.2 + i * 0.25, P * 1.2, SLOW, C_VIOLET);
+        strike(tmp.x, tmp.z, HEX_R, 1.2 + i * 0.25, P * 1.2, SLOW, C_VIOLET);
       }
       humanView.atk++;
     }
@@ -382,12 +427,12 @@ function release(e: Enemy, px: number, pz: number): void {
     if (k === 1) { S.inv = S.act + 0.05; humanView.roll++; blinkFx('ROLL', e.pos.x, e.pos.z, 1.5); }
     else if (k === 2) {
       const base = Math.atan2(S.dirX, S.dirZ);
-      for (let i = 0; i < 9; i++) { const a = base + (i / 8 - 0.5) * 1.0; shoot(e, Math.sin(a), Math.cos(a), 'ARROW', 21, P * 0.55, 0.32, 1.2); }
-      humanView.atk++; events.emit('shake', { amount: 0.12 });
+      for (let i = 0; i < 12; i++) { const a = base + (i / 11 - 0.5) * VOLLEY_HALF * 2; shoot(e, Math.sin(a), Math.cos(a), 'ARROW', 21, P * 0.55, 0.32, 1.06); }   // (the fan = the telegraphed cone, reach ~22)
+      humanView.atk++; events.emit('shake', { amount: 0.22 });
     } else if (k === 3) {
       const p = world.player;
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * 6.283 + Math.random() * 0.8, r = 2.5 + Math.random() * 3.5;
+      for (let i = 0; i < TRAP_N; i++) {
+        const a = (i / TRAP_N) * 6.283 + Math.random() * 0.8, r = 3 + Math.random() * 4.5;
         tmp.set(p.pos.x + Math.cos(a) * r, 0, p.pos.z + Math.sin(a) * r); clampIn(tmp, 3);
         addTrap(tmp.x, tmp.z, 0.9);
       }
@@ -396,9 +441,9 @@ function release(e: Enemy, px: number, pz: number): void {
     else {   // Marked Shot lands
       S.markZ = null;
       events.emit('lightning', { from: new Vector3(e.pos.x, 1.4, e.pos.z), to: new Vector3(e.pos.x + S.dirX * 36, 1.2, e.pos.z + S.dirZ * 36) });
-      events.emit('shake', { amount: 0.3 });
+      events.emit('shake', { amount: 0.45 });
       const rx = px - e.pos.x, rz = pz - e.pos.z, t = rx * S.dirX + rz * S.dirZ, perp = Math.abs(rx * S.dirZ - rz * S.dirX);
-      if (world.player.alive && t > -0.6 && t < 36.6 && perp < 1.5) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }   // (owner) the marked shot knocks down
+      if (world.player.alive && t > -0.6 && t < 36.6 && perp < MARK_W * 0.5 + 0.6) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }   // (owner) the marked shot knocks down
       humanView.atk++;
     }
   }
@@ -406,6 +451,7 @@ function release(e: Enemy, px: number, pz: number): void {
 
 function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
   const k = e.pattern, P = pw(e);
+  if (k === BASIC) { e.vel.set(S.dirX * 5, 0, S.dirZ * 5); requestYaw(Math.atan2(S.dirX, S.dirZ)); return; }   // (basic: a small step into the cut)
   if (S.kind === 'VARN') {
     if (k === 1) {   // Shield Wall: facing locked, shuffles forward
       // (facing fully locked at the yaw it started with: S.lockYaw never turns during the wall)
@@ -415,8 +461,8 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
       return;
     }
     if (k === 2) {   // Shield Bash: charge along the telegraphed line, one hit + knockback
-      e.vel.set(S.dirX * 18, 0, S.dirZ * 18); requestYaw(Math.atan2(S.dirX, S.dirZ));
-      if (!S.flag && playerIn(e.pos.x, e.pos.z, 2.6)) {
+      e.vel.set(S.dirX * BASH_SPEED, 0, S.dirZ * BASH_SPEED); requestYaw(Math.atan2(S.dirX, S.dirZ));
+      if (!S.flag && playerIn(e.pos.x, e.pos.z, BASH_W * 0.5 - 0.5)) {
         S.flag = true;
         damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });   // shield bash connects: knockdown
         applyPlayerDebuff('STUN', 0.4);
@@ -432,7 +478,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
         S.tick = 0.4; S.volley++;
         aimAt(e, px, pz);
         const base = Math.atan2(S.dirX, S.dirZ);
-        for (let i = -1; i <= 1; i++) { const a = base + i * 0.28; shoot(e, Math.sin(a), Math.cos(a), 'BOSS_ORB', 11, P * 0.7, 0.55, 2.6); }
+        for (let i = -2; i <= 2; i++) { const a = base + i * 0.21; shoot(e, Math.sin(a), Math.cos(a), 'BOSS_ORB', 11, P * 0.65, 0.6, 2.6); }   // (fan of five, +45% spread)
         humanView.atk++;
       }
       requestYaw(Math.atan2(S.dirX, S.dirZ));
@@ -449,15 +495,44 @@ function finish(e: Enemy): void {
   const k = e.pattern;
   if (S.kind === 'VARN' && k === 1) { S.wallT = 0; humanView.wall = 0; }
   if (S.kind === 'ROOK' && k === 1) { aimAt(e, world.player.pos.x, world.player.pos.z); shoot(e, S.dirX, S.dirZ, 'ARROW', 24, pw(e) * 0.6); humanView.atk++; }
+  if (k === BASIC) { basicDone(e); return; }
   const rate = e.phase > 0 && !(S.kind === 'SABLE' && k === 1) ? 1.4 : 1;
-  S.cd[S.kind === 'VARN' && k === SWING ? 0 : k] = (S.huntT > 0 && k === MARKED ? 1.6 : cdOf(k) * (0.85 + Math.random() * 0.3) / rate);
-  S.gap = 0.9; e.pattern = 0; e.vel.set(0, 0, 0);
+  S.cd[k] = (S.huntT > 0 && k === MARKED ? 1.6 : cdOf(k) * (0.85 + Math.random() * 0.3) / rate);
+  S.gap = 0.45;   // (+ the 0.25 s recover = a ~0.7 s readable breather after a big skill; basics fill the time up to the next one)
+  S.skillT = 3 + Math.random() * 1.5;   // next BIG skill ~3.5-5 s later (3-4.5 s timer + the skill itself) (shorter enraged: the timers tick x1.4)
+  S.cd[0] = Math.max(S.cd[0], 0.25);
+  e.pattern = 0; e.vel.set(0, 0, 0);
   enter(e, 'RECOVER'); S.t = 0;
+}
+/** A basic hit is over: chain the next hit of the combo while the hero is still close, else a 0.9-1.4 s pause before the next one. */
+function basicDone(e: Enemy): void {
+  const B = BASIC_DEF[S.kind], p = world.player;
+  S.hitN++; S.combo--;
+  e.pattern = 0; e.vel.set(0, 0, 0);
+  if (S.combo > 0 && p.alive && Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z) < B.range + 1.8) { begin(e, BASIC, p.pos.x, p.pos.z); return; }
+  S.combo = 0; S.hitN = 0;
+  S.cd[0] = B.pause[0] + Math.random() * (B.pause[1] - B.pause[0]); S.gap = 0.1;
+  enter(e, S.kind === 'VARN' ? 'CHASE' : 'KITE'); S.t = 0;
+}
+/** Start a basic combo (hits chain through `basicDone`). */
+function startBasic(e: Enemy, px: number, pz: number): void {
+  const B = BASIC_DEF[S.kind];
+  S.combo = B.combo[0] + Math.floor(Math.random() * (B.combo[1] - B.combo[0] + 1)); S.hitN = 0;
+  begin(e, BASIC, px, pz);
+}
+/** Gap-closing step toward the hero (a quick dash / roll) so the boss actually engages. */
+function startStep(e: Enemy): void {
+  const B = BASIC_DEF[S.kind];
+  S.stepT = S.kind === 'VARN' ? 0.35 : S.kind === 'SABLE' ? 0.5 : 0.55;
+  S.stepCd = B.stepCd * (0.85 + Math.random() * 0.3);
+  if (S.kind === 'ROOK') { humanView.roll++; blinkFx('ROLL', e.pos.x, e.pos.z, 1.5); }
+  else if (S.kind === 'SABLE') blinkFx('ROLL', e.pos.x, e.pos.z, 1.8);
 }
 
 function cancel(e: Enemy): void {
   humanView.wall = 0; humanView.charge = 0; S.wallT = 0; S.inv = 0; e.hideT = 0; S.markZ = null;
-  if (e.pattern > 0) { S.cd[S.kind === 'VARN' && e.pattern === SWING ? 0 : e.pattern] = 2; e.pattern = 0; }
+  S.combo = 0; S.hitN = 0; S.stepT = 0;
+  if (e.pattern > 0) { S.cd[e.pattern === BASIC ? 0 : e.pattern] = e.pattern === BASIC ? 0.8 : 2; e.pattern = 0; }
   enter(e, 'RECOVER'); S.t = 0;
 }
 
@@ -561,6 +636,9 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
   proxTick(e, dt); nearNow = bossNear(e); const pr = proxRate(e);
   for (let i = 0; i < S.cd.length; i++) if (S.cd[i] > 0) S.cd[i] -= dt * (kind === 'SABLE' && i === 1 ? 1 : rate) * (isCloseSkill(i) ? pr : 1);
   if (S.gap > 0) S.gap -= dt * rate;
+  if (S.skillT > 0) S.skillT -= dt * rate;
+  if (S.stepCd > 0) S.stepCd -= dt;
+  if (S.shot > 0) S.shot -= dt;
 
   switch (e.state) {
     case 'WINDUP':
@@ -572,7 +650,7 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
         if (z && z.active && z.kind === 'TELEGRAPH_LINE') { z.dir.set(S.dirX, 0, S.dirZ); z.pos.set(e.pos.x, 0, e.pos.z); }
       }
       requestYaw(kind === 'VARN' && S.turnT > 0 ? S.turnYaw : Math.atan2(S.dirX, S.dirZ));
-      if (!(kind === 'VARN' && e.pattern === SWING)) humanView.charge = Math.min(1, S.t / Math.max(0.1, S.wind));
+      if (e.pattern !== BASIC) humanView.charge = Math.min(1, S.t / Math.max(0.1, S.wind));
       if (S.t >= S.wind) release(e, px, pz);
       return;
     case 'ATTACK':
@@ -581,13 +659,13 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
       return;
     case 'RECOVER':
       e.vel.set(0, 0, 0);
-      if (S.t >= 0.3) enter(e, kind === 'VARN' ? 'CHASE' : 'KITE');
+      if (S.t >= 0.25) enter(e, kind === 'VARN' ? 'CHASE' : 'KITE');
       return;
     default: break;
   }
 
   // ---- pick a skill
-  if (S.gap <= 0 && world.player.alive) {
+  if (S.gap <= 0 && S.skillT <= 0 && world.player.alive) {
     if (kind === 'VARN' && S.bannerArmed && !S.bannerDone) { S.bannerArmed = false; begin(e, BANNER, px, pz); return; }
     const n = kind === 'VARN' ? (S.turnT > 0 ? 0 : 3) : kind === 'SABLE' ? 4 : 5;
     for (let j = 0; j < n; j++) {
@@ -596,27 +674,42 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
     }
   }
 
-  // ---- move + basic attack
+  // ---- move + basic attack (quick basics keep the pressure between the big skills)
   const inv = 1 / Math.max(0.001, d);
   const ux = (px - e.pos.x) * inv, uz = (pz - e.pos.z) * inv;
+  const B = BASIC_DEF[kind], alive = world.player.alive;
   if (kind === 'VARN' && S.turnT > 0) {   // Shield Turn: he advances where his shield points and turns slowly (1.2 rad/s)
     if (e.state !== 'CHASE') enter(e, 'CHASE');
     let da = Math.atan2(ux, uz) - S.turnYaw; da = Math.atan2(Math.sin(da), Math.cos(da));
     S.turnYaw += Math.max(-1.2 * dt, Math.min(1.2 * dt, da));
     if (d > 2.6) e.vel.set(Math.sin(S.turnYaw) * e.speed * 0.7, 0, Math.cos(S.turnYaw) * e.speed * 0.7); else e.vel.set(0, 0, 0);
     requestYaw(S.turnYaw);
-    if (world.player.alive && S.cd[0] <= 0 && d < 4.3) begin(e, SWING, px, pz);
+    if (alive && S.gap <= 0 && S.cd[0] <= 0 && d < B.range - 0.3) startBasic(e, px, pz);
     return;
   }
   if (kind === 'ROOK' && S.huntT > 0) { if (e.state !== 'KITE') enter(e, 'KITE'); e.vel.set(0, 0, 0); requestYaw(Math.atan2(ux, uz)); return; }   // cloaked: he stays put
+  const want = kind === 'VARN' ? 'CHASE' : 'KITE';
+  if (e.state !== want) enter(e, want);
+  if (S.stepT > 0) {   // gap-closing step: dash at the hero until in reach (or the step runs out)
+    S.stepT -= dt;
+    if (d < B.range - 0.9) S.stepT = 0;
+    else {
+      const sp = kind === 'VARN' ? Math.max(13, e.speed * 3) : kind === 'SABLE' ? 18 : 15;
+      e.vel.set(ux * sp, 0, uz * sp); requestYaw(Math.atan2(ux, uz));
+      return;
+    }
+    if (alive && S.cd[0] <= 0 && d < B.range + 0.4) { startBasic(e, px, pz); return; }
+  }
+  const canBasic = alive && S.gap <= 0 && S.cd[0] <= 0;
   if (kind === 'VARN') {
-    if (e.state !== 'CHASE') enter(e, 'CHASE');
     if (d > 2.3) e.vel.set(ux * e.speed, 0, uz * e.speed); else e.vel.set(0, 0, 0);
     requestYaw(Math.atan2(ux, uz));
-    if (world.player.alive && S.cd[0] <= 0 && d < 4.3) begin(e, SWING, px, pz);
+    if (canBasic) {
+      if (d < B.range - 0.3) startBasic(e, px, pz);
+      else if (d < 11 && S.stepCd <= 0) startStep(e);
+    }
     return;
   }
-  if (e.state !== 'KITE') enter(e, 'KITE');
   S.strafeT -= dt;
   if (S.strafeT <= 0) { S.strafeT = 1.6 + Math.random() * 1.8; S.strafe = -S.strafe; }
   const lo = kind === 'SABLE' ? 7 : 9, hi = kind === 'SABLE' ? 12 : 14;
@@ -627,11 +720,15 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
   const vl = Math.hypot(vx, vz) || 1;
   e.vel.set((vx / vl) * e.speed * 0.85, 0, (vz / vl) * e.speed * 0.85);
   requestYaw(Math.atan2(ux, uz));
-  if (S.cd[0] <= 0 && d < 20 && world.player.alive) {   // basic shot
-    S.cd[0] = (kind === 'SABLE' ? 1.5 : 1.1) * (0.85 + Math.random() * 0.3);
-    if (kind === 'SABLE') shoot(e, ux, uz, 'ORB', 14, pw(e) * 0.6, 0.45);
+  if (canBasic) {   // close: dagger / stab combo; mid range: a lunge / roll to get there
+    if (d < B.range - 0.3) { startBasic(e, px, pz); return; }
+    if (d < (kind === 'SABLE' ? 10 : 12) && S.stepCd <= 0) { startStep(e); return; }
+  }
+  if (S.shot <= 0 && d < 20 && alive) {   // basic shot: Sable one shadow bolt every ~1.2 s, Rook an arrow every ~1.1 s
+    S.shot = (kind === 'SABLE' ? 1.2 : 1.0) * (0.85 + Math.random() * 0.3);
+    if (kind === 'SABLE') shoot(e, ux, uz, 'BOSS_ORB', 12, pw(e) * 0.6, 0.5, 2.4);
     else shoot(e, ux, uz, 'ARROW', 24, pw(e) * 0.55);
-    humanView.atk++;
+    humanView.atk++; humanStats.shots++;
   }
 }
 

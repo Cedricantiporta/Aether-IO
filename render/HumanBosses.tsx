@@ -174,8 +174,9 @@ function HumanFx() {
     for (const tr of humanTraps) {
       if (!tr.active) continue;
       const armed = tr.arm <= 0;
-      setInst(traps.current, n, tr.x, 0, tr.z, n, armed ? 1 : 0.7, armed ? 1 : 0.35, armed ? 1 : 0.7);
-      setInst(rings.current, n, tr.x, 0.08, tr.z, 0, armed ? 1 + Math.sin(t * 6 + n) * 0.05 : 0.6);
+      const kr = tr.r / 1.7;   // (trap radius: the model is drawn for r 1.7)
+      setInst(traps.current, n, tr.x, 0, tr.z, n, (armed ? 1 : 0.7) * kr, armed ? 1 : 0.35, (armed ? 1 : 0.7) * kr);
+      setInst(rings.current, n, tr.x, 0.08, tr.z, 0, (armed ? 1 + Math.sin(t * 6 + n) * 0.05 : 0.6) * kr);
       n++;
     }
     commitInst(traps.current, n); commitInst(rings.current, n);
