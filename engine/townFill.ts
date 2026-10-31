@@ -20,7 +20,7 @@ import { CG_BANNERS, CG_HEDGES, CG_STATUES, CG_PROPS, CG_TREES, CG_FLOWERS, CG_B
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, tierRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, BOSS_PORTAL, BOSS_PORTAL_S, bossAt, ADV_VILLAGE, inAdvPlaza, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
-  SIDE_GATES, PARK_EAST, NORTH_GROWTH,
+  SIDE_GATES, PARK_EAST, NORTH_GROWTH, dirtEdge, ROADSIDE_CLEAR,
 } from './townData';
 import { TOWN_CHESTS } from './townChests';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
@@ -137,6 +137,7 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   if (solidNear(x, z, pad)) return true;
   for (const r of reserved) if ((r.x - x) ** 2 + (r.z - z) ** 2 < (r.r + pad) ** 2) return true;
   for (const l of legs) if (distSeg(x, z, l[0], l[1], l[2], l[3]) < l[4] + pad) return true;
+  if (z > 52 && z < 190 && dirtEdge(x, z) < pad + ROADSIDE_CLEAR && !inAdvPlaza(x, z, 0.3)) return true;   // (owner 2026-10-31 roadside clearance: nothing on the mainland's VISIBLE dirt, a prop's edge stays >= ROADSIDE_CLEAR m outside it; the plaza paving is exempt; the Haunted Hollow z >= 190 keeps its own deliberate ruined gateway on the path)
   for (const q of rects) if (x > q[0] - pad && x < q[2] + pad && z > q[1] - pad && z < q[3] + pad) return true;
   if (Math.hypot(x, z) > islandRadius(Math.atan2(z, x)) - edge) return true;
   if (isTownWater(x, z) || onDeckRect(x, z, 2) >= 0 || beachZoneK(x, z) > 0.1 || headSandK(x, z) > 0.1) return true;   // (the sand strips of the Boss Trials headland stay free of trees / bushes)
@@ -183,7 +184,7 @@ function prop(piece: string, x: number, z: number, ry: number, s: number, sy?: n
 const deg = (d: number): number => (d * Math.PI) / 180;
 function deco(piece: string, x: number, z: number, ry: number, s: number, sy?: number): boolean {
   if (piece === PIECES.tuft) return false;   // (owner 2026-10-22: no loose grass tufts; 2026-10-31: flowers (real Quaternius flower clumps, natureLayout.flowerClump) + mushrooms are back)
-  if (blocked(x, z, 0.1, 2.6)) return false;
+  if (blocked(x, z, 0.6, 2.6)) return false;   // (0.6: a flower clump / mushroom ring is ~1 m across, so it keeps that much off the dirt edge)
   put(piece, x, z, ry, s, sy); return true;
 }
 
@@ -282,11 +283,12 @@ put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTA
   for (const [x, z, r] of BI_SOLIDS) { addSolid(x, z, r); claim(x, z, r + 0.2); }
   claim(BI_DAIS.x, BI_DAIS.z, BI_DAIS.r + 0.6);
   for (const st of BI_STATUES) put('statue_hero', st.x, st.z, st.ry, 0.34, 0.34, 0.34, 0.5);
-  decor('notice_board', BI_BOARD.x, BI_BOARD.z, BI_BOARD.ry, 1, { solid: 'ring', r: 0.4, rad: 1.0, force: true });
+  // (roadside clearance 2026-10-31: the board stood on the old-spot path's edge: nudged away from it, same side)
+  decor('notice_board', BI_BOARD.x - 1.4, BI_BOARD.z + 0.8, BI_BOARD.ry, 1, { solid: 'ring', r: 0.4, rad: 1.0, force: true });
   { const [bx, bz] = biRot(-0.2, -0.3); put(PIECES.bench, BI_DECK.x + bx, BI_DECK.z + bz, Math.PI + BI_ROT, 1, 1, 1, 0.14); addSolid(BI_DECK.x + bx, BI_DECK.z + bz, 0.7); } claim(BI_DECK.x, BI_DECK.z, 5.5);
   const r = rng(2610);
   /** a small flower patch / bush / tuft / mushroom nest, walk-through except the bushes (owner: flowers + bushes huddle round the foot of every tree) */
-  const bloom = (x: number, z: number, s: number): void => { if (!blocked(x, z, 0.1, 2.0)) put(PIECES.flowers, x, z, r() * TAU, s, s * (0.85 + r() * 0.3), s); };
+  const bloom = (x: number, z: number, s: number): void => { if (!blocked(x, z, 0.6, 2.0)) put(PIECES.flowers, x, z, r() * TAU, s, s * (0.85 + r() * 0.3), s); };
   const nest = (x: number, z: number, rad: number): void => {
     const nb = 2 + Math.floor(r() * 3);
     for (let k = 0; k < nb; k++) { const a = r() * TAU, d = rad + 0.4 + r() * 0.9; prop(pick(PIECES.bush, r()), x + Math.cos(a) * d, z + Math.sin(a) * d, r() * TAU, 0.5 + r() * 0.32, undefined, 0.1); }
@@ -532,7 +534,8 @@ export const GLOOM = {
     const len = Math.hypot(rd.x2 - rd.x1, rd.z2 - rd.z1), ux = (rd.x2 - rd.x1) / len, uz = (rd.z2 - rd.z1) / len, ry = Math.atan2(-uz, ux), m = Math.floor(len / 2.1);
     for (const side of [-1, 1]) for (let i = 0; i < m; i++) {
       if (g() < 0.22) continue;
-      const t = (i + 0.5) * (len / m), x = rd.x1 + ux * t - uz * 3.2 * side, z = rd.z1 + uz * t + ux * 3.2 * side;
+      const t = (i + 0.5) * (len / m); let o = 3.2, x = rd.x1 + ux * t - uz * o * side, z = rd.z1 + uz * t + ux * o * side;
+      while (o < 7 && dirtEdge(x, z) < ROADSIDE_CLEAR + 0.35) { o += 0.15; x = rd.x1 + ux * t - uz * o * side; z = rd.z1 + uz * t + ux * o * side; }   // (roadside clearance: the broken fence stands outside the dirt edge, same side)
       if (!free(x, z, 0.6, 0.05, 2.6)) continue;
       const broken = g() < 0.35;
       GLOOM.fences.push({ x, z, ry: ry + (broken ? (g() - 0.5) * 0.5 : 0), k: broken ? 1 : 0, s: len / m / 2.1 }); claim(x, z, 0.6);

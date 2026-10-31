@@ -21,6 +21,8 @@ import { SHOP_POSITIONS, shopFront } from '../constants';
 import { v3Ring, v3Disc } from './kitV3Data';
 import { BEACH_BOX, BEACH, onDeckRect, beachWobble, mainBeachK, MAIN_BEACH, mainShoreOff, lakeSouthZ } from './beachData';
 import { TOWN_CHESTS, CHEST_R } from './townChests';
+import { dirtDiscs, makeDirtEdge, ROADSIDE_CLEAR } from './dirtPath';
+export { ROADSIDE_CLEAR };
 
 /** `kit` = which town_kit_v2 piece draws it (render/townKit.tsx; undefined = the procedural barn / coop), `s` = uniform scale of that
  *  piece. Every house faces south (+z, rot 0) so the north-up camera always sees its front (owner: Echoes-of-Wisdom framing). */
@@ -129,7 +131,7 @@ export const BARN = { x: 41.5, z: 96.8, s: 0.85 };   // nature_kit_v1 'barn' (fr
 export const FARMHOUSE = { x: 31, z: 96.2, s: 0.85 };   // nature_kit_v1 'farmhouse', west column (Hollis lives here)
 /** (owner 2026-10-24) the animal pen on the lot south of the farm track: fenced on every side, its entrance a gap in the
  *  track's south fence facing the farm yard's own gap (x gate0..gate1). Coop + hens west, cows / sheep / pigs east. */
-export const ANIMAL_PEN = { x0: 29.2, x1: 46.2, z0: 113.2, z1: 126.6, gate0: 34.4, gate1: 38.6 };
+export const ANIMAL_PEN = { x0: 29.2, x1: 46.2, z0: 114.8, z1: 126.6, gate0: 34.4, gate1: 38.6 };
 export const COOP = { x: 32.4, z: 117.0, s: 1 };   // nature_kit_v1 'chicken_coop' (front = south), north-west corner of the animal pen
 /** Egg nests in front (south) of the coop (hold nothing; E collects an egg when one is laid, see village.ts). */
 /** (owner 2026-10-25) the hens range free on the open grass east of the animal pen; six egg nests spread out across it. */
@@ -329,7 +331,7 @@ export interface SeatSpec { x: number; z: number; yaw: number; y: number }
 export const TOWN_SEATS: SeatSpec[] = [
   // (owner 2026-10-31) the Adventure Plaza: six benches on an arc in front of the portal, all facing it (yaw = -angle from the arch's front axis)
   ...[-86, -62, -40, 40, 62, 86].map((a) => { const r = Math.abs(a) < 45 ? 11.6 : 10.5; return { x: PORTAL.x + r * Math.sin((a * Math.PI) / 180), z: PORTAL.z - r * Math.cos((a * Math.PI) / 180), yaw: (-a * Math.PI) / 180, y: 0.55 }; }),   // (the two inner ones sit a little further out, clear of the horse statues)
-  { x: -16.6, z: 150.5, yaw: Math.PI, y: 0.55 },   // Lantern Lane: a bench between the two south houses (faces north onto the lane)
+  { x: -16.6, z: 151.6, yaw: Math.PI, y: 0.55 },   // Lantern Lane: a bench between the two south houses (faces north onto the lane)
   { x: 8.1, z: 2, yaw: -Math.PI / 2, y: 0.55 }, { x: -8.1, z: 2, yaw: Math.PI / 2, y: 0.55 },   // the plaza's east / west rim between the two shop paths, facing the portal
   { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
@@ -348,9 +350,9 @@ export const TOWN_SEATS: SeatSpec[] = [
 /** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
 export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
 /** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
-export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-11.4, 122.6], [-24.0, 153.2]];   // (+ Lantern Lane's well)
+export const WELLS: [number, number][] = [[30.8, 106.5], [14, 122.4], [-12.9, 125.2], [-24.0, 153.2]];   // (+ Lantern Lane's well)
 /** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
-export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6], [-2.4, 138.6], [-24.6, 146.2], [3.6, 91.2], [-3.6, 110.2], [6.4, 131.6]];   // (+ the Adventure Plaza's north entrance and Lantern Lane's corner)
+export const SIGNPOSTS: [number, number][] = [[8.7, 80.6], [-6.4, 80.6], [-2.4, 138.6], [-30.0, 151.2], [5.0, 90.2], [-4.8, 109.4], [6.7, 131.2]];   // (+ the Adventure Plaza's north entrance and Lantern Lane's corner)
 /** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
 export const STEP_PATHS: [number, number, number, number][] = [
   [30.1, 100.2, 30.1, 101.6], [41.4, 102.0, 41.4, 103.4],   // farmhouse + barn doors
@@ -418,7 +420,7 @@ export const HOUSES: HouseSpec[] = [
   // ---- the Quaternius village houses (owner 2026-10-24): every door faces the nearest street / lane, rows share one setback (front line) parallel to it, the back of a row
   // faces the kingdom wall or a back garden. Few, well spaced; nothing between two houses without a door onto a path.
   // the hamlet on the forest road south of the farm bridge: two houses a side, doors toward the road (x 0)
-  V('House_1', 13.2, 118, -Math.PI / 2), V('House_2', 13.6, 125.2, -Math.PI / 2), V('House_2', -8.6, 118.8, Math.PI / 2), V('House_1', -8.2, 126.6, Math.PI / 2),
+  V('House_1', 13.2, 118, -Math.PI / 2), V('House_2', 13.6, 125.2, -Math.PI / 2), V('House_2', -10.1, 120.7, Math.PI / 2), V('House_1', -9.7, 129.6, Math.PI / 2),
   // the adventurer's house (HERO_HOUSE): West Rise, south row of the lane z 23.2, door north onto the lane, back to the south wall
   { ...VF('House_1', HERO_HOUSE.x, 25.6, Math.PI), wall: '#e9dfc8', door: '#8a2f22' },
   // North Street, south side (doors north onto the street, front line z -3.4): a west row and an east row
@@ -434,8 +436,8 @@ export const HOUSES: HouseSpec[] = [
   // Middle Town (Town Plan v6): the north row of terraced houses on Terrace Street (z -41.4), doors south, a gap at x +-30 for the flights up to Castle Hill
   VF('House_1', -36.8, -44.3, 0), VF('House_2', -20.9, -44.3, 0), VF('House_1', -14, -44.3, 0), VF('House_1', 14, -44.3, 0), VF('House_2', 20.9, -44.3, 0), VF('House_1', 36.8, -44.3, 0),
   // Lantern Lane (owner 2026-10-31): the little village between the Adventure Plaza and the Boss Trials path. Doors face the lane (ADV_ROADS), each a different way / wall colour.
-  { ...V('House_2', -21.0, 141.7, 0), wall: '#f2d9b8', door: '#2f5a7a' }, { ...V('House_1', -13.0, 154.5, Math.PI), wall: '#d9e6c8', door: '#8a2f22' }, { ...V('House_2', -20.2, 155.3, Math.PI), wall: '#f1c9c0', door: '#3e5a2e' },
-  { ...V('House_1', -32.6, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -23.4, 133.2, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
+  { ...V('House_2', -21.0, 139.6, 0), wall: '#f2d9b8', door: '#2f5a7a' }, { ...V('House_1', -13.0, 155.5, Math.PI), wall: '#d9e6c8', door: '#8a2f22' }, { ...V('House_2', -20.2, 156.3, Math.PI), wall: '#f1c9c0', door: '#3e5a2e' },
+  { ...V('House_1', -32.75, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -23.4, 133.2, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
 ];
 
 /** (no yards: the houses stand directly on the streets, see HOUSES) */
@@ -573,6 +575,10 @@ export const WALL_RUNS: [number, number, number, number, number, number][] = [
 ];
 
 
+/** The outskirts' visible dirt (engine/dirtPath.ts: ROADS wandering a little off the straight segment + bare patches) as discs, and the signed distance to its edge: the roadside-clearance rule measures every prop against THIS, not the nominal road width. */
+export const DIRT_DISCS = dirtDiscs(ROADS, WALL.z1);
+export const dirtEdge = makeDirtEdge(DIRT_DISCS);
+
 // ---- landscaped lots (owner 2026-10-21: fewer houses, each on its own garden island: lawn, a low fence with a gate opening, proper spacing, decorations)
 /** One house's lot in the HOUSE's local frame (origin = house centre, +z = its front, turned by `rot`): x +-hx, z zb (back) .. zf (front). `gx` = the gate's centre x (the door), `gw` its width. */
 export interface Lot { i: number; x: number; z: number; rot: number; hx: number; zb: number; zf: number; gx: number; gw: number; hero: boolean }
@@ -593,7 +599,7 @@ export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
 const HAND_FENCES: [number, number, number, number][] = [
   // (owner 2026-10-31) Lantern Lane's yards: the back fence of the two south houses, a gate-less stub beside the well, the back fence behind the market stalls
-  [-23.2, 159.8, -9.8, 159.8], [-23.2, 159.8, -23.2, 157.4], [-24.0, 136.6, -15.2, 136.6], [-15.2, 136.6, -15.2, 138.8],
+  [-23.2, 161.0, -9.8, 161.0], [-23.2, 161.0, -23.2, 158.6], [-19.4, 134.5, -15.2, 134.5], [-15.2, 134.5, -15.2, 136.7],
   // (the avenue's fences made way for the market stalls; houses get their yard fences from YARD_FENCES below)
   // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
   [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
@@ -607,13 +613,13 @@ const HAND_FENCES: [number, number, number, number][] = [
   // farm field south of the gate, east of the road (gap in the west side, facing the road)
   [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z - FARM.hd], [FARM.x - FARM.hw, FARM.z + FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
   [FARM.x + FARM.hw, FARM.z - FARM.hd, FARM.x + FARM.hw, FARM.z + FARM.hd],
-  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 1.5], [FARM.x - FARM.hw, FARM.z + 1.5, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west)
+  [FARM.x - FARM.hw, FARM.z - FARM.hd, FARM.x - FARM.hw, FARM.z - 3.1], [FARM.x - FARM.hw, FARM.z + 3.1, FARM.x - FARM.hw, FARM.z + FARM.hd],   // gap on the road side (west), as wide as the farm gate road's dirt + the clearance
   // (owner 2026-10-24) no fences along the paths / roads any more (road from the bridge, coop -> mines path, farm track, tower lane);
   // only the crop fields, pens, paddock and graveyard keep theirs. The animal pen's north side (it used to be the track fence):
-  [ANIMAL_PEN.x0, 113.2, ANIMAL_PEN.gate0, 113.2], [ANIMAL_PEN.gate1, 113.2, 43.6, 113.2],
+  [ANIMAL_PEN.x0, ANIMAL_PEN.z0, ANIMAL_PEN.gate0, ANIMAL_PEN.z0], [ANIMAL_PEN.gate1, ANIMAL_PEN.z0, 43.6, ANIMAL_PEN.z0],
   // (owner) the animal pen: west, south and east sides (its north side is the track fence above)
   [ANIMAL_PEN.x0, ANIMAL_PEN.z0, ANIMAL_PEN.x0, ANIMAL_PEN.z1], [ANIMAL_PEN.x0, ANIMAL_PEN.z1, ANIMAL_PEN.x1, ANIMAL_PEN.z1],
-  [ANIMAL_PEN.x1, ANIMAL_PEN.z1, ANIMAL_PEN.x1, 113.6], [43.6, 113.2, ANIMAL_PEN.x1, 113.6],
+  [ANIMAL_PEN.x1, ANIMAL_PEN.z1, ANIMAL_PEN.x1, ANIMAL_PEN.z0 + 0.4], [43.6, ANIMAL_PEN.z0, ANIMAL_PEN.x1, ANIMAL_PEN.z0 + 0.4],
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
@@ -636,13 +642,13 @@ const YARD_FENCES: [number, number, number, number][] = (() => {
   // east hamlet pair (doors west onto the forest road at z 118 / 125.2; the well at (14, 122.4) stays inside the yard)
   run(7.2, 114.6, 18.9, 114.6); run(7.2, 129.4, 18.9, 129.4); run(18.9, 114.6, 18.9, 129.4);
   run(7.2, 114.6, 7.2, 116.2); run(7.2, 119.8, 7.2, 123.4); run(7.2, 127.0, 7.2, 129.4);
-  // west hamlet pair (doors east onto the road; the well at (-11.4, 122.6) inside; open front)
-  run(-13.7, 115.9, -13.7, 130.3); run(-13.7, 130.3, -4.9, 130.3); run(-13.7, 115.9, -10.6, 115.9);
+  // west hamlet pair (doors east onto the road; the well at (-12.9, 125.2) inside; open front)
+  run(-15.2, 117.4, -15.2, 133.3); run(-15.2, 133.3, -6.4, 133.3); run(-15.2, 117.4, -12.0, 117.4);
   // Lantern Lane: the west house (-32.6, 143) and the SW house (-23.4, 133.2) (its north side is the stub beside the well above)
-  run(-37.0, 139.5, -37.0, 146.5); run(-37.0, 139.5, -32.5, 139.5); run(-37.0, 146.5, -30.2, 146.5);
+  // (the west house (-32.6, 143) stands in a 6.1 m corridor between the lane and the old-spot path: no yard fence there)
   run(-19.0, 129.5, -19.0, 136.6); run(-19.0, 129.5, -24.5, 129.5);
   // the Elixir Brewer's hut (-6.4, 107.4): back and west side
-  run(-11.8, 102.6, -4.4, 102.6); run(-11.8, 102.6, -11.8, 112.4);
+  run(-11.8, 102.6, -4.4, 102.6); run(-11.8, 102.6, -11.8, 108.6);
   // the farm yard: west side continued north from the farmhouse stub (gap at z 95-98.6 for the cows' way), back fence behind the farmhouse + barn (gap north of the farm yard gate)
   run(27, 101.8, 27, 98.6); run(27, 95.2, 27, 89.6); run(27, 89.6, 33.5, 89.6); run(37, 89.6, 47, 89.6);
   return out;
@@ -664,7 +670,7 @@ const PATH_FENCES: [number, number, number, number][] = (() => {
     // (owner 2026-10-31 "more path sides") the tower lane on past the nests / hens' grass, up to where the Haunted Hollow's gloom begins (z ~ 193; the gloomy stretch keeps its own broken look)
     { pts: [[24, 138.5], [34, 137], [45, 142], [52, 152], [53, 163], [46, 173], [37, 183], [34, 193]], w: 2.8, sides: [-1, 1], gaps: [[24, 138.5, 3.0], [34, 137, 3.0], [45, 142, 3.4], [52, 152, 3.4], [53, 163, 3.4], [46, 173, 3.4], [37, 183, 3.4], [34, 193, 3.4]] },
     // the MAIN forest road, both sides, from the bridge's south end down past the farm gate and the Brewer's door (gaps: signposts, farm gate, farm track, Brewer's lane; the hamlet stretch and the plaza mouth stay open)
-    { pts: [[0, 81], [0, 108.5]], w: 4.6, sides: [-1, 1], gaps: [[0, 94, 4.6], [3.6, 91.2, 3.4], [-3.6, 110.2, 3.4], [2.4, 110.6, 5.2], [0, 81, 3.2]] },
+    { pts: [[0, 81], [0, 108.5]], w: 4.6, sides: [-1, 1], gaps: [[0, 94, 4.6], [5.0, 90.2, 3.4], [-4.8, 109.4, 3.4], [2.4, 110.6, 5.2], [0, 81, 3.2]] },
     // the Brewer's lane west from the road (north side only: the hamlet's yard stands south of it) up to the Boss Trials meadow
     { pts: [[-1, 113.6], [-17, 113.6], [-29, 114]], w: 3.4, sides: [1], gaps: [[-1, 113.6, 5.4], [-6.4, 113.6, 4.4], [-17, 113.6, 3.4]] },
     // the mine path east side: from the footbridge's north end up towards the mining camp (gaps at the story gate, the footbridge end, the ore node, the camp mouth)
@@ -674,20 +680,28 @@ const PATH_FENCES: [number, number, number, number][] = (() => {
   const sd = (px: number, pz: number, a: number, b: number, c: number, d: number): number => { const dx = c - a, dz = d - b, L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((px - a) * dx + (pz - b) * dz) / L)); return Math.hypot(px - a - dx * t, pz - b - dz * t); };
   const out: [number, number, number, number][] = [];
   // (the farmhouse yard's west side, running back from the track's north fence)
-  out.push([27, 108.4, 27, 105], [27, 105, 27, 101.8]);
-  const PIECE = 3.4;
+  out.push([27, 106.6, 27, 104.2], [27, 104.2, 27, 101.8]);
+  const PIECE = 3.4, FENCE_CLEAR = ROADSIDE_CLEAR + 0.35;   // (roadside clearance: the fence LINE stands >= ROADSIDE_CLEAR m outside the visible dirt, on its own side: each piece end is pushed out along the track's perpendicular until dirtEdge allows it, the line eases in / out so it follows the dirt without kinks)
   for (const T of TRACKS) for (const side of T.sides) for (let k = 0; k + 1 < T.pts.length; k++) {
     const [ax, az] = T.pts[k], [bx, bz] = T.pts[k + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
-    const d = T.w / 2 + 1.35, nx = -uz * side * d, nz = ux * side * d, t0 = 1.4, n = Math.floor((L - 2 * t0) / PIECE);
+    const px = -uz * side, pz = ux * side, d0 = T.w / 2 + 1.35, t0 = 1.4, n = Math.floor((L - 2 * t0) / PIECE);
+    const off: number[] = [];
+    for (let i = 0; i <= n; i++) { const s = t0 + i * PIECE, cx = ax + ux * s, cz = az + uz * s; let o = d0; while (o < d0 + 4.5 && dirtEdge(cx + px * o, cz + pz * o) < FENCE_CLEAR) o += 0.1; off.push(o); }
+    for (let i = 1; i <= n; i++) off[i] = Math.max(off[i], off[i - 1] - 0.8);
+    for (let i = n - 1; i >= 0; i--) off[i] = Math.max(off[i], off[i + 1] - 0.8);
     for (let i = 0; i < n; i++) {
-      const s0 = t0 + i * PIECE, s1 = s0 + PIECE, x1 = ax + ux * s0 + nx, z1 = az + uz * s0 + nz, x2 = ax + ux * s1 + nx, z2 = az + uz * s1 + nz, mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
-      if (i % 6 === 5 || hh(mx, mz) < 0.15) continue;   // (a gate every sixth piece, a few broken sections)
-      if (T.gaps.some(([gx, gz, gr]) => Math.hypot(mx - gx, mz - gz) < gr || Math.hypot(x1 - gx, z1 - gz) < gr * 0.7 || Math.hypot(x2 - gx, z2 - gz) < gr * 0.7)) continue;
+      const s0 = t0 + i * PIECE, s1 = s0 + PIECE;
+      const x1 = ax + ux * s0 + px * off[i], z1 = az + uz * s0 + pz * off[i], x2 = ax + ux * s1 + px * off[i + 1], z2 = az + uz * s1 + pz * off[i + 1], mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+      // (gaps, wells, nests, signposts, houses are judged on the nominal line d0 so the junction openings stay where they were)
+      const nx1 = ax + ux * s0 + px * d0, nz1 = az + uz * s0 + pz * d0, nx2 = ax + ux * s1 + px * d0, nz2 = az + uz * s1 + pz * d0, nmx = (nx1 + nx2) / 2, nmz = (nz1 + nz2) / 2;
+      if (i % 6 === 5 || hh(nmx, nmz) < 0.15) continue;   // (a gate every sixth piece, a few broken sections)
+      if (T.gaps.some(([gx, gz, gr]) => Math.hypot(nmx - gx, nmz - gz) < gr || Math.hypot(nx1 - gx, nz1 - gz) < gr * 0.7 || Math.hypot(nx2 - gx, nz2 - gz) < gr * 0.7)) continue;
       if (WELLS.some(([wx, wz]) => Math.hypot(mx - wx, mz - wz) < 3.2)) continue;
       if (NESTS.some(([nx_, nz_]) => Math.hypot(mx - nx_, mz - nz_) < 3.4) || SIGNPOSTS.some(([sx_, sz_]) => Math.hypot(mx - sx_, mz - sz_) < 3.0)) continue;
       if (YARD_FENCES.some((f) => sd(mx, mz, f[0], f[1], f[2], f[3]) < 1.9)) continue;
       if (HOUSES.some((h) => Math.hypot(mx - h.x, mz - h.z) < 6)) continue;
       if (HAND_FENCES.some((f) => sd(mx, mz, f[0], f[1], f[2], f[3]) < 1.9 || sd(x1, z1, f[0], f[1], f[2], f[3]) < 1.4 || sd(x2, z2, f[0], f[1], f[2], f[3]) < 1.4)) continue;
+      if (dirtEdge(x1, z1) < FENCE_CLEAR - 0.1 || dirtEdge(x2, z2) < FENCE_CLEAR - 0.1 || dirtEdge(mx, mz) < FENCE_CLEAR - 0.1) continue;   // (still on some other track's dirt: leave the piece out)
       out.push([x1, z1, x2, z2]);
     }
   }
@@ -703,11 +717,11 @@ export const SIGNS: SignSpec[] = [];
 export const LAMPS: [number, number][] = [
   // main avenue (+ the road on into the farmland)
   // (owner 2026-10-23) the avenue from the plaza to the gate: lamps in mirrored pairs on both edges
-  [3.2, 13.5], [-3.2, 13.5], [3.2, 20], [-3.2, 20], [3.2, 26.5], [-3.2, 26.5], [3.2, 33], [-3.2, 33], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.1, 108], [4.1, 116],
+  [3.2, 13.5], [-3.2, 13.5], [3.2, 20], [-3.2, 20], [3.2, 26.5], [-3.2, 26.5], [3.2, 33], [-3.2, 33], [-3.2, 41.8], [3, 42.5], [3.2, 50], [-3.2, 53.5], [4.1, 84], [-4.1, 92], [4.1, 100], [-4.4, 108], [4.1, 116],
   // south street (north edge), plaza, north street
   [-35.25, 7.75], [-26.75, 7.75], [-12.5, -8.25], [12.5, -8.25], [-5, -8.25], [5, -8.25],   // (on the kerb line of the plant-box barriers, engine/townBarriers.ts; the east shop-row lamps are the shops' own, SHOP_LOOK)
   // the dirt path from the meadow to the beach
-  [-11, 53.9], [-27.5, 54.6], [-42.2, 52.3],
+  [-12.2, 55.9], [-27.5, 55.3], [-42.4, 52.8],
   // the riverside park
   [22, riverBank(22, 0) - 3.4], [31, riverBank(31, 0) - 3.4],
   ...CG_LAMPS,   // (Town Plan v6: the Royal Way, the castle way and the ring road, engine/castleGrounds)
@@ -724,11 +738,11 @@ export const PLANTERS: PlanterSpec[] = [
   // (owner 2026-10-31) the Adventure Plaza: long flower beds flanking the entrance road, two more on the inner arc, tree-ringed corner beds (the trees are ADV_TREES); Lantern Lane: door boxes
   { x: 0.2, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: 8.4, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: -1.6, z: 144.4, w: 3.6, d: 1.3, kind: 1 }, { x: 11.2, z: 142.6, w: 3.6, d: 1.3, kind: 1 },
   { x: -1.2, z: 162.4, w: 4.0, d: 1.3, kind: 1 }, { x: 10.0, z: 162.4, w: 3.2, d: 1.3, kind: 1 },
-  { x: -14.9, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -11.2, z: 151.1, w: 1.5, d: 0.9, kind: 0 }, { x: -22.6, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -18.9, z: 151.1, w: 1.5, d: 0.9, kind: 0 },
+  { x: -14.9, z: 152.1, w: 1.5, d: 0.9, kind: 1 }, { x: -11.2, z: 152.1, w: 1.5, d: 0.9, kind: 0 }, { x: -22.6, z: 152.1, w: 1.5, d: 0.9, kind: 1 }, { x: -18.9, z: 152.1, w: 1.5, d: 0.9, kind: 0 },
   // (owner 2026-10-23) the avenue to the gate: mirrored flower boxes on both edges, between the lamps
   { x: 3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: -3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: 3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 }, { x: -3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 },
   // (audit 2026-10-31) the forest road between the bridge and the hamlet: mirrored flower boxes between the lamps, a bed beside the chapel yard tree
-  { x: 3.6, z: 88, w: 0.9, d: 2.2, kind: 1 }, { x: -3.6, z: 88, w: 0.9, d: 2.2, kind: 0 }, { x: 3.6, z: 105.6, w: 0.9, d: 2.2, kind: 0 }, { x: -3.6, z: 100.4, w: 0.9, d: 2.2, kind: 1 },
+  { x: 4.5, z: 86.6, w: 0.9, d: 2.2, kind: 1 }, { x: -4.5, z: 86.6, w: 0.9, d: 2.2, kind: 0 }, { x: 4.5, z: 105.6, w: 0.9, d: 2.2, kind: 0 }, { x: -4.5, z: 100.4, w: 0.9, d: 2.2, kind: 1 },
   { x: -19.6, z: -9.4, w: 2.4, d: 1.1, kind: 1 },
   // (owner) flower boxes lining the summon + tech shop paths
   { x: 7.3, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 11.9, z: 15.4, w: 0.9, d: 2.0, kind: 1 }, { x: 14.9, z: 15.4, w: 0.9, d: 2.0, kind: 0 }, { x: 19.5, z: 15.4, w: 0.9, d: 2.0, kind: 1 },
@@ -810,7 +824,7 @@ export const GRASS_PATCHES: [number, number, number, number, number?, number?][]
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
   { x: 12.6, z: 158.6, rot: 0, kind: 0 },   // (owner 2026-10-31) the travelling merchant's cart in the Adventure Plaza's south-east corner
-  { x: 13.6, z: 57.0, rot: 0, kind: 0 }, { x: -9.4, z: 56.6, rot: 0, kind: 2 }, { x: -37, z: 56.8, rot: 0, kind: 1 }, { x: -33.5, z: 81.4, rot: 0, kind: 2 },   // (market carts: fronts south; kind 1 is a haystack)
+  { x: 13.6, z: 57.0, rot: 0, kind: 0 }, { x: -8.4, z: 57.5, rot: 0, kind: 2 }, { x: -37.2, z: 57.5, rot: 0, kind: 1 }, { x: -33.5, z: 81.4, rot: 0, kind: 2 },   // (market carts: fronts south; kind 1 is a haystack)
 ];
 /** Free-standing stone gateways on the two outskirts roads (owner 2026-10-22: "a gate to the beach and a gate to the mines"). The roads start at the south gate meadow and never cross the town wall,
  *  so the gates stand ON the roads: `rot` = yaw of the road direction (the passage runs along it). Pillars: two collider circles at +-GATEWAY.px across the road. */
