@@ -13,7 +13,7 @@ export const BOSS_HP_TOTAL = 1;   // (owner 2026-10-31: halved again, 2 -> 1; th
 export const BOSS_LAYERS = 10, BOSS_LAYERS_HARD = 10;
 export const ARMOR_CAP = 300, ARMOR_EXP = 1.3, TRIAL_ARMOR_MUL = 1.15;
 /** Target hit (share of max HP after mitigation) of an ordinary boss skill; Boss Trials bosses are final-tier. */
-export const HIT_TARGET = 0.10, HIT_TARGET_TRIAL = 0.14, HIT_EXP = 0.6, HIT_MIN = 1, HIT_MAX = 4;
+export const HIT_TARGET = 0.10, HIT_TARGET_TRIAL = 0.14, HIT_EXP = 0.6, HIT_MIN = 1, HIT_MAX = 6;
 
 /** Extra boss armour for a hero of `level` (1..50). */
 export function bossLvArmor(level: number, trial: boolean): number {

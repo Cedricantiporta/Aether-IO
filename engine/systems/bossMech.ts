@@ -57,7 +57,7 @@ const WARD_AT = 0.5;    // (owner: once per fight at 50% hp; was at 66% and 33%)
 const BARRIER_CD = [32, 28, 24], BARRIER_HP = [0.05, 0.06, 0.07];   // (owner: less often; was 22 / 20 / 18)
 // damage of the shared layer as multiples of the boss's power (balance pass: 1.1 / 1.3 / 1.6 -> 0.8 / 1.0 / 1.25; this layer
 // sits on top of every boss's own kit and dealt a big share of the hits that killed level-8 heroes at Elderroot)
-const RAIN_DMG = 0.5, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
+const RAIN_DMG = 1.5, QUAKE_DMG = 1.7, CRUSH_DMG = 2.1;   // (owner 2026-10-31: the meteor rain, quake and crush hit very hard: ~x3 of before, they scale with the hero via bossBalance)
 
 // ============================================================================
 // Proximity pressure (owner 2026-10-31): a boss only uses its SHORT-range skills (melee swipes, stomps, slams, tail / ring bursts, shield
@@ -181,7 +181,7 @@ function arenaR(): number { return Math.max(14, world.room.radius * 0.85); }
  * Each wave warns ~1 s. Waves are queued (RQ) and fired from tickBossStrikes; impacts come from the pooled strike list.
  */
 /** share of MAX hp one rain impact takes (~10-15%: a mid-geared hero survives several, standing still through a cast does not) */
-const RAIN_PCT = [0.1, 0.12, 0.14];
+const RAIN_PCT = [0.2, 0.24, 0.28];   // (owner 2026-10-31: meteors / boulders / geysers / icicles hit very hard; was 10 / 12 / 14 % of max HP)
 const RAIN_WAVE_GAP = 0.9, RAIN_WARN = [1.1, 1.0, 0.95];
 const RQ = { n: 3, t: 0, m: null as Mech | null, dmg: 0, big: 1, phase: 0, pi: 0 };
 const rainSeed = { th: 0, ox: 0, oz: 0 };
