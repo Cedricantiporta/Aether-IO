@@ -16,8 +16,8 @@ export interface BossFormDef {
   suffix: string; fallText: string; ascendText: string; ascendNote: string; fallNote: string;
   /** form-2 body colour multiplier (vertex colours x tint), emissive colour + strength, aura ring / particle colours (0xRRGGBB) */
   tint: readonly [number, number, number]; emissive: number; emissiveI: number; aura: number; auraAlt: number;
-  /** form-2 skill palette: hue shift (deg) / saturation x / lightness x applied to every telegraph + shockwave colour a form-2 boss casts */
-  hue: number; sat: number; lum: number;
+  /** form-2 skill palette applied to every telegraph + wave + hazard colour a form-2 boss casts: hue (deg; `snap` = every colour takes this hue, else it is a shift) / saturation x / lightness x */
+  hue: number; snap: boolean; sat: number; lum: number;
   /** form-2 telegraphs are this much bigger */
   tel: number;
   /** form-2 wing glow (the Herald's / Ignar's wings) */
@@ -32,14 +32,14 @@ export const FORMS: Partial<Record<EnemyKind, BossFormDef>> = {
     s1: 0.75, s2: 1.3, hp: [0.75, 1], finalHp: [0.75, 1], speed: 1.3, dmg: 1,
     suffix: ' - Burning Form', fallText: 'IGNAR FALLS...', ascendText: 'IGNAR BURNS ANEW', fallNote: 'Ignar collapses - but the flames are not done!', ascendNote: 'IGNAR RISES, THE BURNING FORM!',
     tint: [0.55, 1.05, 1.9], emissive: 0x2a9bff, emissiveI: 0.55, aura: 0x58c8ff, auraAlt: 0xe2f8ff,
-    hue: 185, sat: 1, lum: 1.12, tel: 1.12, wing: 0x2a8cff, burst: 0xff6a1a,
+    hue: 185, snap: false, sat: 1, lum: 1.12, tel: 1.12, wing: 0x2a8cff, burst: 0xff6a1a,
   },
   // The Void Herald: violet void -> crimson-pink final form (the finale fight uses `finalHp`: form 1 = 1x, form 2 = 1.25x of the Void boss's HP)
   BOSS_VOID: {
     s1: 0.75, s2: 1.3, hp: [0.75, 1], finalHp: [1, 1.25], speed: 1.2, dmg: 1.15,
     suffix: ' - Final Form', fallText: 'THE HERALD FALLS...', ascendText: 'THE HERALD ASCENDS', fallNote: 'The Void Herald shatters - and the void gathers his remains!', ascendNote: 'THE VOID HERALD - FINAL FORM!',
     tint: [1.7, 0.55, 1.0], emissive: 0xff2a6a, emissiveI: 0.5, aura: 0xff4d8a, auraAlt: 0xffd9e6,
-    hue: 62, sat: 1.05, lum: 1.1, tel: 1.12, wing: 0xff2a6a, burst: 0xc084fc,
+    hue: 336, snap: true, sat: 1.05, lum: 1.1, tel: 1.12, wing: 0xff2a6a, burst: 0xc084fc,
   },
 };
 
@@ -95,7 +95,8 @@ export function formColor(c: number): number {
     h = mx === r ? ((g - b) / dl + (g < b ? 6 : 0)) : mx === g ? (b - r) / dl + 2 : (r - g) / dl + 4;
     h *= 60;
   }
-  h = (h + d.hue) % 360; if (h < 0) h += 360;
+  h = d.snap ? d.hue + (l - 0.5) * 24 : h + d.hue; h %= 360; if (h < 0) h += 360;
+  if (d.snap && s < 0.35) s = 0.6;   // (grey / white tones in a snapped palette become the palette colour too)
   s = Math.min(1, s * d.sat); const l2 = Math.min(0.95, l * d.lum);
   const q = l2 < 0.5 ? l2 * (1 + s) : l2 + s - l2 * s, p = 2 * l2 - q;
   const k = (t: number): number => { if (t < 0) t += 1; if (t > 1) t -= 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
