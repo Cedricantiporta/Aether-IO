@@ -17,6 +17,7 @@ import { LOOT_BY_ID, FISH_IDS, lootItem, isFishName } from '../../loot';
 import { GOLD_SCALE, RARITY_LABEL_COLOR, sellUnit } from '../../constants';
 import type { Rarity } from '../../types';
 import { toolCostText, type ToolCost } from '../../toolTiers';
+import { wishNow, wishSpend } from './wishing';
 
 export const FISH = { IDLE: 0, CAST: 1, WAIT: 2, BITE: 3, REEL: 4, RESULT: 5 } as const;
 
@@ -183,9 +184,11 @@ export function fishAction(): void {
     case FISH.WAIT: stopFishing('You reel in the line.'); break;
     case FISH.BITE: {
       const s = FISH_SPOTS[F.spot];
-      F.fish = rollFish((s ? s.luck : 1) * rod.luck);
+      const wf = wishNow('FISH');   // Wishing Fountain (Fisher's Fortune / Lucky Charm / Jackpot): rarer fish + a wider reel zone for the next 6 hooked fish
+      if (wf) wishSpend('FISH');
+      F.fish = rollFish((s ? s.luck : 1) * rod.luck * (wf?.fishLuck ?? 1));
       const r = REEL[LOOT_BY_ID[F.fish].rarity];
-      F.need = r.need; F.speed = r.speed; F.zoneW = Math.min(0.6, r.zone * rod.zone); F.hits = 0; F.misses = 0; F.maxMiss = 2;
+      F.need = r.need; F.speed = r.speed; F.zoneW = Math.min(0.6, r.zone * rod.zone * (1 + (wf?.reelZone ?? 0))); F.hits = 0; F.misses = 0; F.maxMiss = 2;
       F.marker = 0; F.dir = 1; newZone(); F.flash = 1;
       setState(FISH.REEL, 14);
       events.emit('fishing', { kind: 'hit' });

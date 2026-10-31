@@ -848,6 +848,11 @@ export function initAudio(): () => void {
   offs.push(events.on('ultReady', safe(() => { tone(660, 990, 0.25, 0.12, { type: 'sine' }); tone(990, 1320, 0.3, 0.1, { type: 'sine', delay: 0.12 }); })));
   offs.push(events.on('lightning', safe(() => sfxLightning())));
   offs.push(events.on('telegraph', safe(() => sfxTelegraph())));
+  offs.push(events.on('wishToss', safe((p) => {   // wishing fountain: coin whoosh, plop + jingle, rising sparkle chime (bigger for the rare buffs)
+    if (p.stage === 'throw') { noise(0.12, 0.06, 3000, 900); playSample('buy', 0.5, 1.15); }
+    else if (p.stage === 'splash') { noise(0.18, 0.1, 900, 200); tone(520, 260, 0.14, 0.06, { type: 'sine' }); }
+    else { tone(880, 1320, 0.22, 0.1, { type: 'sine' }); tone(1320, 1760, 0.26, 0.09, { type: 'sine', delay: 0.1 }); tone(1760, 2349, 0.34, 0.08, { type: 'sine', delay: 0.22 }); if (p.id === 'JACKPOT' || p.id === 'CHARM') playSample('epic', 0.8); }
+  })));
   offs.push(events.on('purchase', safe(() => { playSample('buy', 0.8); })));
   offs.push(events.on('summonCast', safe(() => { playSample('summon', 0.85); })));
   offs.push(events.on('lootDrop', safe((p) => { if (p.rarity === 'EPIC' || p.rarity === 'LEGENDARY' || p.rarity === 'MYTHIC') playSample('epic', 0.8); })));

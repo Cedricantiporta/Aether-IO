@@ -120,6 +120,8 @@ export function wakeInBed(): void {
 }
 import { CAVE_DOOR, CAVE_EXIT, CAVE_MOUTH, CAVE_MOUTH_COLLIDERS, CAVE_OUT, CAMP_COLLIDERS } from '../caveData';
 import { UNLOCK_LV } from '../../unlocks';
+import { PLAZA_FOUNTAIN } from '../townData';
+import { WISH_REACH, canWishToday, makeWishHere } from './wishing';
 import { enterCave, leaveCave, switchCaveFloor, scanCave, interactCave, updateCave } from './cave';
 import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
@@ -250,7 +252,7 @@ function sleepAtHome(): void {
   }, SLEEP_FADE);
 }
 
-export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'chest' | 'bossportal';
+export type Act = 'shop' | 'npc' | 'gate' | 'harvest' | 'castle' | 'church' | 'tavern' | 'home' | 'sleep' | 'sit' | 'cave' | 'leave' | 'tower' | 'farm' | 'loot' | 'down' | 'up' | 'bench' | 'fish' | 'locked' | 'blocked' | 'ride' | 'pet' | 'chest' | 'bossportal' | 'wish';
 export const MAX_NEARBY = 1;   // (owner) one prompt at a time: 3 stacked pills by the plaza / castle door were hard to click
 export const nearby: Interactable[] = Array.from({ length: MAX_NEARBY }, () => ({ active: false, key: 'E', verb: '', label: '', shop: '', node: -1, d2: 0, act: 'shop' as Act }));
 let nearbyN = 0;
@@ -307,6 +309,7 @@ function scanNearby(): void {
       else push('E', 'Talk', SHOP_LABEL[s.type] ?? s.type, SHOP_TAB[s.type], -1, d);
     }
     d = q(PORTAL.front.x, PORTAL.front.z); if (d < GATE_R * GATE_R) push('E', gateOpen(useGameStore.getState().story) ? 'Set out' : 'Sealed', 'Adventure Portal', '', -1, d, 'gate');
+    d = q(PLAZA_FOUNTAIN.x, PLAZA_FOUNTAIN.z); if (d < WISH_REACH * WISH_REACH) { if (canWishToday()) push('E', 'Make a wish', 'Wishing Fountain', '', -1, d, 'wish', '#ffe28a'); else push('E', 'Look', 'Wishing Fountain', '', -1, d, 'wish'); }   // (owner 2026-10-31) the plaza fountain takes one coin a day: a random Luck buff (wishing.ts)
     d = q(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z); if (d < GATE_R * GATE_R) { if (useGameStore.getState().progress.endings > 0) push('E', 'Enter', 'Boss Trials', '', -1, d, 'bossportal', '#c58cff'); else push('E', 'Dormant', 'Boss Trials', '', -1, d, 'bossportal', LOCK_COLOR); }   // (owner 2026-10-26) the purple portal: asleep until the first game clear
     d = q(TOWER.door.x, TOWER.door.z); if (d < 16 && gateFlags.tower) push('E', 'Enter', 'Endless Tower', '', -1, d, 'tower');   // (closed: the fallen tree's Look pill takes its place)
     d = q(CASTLE_DOOR.x, CASTLE_DOOR.z); if (d < CASTLE_DOOR.r * CASTLE_DOOR.r) push('E', 'Enter', 'Castle', '', -1, d, 'castle');
@@ -366,6 +369,7 @@ export function interact(it: Interactable): void {
   const st = useGameStore.getState(), v = world.village, p = world.player;
   if (it.act === 'locked') { st.addNotification(`${it.label.split(' · ')[0]} unlocks at Lv ${UNLOCK_LV.FISHING}. Level up out there first!`, LOCK_COLOR, 'WARNING'); return; }
   if (it.act === 'chest') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && !v.ride.on) { if (it.node < 0) openTreasury(); else openChest(it.node); } return; }
+  if (it.act === 'wish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && !v.ride.on) makeWishHere(); return; }
   if (it.act === 'blocked') { const g = TOWN_GATES[it.node]; if (g && !gateFlags[g.id]) st.addNotification(g.line, GATE_COLOR, 'WARNING'); return; }   // (the sign explains it; WARNING toasts repeat at most every 3 s)
   if (it.act === 'fish') { if (!st.isShopOpen && !dialogueOpen() && !v.pending && beachSide(p.pos.x, p.pos.z) && !fishingLocked()) startFishing(it.node); return; }
   if (it.act !== 'harvest' && it.act !== 'farm' && it.act !== 'loot') {

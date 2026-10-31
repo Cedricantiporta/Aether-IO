@@ -21,7 +21,7 @@ import type { EnemyKind } from './engine/types';
 import type { CodexTab, Discovered } from './codexData';
 
 export type Difficulty = 'EASY' | 'NORMAL' | 'HARD' | 'NIGHTMARE';
-export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]>; /** crystal cave: lantern upgrade level (0..6) and the deepest floor ever reached */ caveLantern?: number; caveBest?: number; /** biomes whose boss was beaten at least once (index % BIOMES.length): they get a boss shortcut door in later runs */ biomesDone?: number[]; /** the 'a shortcut opens' notice was shown once */ shortcutSeen?: boolean; /** Ascension levels (0..10) whose one-time first-clear reward was already paid (ascension.ts ASC_REWARDS) */ ascClaimed?: number[]; /** Mining Pickaxe tier (toolTiers.ts PICKAXES, 0 Common .. 5 Mythic) */ pickTier?: number; /** Boss Trials (bossTrials.ts): the local day key (YYYY-MM-DD) each biome boss (key = biome index) was last fought; once per day unless a ticket is used */ trialDay?: Record<string, string> }
+export interface RunProgress { endings: number; ascensionMax: number; ascension: number; towerBest: Record<HeroClass, number>; towerClaimed: Record<HeroClass, number[]>; daily: DailySave; wavesBest: Record<HeroClass, number>; wavesClaimed: Record<HeroClass, number[]>; /** crystal cave: lantern upgrade level (0..6) and the deepest floor ever reached */ caveLantern?: number; caveBest?: number; /** biomes whose boss was beaten at least once (index % BIOMES.length): they get a boss shortcut door in later runs */ biomesDone?: number[]; /** the 'a shortcut opens' notice was shown once */ shortcutSeen?: boolean; /** Ascension levels (0..10) whose one-time first-clear reward was already paid (ascension.ts ASC_REWARDS) */ ascClaimed?: number[]; /** Mining Pickaxe tier (toolTiers.ts PICKAXES, 0 Common .. 5 Mythic) */ pickTier?: number; /** Boss Trials (bossTrials.ts): the local day key (YYYY-MM-DD) each biome boss (key = biome index) was last fought; once per day unless a ticket is used */ trialDay?: Record<string, string>; /** Wishing Fountain (wishing.ts): today's wish + what of it is already used */ wish?: import('./wishing').WishSave }
 export type BlessingKind = 'FORTUNE' | 'MIGHT' | 'AEGIS' | 'SWIFT' | 'VITALITY' | 'PRECISION';
 export type ShopTab = 'SUPPLIES' | 'PETS' | 'SKILLS' | 'BLACKSMITH' | 'SUMMON' | 'MERCHANT' | 'ARMORY' | 'WAREHOUSE' | 'TECH' | 'BREWER' | 'FISH' | 'MINE'; // FISH = the Fishmonger on the beach; MINE = Mining Supplies at the cave camp; MERCHANT = the travelling merchant room
 export type EquipSlot = 'weapon' | 'helmet' | 'armor' | 'gloves' | 'boots' | 'accessory' | 'pet' | 'tool';
@@ -281,6 +281,9 @@ export interface GameState {
   drinkElixir: (item: Item) => boolean;            // bag: drink an elixir (town: queued for the next run; in a run: active at once)
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
+  /** Wishing Fountain: toss today's coin (null when already wished today); uses a wish target up (RUN consumed at run start, FISH / CRAFT count steps, MINE once) */
+  makeWish: () => import('./wishing').WishId | null;
+  wishUse: (t: import('./wishing').WishTarget, n?: number) => void;
   rollItemDrop: (rarityOverride?: Rarity, ctx?: import('./biomeLoot').DropCtx) => Item | null; // engine asks store for a loot roll
   summon: (count: 1 | 10, altar?: 'GEM' | 'SHARD') => Item[]; // gacha: GEM altar (10 / 90 gems, better odds) or SHARD altar (10 / 90 Aether Crystals); pets+gear
 

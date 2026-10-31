@@ -1,0 +1,25 @@
+/* Wishing Fountain popup + HUD chips (owner 2026-10-31): soft cream toy cards, no outlines. */
+.wish-shade { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(30, 20, 60, .45); animation: wish-fade .25s ease-out; }
+.wish-card { --wc: #ffd86a; position: relative; width: min(92vw, 25rem); padding: 1.6rem 1.4rem 1.2rem; border-radius: 1.6rem; text-align: center; color: #4a3a66;
+  background: linear-gradient(180deg, #fffaf0 0%, #fff0d4 100%); box-shadow: 0 .5rem 0 rgba(120, 90, 40, .18), 0 1.2rem 2.4rem rgba(20, 10, 50, .35); animation: wish-pop .35s cubic-bezier(.2, 1.4, .4, 1); }
+.wish-card h2 { margin: .1rem 0 .2rem; font-size: 1.7rem; font-weight: 800; color: color-mix(in srgb, var(--wc) 55%, #6a4a10); text-shadow: 0 .1rem 0 rgba(255, 255, 255, .8); }
+.wish-tier { display: inline-block; padding: .12rem .8rem; border-radius: 999px; background: var(--wc); color: #4a3410; font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.wish-blurb { margin: 0 0 .7rem; font-size: .95rem; opacity: .85; }
+.wish-rows { list-style: none; margin: 0 0 .6rem; padding: 0; display: grid; gap: .4rem; text-align: left; }
+.wish-rows li { display: grid; grid-template-columns: 5.2rem 1fr; gap: .1rem .6rem; padding: .45rem .7rem; border-radius: 1rem; background: rgba(255, 255, 255, .75); }
+.wish-rows li b { grid-row: span 2; align-self: center; color: color-mix(in srgb, var(--wc) 50%, #6a4a10); }
+.wish-rows li span { font-size: .9rem; font-weight: 700; }
+.wish-rows li em { font-style: normal; font-size: .75rem; opacity: .65; }
+.wish-rows li.done { opacity: .5; }
+.wish-note { margin: 0 0 .8rem; font-size: .75rem; opacity: .6; }
+.wish-ok { border: 0; border-radius: 999px; padding: .55rem 1.4rem; font-weight: 800; font-size: .95rem; background: var(--wc); color: #4a3410; cursor: pointer; box-shadow: 0 .25rem 0 rgba(120, 90, 40, .25); }
+.wish-ok:active { transform: translateY(.1rem); box-shadow: 0 .12rem 0 rgba(120, 90, 40, .25); }
+.wish-star { position: absolute; left: 50%; top: -.6rem; width: 0; height: 0; pointer-events: none; }
+.wish-star i { position: absolute; width: .6rem; height: .6rem; margin: -.3rem; border-radius: 50%; background: var(--wc); animation: wish-spark 1.4s ease-out infinite; transform: rotate(var(--a)) translateY(-2rem); }
+.wish-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .3rem; pointer-events: auto; }
+.wish-chip { --wc: #ffd86a; display: inline-flex; align-items: center; gap: .35rem; padding: .15rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 800; color: #4a3410; background: color-mix(in srgb, var(--wc) 80%, #fff); box-shadow: 0 .12rem 0 rgba(120, 90, 40, .25); }
+.wish-chip i { width: .5rem; height: .5rem; border-radius: 50%; background: #fff; box-shadow: 0 0 .4rem #fff; animation: wish-pulse 1.8s ease-in-out infinite; }
+@keyframes wish-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wish-pop { from { transform: scale(.7) translateY(1rem); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes wish-spark { 0% { opacity: 1; transform: rotate(var(--a)) translateY(-1.2rem) scale(1); } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-3.4rem) scale(.3); } }
+@keyframes wish-pulse { 50% { transform: scale(1.4); opacity: .7; } }

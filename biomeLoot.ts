@@ -41,11 +41,13 @@ export const ELITE_RARITY: readonly W5[] = [
 
 const clampB = (b: number): number => Math.max(0, Math.min(MONSTER_RARITY.length - 1, b | 0));
 /** Rolls the rarity of one kill-dropped gear piece (never Mythic). */
-export function rollBiomeRarity(ctx: DropCtx, rng: () => number = Math.random): Rarity {
+export function rollBiomeRarity(ctx: DropCtx, rng: () => number = Math.random, luck = 0): Rarity {
   const w = (ctx.elite ? ELITE_RARITY : MONSTER_RARITY)[clampB(ctx.biome)];
-  let sum = 0; for (let i = 0; i < 5; i++) sum += w[i];
+  // luck (Wishing Fountain): tier i weighs x(1 + luck * 0.5 * i), only tiers the biome already allows (weight > 0), so the biome's floor / cap never moves
+  const k = (i: number): number => (w[i] > 0 ? w[i] * (1 + luck * 0.5 * i) : 0);
+  let sum = 0; for (let i = 0; i < 5; i++) sum += k(i);
   let r = rng() * sum;
-  for (let i = 0; i < 5; i++) { if (w[i] > 0 && r < w[i]) return TIERS[i]; r -= w[i]; }
+  for (let i = 0; i < 5; i++) { const wi = k(i); if (wi > 0 && r < wi) return TIERS[i]; r -= wi; }
   for (let i = 4; i >= 0; i--) if (w[i] > 0) return TIERS[i];
   return 'COMMON';
 }
