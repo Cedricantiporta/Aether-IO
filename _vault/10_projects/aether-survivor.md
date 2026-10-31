@@ -15,6 +15,7 @@ Read first: `CLAUDE.md`, `docs/HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/RUN_DE
 - Bosses never get knocked down; skills down normal monsters and dark heroes (`combat.downEnemy`).
 - Pet Collection: register a pet to count it; milestones auto-claim.
 - Wishing fountain: one luck wish per day (`wishing.ts`).
+- Boss balance (2026-10-31): total boss HP = 2x (was 5x); the x5 / x10 bars are cosmetic (5, or 10 in trials / Ascension >= 5); boss armour gains `300*((L-1)/49)^1.3` from hero level; flat boss hits scale toward 10% (trial 14%) of hero max HP, trial `pct` hits x1.5. All constants in `engine/bossBalance.ts`.
 - Boss Trials portal moves to the shore headland, facing inland (in progress).
 
 ## Open

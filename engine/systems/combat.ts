@@ -20,6 +20,8 @@ import type { Enemy } from '../types';
 import type { Rarity, StatusEffectType } from '../../types';
 import { GameStatus } from '../../types';
 import { comboMul, registerHit } from './combo';
+import { trial } from '../../bossTrials';
+import { TRIAL_PCT_MUL } from '../bossBalance';
 import { useGameStore, makeItemById, DMG_INFLATE, rollDropPlus } from '../../store';
 import { COLORS } from '../../constants';
 import { runMods, runInfo, HARD_EPIC_MUL, hardMul } from '../runMods';
@@ -940,7 +942,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   const bone = boneArmorMul();
   let reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
   if (crit) { reduced = st.stats.maxHealth * o!.pct!; if (p.hp > st.stats.maxHealth * 0.5) reduced = Math.min(reduced, p.hp - 1); }   // mechanic hit: flat share of max HP; above 50% HP it leaves at least 1 HP, at or below 50% it can kill
-  else if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
+  else if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (trial.on ? TRIAL_PCT_MUL : 1) * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
   // Energy Shield only saves you when this hit would leave you under 20% HP.
   if (!isDot && barrier > 0 && p.shieldCharges > 0 && kind !== 'POISON' && (crit ? p.hp - reduced <= 0 : p.hp - reduced < st.stats.maxHealth * 0.2)) {   // (a mechanic hit only trips it when it would kill)
     triggerBarrier(barrier);
