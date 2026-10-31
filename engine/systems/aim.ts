@@ -5,6 +5,7 @@ import { rclickDash } from '../input';
 // drag back to the centre (or into the top cancel zone) cancels, a quick tap casts at the auto-target.
 // Settings: castMode AIMED (hold & release) / QUICK (instant at cursor) / AUTO (instant at auto-target).
 // ============================================================================
+import { bp } from './bossPhaseState';
 import { world } from '../world';
 import { useGameStore } from '../../store';
 import { ACTIVE_ORDER, type ActiveSlot } from '../../abilityDefs';
@@ -69,7 +70,7 @@ function isCastable(id: string): boolean {
   const p = world.player, st = useGameStore.getState();
   if (!p.alive) return false;
   if (id === 'ult') return ultReady() && p.stunT <= 0 && p.downT <= 0 && p.silenceT <= 0;
-  if (id === 'dash') return p.dashCharges > 0 && p.stunT <= 0 && p.downT <= 0;
+  if (id === 'dash') return p.dashCharges > 0 && p.stunT <= 0 && p.downT <= 0 && !(bp.on && bp.kind === 'VOIDPULL');
   const slot = slotOf(id);
   if (!slot) return false;
   return p.cd[slot] <= 0 && p.mana >= st.getManaCost(slot) && p.stunT <= 0 && p.downT <= 0 && p.silenceT <= 0;

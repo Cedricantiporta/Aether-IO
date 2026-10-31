@@ -2,6 +2,7 @@
 // Active abilities: Q, E, 3, 4 (class kit) and R (ultimate, charge meter).
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
+import { bp } from './bossPhaseState';
 import { iceAt } from '../iceFloor';
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind, raiseArmy } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
@@ -1293,6 +1294,10 @@ export function tryDash(auto: boolean): boolean {
   const p = world.player;
   if (!p.alive || p.dashT > 0 || p.stunT > 0 || abilityState.leapT > 0 || abilityState.windupT > 0) return false;   // (a Void black hole's pull is escaped by dashing)
   if (useGameStore.getState().level < DASH_UNLOCK_LV) {   // the dash unlocks at class level DASH_UNLOCK_LV (6)
+    return false;
+  }
+  if (bp.on && bp.kind === 'VOIDPULL') {   // (owner 2026-10-31) no dashing out of the Herald's universal pull
+    if (world.time - iceDashTextT > 1) { iceDashTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'The pull holds you!', color: 0xc9a0ff, scale: 0.8, dy: 2.6 }); }
     return false;
   }
   if (iceAt(p.pos.x, p.pos.z)) {   // (owner 2026-10-26) Frostpeak ice: too slippery to dash

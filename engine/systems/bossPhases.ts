@@ -44,7 +44,7 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
   TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },
   LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Every tile erupts twice - keep moving to one that is not flashing!', color: 0xff7a1a },
   SAND: { name: 'SANDSTORM', sub: 'Hide behind a pillar, out of the wind!', color: 0xe0b060 },
-  VOIDPULL: { name: 'VOID MAELSTROM', sub: 'Dash out of the pull - keep away from the black orbs!', color: 0xa060ff },
+  VOIDPULL: { name: 'VOID MAELSTROM', sub: 'You cannot dash out of the pull - fight it and dodge the black orbs!', color: 0xa060ff },
 };
 
 const tv = new Vector3();
