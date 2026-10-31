@@ -372,7 +372,7 @@ export function updatePlayer(dt: number): void {
     const lt = lockedEnemy() ? null : lockedTrap();
     if (lt) tr = lt;
     else if (st.settings.autoAim !== false && !lockedEnemy()) {
-      const tn = nearestTrap(p.pos.x, p.pos.z, AUTO_TARGET_RANGE);
+      const tn = nearestTrap(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : AUTO_TARGET_RANGE);   // (owner 2026-10-31) the AUTO bot hunts stationaries (towers / ballistae) anywhere in the room, like it hunts monsters
       if (tn) {
         const en = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
         const de = en ? Math.hypot(en.pos.x - p.pos.x, en.pos.z - p.pos.z) - en.radius : 1e9;

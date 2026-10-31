@@ -241,10 +241,9 @@ const ANIMAL_BUBBLE_Y: Record<string, number> = { CHICKEN: 1.6, CAT: 1.5, COW: 2
 /** Egg nests (spread over the free-range grass east of the pen) (an egg shows when one is ready) + Pip's wheel-pin mate: Corin's lost wheel pin (Biscuit the cat is a KitAnimals instance). */
 function FarmBits() {
   const geos = useMemo(() => {
-    const n = new GB([0.8, 1.05]); n.cyl(0.42, 0.34, 0.16, 10, [0, 0.08, 0], '#c9a050'); n.cyl(0.3, 0.3, 0.05, 10, [0, 0.16, 0], '#8a6a30');
-    const e = new GB([0.85, 1.1]); e.sph(0.12, [0, 0.27, 0], '#fff6e6', [0.85, 1.15, 0.85], 7);
+    const e = new GB([0.85, 1.1]); e.sph(0.3, [0, 0.34, 0], '#fff6e6', [0.85, 1.15, 0.85], 10);   // (owner 2026-10-31) no nest: just a big egg lying on the grass
     const pn = new GB([0.9, 1.1]); pn.cyl(0.07, 0.07, 0.62, 6, [0, 0.07, 0], '#c8ccd4', [0, 0, Math.PI / 2]); pn.cyl(0.13, 0.13, 0.06, 8, [0.33, 0.07, 0], '#e8ecf2', [0, 0, Math.PI / 2]);   // Corin's wheel pin, lying in the grass
-    return { nest: n.build(), egg: e.build(), pin: pn.build() };
+    return { egg: e.build(), pin: pn.build() };
   }, []);
   const mat = useMemo(() => litMat({ roughness: 0.9 }), []);
   const pinMat = useMemo(() => litMat({ roughness: 0.25, metalness: 0.8, emissive: new Color('#fff2c0'), emissiveIntensity: 0.35 }), []);
@@ -257,8 +256,7 @@ function FarmBits() {
     <>
       {NESTS.map(([x, z], k) => (
         <group key={k} position={[x, 0, z]}>
-          <mesh geometry={geos.nest} material={mat} receiveShadow />
-          <mesh ref={(m) => { eggs.current[k] = m; }} geometry={geos.egg} material={mat} />
+          <mesh ref={(m) => { eggs.current[k] = m; }} geometry={geos.egg} material={mat} castShadow />
         </group>
       ))}
       <mesh ref={pin} geometry={geos.pin} material={pinMat} position={[WHEEL_PIN.x, 0, WHEEL_PIN.z]} rotation={[0, 0.7, 0]} scale={1.4} visible={false} />
