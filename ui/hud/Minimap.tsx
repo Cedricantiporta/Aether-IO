@@ -2,6 +2,8 @@
 // green grass, rounded forest blobs, tan roads, blue water, cream / brown buildings. The static terrain is baked ONCE per
 // area / room into an offscreen canvas (`bake`) and only blitted each frame; markers (hero badge, NPC dots, enemies, gates,
 // the tracked quest ring) are drawn on top from the world. No React state, no per-frame allocations (module scratch).
+import { canWishToday } from '../../engine/systems/wishing';
+import { PLAZA_FOUNTAIN } from '../../engine/townData';
 import React, { useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { clickMoveTo } from '../../engine/systems/target';
@@ -318,6 +320,7 @@ export const Minimap: React.FC = () => {
       gate(ctx, sx(GATE.x), sy(GATE.z), 6 * u, C.gold);
       gate(ctx, sx(PORTAL.front.x), sy(PORTAL.front.z), 6.5 * u, '#9d7cff');
       gate(ctx, sx(BOSS_PORTAL.front.x), sy(BOSS_PORTAL.front.z), 6 * u, useGameStore.getState().progress.endings > 0 ? '#e052ff' : '#7a6a8a');   // Boss Trials portal (dormant = grey)
+      if (canWishToday()) gate(ctx, sx(PLAZA_FOUNTAIN.x), sy(PLAZA_FOUNTAIN.z), 5 * u, '#ffe070');   // today's wish is still unused (wishing.ts)
       gate(ctx, sx(TOWER.door.x), sy(TOWER.door.z), 5.5 * u, '#c9a6ff');
       gate(ctx, sx(CAVE_DOOR.x), sy(CAVE_DOOR.z), 5.5 * u, '#6fd8f0');
       gate(ctx, sx(CASTLE_DOOR.x), sy(CASTLE_DOOR.z), 4.5 * u, '#e48a7c');

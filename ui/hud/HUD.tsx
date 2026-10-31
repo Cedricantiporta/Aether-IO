@@ -19,6 +19,7 @@ import { UltOverlay } from './UltOverlay';
 import { ComboMeter } from './ComboMeter';
 import { QuestTracker } from './QuestTracker';
 import { BlindOverlay } from './BlindOverlay';
+import { WishChips } from './WishChips';
 import { DailyBadge } from './DailyBadge';
 import { device } from '../../engine/device';
 import { useGameStore } from '../../store';
@@ -42,6 +43,7 @@ export const HUD: React.FC = () => {
       {/* (owner: the room plaque is gone; this spot shows the targeted monster's HP) */}
       <TargetFrame docked />
       <DailyBadge />
+      <WishChips />
       <ComboMeter touch={device.touch} />
     </div>
 

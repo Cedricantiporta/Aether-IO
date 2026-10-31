@@ -61,6 +61,8 @@ export interface GameEvents {
   petBurst: { pos: Vector3; el: number; r: number; tier: number };   // a Legendary / Mythic pet's elemental area burst
   telegraph: { pos: Vector3; radius: number; duration: number }; // audio cue only; visual via Zone
   pickup: { pos: Vector3; kind: PickupKind; value: number; rarity?: Rarity; name?: string; /** gear grade of a picked-up item ('LOW' | 'MID' | 'HIGH'), for the item sound */ grade?: string };
+  openWish: { id: string; again: boolean };   // the Wishing Fountain result popup (ui/screens/WishWindow.tsx); again = already wished today (shows the live buff)
+  wishToss: { stage: 'throw' | 'splash' | 'reveal'; id: string };   // the wish show moments (audio): coin thrown, plop, sparkle reveal
   openBossTrials: Record<string, never>;      // E at the purple Boss Trials portal (ui/screens/BossTrials.tsx)
   purchase: Record<string, never>;            // something was bought with gold / gems (audio)
   summonCast: Record<string, never>;          // a summon was pulled (audio)

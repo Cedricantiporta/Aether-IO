@@ -1,11 +1,17 @@
 // (owner 2026-10-25) The plaza fountain: a round two-tier storybook fountain (cream stone, soft rounded rims, blue
 // water, little falling water sheets, a sparkling top jet, lily pads and ripples). Built from lathe shapes; the
 // droplets are one InstancedMesh animated in place (no per-frame allocations).
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Color, DoubleSide, InstancedMesh, LatheGeometry, Matrix4, Mesh, MeshStandardMaterial, Vector2 } from 'three';
 import { PLAZA_FOUNTAIN, townLift } from '../engine/townData';
 import { TAU } from './util';
+import { useGameStore } from '../store';
+import { dayKey } from '../dailyChallenge';
+import { wishedToday, WISH_BY_ID } from '../wishing';
+import { wishFx, tickWish, WISH_SHOW } from '../engine/systems/wishing';
+
+const SPARKS = 28;   // the wish burst (instanced, animated in place)
 
 const BASIN_R = 3.6;
 const DROPS = 28;
@@ -36,6 +42,9 @@ export function PlazaFountain({ shadows }: { shadows: boolean }) {
     pad: lathe([[0, 0.54], [0.34, 0.54], [0.34, 0.56], [0, 0.56]], 14),
     drop: lathe([[0, -0.07], [0.05, -0.03], [0.045, 0.03], [0, 0.07]], 6),
     flower: lathe([[0, 0.55], [0.09, 0.58], [0.1, 0.64], [0, 0.66]], 8),
+    coin: lathe([[0, -0.03], [0.17, -0.03], [0.17, 0.03], [0, 0.03]], 14),
+    spark: lathe([[0, -0.12], [0.06, 0], [0, 0.12]], 4),
+    glow: latheR([[BASIN_R - 0.9, 0.56], [BASIN_R - 0.1, 0.56]], 56),
   }), []);
   const mats = useMemo(() => ({
     stone: new MeshStandardMaterial({ color: new Color('#f2e8d4'), roughness: 0.75 }),
@@ -47,11 +56,51 @@ export function PlazaFountain({ shadows }: { shadows: boolean }) {
     pad: new MeshStandardMaterial({ color: new Color('#7ccf5a'), roughness: 0.8 }),
     flower: new MeshStandardMaterial({ color: new Color('#ff9fc4'), roughness: 0.7 }),
     gold: new MeshStandardMaterial({ color: new Color('#ffd36a'), roughness: 0.4, metalness: 0.3 }),
+    spark: new MeshStandardMaterial({ color: new Color('#fff1a8'), emissive: new Color('#ffd54a'), emissiveIntensity: 1.1, transparent: true, opacity: 0.95, depthWrite: false }),
+    twink: new MeshStandardMaterial({ color: new Color('#fff1a8'), emissive: new Color('#ffd54a'), emissiveIntensity: 1.2 }),
+    glow: new MeshStandardMaterial({ color: new Color('#ffeaa0'), emissive: new Color('#ffd54a'), emissiveIntensity: 0.9, transparent: true, opacity: 0.35, depthWrite: false, side: DoubleSide }),
   }), []);
+  // today's wish still unused: a soft golden glow + sparkles on the water (re-checked every 30 s for the day change)
+  const wish = useGameStore((s) => s.progress.wish);
+  const [day, setDay] = useState(dayKey);
+  useEffect(() => { const t = setInterval(() => setDay(dayKey()), 30000); return () => clearInterval(t); }, []);
+  const unused = !wishedToday(wish, day);
   useEffect(() => () => { Object.values(geo).forEach((g) => g.dispose()); Object.values(mats).forEach((m) => m.dispose()); }, [geo, mats]);
+  const coin = useRef<Mesh>(null!), sparks = useRef<InstancedMesh>(null!), glow = useRef<Mesh>(null!), twinkle = useRef<InstancedMesh>(null!);
   const drops = useRef<InstancedMesh>(null!), rip1 = useRef<Mesh>(null!), rip2 = useRef<Mesh>(null!), f1 = useRef<Mesh>(null!), f2 = useRef<Mesh>(null!);
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, dt) => {
     const t = clock.elapsedTime;
+    tickWish(Math.min(dt, 0.1));
+    // wish show: the coin arcs from the hero into the basin, then a sparkle burst rises from the water
+    const w = wishFx.t, c = coin.current, sp = sparks.current;
+    if (c) {
+      if (w >= 0 && w < WISH_SHOW.toss) {
+        const u = w / WISH_SHOW.toss, gx = wishFx.sx - PLAZA_FOUNTAIN.x, gz = wishFx.sz - PLAZA_FOUNTAIN.z;
+        c.visible = true; c.position.set(gx * (1 - u), 1.3 + Math.sin(Math.PI * u) * 2.4 - u * 0.9, gz * (1 - u)); c.rotation.set(u * 18, 0, u * 6);
+      } else c.visible = false;
+    }
+    if (sp) {
+      const b = w - WISH_SHOW.reveal;
+      if (w >= 0 && b >= 0 && b < 2.2) {
+        sp.visible = true;
+        const col = WISH_BY_ID[(wishFx.id || 'FORTUNE') as keyof typeof WISH_BY_ID];
+        mats.spark.emissive.set(col.color); mats.spark.opacity = Math.max(0, 1 - b / 2.2);
+        for (let i = 0; i < SPARKS; i++) {
+          const a = (i * 2.399) % TAU, sp0 = 1.2 + (i % 5) * 0.55, y = 0.7 + b * (2.4 + (i % 4) * 0.5) - b * b * 1.2;
+          m4.makeScale(1, 1, 1); m4.setPosition(Math.cos(a) * sp0 * b * 1.3, Math.max(0.5, y), Math.sin(a) * sp0 * b * 1.3); sp.setMatrixAt(i, m4);
+        }
+        sp.instanceMatrix.needsUpdate = true;
+      } else sp.visible = false;
+    }
+    if (glow.current) { mats.glow.opacity = 0.22 + 0.16 * Math.sin(t * 2.4); glow.current.scale.setScalar(1 + 0.03 * Math.sin(t * 2.4)); }
+    const tw = twinkle.current;
+    if (tw && tw.visible) {   // unused-wish twinkles: little gold stars drifting up from the water
+      for (let i = 0; i < 10; i++) {
+        const ph = (t * 0.35 + i / 10) % 1, a = (i * 2.399) % TAU, rr = 1.3 + (i % 4) * 0.55;
+        m4.makeScale(1 - ph * 0.6, 1 - ph * 0.6, 1 - ph * 0.6); m4.setPosition(Math.cos(a + t * 0.3) * rr, 0.7 + ph * 1.6, Math.sin(a + t * 0.3) * rr); tw.setMatrixAt(i, m4);
+      }
+      tw.instanceMatrix.needsUpdate = true;
+    }
     // the top jet: droplets arc up from the knob and fall into the upper bowl / over its lip
     const d = drops.current;
     if (d) {
@@ -86,6 +135,10 @@ export function PlazaFountain({ shadows }: { shadows: boolean }) {
       <mesh ref={f2} geometry={geo.fall2} material={mats.fall} />
       <mesh ref={rip1} geometry={geo.ripple} material={mats.foam} position={[0, 0.005, 0]} />
       <mesh ref={rip2} geometry={geo.ripple} material={mats.foam} position={[0, 0.005, 0]} />
+      <mesh ref={glow} geometry={geo.glow} material={mats.glow} visible={unused} />
+      <instancedMesh ref={twinkle} args={[geo.spark, mats.twink, 10]} frustumCulled={false} visible={unused} />
+      <mesh ref={coin} geometry={geo.coin} material={mats.gold} visible={false} />
+      <instancedMesh ref={sparks} args={[geo.spark, mats.spark, SPARKS]} frustumCulled={false} visible={false} />
       <instancedMesh ref={drops} args={[geo.drop, mats.drop, DROPS]} frustumCulled={false} />
       {/* lily pads + little pink flowers floating in the outer pool */}
       {[[2.5, 0.6], [-2.1, 1.6], [0.4, -2.7], [-1.4, -2.2], [2.2, -1.5]].map(([px, pz], i) => (

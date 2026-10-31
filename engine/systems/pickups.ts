@@ -15,11 +15,12 @@ import { showcase } from '../showcase';
 import { trial } from '../../bossTrials';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
+import { runWish } from '../../wishing';
 import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
 /** (owner) gold coins picked up from the ground are worth 70% less (kills, crates, bosses, rewards). */
 const GOLD_LOOT_MUL = 0.3;
 /** (owner 2026-10-31) the deeper the biome the bigger the coins (biomeLoot.BIOME_GOLD_MUL); Adventure runs only (the Endless Waves gold stays flat). */
-const goldBiomeMul = (): number => (runInfo.mode === 'ADVENTURE' && world.room.active ? biomeGoldMul(world.room.biome) : 1);
+const goldBiomeMul = (): number => (runInfo.mode === 'ADVENTURE' && world.room.active ? biomeGoldMul(world.room.biome) : 1) * (1 + runWish.gold);   // (runWish.gold: Wishing Fountain Golden Touch / Lucky Charm / Jackpot, this run only)
 import { healPlayer, grantKillXp } from './combat';
 import { coopRoom } from '../../net/coopRoom';
 

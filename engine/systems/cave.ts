@@ -24,6 +24,7 @@ import {
 } from '../caveData';
 import { CRATE_HP, HARVEST_NAME, installInterior } from '../mapgen';
 import { useGameStore } from '../../store';
+import { wishNow, wishSpend } from './wishing';
 import { spawnPickup, dropCrystals, petCollect } from './pickups';
 import { spawnEnemy } from './enemies';
 import { damagePlayer, addShake } from './combat';
@@ -274,10 +275,12 @@ function loseTripHaul(): string {
 }
 
 /** Walking in from the town (pending 'CAVE'). */
+let tripWished = false;   // a vein broke under today's mining wish: the buff is used up when the hero leaves the cave
 export function enterCave(): void { caveInWhy = ''; enterFloor(1, 'TOWN'); }
 /** Leaving to the town: fights end, HP back to full. */
 export function leaveCave(): void {
   const cv = world.village.cave;
+  if (tripWished) { tripWished = false; wishSpend('MINE'); }   // the wish buff is used up by a trip that mined at least one vein
   cv.combat = false; cv.floor = 1; cv.seed = 0;
   if (loaded) { save.oil = cv.oil; persist(); }
   useLanternPanel.setState({ open: false });
@@ -321,9 +324,11 @@ function good(kind: CaveNodeKind, rarity: number, x: number, z: number): void {
 /** Extra drops of a vein on floor `f` (on top of the normal harvest drops): the depth bonus + a rare vein's guarantee. */
 export function caveYield(kind: CaveNodeKind, tier: number, f: number, x: number, z: number): void {
   const n = Math.min(1, bonusShards(kind, f));   // (owner: one shard per drop)
-  if (Math.random() < 0.12 + 0.04 * f + (tier > 0 ? 0.3 : 0)) dropCrystals(1, { x, z });   // mined Aether Crystal
+  const wf = wishNow('MINE');   // Wishing Fountain (Miner's Mercy / Lucky Charm / Jackpot): this cave trip
+  if (wf) tripWished = true;
+  if (Math.random() < 0.12 + 0.04 * f + (tier > 0 ? 0.3 : 0) + (wf?.crystal ?? 0)) dropCrystals(1, { x, z });   // mined Aether Crystal
   for (let k = 0; k < n; k++) spawnPickup('SHARD', at(x, z), rollDepthRarity(f, Math.random()));
-  if (kind !== 'GOLD_VEIN' && Math.random() < tradeGoodChance(f)) good(kind, rollDepthRarity(f, Math.random()), x, z);
+  if (kind !== 'GOLD_VEIN' && Math.random() < tradeGoodChance(f) * (1 + (wf?.ore ?? 0))) good(kind, rollDepthRarity(f, Math.random()), x, z);
   if (kind === 'GOLD_VEIN' && depthOf(f) > 0) { const each = Math.round(30 * (goldVeinMul(f) - 1)); for (let k = 0; k < 5; k++) spawnPickup('GOLD', at(x, z), each); }
   if (tier > 0) {   // rare vein: guaranteed shards + a trade good of its tier, and a purse of gold
     const cnt = 1;   // (owner: one shard per drop)

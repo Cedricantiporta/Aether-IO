@@ -31,6 +31,7 @@ import {
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
 import { rollBiomeRarity, dropGradeFor, clampKillRarity } from './biomeLoot';
+import { runWish, liveFx, liveTargets, newWish, rollWishId, sanitizeWish, wishedToday } from './wishing';
 import { rollGrade, migrateGear, legacyLowToMid, GRADE_DROP_ODDS } from './grade';
 import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
@@ -688,6 +689,7 @@ const sanitizeProgress = (p: Partial<RunProgress> | undefined): RunProgress => (
   caveLantern: Math.max(0, Math.min(6, Math.floor(num(p?.caveLantern, 0)))), caveBest: Math.max(1, Math.min(30, Math.floor(num(p?.caveBest, 1)))),
   ascClaimed: Array.isArray(p?.ascClaimed) ? [...new Set((p!.ascClaimed as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= ASCENSION_MAX))] : [],
   pickTier: pickTierOf(p?.pickTier),
+  wish: sanitizeWish(p?.wish),   // Wishing Fountain: today's buff (wishing.ts)
   trialDay: p?.trialDay && typeof p.trialDay === 'object' ? Object.fromEntries(Object.entries(p.trialDay).filter(([k, v]) => /^[0-6]$/.test(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) : {},
   biomesDone: Array.isArray(p?.biomesDone) ? [...new Set((p!.biomesDone as unknown[]).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n < 64))] : [], shortcutSeen: !!p?.shortcutSeen,
 });
@@ -953,6 +955,10 @@ export const useGameStore = create<GameState>()((set, get) => {
         actionResult: null,
         maxInventorySlots: Math.max(state.maxInventorySlots, INVENTORY_LIMIT),
       });
+      // Wishing Fountain: today's RUN buff starts working now and is used up (loot / gold luck for THIS run only)
+      const rw = liveFx(get().progress.wish, dayKey(), 'RUN');
+      runWish.loot = rw?.loot ?? 0; runWish.gold = rw?.gold ?? 0;
+      if (rw) get().wishUse('RUN');
       runStartLevel = get().level;
       runInfo.hard = get().difficulty === 'HARD';
       if (debug.maxSkills) get().debugMaxSkills();
@@ -971,6 +977,7 @@ export const useGameStore = create<GameState>()((set, get) => {
 
     resetGame: () => {
       enterVillage();
+      runWish.loot = 0; runWish.gold = 0;   // the run's wish luck ends with the run
       setActiveElixirs([]);   // run elixir buffs end with the run
       const s = get();
       const l = loadoutFor(s.hero, s.inventory, s.equipment);
@@ -1965,16 +1972,34 @@ export const useGameStore = create<GameState>()((set, get) => {
       const missing = canCraft({ ...s, maxInventorySlots: s.maxInventorySlots }, recipe);
       if (missing.length > 0) { notify(missing[0].kind === 'space' ? 'Inventory Full!' : `Missing: ${missing[0].label}`, 'red', 'WARNING'); return null; }
       const paid = { gold: s.gold - recipe.gold, materials: { ...s.materials, [recipe.rarity]: s.materials[recipe.rarity] - recipe.shards } };
+      const blessed = liveFx(s.progress.wish, dayKey(), 'CRAFT') !== null;
+      if (blessed) get().wishUse('CRAFT');   // every craft attempt (success or fail) uses one of the 5
       if (Math.random() >= CRAFT_SUCCESS[recipe.rarity]) {   // failed: gold + shards are lost, the monster loot is kept
         set(paid);
         events.emit('hub', { kind: 'craft_fail', n: 1 });
         return { item: null, outcome: 'FAIL' as const };
       }
-      const item = craft(recipe);
+      const bless = liveFx(s.progress.wish, dayKey(), 'CRAFT');   // Smith's Blessing (wishing.ts): next 5 crafts
+      const item = craft(recipe, Math.random, bless?.great ?? 0, bless?.perfect ?? 1);
       set({ ...paid, inventory: [...consumeLoot(s.inventory, recipe), item] });
       notify(`Crafted ${item.name}${item.level > 1 ? ` +${item.level - 1}` : ''}!`, RARITY_COLOR[item.rarity], 'ITEM');
       events.emit('hub', { kind: 'craft', n: 1 });
       return { item, outcome: item.level > 1 ? 'GREAT' as const : 'SUCCESS' as const };
+    },
+
+    // ---- Wishing Fountain (wishing.ts): one coin a day -> one random Luck buff; per-target use-up
+    makeWish: () => {
+      const today = dayKey(), p = get().progress;
+      if (wishedToday(p.wish, today)) return null;
+      const id = rollWishId();
+      set({ progress: { ...p, wish: newWish(id, today) } });
+      return id;
+    },
+    wishUse: (t, n = 1) => {
+      const today = dayKey(), p = get().progress, w = p.wish;
+      if (!w || !liveTargets(w, today).includes(t)) return;
+      const next = t === 'FISH' ? { ...w, fishLeft: Math.max(0, w.fishLeft - n) } : t === 'CRAFT' ? { ...w, craftLeft: Math.max(0, w.craftLeft - n) } : { ...w, used: [...w.used, t] };
+      set({ progress: { ...p, wish: next } });
     },
 
     brewElixir: (id, n = 1) => {
@@ -2112,7 +2137,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (kind > 0.95) pool = notPet.filter((i) => i.type === 'POTION');
         else if (kind > 0.87) pool = notPet.filter((i) => i.id === 'upgrade_core');
         else {
-          biomeTier = capRarity(rollBiomeRarity(ctx), dropLv);
+          biomeTier = capRarity(rollBiomeRarity(ctx, Math.random, runWish.loot), dropLv);   // (runWish.loot: Wishing Fountain luck of this run)
           if (biomeTier === 'COMMON' && Math.random() < 0.7) return null;   // no Common spam
         }
         if (!biomeTier) {

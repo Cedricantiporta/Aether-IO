@@ -221,7 +221,7 @@ export const statRange = (v: number): [number, number] => [roundStat(v * (1 - CR
 
 let seq = 0;
 /** Rolls a crafted item. `rng` is injectable for tests. */
-export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
+export function craft(recipe: Recipe, rng: () => number = Math.random, great = 0, perfect = 1): Item {   // great / perfect: Smith's Blessing (wishing.ts): +% great-success chance, Perfect-line odds multiplier
   const pool = recipeTemplates(recipe);
   const tpl = pool[Math.floor(rng() * pool.length)];
   const stats: Partial<PlayerStats> = {};
@@ -236,10 +236,11 @@ export function craft(recipe: Recipe, rng: () => number = Math.random): Item {
     onHitEffect: tpl.onHitEffect ? { ...tpl.onHitEffect } : undefined,
     affixes: undefined,
   };
-  rollAffixes(item, rng);
+  rollAffixes(item, rng, perfect);
   rollGrade(item, rng, GRADE_CRAFT_ODDS);   // crafted gear: fewer Low, better odds of a High grade piece
   const r = rng();
-  applyPlus(item, r < CRAFT_PLUS2_CHANCE ? 2 : r < CRAFT_PLUS2_CHANCE + CRAFT_PLUS1_CHANCE ? 1 : 0);
+  const gm = 1 + great;
+  applyPlus(item, r < CRAFT_PLUS2_CHANCE * gm ? 2 : r < (CRAFT_PLUS2_CHANCE + CRAFT_PLUS1_CHANCE) * gm ? 1 : 0);
   return item;
 }
 
