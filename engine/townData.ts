@@ -95,9 +95,16 @@ export const ADV_PLAZA = { x: 5, z: 150, rx: 15, rz: 14 };
 export const inAdvPlaza = (x: number, z: number, pad = 0): boolean => ((x - ADV_PLAZA.x) / (ADV_PLAZA.rx + pad)) ** 2 + ((z - ADV_PLAZA.z) / (ADV_PLAZA.rz + pad)) ** 2 < 1;
 /** The Lantern Lane village stretch (houses, stalls, well, fences) west of the plaza, between it and the Boss Trials path: its bounding box (flattened, kept clear of forest). */
 export const ADV_VILLAGE = { x0: -34, z0: 128, x1: -9, z1: 160 };
-/** (owner 2026-10-26) the Boss Trials portal on the headland added at the south-west coast of the outskirts (ISLAND_BOXES [-64, -10, 0, 166]): the same kit `adventure_portal`, tinted purple. Dormant until the first game clear.
- *  Like the Adventure Portal it faces NORTH (ry = PI), down its dirt path (the Brewer's lane, bending south from (-34, 114)): `front` = where the hero stands (E, minimap), `out` = where he reappears after a trial. */
-export const BOSS_PORTAL = { x: -40, z: 152, r: 4.4, ry: Math.PI, front: { x: -40, z: 147.6 }, out: { x: -40, z: 145.2 } };
+/** (owner 2026-10-31, the red line in his screenshot) the Boss Trials portal stands on the headland at the far south end of the forest peninsula (the strip x 0..62 that runs south from the Adventure Plaza to the Endless Tower),
+ *  in the middle of its seaward (south) shore, its back to the sea and its ring across the shore: the swirl faces NORTH (ry = PI), inland, where the hero comes from. The old south-west site (-40, 152) is a small seaside rest spot now (OLD_SPOT).
+ *  `front` = where the hero stands (E, minimap, autopath), `out` = where he reappears after a trial. The dais / pillars / statues / lamps / banners / deck of engine/bossIsland.ts are all placed relative to it.
+ *  BOSS_HEAD = the polar bulge that rounds the peninsula's south end out into the sea (mapgen.baseRadius): a plateau `depth` m deep between the angles a0+ramp .. a1-ramp (x about 18..36 at z 252), eased down to 0 on both ramps (11 m each). */
+export const BOSS_PORTAL = { x: 26, z: 254, r: 4.4, ry: Math.PI, front: { x: 26, z: 249.6 }, out: { x: 26, z: 247.2 } };
+export const BOSS_HEAD = { a0: 1.37, a1: 1.56, ramp: 0.052, depth: 16 };
+/** The dirt path to the portal: from the Adventure Plaza's south-east rim down the peninsula (centre line, metres; the last stretch runs straight north-south into the portal front). */
+export const BOSS_PATH: [number, number][] = [[16.5, 159.5], [20.5, 166], [21, 175], [17.5, 187], [17.5, 201], [21.5, 215], [26, 226], [26, 238], [BOSS_PORTAL.front.x, BOSS_PORTAL.front.z - 0.4]];
+/** The old Boss Trials site on the south-west shore, now a quiet seaside rest spot (a few benches, two lamp posts, flower patches) at the end of the old path. */
+export const OLD_SPOT = { x: -40, z: 152 };
 /** First arrival of a session (new game / boot, not coming back from a run): the middle of the town plaza, in front of the castle road. */
 export const PLAZA_ARRIVAL = { x: 0, z: 7.6 };   // (south of the plaza fountain)
 /** (owner 2026-10-25) the fountain in the middle of the plaza (render/PlazaFountain: two-tier storybook fountain; collider r). */
@@ -139,7 +146,8 @@ export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
  *  how many trees are dead (render/natureLayout) and the wisps / mist (render/GloomTower). */
 export function gloomK(x: number, z: number): number {
   const t = Math.min(1, Math.max(0, (Math.hypot(x - TOWER.x, z - TOWER.z) - 14) / 26));
-  return 1 - t * t * (3 - 2 * t);
+  const u = Math.min(1, Math.max(0, (Math.hypot(x - BOSS_PORTAL.x, z - BOSS_PORTAL.z) - 12) / 16));   // (owner 2026-10-31: the Boss Trials headland 30 m away stays bright and green: the gloom is eased out within ~28 m of that portal)
+  return (1 - t * t * (3 - 2 * t)) * (u * u * (3 - 2 * u));
 }
 /** Height of the Endless Tower's knoll at (x, z) (0 off it): the hero (townLift) and the ground mesh (render/terrainFn) both use it. */
 export function towerKnollAt(x: number, z: number): number {
@@ -490,7 +498,9 @@ export const ROADS: RoadSpec[] = [
   { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: TOWER_PATH_Z, x2: -17, z2: TOWER_PATH_Z, w: 3.4, dirt: true }, { x1: -17, z1: TOWER_PATH_Z, x2: -34, z2: TOWER_PATH_Z + 0.4, w: 3.4, dirt: true },   // the Brewer's lane (owner 2026-10-26: wider + longer dirt path west from the road past her door, then on south-west to the Boss Trials plaza)
-  { x1: -34, z1: TOWER_PATH_Z + 0.4, x2: -37.5, z2: 130, w: 3.2, dirt: true }, { x1: -37.5, z1: 130, x2: BOSS_PORTAL.front.x, z2: BOSS_PORTAL.front.z - 0.4, w: 3.2, dirt: true },
+  { x1: -34, z1: TOWER_PATH_Z + 0.4, x2: -37.5, z2: 130, w: 3.2, dirt: true }, { x1: -37.5, z1: 130, x2: OLD_SPOT.x, z2: OLD_SPOT.z - 3.6, w: 3.2, dirt: true },   // (ends at the old seaside rest spot)
+  // (owner 2026-10-31) the new Boss Trials path: from the Adventure Plaza's south-east rim down the peninsula to the portal front
+  ...BOSS_PATH.slice(1).map((p, i): RoadSpec => ({ x1: BOSS_PATH[i][0], z1: BOSS_PATH[i][1], x2: p[0], z2: p[1], w: 3.2, dirt: true })),
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.front.x, z2: PORTAL.front.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal's clearing (the old tower spot)
   // (owner 2026-10-31) Lantern Lane: from the Adventure Plaza's west gate through the little village, then north-west to meet the Boss Trials path (-37.5, 130)
@@ -827,7 +837,7 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (let x = RIVER.x0; x <= RIVER.x1; x += 6) c.push([x, (RIVER.z0 + RIVER.z1) / 2, 9]);
   for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([TOWER.x, TOWER.z, 13], [TOWER.x, TOWER.z - 6, 9]);   // the tower clearing
-  c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6], [BOSS_PORTAL.x, BOSS_PORTAL.z, 9], [BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
+  c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6], [BOSS_PORTAL.x, BOSS_PORTAL.z - 2, 13], [BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
   for (let x = ADV_PLAZA.x - ADV_PLAZA.rx + 4; x <= ADV_PLAZA.x + ADV_PLAZA.rx - 3; x += 6) for (let z = ADV_PLAZA.z - ADV_PLAZA.rz + 4; z <= ADV_PLAZA.z + ADV_PLAZA.rz - 3; z += 6) if (inAdvPlaza(x, z, 1)) c.push([x, z, 6]);   // (owner 2026-10-31) the Adventure Plaza
   for (let x = ADV_VILLAGE.x0 + 3; x <= ADV_VILLAGE.x1 + 3; x += 6) for (let z = ADV_VILLAGE.z0 + 3; z <= ADV_VILLAGE.z1; z += 6) c.push([x, z, 6]);   // Lantern Lane
   c.push([BREWER_HUT.x, BREWER_HUT.z, 7.5]);   // the brewer's yard

@@ -25,7 +25,7 @@ import { TOWN_CHESTS } from './townChests';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
 import { isV3, v3Ring, v3Disc, V3_BOX } from './kitV3Data';
 import { AP_SOLIDS, AP_FLOWERS, AP_HAY, AP_CLUTTER, AP_TREES } from './adventurePlaza';
-import { BI_DAIS, BI_SOLIDS, BI_STATUES, BI_BOARD, BI_DECK, pathX } from './bossIsland';
+import { BI_DAIS, BI_SOLIDS, BI_STATUES, BI_BOARD, BI_DECK, BI_PALMS, BI_OLD_BENCHES, BI_OLD_PAD, pathBack, shoreZ, headSandK } from './bossIsland';
 import { SHOP_POSITIONS, shopFront } from '../constants';
 import { islandRadius } from './mapgen';
 import { beachZoneK, onDeckRect, FISH_SPOTS, CAMPFIRE, UMBRELLA, CRATES, NET_RACK, SHIP, DOCK } from './beachData';
@@ -138,12 +138,12 @@ function blocked(x: number, z: number, pad = 0.4, edge = 3.6): boolean {
   for (const l of legs) if (distSeg(x, z, l[0], l[1], l[2], l[3]) < l[4] + pad) return true;
   for (const q of rects) if (x > q[0] - pad && x < q[2] + pad && z > q[1] - pad && z < q[3] + pad) return true;
   if (Math.hypot(x, z) > islandRadius(Math.atan2(z, x)) - edge) return true;
-  if (isTownWater(x, z) || onDeckRect(x, z, 2) >= 0 || beachZoneK(x, z) > 0.1) return true;
+  if (isTownWater(x, z) || onDeckRect(x, z, 2) >= 0 || beachZoneK(x, z) > 0.1 || headSandK(x, z) > 0.1) return true;   // (the sand strips of the Boss Trials headland stay free of trees / bushes)
   if (x > RIVER.x0 - 2 && x < RIVER.x1 + 2 && z > riverBank(x, 0) - 1.4 && z < riverBank(x, 1) + 1.4) return true;
   if (inCampYard(x, z, 1) || inCaveClear(x, z, 1)) return true;
   if (Math.hypot(x - TOWER.x, z - TOWER.z) < TOWER_KNOLL.r + 1) return true;
   if (!AP_OPEN && inAdvSite(x, z, 0.8)) return true;
-  if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6 || Math.hypot(x - BOSS_PORTAL.x, z - BOSS_PORTAL.z) < 8) return true;   // (the portal's clearing)
+  if (Math.hypot(x - PORTAL.x, z - PORTAL.z) < 6 || Math.hypot(x - BOSS_PORTAL.x, z - BOSS_PORTAL.z) < 8 || Math.hypot(x - BI_DAIS.x, z - BI_DAIS.z) < BI_DAIS.r + 1) return true;   // (the portal's clearing)
   return false;
 }
 /** Free for a prop of radius r that also keeps `gap` from every earlier fill placement. */
@@ -273,7 +273,7 @@ function decor(piece: string, x: number, z: number, ry: number, s = 1, o: DecorO
 // ---- the plaza (owner 2026-10-24: the Adventure Portal left it, the paved disc is open): four double lamps on the rim diagonals (the two benches are TOWN_SEATS); nothing else (TownScenery addPlaza draws the plinths)
 // ---- the Adventure Portal (kit v3, scale PORTAL_S, front north, down the forest road) stands in the forest clearing south of the walls, where the Endless Tower used to be
 put('adventure_portal', PORTAL.x, PORTAL.z, PORTAL.ry, PORTAL_S, PORTAL_S, PORTAL_S, 0);
-put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTAL_S, BOSS_PORTAL_S, BOSS_PORTAL_S, 0);   // (owner 2026-10-26: the Boss Trials portal on the south-west headland; Town.tsx tints it purple)
+put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTAL_S, BOSS_PORTAL_S, BOSS_PORTAL_S, 0);   // (owner 2026-10-26: the Boss Trials portal at the south tip of the peninsula; Town.tsx tints it purple)
 // ---- (owner 2026-10-31) the Boss Trials headland dressed as a place (layout data: engine/bossIsland.ts; the built pieces - dais, pillars, runes, banners, altar, lanterns, deck - are render/bossIsland.ts):
 // kit props here: boss statues, notice board, bench + trees / bushes / flowers (every tree gets a little undergrowth nest like the forest outskirts), rocks and tufts along the shore, flower patches along the path.
 {
@@ -293,16 +293,24 @@ put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTA
     for (let k = 0; k < 2; k++) { const a = r() * TAU, d = rad + 0.2 + r() * 1.3, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d; if (!blocked(px, pz, 0.1, 2.0)) put(k ? PIECES.mushrooms : PIECES.tuft, px, pz, r() * TAU, k ? 0.5 + r() * 0.3 : 0.8 + r() * 0.5); }
   };
   const tree = (piece: readonly string[], x: number, z: number, s: number): void => { const p = pick(piece, r()); if (prop(p, x, z, r() * TAU, s, s * (0.92 + r() * 0.2), 0.4)) nest(x, z, (SOLID_R[p] ?? 0.7) * s); };
-  // trees with undergrowth: a west copse, an east copse by the path, the back (south-west) and a few on the lookout side
-  for (const [x, z, k] of [[-54, 136, 0], [-50.5, 142, 1], [-56, 146, 0], [-52, 153, 1], [-57, 158, 0], [-48, 160, 1], [-28.5, 128, 1], [-27, 134, 0], [-24.5, 140, 1], [-22.5, 147, 0], [-19, 139, 1], [-17.5, 146, 0], [-20, 153, 1], [-17, 158, 0], [-23, 161, 1], [-46, 161, 1], [-37, 162.2, 0]] as const) tree(k ? PIECES.pine : PIECES.oak, x + (r() - 0.5), z + (r() - 0.5), 0.8 + r() * 0.3);
-  tree(PIECES.blossom, -30.5, 143.5, 0.95); tree(PIECES.fruit, -49.5, 148, 0.95); tree(PIECES.blossom, -53.5, 130, 0.95);
-  // bushes, flower patches and tufts along the dirt path (both edges) and round the dais rim
-  for (let z = 116; z < 146; z += 2.6) for (const sd of [-1, 1]) { if (r() < 0.45) continue; const off = 2.7 + r() * 1.6; if (r() < 0.4) prop(pick(PIECES.bush, r()), pathX(z) + sd * (off + 0.4), z + r(), r() * TAU, 0.5 + r() * 0.3, undefined, 0.1); else bloom(pathX(z) + sd * off, z + r(), 0.6 + r() * 0.5); }
+  // trees with undergrowth: a west copse, an east copse by the path, the back and a few on the lookout side (offsets from the old site layout, now round the new portal: ox / oz)
+  const ox = BOSS_PORTAL.x + 40, oz = BOSS_PORTAL.z - 152;
+  for (const [x, z, k] of [[-54, 136, 0], [-50.5, 142, 1], [-56, 146, 0], [-52, 153, 1], [-57, 158, 0], [-48, 160, 1], [-28.5, 128, 1], [-27, 134, 0], [-24.5, 140, 1], [-22.5, 147, 0], [-19, 139, 1], [-17.5, 146, 0], [-20, 153, 1], [-17, 158, 0], [-23, 161, 1], [-46, 161, 1], [-37, 162.2, 0]] as const) tree(k ? PIECES.pine : PIECES.oak, x + ox + (r() - 0.5), z + oz + (r() - 0.5), 0.8 + r() * 0.3);
+  tree(PIECES.blossom, -30.5 + ox, 143.5 + oz, 0.95); tree(PIECES.fruit, -49.5 + ox, 148 + oz, 0.95); tree(PIECES.blossom, -53.5 + ox, 130 + oz, 0.95);
+  // bushes, flower patches and tufts along the dirt path (both edges, its last 36 m) and round the dais rim
+  for (let d = 9; d < 45; d += 2.6) for (const sd of [-1, 1]) { if (r() < 0.45) continue; const p = pathBack(d), off = 2.7 + r() * 1.6, px = p.x - p.tz * sd * off, pz = p.z + p.tx * sd * off; if (r() < 0.4) prop(pick(PIECES.bush, r()), px - p.tz * sd * 0.4, pz + r(), r() * TAU, 0.5 + r() * 0.3, undefined, 0.1); else bloom(px, pz + r(), 0.6 + r() * 0.5); }
   for (let k = 0; k < 16; k++) { const a = deg(160 + k * 14 + r() * 8), d = BI_DAIS.r + 1.0 + r() * 1.2; const x = BI_DAIS.x + Math.cos(a) * d, z = BI_DAIS.z + Math.sin(a) * d; if (k % 3 === 0) prop(pick(PIECES.bush, r()), x, z, r() * TAU, 0.55 + r() * 0.3, undefined, 0.1); else bloom(x, z, 0.7 + r() * 0.5); }
-  // rocks + tufts along the shore, a few flower beds on the meadow
-  for (let k = 0; k < 14; k++) { const x = -60 + r() * 42, z = 163.5 + r() * 2.2; prop(pick(PIECES.rock, r()), x, z, r() * TAU, 0.55 + r() * 0.5, undefined, 0.2); }
-  for (let k = 0; k < 8; k++) prop(pick(PIECES.rock, r()), -62 + r() * 1.5, 132 + r() * 30, r() * TAU, 0.6 + r() * 0.5, undefined, 0.2);
-  for (let k = 0; k < 22; k++) bloom(-58 + r() * 34, 130 + r() * 30, 0.7 + r() * 0.6);
+  // (owner 2026-10-31) the beach: palms (kit palm_v3, walk-through apart from the trunk collider in BI_SOLIDS) on the sand strips on both sides, rocks + a few boulders at the waterline
+  for (const [x, z, s] of BI_PALMS) put(PIECES.palm[0], x, z, r() * TAU, s, s * (0.95 + r() * 0.15), s, 0.1);
+  for (let k = 0; k < 26; k++) { const dx = (k % 2 ? 1 : -1) * (6 + r() * 30), x = BOSS_PORTAL.x + dx; put(pick(PIECES.rock, r()), x, shoreZ(x) - 0.4 - r() * 1.6, r() * TAU, 0.5 + r() * 0.5, undefined, 0.2); }
+  for (let k = 0; k < 10; k++) { const x = BOSS_PORTAL.x + (k % 2 ? 1 : -1) * (14 + r() * 18), z = shoreZ(x) - 4.5 - r() * 3; bloom(x, z, 0.45 + r() * 0.3); }
+  // the old south-west site: a seaside rest spot (pad + lamps are built pieces, render/bossIsland.ts): benches looking at the sea, flower patches round the pad
+  for (const [x, z, ry] of BI_OLD_BENCHES) put(PIECES.bench, x, z, ry, 1, 1, 1, 0.14);
+  claim(BI_OLD_PAD.x, BI_OLD_PAD.z, BI_OLD_PAD.r + 1);
+  for (let k = 0; k < 9; k++) { const a = deg(180 + k * 25 + r() * 10), d = BI_OLD_PAD.r + 1.2 + r() * 1.5; bloom(BI_OLD_PAD.x + Math.cos(a) * d, BI_OLD_PAD.z + Math.sin(a) * d, 0.6 + r() * 0.5); }
+  tree(PIECES.blossom, BI_OLD_PAD.x - 7, BI_OLD_PAD.z - 2, 0.95); tree(PIECES.oak, BI_OLD_PAD.x + 7.5, BI_OLD_PAD.z - 3, 0.9);
+  // a few flower beds on the meadow round the dais
+  for (let k = 0; k < 22; k++) bloom(BOSS_PORTAL.x - 18 + r() * 36, BOSS_PORTAL.z - 22 + r() * 22, 0.7 + r() * 0.6);
 }
 // ---- (owner 2026-10-31) the Adventure Plaza + Lantern Lane: lamp / banner colliders, flower patches (the kit flower_patch), haystacks, crates, accent trees with a little undergrowth.
 // (houses, benches, beds, stalls, well, cart, fences, signposts, trees: townData; the built pieces: render/adventurePlaza.ts)
@@ -447,7 +455,7 @@ grove(Z(0, 125, 20, 3), 6, [BUSHES(3), OAKS(1, [0.7, 0.9]), PINES(1)], 308, 0.8)
 grove(Z(-7, 148, 13, 18), 24, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 401, 0.7, 2.4);
 grove(Z(17, 148, 11, 18), 18, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 402, 0.7, 2.4);
 grove(Z(5, 161, 15, 8), 22, [PINES(4), OAKS(3), BUSHES(2)], 403, 0.7, 2.4);
-grove(Z(-40, 160, 15, 4), 16, [PINES(4), OAKS(3), BUSHES(2)], 407, 0.7, 2.4);   // (owner 2026-10-26) a screen of trees behind the Boss Trials portal   // (owner 2026-10-24) the Adventure Portal's back: a thick wall of trees behind it
+// (the old screen of trees behind the south-west Boss Trials site is gone: it is a seaside rest spot now)
 grove(Z(5, 172, 20, 8), 18, [PINES(4), OAKS(2), BUSHES(2)], 405, 0.7, 2.4);
 // ---- the Endless Tower's own clearing (east, deeper): forest round its back and sides, its dirt path stays open
 grove(Z(31, 176, 20, 8), 20, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1, [0.6, 1])], 406, 0.7, 2.4);

@@ -2,7 +2,7 @@
 // `b` = lit vertex-coloured geometry, `g` = unlit glow geometry (runes, lantern glass, crystals). Layout data + colliders: engine/bossIsland.ts. Soft, toy-like, lilac stone + warm wood.
 import type { GB } from './util';
 import { BOSS_PORTAL } from '../engine/townData';
-import { BI_DAIS, BI_PILLARS, BI_STATUES, BI_ALTAR, BI_BANNERS, BI_LANTERNS, BI_DECK, pathX } from '../engine/bossIsland';
+import { BI_DAIS, BI_PILLARS, BI_STATUES, BI_ALTAR, BI_BANNERS, BI_LANTERNS, BI_DECK, BI_DRIFT, BI_SHELLS, BI_OLD_PAD, BI_OLD_LAMPS } from '../engine/bossIsland';
 
 const STONE = '#d4cce0', STONE_D = '#b9afcb', STONE_L = '#e6e0ee', PURPLE = '#8a5fd0', PURPLE_D = '#5f3fa0', GLOW = '#d68cff', GOLD = '#f3cf6e', WOOD = '#b98b5a', WOOD_D = '#7d5a38';
 const Y0 = 0.1;   // paving top (the hero walks over it; sunk feet at this height are hidden by the soft stone edge)
@@ -15,7 +15,7 @@ export function addBossIsland(b: GB, g: GB): void {
   b.cyl(5.9, 5.9, 0.04, 36, [D.x, Y0 - 0.01, D.z + 0.0], STONE_L, [0, 0, 0], 1, [1, 1]);
   b.torus(D.r + 0.12, 0.13, [D.x, 0.1, D.z], STONE_L, [Math.PI / 2, 0, 0], 1, 40);
   const ax = BOSS_PORTAL.front.x, az0 = BOSS_PORTAL.front.z - 6.4;
-  for (let i = 0; i < 6; i++) b.cyl(1.05, 1.1, 0.07, 10, [pathX(az0 + i * 1.2) * 0.5 + ax * 0.5 + (i % 2 ? 0.4 : -0.4), 0.035, az0 + i * 1.2], i % 2 ? STONE : STONE_L, [0, 0, 0], [1, 1, 0.8], [1, 1]);   // stepping slabs
+  for (let i = 0; i < 6; i++) b.cyl(1.05, 1.1, 0.07, 10, [ax + (i % 2 ? 0.4 : -0.4), 0.035, az0 + i * 1.2], i % 2 ? STONE : STONE_L, [0, 0, 0], [1, 1, 0.8], [1, 1]);   // stepping slabs
   // ---- glowing runes: two thin rings with 14 glyphs between them
   g.torus(5.35, 0.07, [D.x, Y0 + 0.03, D.z], GLOW, [Math.PI / 2, 0, 0], 1, 56);
   g.torus(3.7, 0.07, [D.x, Y0 + 0.03, D.z], GLOW, [Math.PI / 2, 0, 0], 1, 48);
@@ -86,5 +86,28 @@ export function addBossIsland(b: GB, g: GB): void {
     b.cyl(0.2, 0.17, 0.28, 10, [K.x + 1.5, 0.28, K.z - 0.6], '#7aa8c8');
     for (const o of [-0.5, 0.2]) b.cyl(0.025, 0.04, 2.4, 5, [K.x + 0.4 + o, 1.1, K.z + K.d / 2 - 0.3], '#6b4a2a', [-0.55, 0, 0.1]);
     g.sph(0.07, [K.x + 0.4 - 0.5, 0.4, K.z + K.d / 2 + 0.9], '#ff7a5a', 1, 5);
+  }
+  // ---- the sand beach on both sides of the headland: driftwood logs (a trunk + a stub branch) and shells / starfish (the sand itself is the ground colour, Terrain.tsx headSandK)
+  for (const [x, z, ry, len] of BI_DRIFT) {
+    b.cyl(0.2, 0.24, len, 7, [x, 0.14, z], '#b59a76', [0, ry, Math.PI / 2], 1, [1, 1]);
+    b.cyl(0.1, 0.14, len * 0.45, 6, [x + Math.cos(ry) * len * 0.12 - Math.sin(ry) * 0.3, 0.2, z - Math.sin(ry) * len * 0.12 - Math.cos(ry) * 0.3], '#9d8362', [0, ry + 0.8, Math.PI / 2 - 0.3], 1, [1, 1]);
+  }
+  for (const [x, z, ry, k] of BI_SHELLS) {
+    if (k === 0) { b.cone(0.17, 0.12, 6, [x, 0.07, z], '#f3d9c4', [0, ry, 0]); b.cone(0.12, 0.09, 6, [x + 0.18, 0.06, z + 0.1], '#f7e7d8', [0, ry + 1, 0]); }   // (two small cream shells)
+    else if (k === 1) { b.cyl(0.2, 0.2, 0.05, 5, [x, 0.04, z], '#ff9a8a', [0, ry, 0], 1, [1, 1]); b.sph(0.07, [x, 0.08, z], '#ffd0c6', 1, 5); }   // (a starfish)
+    else if (k === 2) b.sph(0.15, [x, 0.06, z], '#fff1de', [1, 0.6, 0.85], 6);   // (a clam)
+    else { b.sph(0.12, [x, 0.05, z], '#e9c9d8', [1, 0.55, 1], 6); b.sph(0.08, [x + 0.22, 0.04, z - 0.1], '#f6e2b8', [1, 0.6, 1], 5); }
+  }
+  // ---- the old south-west site (townData OLD_SPOT): a small round stone pad + two wooden lamp posts (the benches are kit pieces, townFill)
+  { const O = BI_OLD_PAD;
+    b.cyl(O.r + 0.3, O.r + 0.4, 0.08, 28, [O.x, 0.04, O.z], STONE_D, [0, 0, 0], 1, [1, 1]);
+    b.cyl(O.r, O.r + 0.08, 0.1, 28, [O.x, 0.05, O.z], STONE, [0, 0, 0], 1, [1, 1]);
+    b.torus(O.r + 0.05, 0.1, [O.x, 0.1, O.z], STONE_L, [Math.PI / 2, 0, 0], 1, 28);
+    for (const [x, z] of BI_OLD_LAMPS) {
+      b.cyl(0.07, 0.09, 2.1, 7, [x, 1.05, z], WOOD_D);
+      b.box(0.36, 0.06, 0.36, [x, 2.14, z], PURPLE_D);
+      g.box(0.26, 0.32, 0.26, [x, 2.36, z], '#ffe6b0');
+      b.cone(0.28, 0.22, 4, [x, 2.63, z], PURPLE_D, [0, Math.PI / 4, 0]);
+    }
   }
 }

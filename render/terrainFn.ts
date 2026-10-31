@@ -1,7 +1,8 @@
 // Pure terrain functions shared by ground mesh, props, forest and water.
 import { ARENA_RADIUS } from '../engine/world';
 import { islandRadius, POND as ENGINE_POND, REGIONS } from '../engine/mapgen';
-import { LAKE, ISLAND_BOXES } from '../engine/townData';
+import { LAKE, ISLAND_BOXES, BOSS_HEAD } from '../engine/townData';
+import { headSandK } from '../engine/bossIsland';
 import { FARM, WALL, BREWER_HUT, ROADS, RIVER, FIELDS, riverBank, towerKnollAt, lakeSouth } from '../engine/townData';
 import { inCampYard, CAVE_CLEAR } from '../engine/caveData';
 import { hillAt } from '../engine/townHills';
@@ -17,7 +18,7 @@ export const GROUND_BOX = (() => {
   let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
   for (const b of ISLAND_BOXES) { x0 = Math.min(x0, b[0]); z0 = Math.min(z0, b[1]); x1 = Math.max(x1, b[2]); z1 = Math.max(z1, b[3]); }
   const m = 22;   // (island edge noise + the cave bay bulge + the sloping shore)
-  return { x0: x0 - m, z0: z0 - m, x1: x1 + m, z1: z1 + m };
+  return { x0: x0 - m, z0: z0 - m, x1: x1 + m, z1: z1 + m + BOSS_HEAD.depth };   // (+ the Boss Trials headland bulging out into the sea at the south)
 })();
 
 export function sstep(a: number, b: number, x: number) {
@@ -38,7 +39,7 @@ export function inYard(x: number, z: number, m = 0) {
 export function inForecourtUse(x: number, z: number, m = 0) {
   return (z > WALL.z1 && Math.abs(x) < 4.5 + m) || (Math.abs(x - FARM.x) < FARM.hw + 2 + m && Math.abs(z - FARM.z) < FARM.hd + 2 + m)
     || (Math.abs(z - FARM.z) < 2 + m && x < 0 && x > FARM.x) || Math.hypot(x - BREWER_HUT.x, z - BREWER_HUT.z) < 6 + m || (Math.abs(z - BREWER_HUT.z) < 2 + m && x > 0 && x < BREWER_HUT.x)
-    || beachSandK(x, z) > 0.15   // the lakeside beach (render/Beach.tsx has its own props)
+    || headSandK(x, z) > 0.15 || beachSandK(x, z) > 0.15   // the lakeside beach (render/Beach.tsx has its own props)
     || inCampYard(x, z, 2 + m) || onDirtPath(x, z, 1.2 + m)
     || riverK(x, z) > 0 || (z > riverBank(x, 0) - 2.5 - m && z < riverBank(x, 1) + 2.5 + m && x > RIVER.x0 && x < RIVER.x1 + 3)   // the river + its banks
     || FIELDS.some((F) => Math.abs(x - F.x) < F.hw + 1.5 + m && Math.abs(z - F.z) < F.hd + 1.5 + m)
