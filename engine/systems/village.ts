@@ -48,7 +48,7 @@ const ANIMAL_NAME: Record<string, string> = { CAT: 'Cat', CHICKEN: 'Chicken', CO
 /** (owner) swing up onto a stable horse: the hero rides it (player.ts: faster, no fighting) until E / an area change. */
 function mount(i: number, keepGo = false): void {
   const a = animals[i], v = world.village, p = world.player; if (!a || v.sit.on) return;
-  v.ride.on = true; v.ride.horse = i; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
+  v.ride.on = true; v.ride.horse = i; v.ride.manual = !keepGo; a.ridden = true; a.joy = 1;   // (a happy head toss as you swing up)
   p.pos.set(a.x, 0, a.z); p.facing = a.yaw;
   if (!keepGo) { p.vel.set(0, 0, 0); v.go.on = false; }   // (auto horse: the click-walk / guide auto-path carries on in the saddle)
 }
@@ -58,7 +58,7 @@ hooks.dismount = () => dismount();
 export function dismount(home = false): void {
   const v = world.village; if (!v.ride.on) return;
   const hi = v.ride.horse, a = animals[hi], p = world.player;
-  v.ride.on = false; v.ride.horse = -1; v.ride.dashT = 0; v.ride.moveT = 0;
+  v.ride.on = false; v.ride.horse = -1; v.ride.dashT = 0; v.ride.moveT = 0; v.ride.manual = false;
   if (!a) return;
   a.ridden = false; a.moving = false; a.wait = 1.5; a.hx = a.tx = a.x; a.hz = a.tz = a.z;
   p.pos.set(a.x + Math.cos(a.yaw) * 1.1, 0, a.z - Math.sin(a.yaw) * 1.1);   // step off to the horse's left
@@ -78,7 +78,7 @@ function autoHorse(dt: number, talking: boolean): void {
   if (v.area !== 'TOWN') { rd.moveT = 0; return; }
   if (rd.on) {
     if (insideWalls(p.pos.x, p.pos.z, 1.3)) { dismount(true); return; }   // through the gate / side gate: off at the wall (horse back to the paddock)
-    if (landingNear(p.pos.x, p.pos.z, 5.5)) dismount();                   // arrived at the portal / tower / cave: on foot for the E prompt
+    if (landingNear(p.pos.x, p.pos.z, 5.5) && !rd.manual) dismount();    // the AUTO horse arrived at the portal / tower / cave: on foot for the E prompt (a horse you mounted yourself with E stays under you)
     else if (talking || useGameStore.getState().isShopOpen) dismount();   // a conversation / shop window: get off first
     return;
   }
@@ -336,7 +336,7 @@ function scanNearby(): void {
   if (area === 'TOWN') for (let i = 0; i < animals.length; i++) {   // (owner) pet the animals, ride the stable horses
     const a = animals[i], k = ANIMALS[i].kind; d = q(a.x, a.z);
     const r = k === 'HORSE' || k === 'COW' ? 2.6 : 1.9;
-    if (d < r * r) { if (k === 'HORSE') push('E', 'Ride', 'Horse', '', i, d + 0.4, 'ride'); else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
+    if (d < r * r) { if (k === 'HORSE') push('E', 'Ride', 'Horse', '', i, d - 1.2, 'ride'); else push('E', 'Pet', ANIMAL_NAME[k] ?? 'Animal', '', i, d + 1.5, 'pet'); }
   }
   if (world.village.sit.on) {   // seated: the only action is standing up
     nearbyN = 0; push('E', 'Stand', 'up', '', -1, 0, 'sit');
