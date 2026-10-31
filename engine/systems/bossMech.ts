@@ -125,6 +125,7 @@ export function resetBossMech(): void {
   prox.p.fill(0); prox.t.fill(0); prox.lt.fill(-99); prox.pend.fill(0); prox.chain.fill(0); S.id = -1; S.barrierUsed = false; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
   for (const s of strikes) s.on = false;
   RQ.n = 3; RQ.m = null;
+  hooks.kitReset();   // (bossKit.ts: pending strikes / statues / knots)
 }
 
 const pwr = (e: Enemy): number => Math.max(e.projectileDamage, e.contactDamage * 0.8, 8);

@@ -32,6 +32,9 @@ import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, close
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
 import { dodgeBoss } from './dodgeMechs';
+import { kitOwns } from './bossKit';
+import { gorathKit } from './bossKitGorath';
+import { treantAI } from './bossKitTreant';
 
 const dirV = new Vector3();
 const posV = new Vector3();
@@ -96,8 +99,9 @@ export function updateBoss(e: Enemy, dt: number, distToPlayer: number): void {
   checkPhase(e);
   proxTick(e, dt);   // proximity pressure (bossMech): close skills only with someone near, more often the longer they stay
   if (dodgeBoss(e, dt)) return;   // dodge mechanics (dodgeMechs.ts): i-frame rings, beams, gatlings, trails own the boss while they run
-  if (e.kind === 'BOSS_GOLEM') golem(e, distToPlayer);
+  if (e.kind === 'BOSS_GOLEM') { if (kitOwns(e)) gorathKit(e, dt, distToPlayer); else golem(e, distToPlayer); }   // Gorath's designed kit (bossKitGorath.ts); extra Goraths (Endless Waves) keep the old cycle
   else if (e.kind === 'BOSS_LICH') lich(e, dt, distToPlayer);
+  else if (e.kind === 'BOSS_TREANT' && kitOwns(e)) treantAI(e, dt, distToPlayer);   // Elderroot's designed kit (bossKitTreant.ts); extra Elderroots keep bosses2.treant()
   else updateBoss2(e, dt, distToPlayer); // Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (bosses2.ts)
 }
 

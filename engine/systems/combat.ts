@@ -505,7 +505,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   if (!o.dot && o.source !== 'PET') { dealt *= comboMul(); registerHit(); }
   if (o.source === 'PLAYER') dealt *= cardDamageMul(e);   // special cards: Afflictor / Giant Slayer / Executioner / First Strike
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
-  if (e.boss) dealt *= hooks.damageMul(e, o.fromX !== undefined ? o.fromX : world.player.pos.x, o.fromZ !== undefined ? o.fromZ : world.player.pos.z) * hooks.phaseMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
+  if (e.boss) dealt *= hooks.damageMul(e, o.fromX !== undefined ? o.fromX : world.player.pos.x, o.fromZ !== undefined ? o.fromZ : world.player.pos.z) * hooks.phaseMul(e) * hooks.kitMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
   else if (e.decoy && e.trickKind === 1) dealt *= 3;   // the Herald's illusions mirror his HP bar but crumble 3x faster (balance pass: auto-aim
                                                        // kept hitting them and half the bot fights never finished)
