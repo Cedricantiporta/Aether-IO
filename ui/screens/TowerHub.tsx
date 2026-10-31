@@ -33,7 +33,8 @@ const KIND_ICON = { GEAR: Swords, PET: PawPrint, SUPPLY: Package, SHARDS: Gem } 
 const KIND_NAME = { GEAR: 'Gear', PET: 'Pet', SUPPLY: 'Supplies', SHARDS: 'Shards' } as const;
 const RAR_CLS: Record<string, string> = { RARE: 'r-rare', EPIC: 'r-epic', LEGENDARY: 'r-leg', MYTHIC: 'r-myth' };
 
-export const TowerPage: React.FC<{ locked: boolean; heroTitle: string; best: number; claimed: number[]; onClaim: (floor: number) => void }> = ({ locked, heroTitle, best, claimed, onClaim }) => {
+export const TowerPage: React.FC<{ locked: boolean; heroTitle: string; best: number; claimed: number[]; onClaim: (floor: number) => void; startFloor: number; onStartFloor: (f: number) => void }> = ({ locked, heroTitle, best, claimed, onClaim, startFloor, onStartFloor }) => {
+  const maxF = Math.max(1, best), setF = (f: number) => onStartFloor(Math.max(1, Math.min(maxF, f)));
   const reachedTop = Math.floor(best / TOWER_STEP) * TOWER_STEP;
   const nextMs = reachedTop + TOWER_STEP;
   // the track: the last 2 claimed prizes, every ready one, then the next four ahead
@@ -62,6 +63,21 @@ export const TowerPage: React.FC<{ locked: boolean; heroTitle: string; best: num
             <div className="th-goal-top"><Star size={13} /> Next prize at floor {nextMs}</div>
             <div className="th-bar"><i style={{ width: `${(into / TOWER_STEP) * 100}%` }} /></div>
             <small>{TOWER_STEP - into} more {TOWER_STEP - into === 1 ? 'floor' : 'floors'} to go</small>
+          </div>
+        </div>
+
+        <div className="th-start" data-testid="tower-start">
+          <div className="th-start-tx"><b>Start from floor</b><small>{maxF > 1 ? `Skip ahead to any floor you already reached (up to ${maxF}). Only floors you clear in this run count.` : 'Climb once to unlock skipping ahead.'}</small></div>
+          <div className="th-start-ctl">
+            <button className="th-step pe sm" disabled={startFloor <= 1} onClick={() => setF(startFloor - 1)} aria-label="Lower floor" data-testid="tower-floor-dec"><ChevronLeft size={18} /></button>
+            <div className="th-start-num" data-testid="tower-floor-sel">{startFloor}</div>
+            <button className="th-step pe sm" disabled={startFloor >= maxF} onClick={() => setF(startFloor + 1)} aria-label="Higher floor" data-testid="tower-floor-inc"><ChevronRight size={18} /></button>
+          </div>
+          <div className="th-start-quick">
+            <button className="th-q pe" disabled={startFloor <= 1} onClick={() => setF(1)}>Floor 1</button>
+            <button className="th-q pe" disabled={startFloor <= 1} onClick={() => setF(startFloor - 5)} data-testid="tower-floor-m5">-5</button>
+            <button className="th-q pe" disabled={startFloor >= maxF} onClick={() => setF(startFloor + 5)} data-testid="tower-floor-p5">+5</button>
+            <button className="th-q pe" disabled={startFloor >= maxF} onClick={() => setF(maxF)}>Best</button>
           </div>
         </div>
 

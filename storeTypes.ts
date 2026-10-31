@@ -211,7 +211,7 @@ export interface GameState {
 
   // items
   debugMaxSkills: () => void;                      // debug: all hero skills to max level (Settings > Debug)
-  startMode: (mode: 'ADVENTURE' | 'TOWER', startBiome?: number) => void;
+  startMode: (mode: 'ADVENTURE' | 'TOWER', startBiome?: number, startFloor?: number) => void;
   /** Boss Trials (bossTrials.ts): fight biome `boss` (0..6) alone at Void strength. Free until the boss is WON that local day (a death / abandon keeps the try); a won boss needs a Boss Trial Ticket (consumed here). False = refused (locked / no ticket). */
   startBossTrial: (boss: number) => boolean;
   /** The trial boss fell: rolls + banks its Legendary / Mythic piece (bag, else warehouse) and returns it. */
