@@ -182,32 +182,36 @@ Aim: picks a root target at windup start. Rooted so no charges.
 ### Tide Hydra (Coral; rooted body, 5 heads)
 Direct Hades Lernaean Bone Hydra homage.
 
-| Skill | Pattern | Engine | Feel |
-|---|---|---|---|
-| Acid Barrage / Fan (exists) | 26 | blobs lead, locked puddles | 12% |
-| Head Slam (exists) | 6 | head to marked circle then rests = free hits | 22% |
-| Sweeping Heads (exists) | 9 | staggered cones | 12% |
-| Tidal Surge (exists) | 1 | ring wave, add gap (3) | 28% |
-| Whirlpool | 18 | a growing whirlpool disc in the arena (reuse `ignarLava` shape: slows, small dot) | tick |
-| Head Rotation Beams | 7 | two heads sweep a water beam at opposite directions | 14% |
-| Spit-drop Pearls | 30 | slow floating pearls that explode when near | 10% |
+| Skill | Pattern | Engine | Feel | Status (2026-10-31) |
+|---|---|---|---|---|
+| Acid Barrage / Fan (exists) | 26 | blobs lead, locked puddles | 12% | DONE: glob 11.8%, rim-head blob 9.3% |
+| Head Slam (exists) | 6 | head to marked circle then rests = free hits | 22% | DONE: 18.3% + knockdown; also slot-9 spare head |
+| Sweeping Heads (exists) | 9 | staggered cones | 12% | DONE: 12.3% + knockdown |
+| Tidal Surge (exists) | 1 | ring wave, add gap (3) | 28% | DONE as dodgeMechs Tidal Pulse (30%, dash); gap NOT built |
+| Whirlpool | 18 | a growing whirlpool disc in the arena (reuse `ignarLava` shape: slows, small dot) | tick | NOT built (flag: needs a render + floor-zone piece) |
+| Head Rotation Beams | 7 | two heads sweep a water beam at opposite directions | 14% | REPLACED by the spare heads' water jet (2-3 red lanes from a head, 11.7%); no rotating beam |
+| Spit-drop Pearls | 30 | slow floating pearls that explode when near | 10% | NOT built |
 
 **Signature:** *Heads of the Hydra* at 66 / 33%: body immune (exists for Tidal Wave) and 3 extra heads surface at the rim, each with a different attack (acid / beam / slam); each head killed = a 5 s window where the body takes damage (pattern 31, directly lifted from Bone Hydra).
+
+**Status: DONE** (`bossKitHydra.ts`, bp kind HEADS at 70 / 35%, three spare heads acid / water jet / slam, EXPOSED 5 s x1.5 per head killed, phase cap 28 s, replaces the old TIDAL wave; QA: archer 139 s, both phases landed, 6/6 heads). See HANDOFF 'Boss kits'.
 
 ### Dune Colossus (war machine, Sunscorch)
 Aim: turret-style; rotates slowly; flames only on a locked arc.
 
-| Skill | Pattern | Engine | Feel |
-|---|---|---|---|
-| Molten Ray flamethrower (exists) | 15 | keep | 14% |
-| Seismic Stomp (exists) | 1 | ring, with gap at <50% | 25% |
-| Sandstorm Beams | 7 | 3 rotating beams out from its core | 14% |
-| Missile Salvo | 26 | circles locked on the hero's trail | 10% each |
-| Wall of Shrapnel | 14 | a bullet row across the square with a 6 m gap | 12% |
-| Dune Tiles | 22 | checkerboard of sand tiles erupt | 14% |
-| Sand-worm Kamikaze | 30 | scarabs rush, explode | 8% |
+| Skill | Pattern | Engine | Feel | Status (2026-10-31) |
+|---|---|---|---|---|
+| Molten Ray flamethrower (exists) | 15 | keep | 14% | the OLD Molten Ray is retired; the dodgeMechs Flamethrower (10% / hit + burn) is the flame stream and the heat source |
+| Seismic Stomp (exists) | 1 | ring, with gap at <50% | 25% | DONE as close-range Stomp (11%) + dodgeMechs Seismic Ring (30%, dash); gap NOT built |
+| Sandstorm Beams | 7 | 3 rotating beams out from its core | 14% | DONE as dodgeMechs Lasers (3-5 counter-rotating, 10-12%) |
+| Missile Salvo | 26 | circles locked on the hero's trail | 10% each | DONE: 3 volleys of 3-4 circles, 9.6% each, +2 heat |
+| Wall of Shrapnel | 14 | a bullet row across the square with a 6 m gap | 12% | DONE: 7 m gap >= 6 m from the hero, 12% per round |
+| Dune Tiles | 22 | checkerboard of sand tiles erupt | 14% | NOT built (the vent's spark circles take the 'keep moving' role) |
+| Sand-worm Kamikaze | 30 | scarabs rush, explode | 8% | NOT built |
 
 **Signature:** *Overheat Core*: after 3 Molten Ray bursts it vents, exposing the back core for 5 s (weak point x2 from behind); the hero is baited to circle it while safe tiles pulse (pattern 35, NEW facing multiplier).
+
+**Status: DONE** (`bossKitColossus.ts`: heat from flame bursts / salvos / rampage, vent turns its back to the hero, 5 s back core x1.3 on top of the x1.5 back attack ~ x2, spark circles instead of safe tiles; `hooks.damageMul` got the attacker position; QA: archer 96 s / 1 vent, knight 131 s / 2 vents, 4.7 of 5 s from behind). Machine Gun and the Artillery rain stay as they were. See HANDOFF 'Boss kits'.
 
 ### Glacius (Frost Wyrm, Frostpeak; rooted head)
 Ice floor already forbids dashing: that makes ring checks into "avoid", not "dash": favour lanes and safe circles.

@@ -3,7 +3,7 @@
 // Every boss has its own mechanic (`bp.kind`): at set HP thresholds it turns invulnerable (bubble + banner) and runs it, then
 // becomes vulnerable again on its own.
 export type PhaseKind =
-  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'LAVA' | 'SAND' | 'VOIDPULL';
+  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'HEADS' | 'LAVA' | 'SAND' | 'VOIDPULL';
 
 /** A prop / circle on the floor: safe circles (Avalanche), rocks and pillars (cover / pinball), pods (Spore Garden). */
 export interface PhaseProp { x: number; z: number; r: number; /** free value: pod swell 0..1, pillar hp... */ h: number; on: boolean }
