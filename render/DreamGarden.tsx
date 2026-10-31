@@ -8,11 +8,13 @@ import { world } from '../engine/world';
 import { events } from '../engine/events';
 import { GB, litMat, mulberry32 } from './util';
 import { makeWaterMaterial } from './waterFx';
-import { FlowerPatches } from './FlowerPatches';
+import { QtBatch } from './qtNature';
+import { QT_PREFIX } from '../engine/qtData';
 import type { Place } from './natureKit';
 
 const PETALS = ['#ff9ec4', '#ffffff', '#ffd75e', '#b9a6ff', '#ff7a8a', '#8fd0ff', '#ffb36b', '#f6c8ff'];
-const MAX_FLOWERS = 230;   // (owner 2026-10-31: the kit's flower-on-mound patches, ~1.8 m wide each, instead of 1400 tiny procedural flowers)
+const MAX_FLOWERS = 520;   // (owner 2026-10-31: real Quaternius flowers + grass tufts, one BatchedMesh; no ball / lollipop shapes)
+const DREAM_FLOWERS = ['Flower_3_Group', 'Flower_4_Group', 'N_Flowers', 'Flower_3_Single', 'Flower_4_Single', 'N_Flowers'];
 
 interface Garden { flowers: { x: number; z: number; s: number; r: number; c: number }[]; river: BufferGeometry; deco: BufferGeometry }
 
@@ -54,8 +56,7 @@ function buildGarden(): Garden {
     if (Math.abs(across - (Math.sin(along * 0.11) * 1.2)) < 2.4) continue;   // the walk
     const [rx, rz] = cl(across);
     if (Math.hypot(x - rx, z - rz) < W + 0.8) continue;                        // the stream
-    if (flowers.some((f) => (f.x - x) ** 2 + (f.z - z) ** 2 < 2.6)) continue;   // (patches stay apart)
-    flowers.push({ x, z, s: 0.95 + rnd() * 0.55, r: rnd() * 6.28, c: 0 });
+    flowers.push({ x, z, s: 0.75 + rnd() * 0.6, r: rnd() * 6.28, c: (rnd() * PETALS.length) | 0 });
   }
   return { flowers, river, deco: deco.build() };
 }
@@ -75,13 +76,22 @@ export function DreamGarden() {
 }
 
 function GardenMeshes({ g }: { g: Garden }) {
-  const patches = useMemo<Place[]>(() => g.flowers.map((f) => ({ x: f.x, y: 0, z: f.z, ry: f.r, sx: f.s, sy: f.s, sz: f.s })), [g]);
+  const sets = useMemo(() => {
+    const S = new Map<string, Place[]>(), add = (n: string, p: Place) => { const k = QT_PREFIX + n; let l = S.get(k); if (!l) S.set(k, (l = [])); l.push(p); };
+    g.flowers.forEach((f, i) => {
+      const k = 0.55 + (f.s - 0.75) * 0.5;
+      add(DREAM_FLOWERS[i % DREAM_FLOWERS.length], { x: f.x, y: 0, z: f.z, ry: f.r, sx: k, sy: k * 1.05, sz: k });
+      if (i % 2 === 0) add(i % 4 === 0 ? 'Grass_Wispy_Short' : 'Grass_Common_Short', { x: f.x + Math.cos(f.r) * 0.45, y: 0, z: f.z + Math.sin(f.r) * 0.45, ry: f.r * 2, sx: 0.8, sy: 0.8, sz: 0.8 });
+      if (i % 23 === 0) add('Bush_Common_Flowers', { x: f.x - 0.6, y: 0, z: f.z + 0.4, ry: f.r, sx: 0.7, sy: 0.7, sz: 0.7 });
+    });
+    return S;
+  }, [g]);
   const water = useMemo(() => { const m = makeWaterMaterial({ shore: 'attr', span: 1.3, shallow: '#6fe6e0', deep: '#3d9be0' }); m.side = DoubleSide; return m; }, []);
   const decoMat = useMemo(() => litMat({ roughness: 0.9 }), []);
   useEffect(() => () => { water.dispose(); decoMat.dispose(); }, [water, decoMat]);
   return (
     <>
-      <Suspense fallback={null}><FlowerPatches places={patches} /></Suspense>
+      <Suspense fallback={null}><QtBatch sets={sets} shadows={false} /></Suspense>
       <mesh geometry={g.river} material={water} />
       <DreamMotes />
       <mesh geometry={g.deco} material={decoMat} castShadow receiveShadow />

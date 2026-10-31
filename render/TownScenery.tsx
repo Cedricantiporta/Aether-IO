@@ -304,7 +304,7 @@ function addPatchKerb(b: GB, pts: [number, number][], rnd: () => number) {
     const len = Math.hypot(x2 - x1, z2 - z1);
     b.box(len + 0.08, 0.14, 0.26, [(x1 + x2) / 2, 0.07, (z1 + z2) / 2], i % 2 ? '#d9703a' : '#e07f42', [0, -Math.atan2(z2 - z1, x2 - x1), 0], [0.92, 1.06]);
   }
-  void rnd;   // (owner 2026-10-31: no loose dot flowers inside the kerb: flowers are the kit flower-on-mound patches, placed by engine/townFill)
+  void rnd;   // (owner 2026-10-31: no ball / dot flowers: flowers are the real Quaternius petal flowers, placed by engine/townFill + render/natureLayout)
 }
 
 /** Flat lawn polygon (fan) for a grass patch that sits on a raised district (the terrain grass is under the tier). */
