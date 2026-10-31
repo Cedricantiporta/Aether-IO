@@ -294,17 +294,14 @@ function buildPaving(): { geo: BufferGeometry; patches: [number, number][][] } {
   return { geo: planarUv(g, FLAG_TILE), patches };
 }
 
-/** Low stone kerb around a grass patch + a few muted wild flowers inside. */
+/** Low stone kerb around a grass patch. */
 function addPatchKerb(b: GB, pts: [number, number][], rnd: () => number) {
   for (let i = 0; i < pts.length; i++) {
     const [x1, z1] = pts[i], [x2, z2] = pts[(i + 1) % pts.length];
     const len = Math.hypot(x2 - x1, z2 - z1);
     b.box(len + 0.08, 0.14, 0.26, [(x1 + x2) / 2, 0.07, (z1 + z2) / 2], i % 2 ? '#d9703a' : '#e07f42', [0, -Math.atan2(z2 - z1, x2 - x1), 0], [0.92, 1.06]);
   }
-  let cx = 0, cz = 0; for (const [x, z] of pts) { cx += x; cz += z; } cx /= pts.length; cz /= pts.length;
-  const cols = ['#ece3c8', '#e8c86a', '#e3a9b8', '#b9b0e0'];
-  if (pts.length > 20) return;   // (a house lot: its own decorations, engine/townFill)
-  for (let i = 0; i < 6; i++) { const a = rnd() * TAU, d = 1.4 + rnd() * 1.4; b.sph(0.09, [cx + Math.cos(a) * d, 0.2, cz + Math.sin(a) * d * 0.9], cols[i % 4], 1, 4); }
+  void rnd;   // (owner 2026-10-31: no loose dot flowers inside the kerb: flowers are the kit flower-on-mound patches, placed by engine/townFill)
 }
 
 /** Flat lawn polygon (fan) for a grass patch that sits on a raised district (the terrain grass is under the tier). */
