@@ -15,6 +15,8 @@ import { Modal } from '../components/Modal';
 import { Button, Slider, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { DebugTab } from './DebugTab';
+import { CutePaw } from '../components/CuteIcons';
+import { usePetCollectionAlert } from '../lib/alerts';
 import { useCoop } from '../../net/coopStore';
 import { leaveCoop } from '../../net/coop';
 import type { GraphicsQuality, Settings as SettingsT } from '../../storeTypes';
@@ -37,7 +39,8 @@ export const PauseMenu: React.FC = () => {
   const openRunUpgrades = useUiStore((s) => s.openRunUpgrades);
   const askConfirm = useUiStore((s) => s.askConfirm);
   const coopOn = useCoop((s) => s.state === 'connected');
-  const blocked = useUiStore((s) => s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || !!s.confirm);
+  const petDot = usePetCollectionAlert();
+  const blocked = useUiStore((s) => s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.collectionOpen || s.goalsOpen || !!s.confirm);
   return (
     <Modal open={open} title="Paused" ribbon tone="gold" width="21rem" z={150} onClose={() => !blocked && togglePause()} onConfirm={blocked ? undefined : togglePause}>
       <div className="flex flex-col gap-3 pt-2">
@@ -45,6 +48,7 @@ export const PauseMenu: React.FC = () => {
         <Button onClick={() => openSettings(true)}><Settings size={16} /> Settings</Button>
         <Button onClick={() => openRunUpgrades(true)}><Layers size={16} /> Run Upgrades</Button>
         <Button onClick={() => openCodex(true)}><BookOpen size={16} /> Codex</Button>
+        <Button onClick={() => useUiStore.getState().openCollection(true)}><CutePaw size={16} /> Pet Collection{petDot && <i className="red-dot" />}</Button>
         {coopOn && <Button onClick={() => { togglePause(); leaveCoop(); }} data-testid="pause-leave-coop"><UserRound size={16} /> Leave co-op</Button>}
         <Button variant="danger" onClick={() => askConfirm({ title: 'Abandon run?', body: 'You return to the town. Everything you looted is kept, and your xp is kept and the room bonus gold is paid out.', confirmLabel: 'Abandon', tone: 'danger', onConfirm: abandonRun })}>
           <Flag size={16} /> Abandon run

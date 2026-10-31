@@ -2,8 +2,8 @@ import { keyHint } from '../lib/inputMode';
 import { PadHint } from '../components/PadBtn';
 import { attrPointsTotal, attrSpent } from '../../attributes';
 import { GameStatus } from '../../types';
-import { CuteHero, CuteBag, CuteStar, CuteScroll, CuteMapPin, CuteShop, CuteGear, CuteTrophy, CuteBook, CuteLayers, CuteCalendar, CuteTower, CuteWaves } from '../components/CuteIcons';
-import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert, useQuestAlert } from '../lib/alerts';
+import { CuteHero, CuteBag, CuteStar, CuteScroll, CuteMapPin, CuteShop, CuteGear, CuteTrophy, CuteBook, CuteLayers, CuteCalendar, CuteTower, CuteWaves, CutePaw } from '../components/CuteIcons';
+import { useBagAlert, useCodexAlert, useSkillAlert, useGoalsAlert, useQuestAlert, usePetCollectionAlert } from '../lib/alerts';
 import { device } from '../../engine/device';
 import { toggleFullscreen } from '../layout';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -241,13 +241,14 @@ export const SubMenuButtons: React.FC = () => {
   const inRun = useGameStore((s) => s.status === GameStatus.PLAYING || s.status === GameStatus.PAUSED || s.status === GameStatus.LEVEL_UP);
   const upCount = useGameStore((s) => s.runPicks.length);
   const upOpen = useUiStore((s) => s.runUpgradesOpen);
-  const goalsDot = useGoalsAlert();
+  const goalsDot = useGoalsAlert(), petDot = usePetCollectionAlert();
   return (
     <div className="submenu-row">
       {inRun && <MenuBtn mini icon={<CuteLayers size={22} />} label={`Run Upgrades${upCount ? ` (${upCount})` : ''}`} hint="Tab" onClick={() => useUiStore.getState().openRunUpgrades(!upOpen)} active={upOpen} />}
       <ModeIcons />
       <MenuBtn mini icon={<CuteTrophy size={22} />} label="Achievements" hint="O" onClick={() => useUiStore.getState().openGoals(true, 'ACHIEVEMENTS')} dot={goalsDot} />
       <MenuBtn mini icon={<CuteBook size={22} />} label="Codex" hint="Bestiary" onClick={() => useUiStore.getState().openCodex(true)} />{/* (owner) no red dot on the Codex */}
+      <MenuBtn mini testid="cb-collection" icon={<CutePaw size={22} />} label="Pet Collection" hint="" onClick={() => useUiStore.getState().openCollection(true)} dot={petDot} />
     </div>
   );
 };
@@ -255,7 +256,7 @@ export const SubMenuButtons: React.FC = () => {
 /** (owner) Gold / gems stay visible above any open panel, shop, popup or summon (the HUD copy sits under the backdrops). */
 export const CurrencyFloat: React.FC = () => {
   const panel = useGameStore((s) => s.isShopOpen || s.isInventoryOpen || s.isCharacterSheetOpen);
-  const overlay = useUiStore((s) => s.settingsOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults);
+  const overlay = useUiStore((s) => s.settingsOpen || s.codexOpen || s.collectionOpen || s.goalsOpen || s.questLogOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults);
   if (!panel && !overlay) return null;
   return <div className="cur-float hud-cur pe"><Currency /></div>;
 };

@@ -36,6 +36,7 @@ import { EndingScreen } from './screens/Ending';
 import { Prologue, StoryBook } from './screens/Story';
 import { PauseMenu, SettingsDialog } from './screens/PauseMenu';
 import { CodexDialog } from './screens/Codex';
+import { PetCollectionDialog } from './screens/PetCollection';
 import { RunUpgradesDialog } from './panels/RunUpgrades';
 import { GoalsDialog } from './screens/Goals';
 import '../goalsTracker';
@@ -123,6 +124,7 @@ export const GameUI: React.FC = () => {
       <SettingsDialog />
       {inGame && <RunUpgradesDialog />}
       <CodexDialog />
+      <PetCollectionDialog />
       <GoalsDialog />
       <QuestLog />
       {village && <TodoInTown />}

@@ -6,6 +6,8 @@ import { ItemSlot } from '../../components/ItemSlot';
 import { ShopGrid } from '../../components/ShopGrid';
 import { ItemArt } from '../../components/ItemArt';
 import { PetCare } from './PetCare';
+import { CutePaw } from '../../components/CuteIcons';
+import { usePetCollectionAlert } from '../../lib/alerts';
 import { PetFuse, PetAscend } from './PetFuse';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import { getPetProfile } from '../../../engine/systems/pets';
@@ -43,6 +45,7 @@ export const PetsTab: React.FC = () => {
   const setBuy = useUiStore((s) => s.setBuyItem);
   const freeBlob = useGameStore((s) => firstPetFree(s, 'pet_blob'));   // first pet: the Green Blob is on the house
   const tab = useUiStore((s) => s.petsTab), setTab = useUiStore((s) => s.setPetsTab);
+  const colDot = usePetCollectionAlert();
   const [selId, setSel] = useState(SHOP_PETS[0]?.id ?? '');
   const p = SHOP_PETS.find((x) => x.id === selId) ?? SHOP_PETS[0];
   return (
@@ -50,6 +53,9 @@ export const PetsTab: React.FC = () => {
       <div className="grid grid-cols-3 gap-2">
         {(['SHOP', 'CARE', 'FUSE', 'ASCEND'] as const).map((t) => <button key={t} className={`rpg-subtab bevel pe ${tab === t ? 'is-active' : ''}`} onClick={() => setTab(t)} data-testid={`pets-${t.toLowerCase()}`}>{t === 'SHOP' ? 'Shop' : t === 'CARE' ? 'Pet Care' : t === 'FUSE' ? 'Fuse' : 'Ascend'}</button>)}
       </div>
+      <button className="rpg-btn rpg-btn-sm pe relative self-start" data-testid="open-pet-collection" onClick={() => { useUiStore.getState().openCollection(true); }}>
+        <CutePaw size={14} /> Pet Collection{colDot && <i className="red-dot" />}
+      </button>
       {tab === 'ASCEND' ? <PetAscend /> : tab === 'FUSE' ? <PetFuse /> : tab === 'CARE' ? <PetCare /> : (<>
         <ShopGrid className="pet-grid" testId="pet-grid">
           {SHOP_PETS.map((q) => (
