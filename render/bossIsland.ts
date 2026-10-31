@@ -1,8 +1,8 @@
 // Boss Trials headland dressing (owner 2026-10-31): the built (non-kit) pieces, merged into the town's static chunks by TownScenery (`lifted(...)`): zero per-frame cost.
 // `b` = lit vertex-coloured geometry, `g` = unlit glow geometry (runes, lantern glass, crystals). Layout data + colliders: engine/bossIsland.ts. Soft, toy-like, lilac stone + warm wood.
 import type { GB } from './util';
-import { BOSS_PORTAL } from '../engine/townData';
-import { BI_DAIS, BI_PILLARS, BI_STATUES, BI_ALTAR, BI_BANNERS, BI_LANTERNS, BI_DECK, BI_DRIFT, BI_SHELLS, BI_OLD_PAD, BI_OLD_LAMPS } from '../engine/bossIsland';
+import { BOSS_PORTAL, bossAt } from '../engine/townData';
+import { BI_DAIS, BI_PILLARS, BI_STATUES, BI_ALTAR, BI_BANNERS, BI_LANTERNS, BI_DECK, BI_DRIFT, BI_SHELLS, BI_OLD_PAD, BI_OLD_LAMPS, BI_ROT, biRot } from '../engine/bossIsland';
 
 const STONE = '#d4cce0', STONE_D = '#b9afcb', STONE_L = '#e6e0ee', PURPLE = '#8a5fd0', PURPLE_D = '#5f3fa0', GLOW = '#d68cff', GOLD = '#f3cf6e', WOOD = '#b98b5a', WOOD_D = '#7d5a38';
 const Y0 = 0.1;   // paving top (the hero walks over it; sunk feet at this height are hidden by the soft stone edge)
@@ -14,8 +14,7 @@ export function addBossIsland(b: GB, g: GB): void {
   b.cyl(D.r, D.r + 0.1, 0.1, 40, [D.x, 0.05, D.z], STONE, [0, 0, 0], 1, [1, 1]);
   b.cyl(5.9, 5.9, 0.04, 36, [D.x, Y0 - 0.01, D.z + 0.0], STONE_L, [0, 0, 0], 1, [1, 1]);
   b.torus(D.r + 0.12, 0.13, [D.x, 0.1, D.z], STONE_L, [Math.PI / 2, 0, 0], 1, 40);
-  const ax = BOSS_PORTAL.front.x, az0 = BOSS_PORTAL.front.z - 6.4;
-  for (let i = 0; i < 6; i++) b.cyl(1.05, 1.1, 0.07, 10, [ax + (i % 2 ? 0.4 : -0.4), 0.035, az0 + i * 1.2], i % 2 ? STONE : STONE_L, [0, 0, 0], [1, 1, 0.8], [1, 1]);   // stepping slabs
+  for (let i = 0; i < 6; i++) { const [sx, sz] = bossAt(i % 2 ? 0.4 : -0.4, 10.8 - i * 1.2); b.cyl(1.05, 1.1, 0.07, 10, [sx, 0.035, sz], i % 2 ? STONE : STONE_L, [0, BI_ROT, 0], [1, 1, 0.8], [1, 1]); }   // stepping slabs (up the path from the portal front)
   // ---- glowing runes: two thin rings with 14 glyphs between them
   g.torus(5.35, 0.07, [D.x, Y0 + 0.03, D.z], GLOW, [Math.PI / 2, 0, 0], 1, 56);
   g.torus(3.7, 0.07, [D.x, Y0 + 0.03, D.z], GLOW, [Math.PI / 2, 0, 0], 1, 48);
@@ -60,13 +59,14 @@ export function addBossIsland(b: GB, g: GB): void {
   }
   // ---- banners on tall poles: purple cloth, gold trim + a glowing diamond
   for (const [x, z] of BI_BANNERS) {
+    const [cx, cz] = biRot(0, 0.06), [dx, dz] = biRot(0, 0.07), [ex, ez] = biRot(0, 0.12), R: [number, number, number] = [0, BI_ROT, 0];
     b.cyl(0.07, 0.09, 4.5, 8, [x, 2.25, z], WOOD_D);
-    b.box(1.4, 0.09, 0.09, [x, 4.15, z], WOOD_D);
+    b.box(1.4, 0.09, 0.09, [x, 4.15, z], WOOD_D, R);
     b.sph(0.12, [x, 4.58, z], GOLD, 1, 6);
-    b.box(1.1, 1.75, 0.06, [x, 3.2, z + 0.06], PURPLE, [0, 0, 0], [1, 1]);
-    b.box(0.78, 0.78, 0.06, [x, 2.32, z + 0.06], PURPLE, [0, 0, Math.PI / 4], [1, 1]);
-    b.box(1.1, 0.1, 0.07, [x, 4.05, z + 0.07], GOLD);
-    g.octa(0.2, [x, 3.3, z + 0.12], GLOW, [1, 1.3, 0.25]);
+    b.box(1.1, 1.75, 0.06, [x + cx, 3.2, z + cz], PURPLE, R, [1, 1]);
+    b.box(0.78, 0.78, 0.06, [x + cx, 2.32, z + cz], PURPLE, [0, BI_ROT, Math.PI / 4], [1, 1]);
+    b.box(1.1, 0.1, 0.07, [x + dx, 4.05, z + dz], GOLD, R);
+    g.octa(0.2, [x + ex, 3.3, z + ez], GLOW, [1, 1.3, 0.25], R);
   }
   // ---- little lantern posts along the path
   for (const [x, z] of BI_LANTERNS) {
@@ -75,17 +75,17 @@ export function addBossIsland(b: GB, g: GB): void {
     g.box(0.24, 0.3, 0.24, [x, 2.12, z], '#ffe6b0');
     b.cone(0.26, 0.2, 4, [x, 2.37, z], PURPLE_D, [0, Math.PI / 4, 0]);
   }
-  // ---- the lookout deck on the south-east shore: planks, rail posts on the sea side, bucket, two rods leaning on the rail
-  { const K = BI_DECK;
-    b.box(K.w + 0.5, 0.3, K.d + 0.5, [K.x, 0.1, K.z], STONE_D, [0, 0, 0], [1, 1]);   // stone footing (the ground rolls here)
-    b.box(K.w, 0.14, K.d, [K.x, 0.34, K.z], WOOD, [0, 0, 0], [1, 1]);
-    for (let i = 0; i < 7; i++) b.box(K.w - 0.06, 0.02, 0.05, [K.x, 0.42, K.z - K.d / 2 + 0.25 + i * (K.d - 0.5) / 6], WOOD_D);
-    for (const sx of [-1, 0, 1]) { b.cyl(0.06, 0.07, 0.95, 7, [K.x + sx * (K.w / 2 - 0.1), 0.55, K.z + K.d / 2 - 0.08], WOOD_D); }
-    b.box(K.w - 0.1, 0.08, 0.08, [K.x, 0.98, K.z + K.d / 2 - 0.08], WOOD_D);
-    for (const sz of [-1, 1]) { b.cyl(0.06, 0.07, 0.95, 7, [K.x + K.w / 2 - 0.1, 0.55, K.z + sz * (K.d / 2 - 0.08)], WOOD_D); b.cyl(0.06, 0.07, 0.95, 7, [K.x - K.w / 2 + 0.1, 0.55, K.z + sz * (K.d / 2 - 0.08)], WOOD_D); }
-    b.cyl(0.2, 0.17, 0.28, 10, [K.x + 1.5, 0.28, K.z - 0.6], '#7aa8c8');
-    for (const o of [-0.5, 0.2]) b.cyl(0.025, 0.04, 2.4, 5, [K.x + 0.4 + o, 1.1, K.z + K.d / 2 - 0.3], '#6b4a2a', [-0.55, 0, 0.1]);
-    g.sph(0.07, [K.x + 0.4 - 0.5, 0.4, K.z + K.d / 2 + 0.9], '#ff7a5a', 1, 5);
+  // ---- the lookout deck on the shore (portal's right, rail on the sea side): planks, rail posts, bucket, two rods leaning on the rail (laid out in the deck's own frame, turned by BI_ROT)
+  { const K = BI_DECK, R: [number, number, number] = [0, BI_ROT, 0], P = (dx: number, y: number, dz: number): [number, number, number] => { const [a, c] = biRot(dx, dz); return [K.x + a, y, K.z + c]; };
+    b.box(K.w + 0.5, 0.3, K.d + 0.5, P(0, 0.1, 0), STONE_D, R, [1, 1]);   // stone footing (the ground rolls here)
+    b.box(K.w, 0.14, K.d, P(0, 0.34, 0), WOOD, R, [1, 1]);
+    for (let i = 0; i < 7; i++) b.box(K.w - 0.06, 0.02, 0.05, P(0, 0.42, -K.d / 2 + 0.25 + i * (K.d - 0.5) / 6), WOOD_D, R);
+    for (const sx of [-1, 0, 1]) { b.cyl(0.06, 0.07, 0.95, 7, P(sx * (K.w / 2 - 0.1), 0.55, K.d / 2 - 0.08), WOOD_D); }
+    b.box(K.w - 0.1, 0.08, 0.08, P(0, 0.98, K.d / 2 - 0.08), WOOD_D, R);
+    for (const sz of [-1, 1]) { b.cyl(0.06, 0.07, 0.95, 7, P(K.w / 2 - 0.1, 0.55, sz * (K.d / 2 - 0.08)), WOOD_D); b.cyl(0.06, 0.07, 0.95, 7, P(-K.w / 2 + 0.1, 0.55, sz * (K.d / 2 - 0.08)), WOOD_D); }
+    b.cyl(0.2, 0.17, 0.28, 10, P(1.5, 0.28, -0.6), '#7aa8c8');
+    for (const o of [-0.5, 0.2]) b.cyl(0.025, 0.04, 2.4, 5, P(0.4 + o, 1.1, K.d / 2 - 0.3), '#6b4a2a', [-0.55, BI_ROT, 0.1]);
+    g.sph(0.07, P(0.4 - 0.5, 0.4, K.d / 2 + 0.9), '#ff7a5a', 1, 5);
   }
   // ---- the sand beach on both sides of the headland: driftwood logs (a trunk + a stub branch) and shells / starfish (the sand itself is the ground colour, Terrain.tsx headSandK)
   for (const [x, z, ry, len] of BI_DRIFT) {
@@ -98,7 +98,7 @@ export function addBossIsland(b: GB, g: GB): void {
     else if (k === 2) b.sph(0.15, [x, 0.06, z], '#fff1de', [1, 0.6, 0.85], 6);   // (a clam)
     else { b.sph(0.12, [x, 0.05, z], '#e9c9d8', [1, 0.55, 1], 6); b.sph(0.08, [x + 0.22, 0.04, z - 0.1], '#f6e2b8', [1, 0.6, 1], 5); }
   }
-  // ---- the old south-west site (townData OLD_SPOT): a small round stone pad + two wooden lamp posts (the benches are kit pieces, townFill)
+  // ---- the old south-west site (a wayside rest now) (townData OLD_SPOT): a small round stone pad + two wooden lamp posts (the benches are kit pieces, townFill)
   { const O = BI_OLD_PAD;
     b.cyl(O.r + 0.3, O.r + 0.4, 0.08, 28, [O.x, 0.04, O.z], STONE_D, [0, 0, 0], 1, [1, 1]);
     b.cyl(O.r, O.r + 0.08, 0.1, 28, [O.x, 0.05, O.z], STONE, [0, 0, 0], 1, [1, 1]);

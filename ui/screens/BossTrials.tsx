@@ -1,4 +1,4 @@
-// Boss Trials window (owner 2026-10-26, restyled 2026-10-31): E at the purple portal at the tip of the southern peninsula (after the first game clear). Seven rows, one per biome boss.
+// Boss Trials window (owner 2026-10-26, restyled 2026-10-31): E at the purple portal on the west shore (after the first game clear). Seven rows, one per biome boss.
 // Tap a row to open its drops: the odds and the list of every Legendary / Mythic piece of that boss's slot this hero class can get (ItemArt icons), with the Fight button inside.
 // Rules / odds live in bossTrials.ts; the fight is store.startBossTrial. Own markup (header row with the X inside, footer fixed, list scrolls); styles in trials.css (soft fills, no outlines).
 import React, { useEffect, useMemo, useState } from 'react';

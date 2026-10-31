@@ -151,9 +151,9 @@ function baseRadius(angle: number): number {
   // forest edge curves inward in a rounded cove (tangent to the straight edge at both ends)
   const b = CAVE_BAY;
   if (angle > b.a0 && angle < b.a1) { const w = Math.sin((Math.PI * (angle - b.a0)) / (b.a1 - b.a0)); r += b.depth * w * w; }
-  // (owner 2026-10-31) the Boss Trials headland: the peninsula's south end bulges out into the sea (a plateau eased in and out over `ramp` radians: townData BOSS_HEAD)
-  const h = BOSS_HEAD;
-  if (angle > h.a0 && angle < h.a1) { const u = Math.min(1, (angle - h.a0) / h.ramp, (h.a1 - angle) / h.ramp); r += h.depth * u * u * (3 - 2 * u); }
+  // (owner 2026-10-31) the Boss Trials cape: a round disc of land (townData BOSS_HEAD) pushes the west coast out into the sea behind the portal, merged into the straight coast with a smooth max (blend k metres)
+  const h = BOSS_HEAD, hb = h.x * dx + h.z * dz, hd = hb * hb - (h.x * h.x + h.z * h.z - h.r * h.r);
+  if (hb > 0 && hd > 0) { const g = hb + Math.sqrt(hd), t = Math.max(h.k - Math.abs(r - g), 0) / h.k; r = Math.max(r, g) + t * t * h.k * 0.25; }
   return r;
 }
 /** Walled town + small forecourt; edge radius for an angle (angle = atan2(z, x)), with a little per-run wobble. */

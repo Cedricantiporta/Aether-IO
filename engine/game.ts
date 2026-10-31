@@ -144,7 +144,7 @@ function applyLastSpot(): void {
   const s = loadSpot(), p = world.player;
   if (!s) return;
   if (s.area === 'RUN') { p.pos.set(PORTAL.out.x, 0, PORTAL.out.z); p.facing = 0; }   // a little down the forest road from the portal (north of it), looking at it (south)
-  else if (s.area === 'BOSS') { p.pos.set(BOSS_PORTAL.out.x, 0, BOSS_PORTAL.out.z); p.facing = 0; }   // (a refresh mid Boss Trial: in front of the purple portal)
+  else if (s.area === 'BOSS') { p.pos.set(BOSS_PORTAL.out.x, 0, BOSS_PORTAL.out.z); p.facing = BOSS_PORTAL.ry + Math.PI; }   // (a refresh mid Boss Trial: in front of the purple portal, looking at it)
   else if (s.area === 'TOWER') { p.pos.set(TOWER.out.x, 0, TOWER.out.z); p.facing = 0; }   // (the door faces north onto its path: step out, look back at it)
   else if (s.area === 'CAVE') { p.pos.set(CAVE_OUT.x, 0, CAVE_OUT.z); p.facing = CAVE_MOUTH.rot; }
   else if (s.area === 'TOWN') { p.pos.set(s.x, 0, s.z); p.facing = s.f; }
@@ -185,7 +185,7 @@ export function enterVillage(): void {
   if (runInfo.back === 'TOWER') {                // back from the Endless Tower / Daily Trial / Endless Waves: outside the tower door
     world.player.pos.set(TOWER.out.x, 0, TOWER.out.z); world.player.facing = 0;   // (the tower's door faces north onto its path: step out, look back at it)
   }
-  if (runInfo.back === 'BOSS') { world.player.pos.set(BOSS_PORTAL.out.x, 0, BOSS_PORTAL.out.z); world.player.facing = 0; }   // back from a Boss Trial: in front of the purple portal, looking at it (south)
+  if (runInfo.back === 'BOSS') { world.player.pos.set(BOSS_PORTAL.out.x, 0, BOSS_PORTAL.out.z); world.player.facing = BOSS_PORTAL.ry + Math.PI; }   // back from a Boss Trial: in front of the purple portal, looking at it (west)
   runInfo.back = '';
   world.camera.dist = 1; world.camera.pitch = CAM_PITCH0;   // default zoom 1.0
   world.village.spawnFx = 1;                     // arrival light pillar on the hero
