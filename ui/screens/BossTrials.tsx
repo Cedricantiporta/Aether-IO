@@ -89,6 +89,11 @@ export const BossTrialsWindow: React.FC = () => {
                         </table>
                         <p>Mythic is not guaranteed: it is a <b>chance</b>, and <b>High Mythic</b> is the rarest drop of all ({(TRIAL_MYTHIC * TRIAL_GRADES.MYTHIC[2] * 100).toFixed(1)}% per piece). Second piece: <b>{Math.round(TRIAL_BONUS_ITEM * 100)}%</b>. {t.slot === 'pet' ? 'Pets have no grades.' : 'Low / Mid / High changes the stats of the piece.'}</p>
                       </div>
+                      <div className="bt-btns">
+                        {!done && <button type="button" className="bt-btn go" disabled={guestOn || endings <= 0} data-testid={`bt-fight-${i}`} onClick={() => go(i)}>{withFriend ? `Fight with ${friend}` : 'Fight'}</button>}
+                        {done && !canTicket && <div className="bt-empty">Won today. Resets in {reset}, or use a Boss Trial Ticket.</div>}
+                        {canTicket && <button type="button" className="bt-btn blue" disabled={guestOn} data-testid={`bt-ticket-${i}`} onClick={() => go(i)}>Use ticket</button>}
+                      </div>
                       <div className="bt-items rpg-scroll" data-testid={`bt-drops-${i}`}>
                         {drops[i].length === 0 && <div className="bt-empty">No pieces for your class in this slot.</div>}
                         {drops[i].map(({ it, r }) => (
@@ -98,11 +103,6 @@ export const BossTrialsWindow: React.FC = () => {
                             <span className={`bt-tag ${r}`}>{r === 'MYTHIC' ? 'Mythic' : 'Legendary'}</span>
                           </div>
                         ))}
-                      </div>
-                      <div className="bt-btns">
-                        {!done && <button type="button" className="bt-btn go" disabled={guestOn || endings <= 0} data-testid={`bt-fight-${i}`} onClick={() => go(i)}>{withFriend ? `Fight with ${friend}` : 'Fight'}</button>}
-                        {done && !canTicket && <div className="bt-empty">Won today. Resets in {reset}, or use a Boss Trial Ticket.</div>}
-                        {canTicket && <button type="button" className="bt-btn blue" disabled={guestOn} data-testid={`bt-ticket-${i}`} onClick={() => go(i)}>Use ticket</button>}
                       </div>
                     </div>
                   )}

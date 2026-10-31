@@ -1354,7 +1354,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       }
       disarmDaily(); disarmWaves(); armTrial(boss);
       runInfo.mode = 'BOSS_TRIAL'; runInfo.back = 'BOSS'; runInfo.startBiome = 0; runInfo.ascension = 0; runInfo.dream = false;
-      set({ inventory, difficulty: 'NORMAL' });   // (the day is only marked on a WIN, see claimBossTrialLoot: a death / abandon keeps today's try)
+      set({ inventory, difficulty: 'NORMAL' });   // (the day is only marked on a WIN, see rollBossTrialLoot: a death / abandon keeps today's try)
       get().startGame();
       return true;
     },

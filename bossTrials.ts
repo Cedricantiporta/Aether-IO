@@ -2,7 +2,7 @@
 // Boss Trials (owner 2026-10-26): the purple portal on the south-west headland of the outskirts (townData BOSS_PORTAL) opens after the first game clear.
 // Each of the seven biome bosses can be fought alone, at Void strength, for one guaranteed top-tier piece of gear (a slot per boss).
 // Once per boss per day, counted only after a WIN (loot received; a death / abandon does not use the try; local calendar day, dailyChallenge.dayKey, saved per character in progress.trialDay); a "Boss Trial Ticket" (300 gems) buys a rematch.
-// Pure data + run state (no React, no store import). The store (startBossTrial / claimBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
+// Pure data + run state (no React, no store import). The store (startBossTrial / rollBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
 // ============================================================================
 import type { HeroClass, Item, ItemGrade, Rarity } from './types';
 import { ITEMS_POOL, PETS_POOL } from './constants';
