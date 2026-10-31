@@ -106,7 +106,7 @@ export const VillageHUD: React.FC = () => {
   const openSettings = useUiStore((s) => s.openSettings);
   const recordsOpen = useUiStore((s) => s.recordsOpen);
   const setRecordsOpen = useUiStore((s) => s.setRecordsOpen);
-  const modalOpen = useUiStore((s) => s.codexOpen || s.goalsOpen || s.settingsOpen || !!s.confirm);
+  const modalOpen = useUiStore((s) => s.codexOpen || s.collectionOpen || s.goalsOpen || s.settingsOpen || !!s.confirm);
   const showMap = useGameStore((s) => s.settings.showMinimap !== false);
 
 

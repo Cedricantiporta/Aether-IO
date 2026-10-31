@@ -58,7 +58,7 @@ export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gol
   }
   return { items, gold, count, loot, fish };
 }
-import { applyPetCollection, petMirror, petSpeciesId, sanitizePetSeen, PET_MILESTONES, PET_TOTAL } from './petCollection';
+import { applyPetCollection, petMirror, petSpeciesId, sanitizePetSeen, sanitizePetClaimed, sanitizePetReg, petClaimable, PET_MILESTONES, PET_TOTAL } from './petCollection';
 import { applyAttrs, sanitizeAttrs, attrPointsTotal, attrSpent, ATTR_RESET_GOLD, type Attrs } from './attributes';
 import { shardCounts, syncShardStacks, SHARD_RARITIES, shardItem, shardTier } from './shards';
 import { summonPool } from './summonPool';
@@ -524,7 +524,7 @@ interface Profile {
   talents: Record<HeroClass, TalentRanks>;
   attrs?: Record<HeroClass, Attrs>;   // allocated attribute points per class (attributes.ts)
   starterGiven: Record<HeroClass, boolean>;
-  discovered?: Discovered; codexClaimed?: string[]; petSeen?: string[]; chestsOpened?: string[];   // chestsOpened: town treasure chests already opened (engine/townChests.ts)
+  discovered?: Discovered; codexClaimed?: string[]; petSeen?: string[]; petClaimed?: number[]; petReg?: string[]; chestsOpened?: string[];   // chestsOpened: town treasure chests already opened (engine/townChests.ts)
   gems1k?: boolean;   // one-time top-up of older saves to the 1000-gem start
   zoom1?: boolean;    // one-time reset of the saved camera zoom to the 1.0 default
   al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
@@ -605,7 +605,7 @@ const freshProfile = (settings?: Settings, gameStats?: GameStatistics, alt = fal
   gameStats: gameStats ?? baseGameStats(), settings: settings ?? { ...DEFAULT_SETTINGS },
   welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL',
   talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: { ARCHER: true, WIZARD: false, BARBARIAN: false, KNIGHT: false, NECROMANCER: false },
-  discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], chestsOpened: [],
+  discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], petClaimed: [], petReg: [], chestsOpened: [],
   meta: freshMeta(),
 });
 
@@ -654,7 +654,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               attrs: sanitizeAttrs(p.attrs),
               talents: talentFit(sanitizeTalents(p.talents), spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3)),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
-              discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen), chestsOpened: Array.isArray(p.chestsOpened) ? p.chestsOpened.filter((x: unknown) => typeof x === 'string').slice(0, 64) : [],
+              discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen), petClaimed: sanitizePetClaimed(p.petClaimed), petReg: sanitizePetReg(p.petReg), chestsOpened: Array.isArray(p.chestsOpened) ? p.chestsOpened.filter((x: unknown) => typeof x === 'string').slice(0, 64) : [],
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
               meta: sanitizeMeta(p.meta),
               elixirs: Array.isArray(p.elixirs) ? p.elixirs.filter(isElixirId) : [],
@@ -705,7 +705,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, sp3: true, al1: true, ch1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, petClaimed: s.petClaimed, petReg: s.petReg, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, sp3: true, al1: true, ch1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -717,7 +717,7 @@ const writeProfile = (s: GameState): void => {
 
 const loaded = loadProfile();
 const profile = loaded.profile;
-petMirror.n = (profile.petSeen ?? []).length;   // Pet Collection bonuses are live from the first stat calculation
+petMirror.n = (profile.petReg ?? []).length; petMirror.claimed = profile.petClaimed ?? [];   // Pet Collection bonuses are live from the first stat calculation
 
 // ---- shared warehouse: one storage for all characters (its own key). Each character's old per-profile warehouse is
 // merged in once (the profile keys already merged are remembered), then profiles store an empty warehouse.
@@ -887,7 +887,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     talents: profile.talents,
     attrs: profile.attrs ?? sanitizeAttrs(undefined),
     starterGiven: profile.starterGiven,
-    discovered: profile.discovered ?? emptyDiscovered(), petSeen: profile.petSeen ?? [], chestsOpened: profile.chestsOpened ?? [],
+    discovered: profile.discovered ?? emptyDiscovered(), petSeen: profile.petSeen ?? [], petClaimed: profile.petClaimed ?? [], petReg: profile.petReg ?? [], chestsOpened: profile.chestsOpened ?? [],
     codexClaimed: profile.codexClaimed ?? [],
     meta: profile.meta ?? freshMeta(),
     gameStats: profile.gameStats,
@@ -1004,8 +1004,9 @@ export const useGameStore = create<GameState>()((set, get) => {
         gold: f.gold, gems: f.gems, crystals: f.crystals ?? 0, inventory: f.inventory, equipment: f.equipment, materials: f.materials,
         maxInventorySlots: f.maxInventorySlots, warehouse: get().warehouse, warehouseGold: get().warehouseGold, progress: sanitizeProgress(undefined),   /* (the warehouse is shared by all characters: kept) */ tech: {}, summonPity: { GEM: 0, SHARD: 0 }, story: { step: storyIdx('king'), p: 0, v: STORY_V }, classProg: sanitizeClassProg(undefined, INITIAL_SKILLS, 1), npcQuests: emptyNpcQuests(), unlocks: emptyUnlocks(), questSeen: null, dashMods: {}, heroRank: 1, rankXp: 0, gameStats: f.gameStats,
         welcomeGiftClaimed: true, hero: 'ARCHER', difficulty: 'NORMAL', lastRun: null,
-        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], chestsOpened: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
+        talents: emptyTalents(), attrs: sanitizeAttrs(undefined), starterGiven: f.starterGiven, discovered: emptyDiscovered(), codexClaimed: [], petSeen: [], petClaimed: [], petReg: [], chestsOpened: [], meta: freshMeta(), elixirsNext: [], elixirsRun: [],
       });
+      petMirror.n = 0; petMirror.claimed = [];
       syncDiscoveries();
       get().resetGame();
       notify('Profile reset. A fresh welcome gift awaits!', COLORS.uiAccent, 'SYSTEM');
@@ -1083,6 +1084,29 @@ export const useGameStore = create<GameState>()((set, get) => {
       const have = new Set(cur[tab]);
       const add = keys.filter((k) => !have.has(k));
       if (add.length) set({ discovered: { ...cur, [tab]: [...cur[tab], ...new Set(add)] } });
+    },
+    registerPet: (id) => {
+      const s = get();
+      const add = (id ? [id] : s.petSeen).filter((x) => s.petSeen.includes(x) && !s.petReg.includes(x));
+      if (!add.length) return false;
+      const petReg = [...s.petReg, ...add];
+      petMirror.n = petReg.length;
+      set({ petReg });
+      const ready = petClaimable(petReg.length, s.petClaimed).length;
+      notify(ready ? `Registered! Collection ${petReg.length} / ${PET_TOTAL}: a reward is ready to claim` : `Registered! Collection ${petReg.length} / ${PET_TOTAL}`, COLORS.uiAccent, 'SYSTEM');
+      return true;
+    },
+    claimPetMilestone: (n) => {
+      const s = get();
+      const list = petClaimable(s.petReg.length, s.petClaimed).filter((m) => n === undefined || m.n === n);
+      if (!list.length) return false;
+      const petClaimed = [...s.petClaimed, ...list.map((m) => m.n)], gems = list.reduce((a, m) => a + (m.gems ?? 0), 0);
+      petMirror.claimed = petClaimed;
+      set({ petClaimed, gems: s.gems + gems, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, s.attrs?.[s.hero]) });
+      if (gems) feedReward({ gems });
+      const fin = list.find((m) => m.final);
+      notify(fin ? `Pet Collection complete! Title "${fin.title}" + ${gems} gems` : `Collection reward claimed: ${list.map((m) => m.label).join(' / ')}`, COLORS.uiAccent, 'SYSTEM');
+      return true;
     },
     claimCodexReward: (tab) => {
       const s = get();
@@ -2310,7 +2334,7 @@ useGameStore.subscribe((s, prev) => {
   if (s.gold === prev.gold && s.gems === prev.gems && s.inventory === prev.inventory && s.equipment === prev.equipment
     && s.materials === prev.materials && s.maxInventorySlots === prev.maxInventorySlots && s.warehouse === prev.warehouse && s.warehouseGold === prev.warehouseGold && s.progress === prev.progress && s.tech === prev.tech && s.summonPity === prev.summonPity && s.story === prev.story && s.classProg === prev.classProg && s.npcQuests === prev.npcQuests && s.unlocks === prev.unlocks && s.questSeen === prev.questSeen && s.dashMods === prev.dashMods && s.heroRank === prev.heroRank
     && s.rankXp === prev.rankXp && s.gameStats === prev.gameStats && s.settings === prev.settings
-    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.petSeen === prev.petSeen && s.chestsOpened === prev.chestsOpened && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
+    && s.hero === prev.hero && s.difficulty === prev.difficulty && s.talents === prev.talents && s.attrs === prev.attrs && s.starterGiven === prev.starterGiven && s.discovered === prev.discovered && s.petSeen === prev.petSeen && s.petClaimed === prev.petClaimed && s.petReg === prev.petReg && s.chestsOpened === prev.chestsOpened && s.codexClaimed === prev.codexClaimed && s.meta === prev.meta && s.welcomeGiftClaimed === prev.welcomeGiftClaimed && s.elixirsNext === prev.elixirsNext) return;
   if (!saveTimer) saveTimer = setTimeout(flushProfile, 400);
 });
 if (typeof window !== 'undefined') {
@@ -2355,13 +2379,10 @@ function syncPetSeen(quiet = false): void {
   const see = (it: Item | null | undefined) => { const id = petSpeciesId(it); if (id && !have.has(id)) { have.add(id); add.push(id); } };
   s.inventory.forEach(see); s.warehouse.forEach(see); (Object.values(s.equipment) as (Item | null)[]).forEach(see);
   if (!add.length) return;
-  const before = PET_MILESTONES.filter((m) => s.petSeen.length >= m.n).length;
   const petSeen = [...s.petSeen, ...add];
-  petMirror.n = petSeen.length;
-  useGameStore.setState({ petSeen, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, s.attrs?.[s.hero]) });
+  useGameStore.setState({ petSeen });   // (only REGISTERED species count for the bonuses: registerPet; the Collection button shows a dot)
   if (quiet) return;
-  const hit = PET_MILESTONES.filter((m) => petSeen.length >= m.n).length > before ? PET_MILESTONES.filter((m) => petSeen.length >= m.n).pop() : undefined;
-  s.addNotification(hit ? `Pet Collection ${petSeen.length} / ${PET_TOTAL}: ${hit.label}!` : `New pet species! Collection ${petSeen.length} / ${PET_TOTAL}`, hit ? COLORS.uiAccent : '#9fe3a8', 'SYSTEM');
+  s.addNotification(`New pet species! Open the Pet Collection to register it (${petSeen.length} / ${PET_TOTAL} found)`, '#9fe3a8', 'SYSTEM');
 }
 {
   useGameStore.subscribe((s, prev) => { if (s.inventory !== prev.inventory || s.equipment !== prev.equipment || s.warehouse !== prev.warehouse) syncPetSeen(); });

@@ -60,6 +60,10 @@ export function spawnPickup(kind: PickupKind, pos: Vector3, value: number, item?
   // each side only ever collects the pickups of its own world. XP is never forwarded (kills pay both players directly); crates / harvest nodes / the pet are
   // not forwarded either (coopRoom.noFwd): they exist on both screens and every player breaks his own copy.
   if (coopRoom.fwdDrop && coopRoom.noFwd === 0 && kind !== 'XP' && !(item && droppedItems.has(item.id))) coopRoom.fwdDrop(kind, pos.x, pos.z, value, item);
+  // Interiors (castle / chapel / tavern / house) draw no ground loot and have no ground of their own (the pickup physics would settle it on the
+  // TOWN terrain under the same coordinates, i.e. float or sink): anything dropped there goes straight to the bag / purse.
+  const ar = world.village.area;
+  if (ar === 'CASTLE' || ar === 'CHURCH' || ar === 'TAVERN' || ar === 'HOME') { grant(kind, value, item); return; }
   // Keep inside the arena.
   tmpPos.set(pos.x, 0, pos.z);
   const d = Math.hypot(tmpPos.x, tmpPos.z);

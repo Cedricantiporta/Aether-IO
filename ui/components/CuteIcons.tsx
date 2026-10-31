@@ -102,6 +102,15 @@ export const CuteTower: React.FC<P> = (p) => (
   </Svg>
 );
 
+/** A round paw print: big pad + four toe beans (Pet Collection). */
+export const CutePaw: React.FC<P> = (p) => (
+  <Svg {...p}>
+    <path d="M16 15.200c4.200 0 7.600 3.400 7.600 6.600 0 2.600-2 4-4.400 4-1.200 0-2.100-.5-3.200-.5s-2 .5-3.200.5c-2.400 0-4.400-1.400-4.400-4 0-3.200 3.400-6.600 7.600-6.600z" />
+    <ellipse cx="7.800" cy="14.200" rx="2.400" ry="3.100" transform="rotate(-18 7.800 14.200)" /><ellipse cx="13" cy="8.800" rx="2.500" ry="3.300" transform="rotate(-6 13 8.800)" />
+    <ellipse cx="19" cy="8.800" rx="2.500" ry="3.300" transform="rotate(6 19 8.800)" /><ellipse cx="24.200" cy="14.200" rx="2.400" ry="3.100" transform="rotate(18 24.200 14.200)" />
+  </Svg>
+);
+
 /** Three rolling waves (Endless Waves). */
 export const CuteWaves: React.FC<P> = (p) => (
   <Svg {...p}>

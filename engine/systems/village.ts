@@ -660,6 +660,7 @@ function switchArea(to: 'TOWN' | 'CASTLE' | 'CAVE' | 'CHURCH' | 'TAVERN' | 'HOME
   // (leaving the cave: unlooted drops there are lost; going in: town drops are scooped up)
   if (from === 'CAVE') { for (const o of world.pickups) o.active = false; world.itemPickupsVersion++; }
   else if (to === 'CAVE') for (const o of world.pickups) if (o.active) petCollect(o);
+  if (to !== 'CAVE' && to !== 'TOWN') { for (const o of world.pickups) if (o.active) petCollect(o); world.itemPickupsVersion++; }   // (interiors draw no ground loot: scoop up the town's on the way in)
   if (from === 'CAVE' && to !== 'CAVE') leaveCave();
   for (const b of bubbles) b.active = false;
   dismount();

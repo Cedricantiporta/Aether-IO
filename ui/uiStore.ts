@@ -19,6 +19,7 @@ interface UiState {
   charSelect: boolean;                  // full-screen class selection (after the title, or from the town)
   recordsOpen: boolean;                 // village HUD records panel
   codexOpen: boolean;
+  collectionOpen: boolean;              // Pet Collection window (ui/screens/PetCollection.tsx)
   goalsOpen: boolean;                   // Goals panel (daily / weekly / achievements)
   questLogOpen: boolean;                // Quest log (main / side quests + rewards)
   openQuestLog: (v: boolean) => void;
@@ -55,6 +56,7 @@ interface UiState {
   setCharSelect: (v: boolean) => void;
   setRecordsOpen: (v: boolean) => void;
   openCodex: (v: boolean) => void;
+  openCollection: (v: boolean) => void;
   openGoals: (v: boolean, tab?: string) => void;
   goalsTab: string;                     // tab the Goals panel opens on (DAILY / WEEKLY / ACHIEVEMENTS)
   openSettings: (v: boolean) => void;
@@ -76,6 +78,7 @@ export const useUiStore = create<UiState>((set) => ({
   charSelect: false,
   recordsOpen: false,
   codexOpen: false,
+  collectionOpen: false,
   goalsOpen: false,
   goalsTab: 'DAILY',
   questLogOpen: false,
@@ -107,6 +110,7 @@ export const useUiStore = create<UiState>((set) => ({
   setCharSelect: (v) => set(v ? { charSelect: true, titleDone: false } : { charSelect: false, titleDone: true }),
   setRecordsOpen: (v) => set({ recordsOpen: v }),
   openCodex: (v) => set({ codexOpen: v }),
+  openCollection: (v) => set({ collectionOpen: v }),
   openGoals: (v, tab) => set(tab ? { goalsOpen: v, goalsTab: tab } : { goalsOpen: v }),
   openSettings: (v) => set({ settingsOpen: v }),
   storyOpen: false,
@@ -125,7 +129,7 @@ export type { Rarity };
 /** True while any modal overlay (settings / codex / dialogs) is open. Esc closes these before toggling pause. */
 export function uiOverlayOpen(): boolean {
   const s = useUiStore.getState();
-  return s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.goalsOpen || s.questLogOpen || s.todoTownOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
+  return s.settingsOpen || s.runUpgradesOpen || s.codexOpen || s.collectionOpen || s.goalsOpen || s.questLogOpen || s.todoTownOpen || !!s.confirm || !!s.sellItem || !!s.buyItem || !!s.summonResults;
 }
 
 /** Closes the top-most overlay. Returns true if something was closed. */
@@ -138,6 +142,7 @@ export function closeTopOverlay(): boolean {
   if (s.storyOpen) { s.openStory(false); return true; }
   if (s.runUpgradesOpen) { s.openRunUpgrades(false); return true; }
   if (s.settingsOpen) { s.openSettings(false); return true; }
+  if (s.collectionOpen) { s.openCollection(false); return true; }
   if (s.codexOpen) { s.openCodex(false); return true; }
   if (s.goalsOpen) { s.openGoals(false); return true; }
   if (s.questLogOpen) { s.openQuestLog(false); return true; }

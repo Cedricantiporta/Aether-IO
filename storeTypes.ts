@@ -109,6 +109,8 @@ export interface GameState {
   starterGiven: Record<HeroClass, boolean>;  // class starter weapon/armour already granted
   discovered: Discovered;                    // Codex discoveries (item/pet/loot names, skill keys, monster keys); persisted
   codexClaimed: string[];                    // Codex tabs whose 100% reward was claimed
+  petReg: string[];                          // Pet Collection: species the hero REGISTERED (button in the Collection window); only these count for milestones. Old saves start empty
+  petClaimed: number[];                      // Pet Collection: milestone species counts already claimed (old saves: none, so reached ones show as claimable)
   petSeen: string[];                         // Pet Collection: template ids of every pet species ever owned (petCollection.ts)
   chestsOpened: string[];                   // town treasure chests already opened by this hero (engine/townChests.ts ids; saved with the profile)
   meta: MetaState;                           // daily / weekly goals, achievements, equipped title (goals.ts; written by goalsTracker.ts)
@@ -196,6 +198,8 @@ export interface GameState {
   /** Blacksmith > Shards: 5 cores of `tier` (0 / 1) -> 1 core of the next tier. */
   fuseCores: (tier: number) => boolean;
   discover: (tab: CodexTab, keys: string[]) => void;   // mark Codex entries discovered (idempotent)
+  registerPet: (id?: string) => boolean;                // Pet Collection: register an owned species (undefined = every owned one); free, permanent
+  claimPetMilestone: (n?: number) => boolean;           // Pet Collection: claim milestone `n` (undefined = every reached one); claimed ones give their stats (petCollection.ts)
   claimCodexReward: (tab: CodexTab) => boolean;         // one-time gems when a tab is 100% discovered
   addExperience: (n: number) => void; // handles level-ups: +SP, +base stats, engine heal + levelUp event
   setWave: (wave: number) => void;

@@ -1,0 +1,48 @@
+/* Pet Collection window (ui/screens/PetCollection.tsx). Cute Zelda / casual Nintendo look like the Tower hub: soft rounded tiles,
+   chunky toy-like bottom shadows, pastel accents, no line containers. Class prefix pc-. */
+.pc { --pc-pink: #ff93c0; --pc-mint: #6fe3b0; --pc-sun: #ffd36a; --pc-dim: rgba(255, 255, 255, .62); --pc-tile: rgba(255, 255, 255, .08); --pc-tile2: rgba(255, 255, 255, .13); display: flex; flex-direction: column; gap: .9rem; color: #fff; }
+.pc-banner { display: flex; align-items: center; gap: .9rem; padding: .9rem 1rem; border-radius: 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--pc-pink) 34%, rgba(255, 255, 255, .06)), color-mix(in srgb, var(--pc-pink) 10%, rgba(255, 255, 255, .05))); box-shadow: 0 3px 0 rgba(0, 0, 0, .22); }
+.pc-banner-ic { flex: none; width: 3.2rem; height: 3.2rem; display: grid; place-items: center; border-radius: 50%; background: var(--pc-pink); box-shadow: 0 3px 0 color-mix(in srgb, var(--pc-pink) 45%, #000); }
+.pc-banner-tx { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .3rem; }
+.pc-banner-tx b { font-family: var(--font-title); font-weight: 800; font-size: 1.2rem; line-height: 1.15; }
+.pc-banner-tx small { font-size: .76rem; line-height: 1.35; color: var(--pc-dim); }
+.pc-count { flex: none; text-align: center; padding: .35rem .85rem; border-radius: 8px; background: rgba(0, 0, 0, .22); }
+.pc-count b { display: block; font-family: var(--font-title); font-weight: 800; font-size: 1.8rem; line-height: 1.05; }
+.pc-count small { font-size: .62rem; color: var(--pc-dim); }
+.pc-bar { height: .6rem; border-radius: 6px; background: rgba(0, 0, 0, .3); overflow: hidden; }
+.pc-bar i { display: block; height: 100%; min-width: .6rem; border-radius: 6px; background: linear-gradient(90deg, #ffe27a, #ff93c0); transition: width .4s; }
+.pc-next { display: flex; align-items: center; gap: .7rem; padding: .7rem .9rem; border-radius: 10px; background: var(--pc-tile); font-size: .8rem; line-height: 1.4; }
+.pc-next > div { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .15rem; }
+.pc-next b { font-family: var(--font-title); font-weight: 800; font-size: .9rem; }
+.pc-next span { color: var(--pc-dim); }
+.pc-sec { display: flex; align-items: center; gap: .6rem; margin-top: .2rem; font-family: var(--font-title); font-weight: 800; font-size: .95rem; }
+.pc-sec small { font-size: .7rem; font-weight: 600; color: var(--pc-dim); }
+.pc-sec .rpg-btn { margin-left: auto; }
+.pc-list { display: flex; flex-direction: column; gap: .45rem; }
+.pc-row { display: flex; align-items: center; gap: .75rem; padding: .55rem .75rem; border-radius: 10px; background: var(--pc-tile); }
+.pc-row .pc-n { flex: none; width: 2.3rem; height: 2.3rem; display: grid; place-items: center; border-radius: 50%; font-family: var(--font-title); font-weight: 800; font-size: .95rem; background: rgba(255, 255, 255, .14); color: var(--pc-dim); }
+.pc-row .pc-tx { min-width: 0; flex: 1; font-size: .82rem; line-height: 1.35; font-weight: 700; color: var(--pc-dim); }
+.pc-row .pc-tx em { display: block; font-style: normal; font-size: .66rem; font-weight: 600; opacity: .8; }
+.pc-row .pc-st { flex: none; min-width: 4.6rem; text-align: right; font-size: .68rem; font-weight: 700; color: var(--pc-dim); }
+.pc-row.ready { background: color-mix(in srgb, var(--pc-sun) 24%, rgba(255, 255, 255, .06)); box-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
+.pc-row.ready .pc-n { background: var(--pc-sun); color: #5a3a10; box-shadow: 0 2px 0 #c98f2a; }
+.pc-row.ready .pc-tx { color: #fff; }
+.pc-row.done { background: color-mix(in srgb, var(--pc-mint) 16%, rgba(255, 255, 255, .05)); }
+.pc-row.done .pc-n { background: var(--pc-mint); color: #0f4a32; }
+.pc-row.done .pc-tx { color: #e8fff4; }
+.pc-row.done .pc-st { color: #aef0cf; }
+.pc-row.final { padding: .8rem .9rem; background: linear-gradient(135deg, color-mix(in srgb, var(--pc-pink) 30%, rgba(255, 255, 255, .06)), color-mix(in srgb, var(--pc-sun) 22%, rgba(255, 255, 255, .05))); }
+.pc-row.final .pc-n { width: 2.9rem; height: 2.9rem; background: var(--pc-pink); color: #fff; box-shadow: 0 3px 0 #b84a80; }
+.pc-row.final.done .pc-n { background: var(--pc-mint); box-shadow: 0 3px 0 #2b9a6d; }
+.pc-row.final .pc-tx { color: #fff; font-size: .9rem; }
+.pc-row.lockedrow { opacity: .75; }
+.pc-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.pc-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: .6rem .3rem .5rem; border-radius: 12px; background: var(--pc-tile2); }
+.pc-tile.off { background: rgba(0, 0, 0, .16); }
+.pc-tile.reg { background: color-mix(in srgb, var(--pc-mint) 18%, rgba(255, 255, 255, .08)); }
+.pc-tile span { font-size: .64rem; font-weight: 800; text-align: center; line-height: 1.15; }
+.pc-tile small { font-size: .52rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .8; }
+.pc-tile .rpg-btn { margin-top: .1rem; }
+.pc-tile .pc-ok { font-size: .6rem; font-weight: 800; color: #aef0cf; }
+.pc-tile .pc-dot { position: absolute; top: .35rem; right: .4rem; width: .6rem; height: .6rem; border-radius: 50%; background: #ff5a4a; box-shadow: 0 0 8px #ff5a4a; animation: dotPulse 1.6s ease-in-out infinite; }
+@media (max-width: 520px) { .pc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pc-banner { flex-wrap: wrap; } }
