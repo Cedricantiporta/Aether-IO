@@ -33,3 +33,4 @@ three r182 + @react-three/fiber 9 + drei + Zustand 5 + Tailwind (CDN) + framer-m
 - **Art/UI style is Zelda (Echoes of Wisdom / Link's Awakening) or casual cute Nintendo style** for everything new:
   rounded, soft, toy-like, bright; no Korean-MMO dark-metal / gold-line look (HANDOFF section 1 + 3.9).
 - Update `docs/HANDOFF.md` when you change how the game works (keep it a current map, not a changelog).
+- Vault: short notes in `_vault/` (project status/decisions in `_vault/10_projects/aether-survivor.md`, reusable how-tos in `_vault/20_knowledge/recipes/`). Read the matching recipe before building a boss attack, CC/knockdown, town prop or co-op field; fix it if the code disagrees.
