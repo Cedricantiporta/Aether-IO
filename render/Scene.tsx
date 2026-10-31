@@ -42,6 +42,7 @@ import { HumanBosses } from './HumanBosses';
 import { BossFx } from './BossFx';
 import { BossCrystals } from './BossCrystals';
 import { DodgeFx } from './DodgeFx';
+import { BossKitFx } from './BossKitFx';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
 import { GroundFx } from './GroundFx';
@@ -153,6 +154,7 @@ export function Scene() {
           <BossFx />
           <BossCrystals />
           <DodgeFx />
+          <BossKitFx />
           <RoomEvents />
           <BiomeHazards />
           <VoidFx />

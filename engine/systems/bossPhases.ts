@@ -6,7 +6,7 @@
 //   Slime K. SPLIT       he bursts into 5 slimes that run off: kill them in 8 s, survivors merge back and heal him
 //   Gorath   PINBALL     rolls as a boulder along telegraphed lines and bounces off the walls; hit a pillar to crack him
 //   Elderroot SPORES     4 spore pods swell: pop them (touch / hit) before they burst (heals him + poison); roots grab you
-//   Hydra    TIDAL       a wave from one side: hide behind a raised rock (line-of-sight cover) or take 90% max hp (critical) + knockback
+//   Hydra    HEADS       3 new heads surface (bossKitHydra.ts): each one cut down = a 5 s EXPOSED window (body x1.5). (TIDAL, the old rock-cover wave, is unused)
 //   Ignar    LAVA        the floor is tiles; 4 sweeps (random directions) erupt half the floor each so EVERY tile erupts twice: keep moving
 //   Colossus SAND        a sandstorm from one direction, shifting once: hide behind a pillar / wreck or take ticking damage
 //   Void H.  VOIDPULL    EVENT HORIZON: the floor turns to void, stand on a glowing sigil (they go dark one by one before each collapse) and dodge the seeker orbs
@@ -24,6 +24,7 @@ import { spawnEnemy, onEnemyDeath, spawnTelegraphLine, fireEnemyProjectile } fro
 import { bossStrike, bossPwr } from './bossMech';
 import { BT, voidRotHit, arena } from './bossFx';
 import { S } from './bosses2';
+import { headsBegin, headsEnd, headsReset, tickHeadsPhase } from './bossKitHydra';
 import { spawnHostileZone } from './tricks';
 import { isSlimeKing } from './bossSpecials';
 import { mfx } from './voidFx';
@@ -33,7 +34,7 @@ import { useGameStore } from '../../store';
 import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly, shoveHero } from '../heroes';
 
 const MECH: Record<string, PhaseKind> = {
-  BOSS_WYRM: 'AVALANCHE', BOSS_GOLEM: 'PINBALL', BOSS_TREANT: 'SPORES', BOSS_HYDRA: 'TIDAL', BOSS_WARLORD: 'LAVA',
+  BOSS_WYRM: 'AVALANCHE', BOSS_GOLEM: 'PINBALL', BOSS_TREANT: 'SPORES', BOSS_HYDRA: 'HEADS', BOSS_WARLORD: 'LAVA',
   BOSS_WARMACH: 'SAND', BOSS_VOID: 'VOIDPULL',
 };
 const TH_BOSS = [0.7, 0.35], TH_SLIME = [0.5];
@@ -42,7 +43,8 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
   SPLIT: { name: 'SLIME SPLIT', sub: 'Pop the slimes before they merge back!', color: 0x86efac },
   PINBALL: { name: 'BOULDER PINBALL', sub: 'Bait him into a stone pillar!', color: 0xd9a066 },
   SPORES: { name: 'SPORE GARDEN', sub: 'Pop the spore pods before they burst!', color: 0x84cc16 },
-  TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },
+  TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },   // (kept, no boss uses it since the Hydra got HEADS)
+  HEADS: { name: 'HEADS OF THE HYDRA', sub: 'Cut a new head down: the body is EXPOSED for 5 s - hit it!', color: 0x38bdf8 },
   LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Every tile erupts twice - keep moving to one that is not flashing!', color: 0xff7a1a },
   SAND: { name: 'SANDSTORM', sub: 'Hide behind a pillar, out of the wind!', color: 0xe0b060 },
   VOIDPULL: { name: 'EVENT HORIZON', sub: 'The void floor collapses: stand on a glowing sigil - and dodge the seeker orbs!', color: 0xa060ff },
@@ -147,10 +149,12 @@ function begin(e: Enemy, kind: PhaseKind): void {
   events.emit('shake', { amount: 0.45 });
   say(e, 'INVULNERABLE', bp.color, 1.3);
   useGameStore.getState().addNotification(`${INFO[kind].name}! ${INFO[kind].sub}`, '#' + bp.color.toString(16).padStart(6, '0'), 'BOSS');
+  if (kind === 'HEADS') headsBegin(e);
 }
 
 function end(e: Enemy | null, text = 'VULNERABLE!'): void {
   const kind = bp.kind;
+  if (kind === 'HEADS') headsEnd();
   bp.on = false; bp.immune = false; bp.count = -1; bp.dark = false; bp.ball = false; bp.crackT = 0; bp.windOn = false; bp.shiftT = 0; bp.wave = 2;
   bp.realId = -1; bp.slimes.length = 0;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
@@ -169,7 +173,7 @@ hooks.phaseReset = (): void => {
   bp.windOn = false; bp.wave = 2; bp.nt = 0; bp.slimes.length = 0; bp.id = -1; bp.crackT = 0; bp.shiftT = 0; bp.tail = 9;
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
-  D.id = -1; D.n = 0; D.since = -1; D.lastEnd = -99; mfx.major = false;
+  D.id = -1; D.n = 0; D.since = -1; D.lastEnd = -99; mfx.major = false; headsReset();
   for (let i = 0; i < DB.length; i++) { DB[i].id = -1; DB[i].n = 0; DB[i].since = -1; DB[i].lastEnd = -99; }
   sayT = -99; sayId = -1;
 };
@@ -667,6 +671,7 @@ export function tickPhase(dt: number): void {
     case 'PINBALL': tickPinball(e, dt); break;
     case 'SPORES': tickSpores(e, dt); break;
     case 'TIDAL': tickTidal(e, dt); break;
+    case 'HEADS': if (tickHeadsPhase(e, dt)) end(e); break;
     case 'LAVA': tickLava(e, dt); break;
     case 'SAND': tickSand(e, dt); break;
     case 'VOIDPULL': tickVoidPull(e, dt); break;

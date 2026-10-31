@@ -31,6 +31,8 @@ import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMe
 import { tickIgnarLava, resetIgnarLava } from './ignarLava';
 import { bp, SEEKER } from './bossPhaseState';
 import { initBossForm } from './bossForms';
+import { headsReset, hydraExposeMul, spareHeadAI, headsPhaseOn } from './bossKitHydra';
+import { warmReset, warmDamageMul, warmTick, ventDue, ventBegin, ventFire, ventAim, ventTick, ventEnd, addHeat, missileVolley, wallBegin, wallFire, WX, VENT_T, VENT_WIND } from './bossKitColossus';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
 import {
   mfx, queueHole, holesBusy, tickVoidFx, clearVoidFx,
@@ -43,8 +45,8 @@ export function isBoss2(k: EnemyKind): boolean {
 const tv = new Vector3();
 /** Spread-out salvo spots (owner: boss impacts must not bunch up): the first on (fx, fz), the rest at rMin..rMax from it,
  *  every spot >= gap from the others. Writes into SPOT_X / SPOT_Z, returns how many were placed. */
-const SPOT_X: number[] = [], SPOT_Z: number[] = [];
-function spreadSpots(fx: number, fz: number, n: number, rMin: number, rMax: number, gap: number): number {
+export const SPOT_X: number[] = [], SPOT_Z: number[] = [];
+export function spreadSpots(fx: number, fz: number, n: number, rMin: number, rMax: number, gap: number): number {
   let m = 0;
   for (let tries = 0; m < n && tries < n * 14; tries++) {
     let x = fx, z = fz;
@@ -66,7 +68,7 @@ export const S = {
   // Mire Hydra
   heads: [-1, -1, -1, -1, -1] as number[], regrowT: [0, 0, 0, 0, 0] as number[], regrowN: 0, headsDead: 0, headAng: 0, sub: false, subX: 0, subZ: 0, subFx: 0, subFz: 0,
   /** (rooted Hydra) per head / spare slot: lunge timer (0 = idle) and where it is whipping to */
-  lungeT: [0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeX: [0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeZ: [0, 0, 0, 0, 0, 0, 0, 0] as number[],
+  lungeT: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeX: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] as number[], lungeZ: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] as number[],   // (slots 0-4 rim heads, 5 / 6 / 9 the spare heads of 'Heads of the Hydra': 7 and 8 are enemies.ts MINI flags, a head must never carry them)
   // Glacius
   air: false, wantBlizz: false, blizzT: 0, diveZone: null as Zone | null,
   // Ignar
@@ -89,18 +91,18 @@ export function resetBosses2(): void {
   S.id = -1; S.phase = 0; S.cycle = 0; S.stompCd = 0;
   S.bark = false; S.barkT = 0; S.wantBark = false; S.rings = 0; S.ringN = 0;
   for (let k = 0; k < NH; k++) { S.heads[k] = -1; S.regrowT[k] = 0; }
-  for (let k = 0; k < 8; k++) S.lungeT[k] = 0;
+  for (let k = 0; k < 10; k++) S.lungeT[k] = 0;
   S.regrowN = 0; S.headsDead = 0; S.headAng = 0; S.sub = false;
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0; S.guardT = 0; S.shT = 0; S.dashPh = 2;
   S.voidOn = false; S.gravT = 0; S.pushed = false; S.vform = 0; S.vformT = 0; bp.xformId = -1;
-  S.stride = 1; S.strideT = 0; resetIgnarLava();
+  S.stride = 1; S.strideT = 0; resetIgnarLava(); headsReset(); warmReset();
 }
 
 // ------------------------------------------------------------------ helpers ---
 function stand(e: Enemy): void { e.vel.set(0, 0, 0); }
 function drive(e: Enemy, ux: number, uz: number, sp: number): void { e.vel.set(ux * sp, 0, uz * sp); }
-function pwr(e: Enemy): number { return Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * BOSS_SKILL_MUL; }
+export function pwr(e: Enemy): number { return Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * BOSS_SKILL_MUL; }
 
 /** Ranged-ish positioning: back off inside `near`, close in beyond `far`, otherwise circle the player. */
 function keepRange(e: Enemy, ux: number, uz: number, dist: number, near: number, far: number, sp: number, strafe: number): void {
@@ -109,13 +111,13 @@ function keepRange(e: Enemy, ux: number, uz: number, dist: number, near: number,
   else { const s = (e.id & 1) === 0 ? 1 : -1; drive(e, uz * s, -ux * s, sp * strafe); }
 }
 
-function clampArena(v: Vector3, margin: number): void {
+export function clampArena(v: Vector3, margin: number): void {
   const lim = edgeLimit(v.x, v.z, margin);
   const d2 = v.x * v.x + v.z * v.z;
   if (d2 > lim * lim) { const s = lim / Math.sqrt(d2); v.x *= s; v.z *= s; }
 }
 
-function circle(x: number, z: number, r: number, life: number, trick: number, dmg: number, color: number): Zone | null {
+export function circle(x: number, z: number, r: number, life: number, trick: number, dmg: number, color: number): Zone | null {
   const zn = spawnTelegraphCircle(x, z, r, life, 0, color);
   if (zn) { zn.trick = trick; zn.damage = dmg; }
   return zn;
@@ -129,9 +131,9 @@ function cone(e: Enemy, dx: number, dz: number, range: number, half: number, lif
   return spawnTelegraphCone(e.pos.x, e.pos.z, dx, dz, range, half, life, color, trick, dmg);
 }
 /** Fan index -> angle offset: 0, -1, +1, -2, +2 ... so any count is centred on the aim. */
-function fan(i: number, step: number): number { return ((i & 1) ? -((i + 1) >> 1) : (i >> 1)) * step; }
+export function fan(i: number, step: number): number { return ((i & 1) ? -((i + 1) >> 1) : (i >> 1)) * step; }
 
-function notify(msg: string, color: string): void { useGameStore.getState().addNotification(msg, color, 'BOSS'); }
+export function notify(msg: string, color: string): void { useGameStore.getState().addNotification(msg, color, 'BOSS'); }
 
 function bossEnemy(): Enemy | null {
   if (S.id < 0) return null;
@@ -144,7 +146,7 @@ function countAdds(kind: EnemyKind): number {
   for (let i = 0; i < list.length; i++) { const a = list[i]; if (a.active && a.kind === kind && a.state !== 'DYING') n++; }
   return n;
 }
-function poofAdd(a: Enemy): void {
+export function poofAdd(a: Enemy): void {
   if (!a.active || a.state === 'DYING') return;
   a.state = 'DYING'; a.stateT = 0; a.deathT = 0; a.hp = 0; a.vel.set(0, 0, 0);
   events.emit('enemyDeath', { pos: a.pos, kind: a.kind, elite: false, boss: false, scale: a.scale, poof: true });
@@ -238,10 +240,11 @@ hooks.onStagger = (e: Enemy): void => {
 
 // Incoming damage: Elderroot's bark armor, Mire Hydra's heads shielding the body.
 const HYDRA_MUL = [0.45, 0.6, 0.8, 1.0, 1.25, 1.5];   // by severed heads (0..5)
-hooks.damageMul = (e: Enemy): number => {
+hooks.damageMul = (e: Enemy, fx?: number, fz?: number): number => {
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
-  if (e.kind === 'BOSS_HYDRA') return HYDRA_MUL[S.headsDead];
+  if (e.kind === 'BOSS_HYDRA') { const x = hydraExposeMul(); return x > 1 ? x : HYDRA_MUL[S.headsDead]; }   // 'Heads of the Hydra' window: x1.5 and the front heads no longer shield the body (bossKitHydra.ts)
+  if (e.kind === 'BOSS_WARMACH') return warmDamageMul(e, fx, fz);   // 'Overheat Core': the vented back core takes extra from behind (bossKitColossus.ts)
   if (e.kind === 'BOSS_VOID') return S.vformT > 0 ? 0 : 1;   // transforming: untouchable
   if (e.kind === 'BOSS_WARLORD') return S.formT > 0 ? 0 : S.guardT > 0 ? 0.5 : 1;   // transforming: untouchable; Blazing Guard: half damage
   return 1;
@@ -262,21 +265,23 @@ export function initBoss2(e: Enemy): void {
 
 /** Where hydra head slot k rests (the front row k < NH reaches in along the far rim, spare heads from the ward sit one row further in). */
 export function headAnchor(b: Enemy, k: number, out: { x: number; z: number }): void {
-  const R = world.room.radius, row = k < NH ? 0 : 1, i = row === 0 ? k : k - NH;
+  const R = world.room.radius, row = k < NH ? 0 : 1, i = row === 0 ? k : k === 9 ? 2 : k - NH;
   const th = Math.atan2(b.pos.x, -b.pos.z) + (row === 0 ? (k - (NH - 1) / 2) * 0.36 : (i - 1) * 0.62 + 0.16);
   const rr = R - 3.4 - row * 6.5;
   out.x = Math.sin(th) * rr; out.z = -Math.cos(th) * rr;
 }
 const ha = { x: 0, z: 0 };
 /** (owner 2026-10-26) heads were squishy: x1.9 of the base head hp (was x0.7 = ~2.7x tougher), armour +50%. (bossMech spare heads: x2.2.) */
-const HEAD_HP_MUL = 1.9;
+const HEAD_HP_MUL = 1.9;   // (superseded 2026-10-31 by the head hp formula below: the rim heads had grown to 38% of the body's hp each, ~260 s fights)
+/** Rim head hp: a hero who needs FIGHT_REF_S (90) s of hitting to fell the BODY fells a rim head in HEAD_KILL_S s (body armour = hero level term, head armour is its own), shield removed. */
+export const HEAD_KILL_S = 3.8, FIGHT_REF_S = 90;
 /** (Re)grows hydra head k at its rest spot. */
 function growHead(e: Enemy, k: number): void {
   headAnchor(e, k, ha);
   tv.set(ha.x, 0, ha.z);
   const h = spawnEnemy('BOSS_HYDRA_HEAD', tv);
   if (!h) return;
-  h.pattern = k; h.attackCd = 3.2 + k * 1.5; h.maxHp = Math.round(h.maxHp * HEAD_HP_MUL); h.hp = h.maxHp; h.armor = Math.round(h.armor * 1.5);
+  h.pattern = k; h.attackCd = 3.2 + k * 1.5; h.armor = Math.round(h.armor * 1.5); h.shield = 0; h.maxHp = Math.max(1, Math.round(e.maxHp * (HEAD_KILL_S / FIGHT_REF_S) * ((100 + e.armor) / (100 + h.armor)))); h.hp = h.maxHp; void HEAD_HP_MUL;
   S.heads[k] = h.id; S.lungeT[k] = 0;
 }
 
@@ -461,11 +466,11 @@ export function saplingDied(e: Enemy): void {
 // its armour; the body is hurt through the neck stumps at the rim. Patterns: acid barrage, a sweeping fan of three head-beams, head slams
 // (the heads whip across the arena to telegraphed spots and rest there: a free-hit window) and a tidal surge ring from the body.
 const H_SPIT = 0, H_SWEEP = 1, H_SLAM = 2, H_SURGE = 3;
-const HYDRA_REGROWS = 4;          // heads that may grow back per fight (was unlimited)
+const HYDRA_REGROWS = 2;          // heads that may grow back per fight (was unlimited, then 4; kit pass 2: with the heads phases the fight ran 165 s)
 const HYDRA_REGROW_HEAL = 0.025;  // hp mended per regrown head (was 4%)
 const HYDRA_ORDER = [H_SPIT, H_SWEEP, H_SLAM, H_SPIT, H_SURGE, H_SLAM, H_SWEEP];
 const LUNGE_T = 2.4, LUNGE_HIT = 1.2, LUNGE_HOLD = 1.8;
-const slamZone: (Zone | null)[] = [null, null, null, null, null, null, null, null];   // the telegraph of each head's slam (cancelled when that head dies)   // whip out (telegraph resolves at LUNGE_HIT), hold, snap back
+const slamZone: (Zone | null)[] = [null, null, null, null, null, null, null, null, null, null];   // the telegraph of each head's slam (cancelled when that head dies)   // whip out (telegraph resolves at LUNGE_HIT), hold, snap back
 
 LISTS.BOSS_HYDRA = [
   { // Acid Spit: globs lob onto the player's area, each leaving an acid patch.
@@ -475,7 +480,7 @@ LISTS.BOSS_HYDRA = [
       const p = world.player.pos, n = spreadSpots(p.x, p.z, 4 + e.phase, 6.5, 13, 7.5);   // (spread out; owner 2026-10-26: one more glob, bigger pools)
       for (let i = 0; i < n; i++) {
         const x = SPOT_X[i], z = SPOT_Z[i];
-        circle(x, z, 3.3, 1.25, BT.SPIT, pwr(e) * 1.2, 0x9be32a);
+        circle(x, z, 3.3, 1.25, BT.SPIT, pwr(e) * 1.0, 0x9be32a);   // (kit pass: x1.2 -> x1.0, a glob is ~12% of max hp)
         spawnProp(PROP_GLOB, x, z, 1.25, 0.35, 1.4, 1, e.pos.x, e.pos.z);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
@@ -487,7 +492,7 @@ LISTS.BOSS_HYDRA = [
       const base = Math.atan2(ux, uz), dir = (S.cycle & 1) ? 1 : -1;
       for (let i = 0; i < 3; i++) {
         const a = base + (i - 1) * 0.62 * dir;
-        cone(e, Math.sin(a), Math.cos(a), 56, 0.21, 1.1 + i * 0.4, BT.SWEEP, pwr(e) * 1.4, 0x6b8f5a);
+        cone(e, Math.sin(a), Math.cos(a), 56, 0.21, 1.1 + i * 0.4, BT.SWEEP, pwr(e) * 1.05, 0x6b8f5a);   // (kit pass: x1.4 -> x1.05, a cone is ~12-13% of max hp + the knockdown)
       }
     },
     fire() { /* each cone resolves with its own telegraph */ },
@@ -510,10 +515,7 @@ LISTS.BOSS_HYDRA = [
         if (best < 0) break;
         const a = (used / Math.max(1, want)) * 6.283 + Math.random(), r = used === 0 ? 0 : 3.5 + Math.random() * 3;
         tv.set(p.x + world.player.vel.x * 0.45 + Math.sin(a) * r, 0, p.z + world.player.vel.z * 0.45 + Math.cos(a) * r); clampArena(tv, 3);
-        S.lungeX[best] = tv.x; S.lungeZ[best] = tv.z; S.lungeT[best] = LUNGE_T;
-        const zn = circle(tv.x, tv.z, 3.8, LUNGE_HIT, BT.SURFACE, pwr(e) * 1.3, 0x6b8f5a);
-        if (zn) { zn.life = zn.maxLife = LUNGE_HIT; }   // (boss telegraphs resolve 12% sooner: pin it to the head's arrival)
-        slamZone[best] = zn;
+        slamHead(e, best, tv.x, tv.z);
         used++;
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'SPIT_CAST', radius: 3 });
@@ -531,6 +533,14 @@ LISTS.BOSS_HYDRA = [
     },
   },
 ];
+
+/** Head k whips to (x, z) and crashes there when the marked circle fills (the circle is pinned to the head's arrival). Shared by Head Slam and the spare heads. */
+export function slamHead(b: Enemy, k: number, x: number, z: number): void {
+  S.lungeX[k] = x; S.lungeZ[k] = z; S.lungeT[k] = LUNGE_T;
+  const zn = circle(x, z, 3.8, LUNGE_HIT, BT.SURFACE, pwr(b) * 1.3, 0x6b8f5a);
+  if (zn) { zn.life = zn.maxLife = LUNGE_HIT; }   // (boss telegraphs resolve 12% sooner: pin it to the head's arrival)
+  slamZone[k] = zn;
+}
 
 function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_HYDRA!;
@@ -587,7 +597,7 @@ function wrap(a: number): number {
 
 // --- hydra heads -----------------------------------------------------------------
 /** Removes the pending slam telegraph of head slot k (its head died before the bash landed). */
-function cancelSlam(k: number): void {
+export function cancelSlam(k: number): void {
   const zn = slamZone[k]; slamZone[k] = null;
   if (zn && zn.active && zn.kind === 'TELEGRAPH_CIRCLE' && zn.trick === BT.SURFACE && zn.pos.x === S.lungeX[k] && zn.pos.z === S.lungeZ[k]) zn.active = false;
 }
@@ -628,9 +638,15 @@ export function aiHydraHead(e: Enemy): void {
   if (e.hideT > 0 && e.hideT < 0.3) e.hideT = 0;
   const p = world.player.pos;
   requestYaw(Math.atan2(p.x - e.pos.x, p.z - e.pos.z));
+  if (k >= NH) { spareHeadAI(e, b); return; }   // (slots 5 / 6 / 9)   // a spare head of 'Heads of the Hydra' (bossKitHydra.ts)
   if (S.lungeT[k] > 0 || e.attackCd > 0 || !world.player.alive) return;
+  if (headsPhaseOn()) return;   // the heads phase: the five rim heads hold their fire, the three new heads fight
   e.attackCd = (8.5 - 1.2 * b.phase) * (0.9 + Math.random() * 0.2);
-  // (owner 2026-10-26) Acid Fan: 3-5 big blobs in a cone toward the hero (one lands on him, the rest bracket him)
+  headAcidFan(e, b);
+}
+/** (owner 2026-10-26) Acid Fan: 3-5 big blobs in a cone toward the hero (one lands on him, the rest bracket him). */
+export function headAcidFan(e: Enemy, b: Enemy): void {
+  const p = world.player.pos;
   const dx = p.x + world.player.vel.x * 0.35 - e.pos.x, dz = p.z + world.player.vel.z * 0.35 - e.pos.z;
   const d = Math.max(6, Math.hypot(dx, dz)), a0 = Math.atan2(dx, dz), n = 3 + Math.min(2, b.phase + (b.hp < b.maxHp * 0.5 ? 1 : 0));
   for (let i = 0; i < n; i++) {
@@ -954,50 +970,31 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
 
 // ============================================================ THE DUNE COLOSSUS ===
 // The Sunscorch Desert boss (shown as 'The Dune Colossus', roomDefs bossName): a six-legged war machine. Keeps its distance and shells you.
-const M_ARTY = 0, M_RAY = 1, M_STOMP = 2, M_MISSILE = 3, M_RAM = 4;
-const STRAFE_SP = 9;   // (flamethrower pacing speed)
-const WARMACH_ORDER = [M_ARTY, M_RAY, M_MISSILE, M_ARTY, M_RAM, M_RAY];
+// KIT (docs/BOSS_DESIGN_REFERENCE.md, signature = OVERHEAT CORE in bossKitColossus.ts): own skills here = Artillery Barrage, Core Vent (the
+// signature; slot 1 used to be the old Molten Ray, retired in favour of the dodgeMechs flamethrower), Seismic Stomp (close skill), Missile Salvo
+// (ground-marked impacts on the hero's trail), Rampage (charge lane), Shrapnel Wall (bullet row with a 7 m gap). dodgeMechs.ts adds the Flamethrower
+// (every burst = +1 heat), Seismic Ring (dash check), Lasers and the Machine Gun; the shared layer adds Artillery rain, quake, crush; bossPhases the sandstorm.
+const M_ARTY = 0, M_STOMP = 2, M_MISSILE = 3, M_RAM = 4, M_WALL = 5;
+const WARMACH_ORDER = [M_ARTY, M_MISSILE, M_WALL, M_ARTY, M_RAM, M_MISSILE, M_WALL];
 
 LISTS.BOSS_WARMACH = [
   { // Artillery Barrage: mortar shells rain where you are and where you are heading (sand blasts, no fire).
     name: 'Artillery Barrage!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0,
     begin(e) {
       const p = world.player, n = spreadSpots(p.pos.x + p.vel.x * 0.6, p.pos.z + p.vel.z * 0.6, 5 + e.phase, 11, 22, 12);   // (was 8 + 2 phase, bunched)
-      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 5.6, 1.1 + i * 0.17, BT.SHELL, pwr(e) * 1.3, 0xd9b36a);
+      for (let i = 0; i < n; i++) circle(SPOT_X[i], SPOT_Z[i], 5.6, 1.1 + i * 0.17, BT.SHELL, pwr(e) * 1.05, 0xd9b36a);   // (kit pass: x1.3 -> x1.05, a shell is ~12.5% of max hp)
       events.emit('shake', { amount: 0.3 });
     },
     fire() { /* shells land as their telegraphs expire */ },
   },
-  { // Molten Ray = the FLAMETHROWER (owner 2026-10-31): a much fatter, faster stream (flames 2x wider, 1.5x faster, wider telegraph cone) that
-    // sweeps wider while the Colossus PACES back and forth across the hero's line, laying FIRE TRAILS on the ground; flame hits burn.
-    name: 'Molten Ray!', wind: () => 1.0, act: () => 1.45, rec: () => 1.0,
-    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.95; cone(e, ux, uz, 70, 1.05, 1.0, BT.VISUAL, 0, 0xffa040); },
-    fire(e) { S.rayT = 0; S.rayN = 0; S.trailT = 0; S.stride = (S.cycle & 1) ? 1 : -1; S.strideT = 0.55; void e; },
-    tick(e, dt, ux, uz) {
-      // strafe along the line perpendicular to the hero, reversing every ~0.9 s; keep inside the arena
-      S.strideT -= dt;
-      if (S.strideT <= 0) { S.strideT = 0.9; S.stride = -S.stride; }
-      tv.set(e.pos.x + uz * S.stride * 6, 0, e.pos.z - ux * S.stride * 6);
-      const lim = edgeLimit(tv.x, tv.z, e.radius + 2);
-      if (tv.x * tv.x + tv.z * tv.z > lim * lim) { S.stride = -S.stride; S.strideT = 0.9; }
-      drive(e, uz * S.stride, -ux * S.stride, STRAFE_SP);
-      S.rayT -= dt;
-      if (S.rayT > 0) return;
-      S.rayT = 0.045;
-      S.rayA += 1.9 / 32;   // sweeps ~1.9 rad over the attack (was 1.5)
-      dirV.set(Math.sin(S.rayA), 0, Math.cos(S.rayA));
-      tv.set(e.pos.x + dirV.x * e.radius * 0.9, 6, e.pos.z + dirV.z * e.radius * 0.9);
-      fireEnemyProjectile(tv, dirV, 'FLAME', 46, pwr(e) * 0.5, { life: 1.5, radius: 2.7, debuff: 5 });
-      if ((S.rayN++ & 3) === 0) events.emit('shake', { amount: 0.12 });
-      S.trailT -= 0.045;
-      if (S.trailT <= 0) {   // fire trail: a patch on the ground along the flame (within the global fire patch cap), every ~0.18 s at a random reach
-        S.trailT = 0.18;
-        const d = 12 + Math.random() * 40;
-        firePatch(e.pos.x + dirV.x * d, e.pos.z + dirV.z * d, 3.2, 4.2, pwr(e) * 0.12);
-      }
-    },
-    end(e) { stand(e); },
-    windTick(e) { requestYaw(S.rayA + 0.95); },
+  { // Core Vent (SIGNATURE, bossKitColossus.ts): three flame bursts heat it up; it turns its back, vents, and the BACK CORE takes extra for 5 s.
+    name: 'Core Vent!', wind: () => VENT_WIND, act: () => VENT_T + 0.5, rec: () => 0.8,
+    begin(e, ux, uz) { ventBegin(e, ux, uz); },
+    fire(e) { ventFire(e); },
+    tick(e, dt) { stand(e); requestYaw(ventAim(e)); ventTick(e, dt); },
+    done() { return WX.ventT <= 0; },
+    end() { ventEnd(); },
+    windTick(e) { requestYaw(ventAim(e)); },
   },
   { // Seismic Stomp: all six legs slam down; shockwaves under each leg and around the hull.
     name: 'Seismic Stomp!', wind: () => 1.2, act: () => 0.3, rec: () => 0.9,
@@ -1007,27 +1004,22 @@ LISTS.BOSS_WARMACH = [
     },
     fire() { events.emit('shake', { amount: 0.7 }); },
   },
-  { // Missile Swarm: three volleys of seeking fire missiles.
-    name: 'Missile Swarm!', wind: () => 0.8, act: () => 1.6, rec: () => 1.0,
-    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 2, 0.8, BT.VISUAL, 0, 0xffa040); },
+  { // Missile Salvo (owner kit 2026-10-31: pattern 26): three volleys of fire missiles, each onto ground circles marked on the hero's TRAIL (red, 1.0 s).
+    // Every salvo is a flame burst (+1 heat). Impact = fire pillar + burn + a short fire patch.
+    name: 'Missile Salvo!', wind: () => 0.8, act: () => 2.0, rec: () => 1.0,
+    begin(e) { circle(e.pos.x, e.pos.z, e.radius + 2, 0.8, BT.VISUAL, 0, 0xffa040); addHeat(e, 2); S.rayT = 0; S.rayN = 0; stat('SalvoHeat'); },   // (a salvo is a big fire burst: +2 heat)
     fire() { S.rayT = 0; S.rayN = 0; },
-    tick(e, dt, ux, uz) {
+    tick(e, dt) {
       stand(e);
       S.rayT -= dt;
       if (S.rayT > 0 || S.rayN >= 3) return;
-      S.rayT = 0.5; S.rayN++;
-      const base = Math.atan2(ux, uz), n = 5 + e.phase;
-      for (let i = 0; i < n; i++) {
-        const a = base + (i - (n - 1) / 2) * 0.32;
-        dirV.set(Math.sin(a), 0, Math.cos(a));
-        tv.set(e.pos.x + dirV.x * e.radius * 0.7, 8, e.pos.z + dirV.z * e.radius * 0.7);
-        fireEnemyProjectile(tv, dirV, 'FLAME', 12, pwr(e) * 0.7, { life: 5, radius: 1.2, homing: 1.4, debuff: 5 });
-      }
+      S.rayT = 0.75; S.rayN++;
+      missileVolley(e, 3 + (e.phase >= 1 ? 1 : 0), 1.0);
     },
   },
   { // Rampage: the machine lowers itself and charges along a lane, trampling anything in the way.
     name: 'Rampage!', wind: () => 1.6, act: () => 1.8, rec: () => 1.4,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; lane(e, ux, uz, 30, e.radius * 2 + 3, 1.6, BT.VISUAL, 0, 0xff5a1a); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; addHeat(e); lane(e, ux, uz, 30, e.radius * 2 + 3, 1.6, BT.VISUAL, 0, 0xff5a1a); },
     fire() { events.emit('shake', { amount: 0.5 }); },
     tick(e) {
       drive(e, e.dir.x, e.dir.z, 13 + 1.5 * e.phase);   // (very slow walker, but the charge is still a real threat: ~25 m lane)
@@ -1037,16 +1029,25 @@ LISTS.BOSS_WARMACH = [
     end(e) { stand(e); },
     windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
   },
+  { // Shrapnel Wall (pattern 14): a row of shrapnel rounds sweeps across the arena toward you; ONE 7 m gap (never on the hero's line): step into it or dash the row.
+    name: 'Shrapnel Wall!', wind: () => 1.15, act: () => 0.5, rec: () => 1.1,
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); wallBegin(e, ux, uz); },
+    fire(e) { wallFire(e); },
+    windTick(e) { requestYaw(Math.atan2(e.dir.x, e.dir.z)); },
+  },
 ];
 
 function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WARMACH!;
+  warmTick(e);   // flamethrower casts (dodgeMechs) heat the core up
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 20, 36, e.speed * (1 + 0.12 * e.phase), 0.35);
   const cDue = closeDue(e);   // (proximity) Seismic Stomp is the close skill: only with someone near, more often the longer they stay
-  if (e.attackCd > 0 && !cDue) return;
+  const vent = ventDue() && e.attackCd <= 0.5;   // the vent (3 heat) takes the next free slot
+  if (e.attackCd > 0 && !cDue && !vent) return;
   let id: number;
-  if (cDue) { id = M_STOMP; closeUsed(e, 22, list[id].name); }   // too close: stomp you away
+  if (vent) id = 1;
+  else if (cDue) { id = M_STOMP; closeUsed(e, 22, list[id].name); }   // too close: stomp you away
   else { id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length]; }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -1276,4 +1277,18 @@ function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   if (e.attackCd > 0) return;
   const order = S.vform === 2 ? HERALD_F2 : HERALD_F1;
   beginAtk(e, list, order[S.cycle++ % order.length], ux, uz, dist);
+}
+
+if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {   // QA: `__bossKit.cast(id)` starts attack `id` of the live boss's own list (boss must be in CHASE); `S` = the shared state
+  (window as unknown as Record<string, unknown>).__bossKit = {
+    cast: (id: number): string => {
+      const e = bossEnemy(); const l = e ? LISTS[e.kind] : undefined;
+      if (!e || !l || !l[id]) return 'none';
+      if (e.state !== 'CHASE') return 'busy';
+      const dx = world.player.pos.x - e.pos.x, dz = world.player.pos.z - e.pos.z, d = Math.max(0.001, Math.hypot(dx, dz));
+      beginAtk(e, l, id, dx / d, dz / d, d);
+      return l[id].name;
+    },
+    S,
+  };
 }

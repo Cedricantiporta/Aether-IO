@@ -46,7 +46,7 @@ const KITS: Partial<Record<EnemyKind, number[]>> = {
   BOSS_HYDRA: [MG, RING],
   BOSS_WYRM: [ICEBEAM, RING, ICICLES, MG],
   BOSS_WARLORD: [SPIRAL, MG, RING, WHIP],
-  BOSS_WARMACH: [FLAME, RING, LASERS, MG],
+  BOSS_WARMACH: [FLAME, RING, LASERS, FLAME, MG],   // (Overheat Core, bossKitColossus.ts: every flamethrower burst is +1 heat, so it comes twice per cycle)
   BOSS_LICH: [MG],
 };
 /** Per boss: the ring flavour. fx 0 push, 1 tide (slow), 2 fire (burn), 3 frost (freeze), 4 seismic (knockdown), 5 thorn (bleed). */
