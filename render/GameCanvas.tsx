@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { EffectComposer, Bloom, Vignette, SMAA, ToneMapping, TiltShift2 } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, SMAA, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three';
 import { Scene } from './Scene';
@@ -84,7 +84,6 @@ function FrameDriver({ q }: { q: QualityCfg }) {
 
 export const GameCanvas: React.FC = () => {
   const q = useQuality();
-  const tilt = useGameStore((s) => s.settings?.tiltShift !== false);   // (diorama look; drawn in the composer, so only on quality tiers with bloom)
   return (
     <Canvas
       key={q.name}
@@ -102,7 +101,6 @@ export const GameCanvas: React.FC = () => {
         <EffectComposer multisampling={q.msaa} enableNormalPass={false}>
           <Bloom mipmapBlur luminanceThreshold={1.0} luminanceSmoothing={0.2} intensity={0.65} radius={0.7} />
           <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-          {tilt && <TiltShift2 blur={0.18} taper={0.55} start={[0, 0.5]} end={[1, 0.5]} samples={8} />}
           <Vignette offset={0.3} darkness={0.5} eskil={false} />
           {q.smaa && <SMAA />}
         </EffectComposer>
