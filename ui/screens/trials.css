@@ -30,6 +30,12 @@
 .bt-drops { padding: 0 .75rem .75rem; display: flex; flex-direction: column; gap: .6rem; }
 .bt-odds { font-size: .74rem; color: #d9cdf0; background: rgba(0, 0, 0, .16); border-radius: .5rem; padding: .55rem .7rem; }
 .bt-odds b { color: #fff; }
+.bt-odds table { width: 100%; border-collapse: collapse; margin-bottom: .45rem; text-align: center; }
+.bt-odds th { font-size: .64rem; color: #bcaed6; font-weight: 700; padding: .15rem .25rem; }
+.bt-odds td { padding: .25rem; font-weight: 700; }
+.bt-odds td:first-child { text-align: left; }
+.bt-odds tr.mythic td:first-child { color: #ffa8e6; }
+.bt-odds p { margin: 0; }
 .bt-odds .mythic { color: #ff9be3; }
 .bt-items { display: flex; flex-direction: column; gap: .35rem; max-height: 13rem; overflow-y: auto; }
 .bt-it { display: flex; align-items: center; gap: .6rem; padding: .4rem .6rem; border-radius: .5rem; background: rgba(0, 0, 0, .18); }

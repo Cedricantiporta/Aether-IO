@@ -12,7 +12,7 @@ import { biomeOf, bossNameIn, BIOMES } from '../../engine/roomDefs';
 import { useCoop } from '../../net/coopStore';
 import { coopInviteTrial } from '../../net/coop';
 import { ItemArt } from '../components/ItemArt';
-import { TRIAL_BOSSES, TICKET_NAME, fought, untilReset, trialDayKey, trialPool, TRIAL_MYTHIC, TRIAL_BONUS_ITEM } from '../../bossTrials';
+import { TRIAL_BOSSES, TICKET_NAME, fought, untilReset, trialDayKey, trialPool, TRIAL_MYTHIC, TRIAL_BONUS_ITEM, TRIAL_GRADES } from '../../bossTrials';
 import './trials.css';
 
 /** Small painted boss badge: the first letter of the boss on a soft tile (no emoji). */
@@ -45,7 +45,7 @@ export const BossTrialsWindow: React.FC = () => {
   if (!open) return null;
   const go = (i: number): void => { if (withFriend) { if (coopInviteTrial(i)) setOpen(false); } else if (startBossTrial(i)) setOpen(false); };
   const reset = untilReset();
-  const legend = Math.round((1 - TRIAL_MYTHIC) * 100), mythic = Math.round(TRIAL_MYTHIC * 100);
+  const legend = Math.round((1 - TRIAL_MYTHIC) * 100), mythic = Math.round(TRIAL_MYTHIC * 100), pc = (n: number): string => `${Math.round(n * 100)}%`;
   return (
     <div className="bt-shade pe" style={{ zIndex: 160 }} onPointerDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}>
       <div className="bt-card" data-testid="boss-trials" role="dialog" aria-label="Boss Trials">
@@ -58,7 +58,7 @@ export const BossTrialsWindow: React.FC = () => {
         <div className="bt-body rpg-scroll">
           <div className="bt-intro">
             <p>Face a guardian alone, at <b>Void strength</b> and a little angrier.</p>
-            <p>Each win drops <b>one piece</b> of the boss's slot, <b>Legendary</b> or with a <b className="mythic">chance of Mythic</b>, often upgraded, and a <b>{Math.round(TRIAL_BONUS_ITEM * 100)}% chance of a second piece</b>.</p>
+            <p>Each win drops <b>one piece</b> of the boss's slot, <b>Legendary</b> or with a small <b className="mythic">chance of Mythic</b> (very rare: High Mythic), often upgraded, and a <b>{Math.round(TRIAL_BONUS_ITEM * 100)}% chance of a second piece</b>.</p>
             <p>The loot falls on the arena floor: pick it up before you leave. Dying or leaving does not use your daily try.</p>
           </div>
           <div className="bt-list">
@@ -79,9 +79,15 @@ export const BossTrialsWindow: React.FC = () => {
                   </button>
                   {isOpen && (
                     <div className="bt-drops">
-                      <div className="bt-odds">
-                        <b>{t.slotLabel}</b>: Legendary <b>{legend}%</b>, <span className="mythic"><b>chance of Mythic {mythic}%</b></span> per piece.
-                        {' '}Second piece <b>{Math.round(TRIAL_BONUS_ITEM * 100)}%</b>. Mythic is not guaranteed.
+                      <div className="bt-odds" data-testid={`bt-odds-${i}`}>
+                        <table>
+                          <thead><tr><th /><th>Chance</th><th>Low</th><th>Mid</th><th>High</th></tr></thead>
+                          <tbody>
+                            <tr><td>Legendary</td><td>{legend}%</td>{TRIAL_GRADES.LEGENDARY.map((g, k) => <td key={k}>{pc(g)}</td>)}</tr>
+                            <tr className="mythic"><td>Mythic</td><td>{mythic}%</td>{TRIAL_GRADES.MYTHIC.map((g, k) => <td key={k}>{pc(g)}</td>)}</tr>
+                          </tbody>
+                        </table>
+                        <p>Mythic is not guaranteed: it is a <b>chance</b>, and <b>High Mythic</b> is the rarest drop of all ({(TRIAL_MYTHIC * TRIAL_GRADES.MYTHIC[2] * 100).toFixed(1)}% per piece). Second piece: <b>{Math.round(TRIAL_BONUS_ITEM * 100)}%</b>. {t.slot === 'pet' ? 'Pets have no grades.' : 'Low / Mid / High changes the stats of the piece.'}</p>
                       </div>
                       <div className="bt-items rpg-scroll" data-testid={`bt-drops-${i}`}>
                         {drops[i].length === 0 && <div className="bt-empty">No pieces for your class in this slot.</div>}

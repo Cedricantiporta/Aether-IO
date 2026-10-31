@@ -4,7 +4,7 @@
 // Once per boss per day, counted only after a WIN (loot received; a death / abandon does not use the try; local calendar day, dailyChallenge.dayKey, saved per character in progress.trialDay); a "Boss Trial Ticket" (300 gems) buys a rematch.
 // Pure data + run state (no React, no store import). The store (startBossTrial / claimBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
 // ============================================================================
-import type { HeroClass, Item, Rarity } from './types';
+import type { HeroClass, Item, ItemGrade, Rarity } from './types';
 import { ITEMS_POOL, PETS_POOL } from './constants';
 import { canUseClass, PICKAXE_ID } from './itemClass';
 
@@ -45,9 +45,15 @@ export function trialPool(slot: TrialBoss['slot'], r: Rarity, hero: HeroClass): 
 
 /** Chance of a 2nd item (same slot, rolled like the first) on every win (the first one is guaranteed). */
 export const TRIAL_BONUS_ITEM = 0.5;
-/** Loot odds: never below Legendary. */
-export const TRIAL_MYTHIC = 0.3;
+/** Loot odds (owner 2026-10-31): never below Legendary. Mythic is very rare, and each rarity rolls its own grade (gear only; pets have none): High Mythic is the rarest result. */
+export const TRIAL_MYTHIC = 0.12;
+/** [low, mid, high] shares inside each rarity. */
+export const TRIAL_GRADES: Record<'LEGENDARY' | 'MYTHIC', readonly [number, number, number]> = { LEGENDARY: [0.5, 0.38, 0.12], MYTHIC: [0.7, 0.25, 0.05] };
 export const rollTrialRarity = (rng: () => number = Math.random): Rarity => (rng() < TRIAL_MYTHIC ? 'MYTHIC' : 'LEGENDARY');
+export function rollTrialGrade(r: Rarity, rng: () => number = Math.random): ItemGrade {
+  const g = TRIAL_GRADES[r === 'MYTHIC' ? 'MYTHIC' : 'LEGENDARY'], x = rng();
+  return x < g[0] ? 'LOW' : x < g[0] + g[1] ? 'MID' : 'HIGH';
+}
 /** Bonus (special) lines roll the yellow Perfect quality this many times as often as normal drops (affixes.PERFECT_CHANCE 5% -> 25%). */
 export const TRIAL_PERFECT_LUCK = 5;
 /** Upgrade level of the drop: chance of at least +1..+5 (each step rarer): +1 70%, +2 45%, +3 25%, +4 12%, +5 5%. */

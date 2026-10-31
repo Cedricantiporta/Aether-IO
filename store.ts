@@ -16,7 +16,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, TRIAL_BONUS_ITEM, rollTrialRarity, rollTrialPlus, trialPool, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
+import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, TRIAL_BONUS_ITEM, rollTrialRarity, rollTrialGrade, rollTrialPlus, trialPool, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
 import { runInfo, hardMul, phaseOfTime, shipState, shipDeckChosen, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
@@ -1366,7 +1366,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         const first = rollTrialRarity();
         let pool = mk(first); if (!pool.length) pool = mk(first === 'MYTHIC' ? 'LEGENDARY' : 'MYTHIC');
         if (!pool.length) return null;
-        let it = instantiate(pool[Math.floor(Math.random() * pool.length)], undefined, TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
+        let it = instantiate(pool[Math.floor(Math.random() * pool.length)], rollTrialGrade(pool[0].rarity), TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
         if (isGear(it)) for (let k = rollTrialPlus(); k > 0; k--) it = plusOne(it);
         return it;
       };
