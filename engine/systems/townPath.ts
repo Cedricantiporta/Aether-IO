@@ -14,7 +14,7 @@ const CELL = 0.5;
 /** Hero centre clearance: the hero is pushed to collider r + 0.5, keep a little extra so routes never graze a corner. */
 const CLEAR = 0.78;
 /** Grid box per area (town: the whole island incl. the outer ring, farm, tower nook, portal road and the cave bay). */
-const BOX = { TOWN: [-100, -64, 84, 286], OTHER: [-64, -64, 64, 64] } as const;   // (town: incl. the mainland, the portal and the tower clearing)
+const BOX = { TOWN: [-100, -64, 84, 262], OTHER: [-64, -64, 64, 64] } as const;   // (town: incl. the mainland, the portal and the tower clearing)
 const MAX_W = Math.ceil((BOX.OTHER[2] - BOX.OTHER[0]) / CELL), MAX_H = Math.ceil((BOX.TOWN[3] - BOX.TOWN[1]) / CELL);
 const MAX_N = Math.max(MAX_W, Math.ceil((BOX.TOWN[2] - BOX.TOWN[0]) / CELL)) * MAX_H;
 
