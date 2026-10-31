@@ -337,6 +337,10 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   return false;
 }
 
+/** Dodge mechanics (dodgeMechs.ts): true while this boss is inside the shared layer's breather after a big attack / start a breather of `t` s. */
+export function bossGapOn(e: Enemy): boolean { return S.id === e.id && S.gapT > 0; }
+export function bossGapSet(e: Enemy, t: number): void { if (S.id === e.id && S.gapT < t) S.gapT = t; }
+
 /** Boss died / room left: drop the pending impacts. */
 export function bossMechDied(e?: Enemy): void {
   if (e && S.id >= 0 && S.id !== e.id) return;   // an extra boss died: the owner's state stays

@@ -616,7 +616,7 @@ export function killEnemy(e: Enemy): void {
   {
     const luck = loot * (1 + wave * 0.01) * (e.elite ? 1.5 : 1);
     if (towerMode()) { const c = towerCrystals(e.boss, e.mini, e.elite, wave); if (c > 0) dropCrystals(c, e.pos); }   // tower modes: crystals, never loot
-    else dropTable(e, luck, px, pz);   // (owner) one weighted table per kill: few drops, each a core / gear / material
+    else if (e.kind !== 'MUSHBOMB') dropTable(e, luck, px, pz);   // (Bomb Shrooms drop nothing but their small xp) (owner) one weighted table per kill: few drops, each a core / gear / material
   }
 
   // XP is granted instantly (no orbs), scaled by monster strength at spawn time (see spawnEnemy).

@@ -92,7 +92,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     crates: ['CRATE', 'BARREL', 'POT', 'POT', 'HAY'],
     boss: 'BOSS_TREANT', minis: ['TUSK', 'CAPTAIN'], lichCrypt: false,
-    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7], ['DIREWOLF', 5, 2], ['SPORECAP', 4, 3]],
+    roster: [['SLIME', 10, 0], ['GOBLIN', 9, 0], ['BAT', 5, 1], ['BOAR', 4, 1], ['SKELETON_ARCHER', 4, 2], ['BANDIT', 3, 3], ['BOMBER', 3, 4], ['ZOMBIE', 2, 6], ['SPLITTER', 2, 7], ['DIREWOLF', 5, 2], ['SPORECAP', 4, 3], ['MUSHBOMB', 3, 2]],
   },
   { // 1 Marble Halls: the ruined castle of the old kings, its halls cracked by Gorath's tread (Gorath the Mountain).
     // Inside the castle: flagstone floors with a worn red carpet, broken curtain walls with torches, banners and arched
@@ -154,7 +154,7 @@ export const BIOMES: readonly BiomeDef[] = [
     ],
     crates: ['BARREL', 'CRATE', 'POT', 'BARREL'],
     boss: 'BOSS_HYDRA', minis: ['SHELLBACK', 'CAPTAIN'], lichCrypt: false,
-    roster: [['ROCK_CRAB', 9, 0], ['BANDIT', 8, 0], ['SLIME', 5, 0], ['BOMBER', 5, 0], ['SKELETON_ARCHER', 5, 0], ['ZOMBIE', 6, 1], ['BAT', 3, 0], ['SPLITTER', 3, 2], ['BRUTE', 3, 3], ['GOBLIN', 4, 0]],
+    roster: [['ROCK_CRAB', 9, 0], ['BANDIT', 8, 0], ['SLIME', 5, 0], ['BOMBER', 5, 0], ['SKELETON_ARCHER', 5, 0], ['ZOMBIE', 6, 1], ['BAT', 3, 0], ['SPLITTER', 3, 2], ['BRUTE', 3, 3], ['GOBLIN', 4, 0], ['MUSHBOMB', 3, 1]],
   },
   { // 3 Frostpeak: snowfields, ice rocks, frozen rivers and lakes of black water
     name: 'Frostpeak', style: 'SNOW', ground: ['#cfe0ee', '#f2f8fd'], patch: ['#e8f2fb', '#b9c7d4', '#9aa6b2'], stone: '#a8b4c2', edge: '#aab9c8', fog: '#dbe9f5',

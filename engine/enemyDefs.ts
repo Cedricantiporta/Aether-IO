@@ -160,6 +160,10 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     name: 'Sporecap', hp: 70, speed: 2.2, radius: 0.75, scale: 1.15, contactDamage: 8, projectileDamage: 10,
     xp: 9, gold: 3, cost: 3, minWave: 1, weight: 0, color: 0xd04a3a, knockResist: 0.2, armor: 10,
   },
+  MUSHBOMB: {   // (owner 2026-10-31) kamikaze poison mushroom: 1-hit HP (set in enemies.spawnEnemy), ~2.3x a normal monster's speed, cost < 1.5 so it is never an elite
+    name: 'Bomb Shroom', hp: 1, speed: 5.4, radius: 0.55, scale: 0.85, contactDamage: 0, projectileDamage: 10,
+    xp: 3, gold: 0, cost: 1.2, minWave: 1, weight: 0, color: 0x7a3fc0, knockResist: 0, armor: 0,
+  },
   DIREWOLF: {
     name: 'Dire Wolf', hp: 58, speed: 5.2, radius: 0.75, scale: 1.2, contactDamage: 10, projectileDamage: 0,
     xp: 9, gold: 2, cost: 3, minWave: 1, weight: 0, color: 0x6b6f78, knockResist: 0.1, armor: 10,
@@ -257,7 +261,7 @@ export function rootedHome(k: EnemyKind, R: number, slot: number, out: { x: numb
   else { out.x = side * 1.2; out.z = -(R + 4.2); }
 }
 /** Swarm kinds: rolled in big packs. */
-export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB'; }
+export function isSwarm(k: EnemyKind): boolean { return k === 'BAT' || k === 'SCARAB' || k === 'MUSHBOMB'; }
 
 export type BossKind =
   | 'BOSS_GOLEM' | 'BOSS_LICH' | 'BOSS_TREANT' | 'BOSS_HYDRA' | 'BOSS_WYRM' | 'BOSS_WARLORD' | 'BOSS_WARMACH' | 'BOSS_VOID';

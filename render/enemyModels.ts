@@ -793,6 +793,32 @@ function sporecap(): ModelDef {
   };
 }
 
+/** Kamikaze poison mushroom (MUSHBOMB): a small round toadstool with a sizzling fuse that sprints at the hero; the fuse sparks flare during the WINDUP squeal. */
+function mushbomb(): ModelDef {
+  const stem = '#f2e6cc', cap = '#7a3fc0', dot = '#b8f060';
+  const body = new GB([0.8, 1.12]);
+  body.cyl(0.3, 0.38, 0.7, 9, [0, 0.5, 0], stem);
+  body.sph(0.64, [0, 0.98, 0], cap, [1.15, 0.7, 1.15], 12);
+  body.cyl(0.62, 0.66, 0.07, 12, [0, 0.9, 0], '#d8c49a');
+  for (let i = 0; i < 6; i++) { const a = i * 1.9, r = i ? 0.44 : 0; body.sph(0.1, [cos(a) * r, 1.3 - r * 0.25, sin(a) * r], dot, [1, 0.4, 1], 6); }
+  for (const s of [-1, 1]) { body.sph(0.07, [s * 0.13, 0.62, 0.3], '#1a1010', 1, 5); body.sph(0.025, [s * 0.15, 0.65, 0.35], '#ffffff', 1, 4); }
+  body.box(0.12, 0.05, 0.04, [0, 0.46, 0.34], '#5a2a3a');
+  body.cyl(0.04, 0.05, 0.3, 5, [0, 1.52, 0], '#5a4030');   // the fuse stub
+  const foot = new GB([0.8, 1.1]); foot.sph(0.16, [0, -0.05, 0.05], '#d8c8a8', [1, 0.6, 1.3], 6);
+  const spark = new GB([1, 1]); spark.sph(0.13, [0, 1.72, 0], '#ffb040', 1, 6); spark.sph(0.07, [0, 1.74, 0], '#fff2b0', 1, 5);
+  return {
+    parts: [{ geo: body.build(), mat: 'lit' }, { geo: foot.build(), mat: 'lit' }, { geo: foot.build(), mat: 'lit' }, { geo: spark.build(), mat: 'glow' }], headY: 1.9, shadow: 0.6,
+    pose(e, P, t) {
+      const k = wind(e, 0.35), ph = t * 16;
+      P.body(abs(sin(ph)) * 0.14, 0, sin(ph) * 0.1, 1 + k * 0.35 + sin(t * 60) * 0.05 * k, 1 - k * 0.2);
+      P.part(0, 0, 0, 0);
+      P.part(1, -0.2, 0.15, sin(ph) * 0.4); P.part(2, 0.2, 0.15, -sin(ph) * 0.4);
+      P.part(3, 0, 0, 0, 0, 0, 0, 1 + k * 1.6 + sin(t * 30) * 0.25);
+      P.glow = 1 + k * 3;
+    },
+  };
+}
+
 /** Greenwood Dire Wolf (also the Ember Hellhound with `hound`): lean quadruped, raised hackles, glowing eyes. */
 function wolf(hound: boolean): ModelDef {
   const fur = hound ? '#3a1a14' : '#7a7f88', fur2 = hound ? '#1e0e0a' : '#5a5e66', belly = hound ? '#6a2a1a' : '#b8bcc4', eye = hound ? '#ffb02a' : '#ffe14a';
@@ -1131,12 +1157,12 @@ export function getModels(): Partial<Record<EnemyKind, ModelDef>> {
   if (!cache) cache = { SLIME: slime(), SPLITTER: splitter(), GOBLIN: goblin(), BAT: bat(), SKELETON_ARCHER: minionSkeleton('A'), CULTIST: cultist(), BOMBER: bomber(), BRUTE: brute(), ZOMBIE: zombie(), WRAITH: wraith(), CRYSTAL_GOLEMITE: golemite(), BANDIT: bandit(), BOAR: boar(), ROCK_CRAB: crab(),
     BOSS_SAPLING: sapling(), BOSS_HYDRA_HEAD: hydraHead(), BOSS_IMP: goblin(), // imps: a goblin model, tinted red in Enemies.tsx
     GOBLIN_ARCHER: goblinArcher(), LAKE_HYDRA: lakeHydra(), SCARAB: scarab(), SHIELDBEARER: shieldbearer(),
-    SPORECAP: sporecap(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
+    SPORECAP: sporecap(), MUSHBOMB: mushbomb(), DIREWOLF: wolf(false), HAUNTED_ARMOR: hauntedArmor(), GARGOYLE: gargoyle(), SCORPION: scorpion(), MUMMY: mummy(), YETI: yeti(), FROST_WISP: frostWisp(), BOSS_WYRMLING: wyrmling(),
     HELLHOUND: wolf(true), CINDER_SHAMAN: cinderShaman(), VOID_STALKER: voidStalker(), VOID_EYE: voidEye(), BOSS_CRYSTAL: wardCrystal(),
     SKELETON_WARRIOR: minionSkeleton('W'), BOSS_DKNIGHT: raisedSkeleton('W'), SKELETON_MAGE: minionSkeleton('M'), BONE_GOLEM: boneGolem() };
   return cache;
 }
 export const MODEL_KINDS: EnemyKind[] = ['SLIME', 'SPLITTER', 'GOBLIN', 'BAT', 'SKELETON_ARCHER', 'CULTIST', 'BOMBER', 'BRUTE', 'ZOMBIE', 'WRAITH', 'CRYSTAL_GOLEMITE', 'BANDIT', 'BOAR', 'ROCK_CRAB', 'BOSS_SAPLING', 'BOSS_HYDRA_HEAD', 'BOSS_IMP',
   'GOBLIN_ARCHER', 'LAKE_HYDRA', 'SCARAB', 'SHIELDBEARER',
-  'SPORECAP', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING',
+  'SPORECAP', 'MUSHBOMB', 'DIREWOLF', 'HAUNTED_ARMOR', 'GARGOYLE', 'SCORPION', 'MUMMY', 'YETI', 'FROST_WISP', 'HELLHOUND', 'CINDER_SHAMAN', 'VOID_STALKER', 'VOID_EYE', 'BOSS_CRYSTAL', 'BOSS_WYRMLING',
   'SKELETON_WARRIOR', 'BOSS_DKNIGHT', 'SKELETON_MAGE', 'BONE_GOLEM'];

@@ -22,6 +22,7 @@ const TRICKS: Partial<Record<EnemyKind, string>> = {
   SCARAB: 'Skitters in fast swarms. Weak alone, deadly in numbers.',
   SHIELDBEARER: 'Heavy armour and a tower shield: while braced, hits from the front deal 0. Strike from behind or after its shield bash.',
   SPORECAP: 'Waddles close, puffs up and bursts into a lingering poison spore cloud.',
+  MUSHBOMB: 'Sprints straight at you in packs, squeals, then bursts: a big poison hit and a huge poison floor that slows. Cut them down before they reach you or dash through the blast.',
   DIREWOLF: 'Hunts in packs: circles you while its pounce recharges, then leaps in a straight line.',
   HAUNTED_ARMOR: 'Empty plate armour. Raises its greatsword for a heavy cleave in front of it; step aside.',
   GARGOYLE: 'Sits perched like a statue until you come close or strike it, then takes wing and dive-bombs.',
