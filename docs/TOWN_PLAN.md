@@ -1,4 +1,37 @@
-# Kingdom plan (town v5, 2026-10-21; v4 districts + the shop ring + portal plaza)
+# Kingdom plan v6 (2026-10-31): the 3-tier kingdom (owner: "really make the setup of the town inside the kingdom better ... the 3-tier kingdom: DO IT")
+
+The kingdom grew 51 m NORTH (`WALL.z0` -41 -> -92; gate, bridge, forest road, stable and everything south of z 0 did not move). Walls are now x +-45, z -92..38. Three levels climb north; ONE straight grand avenue (x 0) links them:
+**gate (0, 38) -> plaza (0, 2) -> north street z -6 -> Middle Town stairs (z -14, 10.4 m wide) -> Royal Way (x 0, 5.2 m) -> Castle Hill stairs (z -52, 10.4 m) -> castle way (6.4 m, red carpet) -> keep door (0, -64.4)**.
+Heights (`townData L2_H / L3_H`, `townLift`): L1 0 (paving), L2 1.8, L3 3.8. `TIERS` order matters: the higher tier is FIRST (its flights land inside the lower one's rectangle). `TierSpec.base` = the level a tier's flights come down to (L3's flights land at 1.8), `hide` = edges with no parapet / collider, `tierRun(T)` = flight length (L2 3.78 m, L3 4.2 m). Every flight is >= 4 m wide (the 0.78 m A* clearance rule); the A* ignores heights, so the horse is routed like the hero.
+
+| Level | Where | What |
+| --- | --- | --- |
+| **L1 Lower Town** (h 0) | z -8..38 | unchanged: gate forecourt, avenue + market lanes, plaza (fountain, shop ring: Fortune / Pets / Supplies / Smith / Warehouse west + east, Armory, Fortune, Tech on the south street), park + pen, the two Rises (h 1.2 / 0.8), Hero house, Market Row; North Street houses, Tavern square benches |
+| **L2 Middle Town** (h 1.8, `TIERS[1]`) | x +-43.7, z -52..-14 | residential + civic terrace. Flights to L1 at x -38 (graveyard), -26 (chapel), -16 (trainer yard), **0 (grand)**, 28 (tavern). **Royal Way**: four lawns (x +-3.7..11, z -26..-16 and -38..-31) with statues, benches, hedges, flower clumps, lamps. West: Chapel (-26, -26), graveyard + crypt (NW), trainer yard (-16, -17) with Master Varek, cloister garden. East: Tavern (28, -21), Tavern Row back houses (z -34.7) on the lane z -29.2, pocket park (38.6, -21.4). **Terrace Street z -41.4** (x -31..40) with the north row of 6 houses (x -36.8, -20.9, -14 | 14, 20.9, 36.8, front line -44.3, doors south). Flights to Castle Hill at x +-30 (road x +-30 from the street) |
+| **L3 Castle Hill** (h 3.8, `TIERS[0]`, `TERRACE`) | x +-43.7, z -90.7..-52 | the castle terrace: keep + wings + ring road + gardens. Flights to L2 at x 0 (grand, 10.4 m) and +-30 (4.4 m) |
+
+## Castle (`townData CASTLE / CASTLE_WING / CASTLE_PORCH / CASTLE_RING`, `render/castleExterior.ts`, `engine/castleGrounds.ts`)
+- **Keep**: kit `castle_keep` x1.3 (`CASTLE_S`) at (0, -73.5), footprint 26.6 x 11.8 incl. its four round towers, height 18.4 (colliders: footprint ring + 4 tower circles, as before).
+- **Wings** (code-built, west + east): x +-12..33, z -78.5..-68.5, h 9, cream stone, floor bands, two floors of lit arched windows (front, back and outer faces), crenellations + roof walk, blue banners; **corner towers** r 2.7 h 14 with blue cone roofs, gold finials and pennants on the outer corners (two per wing) + a small turret where each wing meets the keep. Total castle width 71 m (the interior is 70 m wide).
+- **Gatehouse porch** in front of the door: two pillars (x +-3.6), lintel, gold trim, blue gable, two lanterns, shallow steps and a **red runner** down the castle way. Door trigger `castleData CASTLE_DOOR` (0, -64.4) r 4.6, exit spawn `CASTLE_STEPS` (0, -62.8); questNav / townGatesLogic read them (hero target z + 2).
+- **Clear space** (audit): 8.3 m from the towers to the west / east wall, 9.2 m behind (north wall), 13 m from the porch to the Castle Hill edge.
+- **Ring road** (`CASTLE_RING`, 3.4 m): x +-40 from z -57 to -85.6, front leg z -57, back leg z -85.6; the side flights land on the front leg (roads x +-30). Walkable 360 degrees (audit: 8 legs, 215 m, no detour).
+- **Gardens** (all in `engine/castleGrounds.ts`, kit pieces via FILL, colliders in `townData TOWN_COLLIDERS`): the **Queen's Garden** (west front, lawn, fountain (-21, -63.8), gazebo (-34.2, -64.6), a ring of real Quaternius flower clumps, benches, Gardener Pim), the **Royal Yard** (east front: sand floor, weapon / shield racks, armour stands, hay targets, a well, Squire Tavi), statues + lamps along the castle way, side margins (hedge + flower clumps between the road and the wall), the back garden (statues, benches facing the keep, flower beds, a row of fruit trees, hedge under the north wall), banner poles on the retaining-wall corners. **Guards**: Sir Aldo / Sir Bram at the top of the grand flight (+-6.9, -54.7), Sentry Hale / Vero patrol the west / east ring road, all NPCs have talk + bubbles (no quests).
+
+## Moved / changed (everything else stays where docs below say)
+- Old castle terrace (x +-11, z -27.5..-19), its stairs and flower boxes, the old Chapel Hill (h 1.6) + Tavern Row (h 0.9) tiers -> one Middle Town terrace. Chapel, graveyard, tavern, trainer, tavern square benches did NOT move.
+- North wall -41 -> -92 (side towers added at z -40, -66). The hermit's trail and everything north of the old wall moved 51 m north (`townData.NORTH_GROWTH`): Old Wend + camp (0, -102), trail rocks, the NW chest `nw_corner` (-43, -99.4), trail trees, the townFill trail legs, island boxes `[-48.5, -110, 56.5, 56]` + hermit clearing `[-9, -112, 9, 0]`, townHills grid Z0 -128 / NZ 393, townPath BOX z -128.
+- Roads: castle path -> Royal Way + castle way; graveyard / tavern branch roads extended up to their stairs; new Terrace Street, Tavern Row lane starts at the avenue, ring road + two side-flight roads. Lamps (`CG_LAMPS`), planters (`CG_PLANTERS`), benches (`CG_SEATS`), lawns (`CG_LAWNS`) feed LAMPS / PLANTERS / TOWN_SEATS / GRASS_PATCHES. `townKit` lamp filter is `z > WALL.z0`.
+- Minimap: terraces as soft pale blocks, castle = keep + two wings + towers.
+- Island feel: the walls keep the lake / sea on the west and north; a 6 m grass strip + the hermit trail runs between the north wall and the sea edge; the existing river / bridge / stable / cave are untouched (no moat was added).
+
+## Layout check (node, no browser: esbuild-bundle townPath + mapgen + data; `.audit/audit.ts` style)
+Before (v5): 136 targets x 2 starts, 2 unreachable (a well, by design of a fence helper), 11 pinch points, 7 in-road footprints (all shop fronts / street dressing of the plaza ring).
+After (v6): 153 targets x 2, the same 2 unreachable, 11 pinches (the same ones), 7 in-road (same), every new target reachable (castle door, ring corners, gardens, yard, fountain, lawn benches, Terrace Street ends, side flights, chapel / tavern / graveyard / trainer), tier flights narrower than 4 m: 0 of 14, castle ring 8 legs walkable. NEAR-ROAD grew 24 -> 78 only because of the garden hedges that line the ring road (0.7 m off its edge).
+
+# (older plans below: v5 / v4 text. Where it talks about the castle terrace at z -27.5, Chapel Hill / Tavern Row as separate tiers or the north wall at z -41, v6 above wins)
+
+## Kingdom plan (town v5, 2026-10-21; v4 districts + the shop ring + portal plaza)
 
 Owner brief: "restructure the kingdom itself so it makes sense, not much open space with nothing", then "every shop unique, not in one row".
 Camera pitch ~50 deg and it rotates, so buildings may face any yaw (front = +z turned by `rot`; the cottages carry small yaws). Coordinates are world x / z. The code wins; this is the map.

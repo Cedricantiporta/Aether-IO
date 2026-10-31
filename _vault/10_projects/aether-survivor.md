@@ -17,6 +17,8 @@ Read first: `CLAUDE.md`, `docs/HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/RUN_DE
 - Wishing fountain: one luck wish per day (`wishing.ts`).
 - Boss Trials portal moves to the shore headland, facing inland (in progress).
 
+- Town Plan v6 (2026-10-31): 3-tier kingdom (L1 lower town, L2 Middle Town h 1.8, L3 Castle Hill h 3.8), walls grew 51 m north, grand castle (keep + wings + towers + ring road + gardens). Data: `engine/townData.ts` (TIERS/CASTLE*), `engine/castleGrounds.ts`; render `render/castleExterior.ts`. Map: `docs/TOWN_PLAN.md`.
+
 ## Open
 - Eggs: owner's "eggs without a container" request is unclear (farm egg nests vs pet icons).
 - Tower milestone prizes still include gear/pets while the UI says crystals only.

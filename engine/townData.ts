@@ -1031,9 +1031,9 @@ export const NPCS: NpcDef[] = [
       ['Once you are strong enough, the whole east is yours to explore. Bring me back a nice rock.']],
     bubbles: ['None shall pass! Unless they are level 40.', 'East Gate, guarded since breakfast.', 'Halt! ...Oh, carry on, I meant the pigeon.'],
   },
-  // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
+  // the castle's front: two royal guards stand at the top of the grand flight up to Castle Hill (stationary, facing the plaza; Town Plan v6)
   {
-    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-6.6, -64.2], y: TERRACE.h,
+    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-6.9, -54.7], y: TERRACE.h,
     talk: [
       ['The King receives heroes in the throne hall. Go on in.'],
       ['I have stood at this door for eleven years. The door has never once tried anything.', 'Still. One must be ready.'],
@@ -1041,7 +1041,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['For the King!', 'All quiet at the castle.', 'Stand tall, Bram.'],
   },
   {
-    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [6.6, -64.2], y: TERRACE.h,
+    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [6.9, -54.7], y: TERRACE.h,
     talk: [
       ['Halt! State your... ah, the new guard. Welcome to the castle.'],
       ['Aldo snores standing up. Do not tell him I said that.'],

@@ -16,7 +16,7 @@
 // Everything else is forest, hedges, rocks and props: nothing is left as bare grass or bare paving.
 // ============================================================================
 import { HORSE_STATUES } from './qtVillage';
-import { CG_HEDGES, CG_STATUES, CG_PROPS, CG_TREES, CG_FLOWERS, CG_BEDS, CG_YARD_RACKS, CG_YARD_HAY, CG_SEATS } from './castleGrounds';
+import { CG_BANNERS, CG_HEDGES, CG_STATUES, CG_PROPS, CG_TREES, CG_FLOWERS, CG_BEDS, CG_YARD_RACKS, CG_YARD_HAY, CG_SEATS } from './castleGrounds';
 import {
   TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, tierRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, BOSS_PORTAL, BOSS_PORTAL_S, bossAt, ADV_VILLAGE, inAdvPlaza, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
@@ -418,6 +418,7 @@ for (const sx of [-1, 1]) {
   for (const [pc, x, z, yaw] of CG_YARD_RACKS) { put(pc, x, z, yaw, 1, 1, 1); claim(x, z, 1.2); }
   for (const [x, z, yaw, sc] of CG_YARD_HAY) { put(PIECES.haystack, x, z, yaw, sc, sc, sc); claim(x, z, 1.5 * sc); }
   for (const [x, z] of CG_SEATS) claim(x, z, 1.2);
+  for (const [x, z] of CG_BANNERS) decor('banner_pole', x, z, 0, 1, { solid: 'disc', r: 0.35 });
   for (const [x1, z1, x2, z2] of CG_HEDGES) hedge(x1, z1, x2, z2);
   for (const [x, z, role] of CG_TREES) {
     const piece = role === 0 ? PIECES.oak : role === 1 ? PIECES.blossom : PIECES.fruit, p = pick(piece, r()), sc = 0.8 + r() * 0.2;

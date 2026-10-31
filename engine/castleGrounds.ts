@@ -16,11 +16,14 @@ export const CG_LAWNS: [number, number, number, number, number, number][] = [
 export const CG_LAMPS: [number, number][] = [
   ...[-19, -26.4, -35, -45.5].flatMap((z): [number, number][] => [[-3.7, z], [3.7, z]]),   // Royal Way (L2)
   ...[-55.2, -59.5, -63.0].flatMap((z): [number, number][] => [[-4.9, z], [4.9, z]]),          // the castle way (L3)
-  [-12, -54.4], [12, -54.4], [-22, -54.4], [22, -54.4], [-35, -54.4], [35, -54.4],         // along the L3 front parapet
+  [-15, -54.4], [15, -54.4], [-22, -54.4], [22, -54.4], [-35, -54.4], [35, -54.4],         // along the L3 front parapet
   ...[-62, -72, -80].flatMap((z): [number, number][] => [[-42.4, z], [42.4, z]]),             // the side ring road
   [-30, -88], [-15, -88], [0, -88], [15, -88], [30, -88],                                    // the back strip
   [-40.4, -55.1], [40.4, -55.1],
 ];
+
+/** Banner poles (kit banner_pole, 5.4 m): the corners of the L2 / L3 retaining walls and the foot of the grand flights. */
+export const CG_BANNERS: [number, number][] = [[-12.6, -15.0], [12.6, -15.0], [-41.8, -54.0], [41.8, -54.0], [-6.9, -50.2], [6.9, -50.2], [-41.8, -16.0], [41.8, -16.0]];
 
 /** Benches (x, z, yaw: 0 faces south, PI/2 faces east, -PI/2 faces west, PI faces north). They are sit spots (TOWN_SEATS). */
 export const CG_SEATS: [number, number, number][] = [
@@ -34,7 +37,7 @@ export const CG_SEATS: [number, number, number][] = [
 /** Stone flower boxes [x, z, w, d, kind(1 flowers)]: along the L3 front parapet and round the porch. */
 export const CG_PLANTERS: [number, number, number, number, 0 | 1][] = [
   [-7.4, -15.3, 3.0, 1.1, 1], [7.4, -15.3, 3.0, 1.1, 1],
-  [-8.2, -53.3, 3.4, 1.1, 1], [8.2, -53.3, 3.4, 1.1, 1], [-17, -53.3, 3.4, 1.1, 1], [17, -53.3, 3.4, 1.1, 1], [-25, -53.3, 3.0, 1.1, 1], [25, -53.3, 3.0, 1.1, 1],
+  [-11.6, -53.3, 3.0, 1.1, 1], [11.6, -53.3, 3.0, 1.1, 1], [-18.6, -53.3, 3.4, 1.1, 1], [18.6, -53.3, 3.0, 1.1, 1], [-25, -53.3, 3.0, 1.1, 1], [25, -53.3, 3.0, 1.1, 1],
   [-7.4, -66.6, 3.2, 1.1, 1], [7.4, -66.6, 3.2, 1.1, 1],   // beside the porch steps
 ];
 
