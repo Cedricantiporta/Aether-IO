@@ -42,6 +42,7 @@ export type EnemyKind =
   | 'SHIELDBEARER'    // bulky, high armour, low damage; blocking stance: frontal hits deal 0 ("BLOCKED")
   // ---- biome-unique monsters (2 per biome)
   | 'SPORECAP'        // Greenwood: walking mushroom, bursts into a lingering spore cloud near you
+  | 'MUSHBOMB'        // Greenwood / Coral Isles: very fast kamikaze poison mushroom (systems/dodgeMechs.ts aiMushbomb): explodes on contact, leaves a huge poison floor
   | 'DIREWOLF'        // Greenwood: fast pack hunter, circles then pounces
   | 'HAUNTED_ARMOR'   // Marble Halls: empty plate armour, slow, telegraphed greatsword cleave in front
   | 'GARGOYLE'        // Marble Halls: perched stone statue until you come close, then swoops in dives

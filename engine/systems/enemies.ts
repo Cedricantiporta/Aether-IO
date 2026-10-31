@@ -46,6 +46,7 @@ import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { trial, TRIAL_SCALE_BIOME, TRIAL_DMG, TRIAL_TELE, TRIAL_CD } from '../../bossTrials';
 import { updateBoss } from './bosses';
+import { aiMushbomb } from './dodgeMechs';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
 import { bp } from './bossPhaseState';
@@ -434,6 +435,7 @@ export function spawnEnemy(
   if (e.corrupt) { e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3; }
   e.mini = false; e.downT = e.downMax = e.downResT = 0;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
+  if (kind === 'MUSHBOMB') { e.maxHp = e.hp = 1; e.shield = 0; e.armor = 0; e.traits = 0; e.patternT = 0; }   // Bomb Shroom (dodgeMechs.ts): 1-hit HP, no shield / traits
   e.dodgeCd = 1 + Math.random() * 2.5;
   e.staggerMax = boss ? 100 : 0;
   if (!boss) initTrick(e);
@@ -1395,6 +1397,7 @@ function runAI(e: Enemy): void {
     case 'SCARAB': aiScarab(e); break;
     case 'SHIELDBEARER': aiShieldbearer(e); break;
     case 'SPORECAP': aiSporecap(e); break;
+    case 'MUSHBOMB': aiMushbomb(e, tdx, tdz, tdist); break;
     case 'DIREWOLF': aiDirewolf(e, false); break;
     case 'HAUNTED_ARMOR': aiHauntedArmor(e); break;
     case 'GARGOYLE': aiGargoyle(e); break;

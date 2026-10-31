@@ -41,6 +41,7 @@ import { DarkHeroes } from './DarkHero';
 import { HumanBosses } from './HumanBosses';
 import { BossFx } from './BossFx';
 import { BossCrystals } from './BossCrystals';
+import { DodgeFx } from './DodgeFx';
 import { Projectiles } from './Projectiles';
 import { Zones } from './Zones';
 import { GroundFx } from './GroundFx';
@@ -151,6 +152,7 @@ export function Scene() {
           <HumanBosses />
           <BossFx />
           <BossCrystals />
+          <DodgeFx />
           <RoomEvents />
           <BiomeHazards />
           <VoidFx />

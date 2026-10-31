@@ -379,7 +379,21 @@ function sfxSkill(name: string): void {
     default: break;
   }
 }
+/** Dodge mechanics cues (engine/systems/dodgeMechs.ts, 'trick' kinds "DG_*"): a rising warning sweep for the i-frame ring, a heavy boom on release, beam hum, mushroom squeals. */
+function sfxDodge(kind: string): void {
+  const k = kind.split('|');
+  switch (k[0]) {
+    case 'DG_RING': { const d = Math.max(0.4, +k[1] || 1.1); tone(220, 1500, d, 0.2, { type: 'sawtooth', attack: d * 0.7, priority: true }); tone(440, 3000, d, 0.1, { type: 'square', attack: d * 0.8 }); noise(d, 0.12, 400, 6000, { attack: d * 0.8 }); break; }
+    case 'DG_GO': tone(90, 28, 0.7, 0.42, { type: 'sine', priority: true }); noise(0.5, 0.3, 1200, 120, { priority: true }); tone(1600, 400, 0.25, 0.14, { type: 'triangle' }); break;
+    case 'DG_BEAM': tone(160, 420, 0.4, 0.14, { type: 'sawtooth', attack: 0.1 }); noise(0.4, 0.08, 800, 3000); break;
+    case 'DG_RUN': tone(900, 1700, 0.16, 0.07, { type: 'triangle' }); tone(1300, 2200, 0.16, 0.05, { type: 'square', delay: 0.05 }); break;
+    case 'DG_FUSE': tone(1100, 2600, 0.3, 0.14, { type: 'square', priority: true }); noise(0.3, 0.1, 3000, 6000); break;
+    case 'DG_BOOM': tone(110, 40, 0.5, 0.3, { type: 'sine', priority: true }); noise(0.55, 0.22, 700, 150, { priority: true }); tone(500, 180, 0.3, 0.1, { type: 'sawtooth' }); break;
+    default: break;
+  }
+}
 function sfxTrick(kind: string): void {
+  if (kind.charCodeAt(0) === 68 && kind.startsWith('DG_')) { sfxDodge(kind); return; }
   if (!gate(G.SHOCK)) return;
   switch (kind) {
     case 'GOO': tone(180, 90, 0.3, 0.18, { type: 'sine' }); noise(0.25, 0.12, 600, 200); break;

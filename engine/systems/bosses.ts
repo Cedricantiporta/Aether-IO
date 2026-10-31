@@ -31,6 +31,7 @@ import { formName } from './bossForms';
 import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
+import { dodgeBoss } from './dodgeMechs';
 
 const dirV = new Vector3();
 const posV = new Vector3();
@@ -94,6 +95,7 @@ export function updateBoss(e: Enemy, dt: number, distToPlayer: number): void {
   syncHud(e);
   checkPhase(e);
   proxTick(e, dt);   // proximity pressure (bossMech): close skills only with someone near, more often the longer they stay
+  if (dodgeBoss(e, dt)) return;   // dodge mechanics (dodgeMechs.ts): i-frame rings, beams, gatlings, trails own the boss while they run
   if (e.kind === 'BOSS_GOLEM') golem(e, distToPlayer);
   else if (e.kind === 'BOSS_LICH') lich(e, dt, distToPlayer);
   else updateBoss2(e, dt, distToPlayer); // Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (bosses2.ts)
