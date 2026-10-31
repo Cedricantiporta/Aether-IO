@@ -14,7 +14,7 @@ import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
-import { forEachHero, nearestHero, randomHero, isAlly } from '../heroes';
+import { forEachHero, nearestHero, randomHero, isAlly, shoveHero } from '../heroes';
 
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
 export const BT = {
@@ -45,7 +45,7 @@ export const breath = { active: false, x: 0, z: 0, dx: 0, dz: 1, range: 20, half
 /** Player chill meter: 4 stacks freeze. */
 export const chill = { stacks: 0, t: 0, immuneT: 0 };
 /** Arena modifiers. Void: circular arena that shrinks; Glacius: blizzard slow. */
-export const arena = { shrink: false, cx: 0, cz: 0, r: 60, minR: 22, rate: 0.9, edgeT: 0, blizzard: false, blizzardK: 0, hailT: 0 };
+export const arena = { hard: false, shrink: false, cx: 0, cz: 0, r: 60, minR: 22, rate: 0.9, edgeT: 0, blizzard: false, blizzardK: 0, hailT: 0 };
 
 /** QA counters. */
 export const bossStats: Record<string, number> = {};
@@ -365,6 +365,18 @@ export function updateBossFx(dt: number): void {
   if (chill.immuneT > 0) chill.immuneT -= dt;
   if (chill.stacks > 0) { chill.t += dt; if (chill.t > 3) { chill.t = 0; chill.stacks--; } }
 
+  // ---- Void arena: `hard` = the Herald's void stage, a fixed ring the heroes cannot leave (an invisible wall at the dark swirling edge)
+  if (arena.shrink && arena.hard) {
+    const lim = arena.r - 0.6;
+    forEachHero((h) => {
+      const dx = h.pos.x - arena.cx, dz = h.pos.z - arena.cz, d2 = dx * dx + dz * dz;
+      if (d2 <= lim * lim) return;
+      const d = Math.sqrt(d2), back = d - lim;
+      if (isAlly(h)) shoveHero(h, -dx / d * back, -dz / d * back); else { h.pos.x -= dx / d * back; h.pos.z -= dz / d * back; }
+      arenaStat.pushes++;
+      if (!isAlly(h) && world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: h.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
+    });
+  }
   // ---- Void shrinking arena
   if (arena.shrink) {
     if (arena.r > arena.minR) arena.r = Math.max(arena.minR, arena.r - arena.rate * dt);
@@ -397,6 +409,8 @@ export function updateBossFx(dt: number): void {
   } else arena.blizzardK = Math.max(0, arena.blizzardK - dt);
 }
 let lastVoidText = -9;
+/** QA: how many times the void wall pushed a hero back. */
+export const arenaStat = { pushes: 0 };
 
 /** Multiplier applied to player move speed (read by zones.updateZones -> envSlow). */
 export function arenaSlow(): number { return arena.blizzard ? 0.6 : 1; }   // Glacius's blizzard: -40% move speed everywhere
@@ -416,7 +430,7 @@ export function endBossFx(): void {
   for (const q of portals) q.active = false;
   for (const q of echoes) q.active = false;
   breath.active = false; chill.stacks = 0; chill.t = 0; chill.immuneT = 0;
-  arena.shrink = false; arena.blizzard = false; arena.blizzardK = 0; arena.hailT = 1.5; arena.r = 60; arena.edgeT = 0;
+  arena.shrink = false; arena.hard = false; arena.blizzard = false; arena.blizzardK = 0; arena.hailT = 1.5; arena.r = 60; arena.edgeT = 0;
   dive.landed = false;
   // pending boss telegraphs must not fire after their caster is gone
   const zs = world.zones;
