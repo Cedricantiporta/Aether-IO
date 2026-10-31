@@ -19,14 +19,18 @@ export const Modal: React.FC<ModalProps> = (props) => {
   if (props.portal) return createPortal(<ModalBody {...props} />, (document.querySelector('.hud-root') as HTMLElement) ?? document.body);
   return <ModalBody {...props} />;
 };
+const modalStack: object[] = [];   // open modals, newest last: Esc closes only the top one (engine/input.ts then never sees that Esc)
 const ModalBody: React.FC<ModalProps> = ({ open, onClose, title, ribbon, tone = 'gold', width = '26rem', children, z = 200, onConfirm, icon, dim = .6, full }) => {
+  const closeRef = React.useRef(onClose); closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
+    const me = {}; modalStack.push(me);
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && onConfirm) { e.preventDefault(); e.stopPropagation(); onConfirm(); }
+      if (e.code === 'Escape' && !e.repeat && modalStack[modalStack.length - 1] === me && closeRef.current && !(e.target instanceof HTMLElement && /^(INPUT|TEXTAREA)$/.test(e.target.tagName))) { e.preventDefault(); e.stopImmediatePropagation(); closeRef.current(); }
     };
     window.addEventListener('keydown', h, true);
-    return () => window.removeEventListener('keydown', h, true);
+    return () => { window.removeEventListener('keydown', h, true); const i = modalStack.indexOf(me); if (i >= 0) modalStack.splice(i, 1); };
   }, [open, onConfirm]);
   return (
     <AnimatePresence>
