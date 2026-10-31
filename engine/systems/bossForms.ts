@@ -8,7 +8,7 @@ import type { Enemy, EnemyKind } from '../types';
 export interface BossFormDef {
   /** body scale of form 1 / form 2 relative to the boss's normal size (hit-box + model + camera follow `e.radius`) */
   s1: number; s2: number;
-  /** HP multiplier of form 1 / form 2 (each form gets the FULL bar stack, BOSS_HP_X layers); `final*` = the Herald's finale fight */
+  /** HP multiplier of form 1 / form 2 (each form gets the FULL bar stack, bossLayers() layers); `final*` = the Herald's finale fight */
   hp: readonly [number, number]; finalHp: readonly [number, number];
   /** form 2: movement speed x, hit power x (projectile + contact) */
   speed: number; dmg: number;

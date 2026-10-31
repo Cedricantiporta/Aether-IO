@@ -39,8 +39,9 @@ import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './e
 import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
-import { useGameStore, rollDropPlus } from '../../store';
-import { runMods, veteran, VET } from '../runMods';
+import { useGameStore, rollDropPlus, DMG_INFLATE } from '../../store';
+import { runMods, veteran, VET, runInfo } from '../runMods';
+import { BOSS_HP_TOTAL, BOSS_LAYERS, BOSS_LAYERS_HARD, bossLvArmor, bossHitScale } from '../bossBalance';
 import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { trial, TRIAL_SCALE_BIOME, TRIAL_DMG, TRIAL_TELE, TRIAL_CD } from '../../bossTrials';
@@ -369,7 +370,7 @@ export function spawnEnemy(
   // (owner 2026-10-26) the Endless Tower family opens after a first clear, so it is much harder: x1.6 HP / x1.4 damage, plus +15% / +10% per cleared Ascension
   const tAsc = towerMode() ? (() => { const pg = useGameStore.getState().progress; return pg.endings > 0 ? Math.max(0, pg.ascensionMax - 1) : 0; })() : 0;
   const towerHp = towerMode() ? 1.6 + 0.15 * tAsc : 1, towerDmg = towerMode() ? 1.4 + 0.1 * tAsc : 1;
-  const hpMul = towerHp * waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * BOSS_HP_X * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
+  const hpMul = towerHp * waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * BOSS_HP_TOTAL * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // (2026-10-31: total boss HP = 2x, the x5 / x10 bars are cosmetic, bossBalance.ts) normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
   const dmgMul = towerDmg * waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL * (trial.on && boss ? TRIAL_DMG : 1);   // (Boss Trial: bosses hit 25% harder)
   // later biomes breed tougher monsters on top of the depth curve (owner): +12% HP and +10% damage per biome (2026-10-25: HP was +15%)
   const bi = Math.max(0, Math.min(7, (trial.on ? TRIAL_SCALE_BIOME : world.room.biome) | 0));
@@ -397,7 +398,8 @@ export function spawnEnemy(
   e.xp = Math.round(rewardDef.xp * MONSTER_XP_MUL * (1 + 0.08 * (wave - 1)) * (boss ? 60 : elite ? 5 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.gold = Math.round(rewardDef.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
-  if (boss) e.armor = Math.round(e.armor * BOSS_ARMOR_MUL);   // (owner 2026-10-26) bosses were too easy: +80% defense
+  if (boss) e.armor = Math.round(e.armor * BOSS_ARMOR_MUL) + bossLvArmor(lvl, trial.on);   // (owner 2026-10-26) bosses were too easy: +80% defense; (2026-10-31) + a term that grows with the hero's level (bossBalance.ts)
+  if (boss) { const k = bossDmgScale(e, wave); e.contactDamage *= k; e.projectileDamage *= k; }   // (2026-10-31) flat boss hits track the hero's max HP / defence (bossBalance.ts)
   if (kind === 'BOMBER' && world.room.active && world.room.biome >= 3) { e.speed *= 1.45; e.armor = Math.max(e.armor, 45); }   // (owner 2026-10-25) later realms: fast rushing bombers with medium defense
   // (owner 2026-10-26) The Void breeds corrupted monsters: 2x damage, 1.3x bigger (the shots turn black-purple in render)
   e.corrupt = !boss && !opts?.fixed && !isStationary(kind) && world.room.active && ((world.room.biome | 0) % BIOMES.length) === VOID_BIOME && Math.random() < CORRUPT_CHANCE;
@@ -441,16 +443,25 @@ export function spawnEnemy(
   return e;
 }
 
-/** (owner 2026-10-31 "bosses way way more HP, x5 and up") every boss has 5x the HP it had; dark heroes (sized against their guardian) and the Slime King follow. */
-export const BOSS_HP_X = 5;
+/** Cosmetic stacked-bar count of a boss HP bar (the TOTAL HP is BOSS_HP_TOTAL x, split in equal layers): 5, or 10 in Boss Trials / Ascension >= 5. */
+export function bossLayers(): number { return trial.on || runInfo.ascension >= 5 ? BOSS_LAYERS_HARD : BOSS_LAYERS; }
+/** Flat boss-hit multiplier for the freshly built boss `e` (contact / projectile already set): see bossBalance.bossHitScale. Spawn-time only (no per-frame cost). */
+function bossDmgScale(e: Enemy, wave: number): number {
+  const st = useGameStore.getState();
+  const def = st.stats.defense / (1 + 0.025 * Math.max(0, wave - 1));   // same depth-pierce as combat.damagePlayer
+  const mods = runMods(st.difficulty);
+  const mit = DMG_INFLATE * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce));
+  const raw = Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * 1.5;   // = bossMech pwr(e) x BOSS_SKILL_MUL
+  return bossHitScale(raw, mit, st.stats.maxHealth, trial.on);
+}
 /** (owner 2026-10-26) The HP `bossKind` would have in the room the freshly spawned ordinary enemy `e` stands in (same depth / level / tower / biome scaling):
  *  the dark heroes are sized against their biome's guardian with this. Call it right after spawnEnemy, before touching e.maxHp. */
 export function bossHpLike(e: Enemy, bossKind: EnemyKind): number {
   const mods = runMods(useGameStore.getState().difficulty);
-  return Math.round(e.maxHp * (ENEMY_DEFS[bossKind].hp * 0.25 * 3.6 * BOSS_HP_X * mods.bossHp * WIND.bossHp) / (ENEMY_DEFS[e.kind].hp * 1.4));
+  return Math.round(e.maxHp * (ENEMY_DEFS[bossKind].hp * 0.25 * 3.6 * BOSS_HP_TOTAL * mods.bossHp * WIND.bossHp) / (ENEMY_DEFS[e.kind].hp * 1.4));
 }
 /** Armour a boss of `bossKind` has at this wave (a dark hero's defence = the guardian's, not an elite's). */
-export function bossArmorLike(bossKind: EnemyKind, wave: number): number { return Math.round(armorFor(bossKind, wave, false) * BOSS_ARMOR_MUL); }
+export function bossArmorLike(bossKind: EnemyKind, wave: number): number { return Math.round(armorFor(bossKind, wave, false) * BOSS_ARMOR_MUL) + bossLvArmor(Math.max(1, useGameStore.getState().level | 0), trial.on); }
 
 /** Wave 5/15/25... mini-boss: elite-like unique (8x hp, +50% size) of a regional kind; drives world.boss HUD. */
 /** The enemy whose hp the boss bar shows (bosses win over minis). */
@@ -466,7 +477,7 @@ export function spawnMiniBoss(kind: EnemyKind, pos: Vector3, name: string, title
   e.affix = 'NONE';
   e.radius *= MINI.scaleMul; e.scale *= MINI.scaleMul;
   e.xp *= 4; e.gold *= 4;
-  e.mini = true; initSpecial(e); e.staggerMax = 70; e.armor = Math.round(e.armor * 1.25);
+  e.mini = true; initSpecial(e); e.staggerMax = 70; e.armor = Math.round(e.armor * 1.25) + Math.round(bossLvArmor(Math.max(1, useGameStore.getState().level | 0), trial.on) * 0.5);   // (2026-10-31 mini-bosses: half the boss level-armour term)
   e.pattern = MINI.flag;
   e.angle = MINI.slamCd * 0.7;
   e.attackCd = Math.max(e.attackCd, 1.5);
