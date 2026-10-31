@@ -23,7 +23,8 @@ import { CELL, FX, embers } from './fx';
 import { GB, TAU, litMat, mulberry32, setInst } from './util';
 import { useWorldCounter } from './hooks';
 import type { QualityCfg } from './quality';
-import { FlowerPatches } from './FlowerPatches';
+import { QtBatch } from './qtNature';
+import { QT_PREFIX } from '../engine/qtData';
 import type { Place } from './natureKit';
 
 // ------------------------------------------------------------- textures ----
@@ -370,14 +371,16 @@ function FountainPlaza({ q }: { q: QualityCfg }) {
     const fg = mergeGeometries([new CircleGeometry(MOAT_R - MOAT_HW + 0.5, 56).rotateX(-Math.PI / 2), new RingGeometry(MOAT_R + MOAT_HW - 0.5, PLAZA_COL_R + 2.6, 72).rotateX(-Math.PI / 2)])!;
     const floor = new Mesh(fg, new MeshStandardMaterial({ map: marbleTex(), roughness: 0.45, metalness: 0.05 }));
     floor.position.set(0, 0.014, cz); floor.receiveShadow = true;
-    const b = new GB([0.82, 1.06]), beds: Place[] = [];
+    const b = new GB([0.82, 1.06]), beds = new Map<string, Place[]>(), addBed = (n: string, p: Place) => { const k = QT_PREFIX + n; let l = beds.get(k); if (!l) beds.set(k, (l = [])); l.push(p); };
     // columns + flower planters between them
     for (let i = 0; i < PLAZA_COLS; i++) {
       const a = (i / PLAZA_COLS) * TAU + Math.PI / PLAZA_COLS, x = Math.cos(a) * PLAZA_COL_R, z = cz + Math.sin(a) * PLAZA_COL_R;
       b.box(1.3, 0.4, 1.3, [x, 0.2, z], '#e4ddd0'); b.cyl(0.42, 0.48, 4.6, 12, [x, 2.7, z], '#f2ede4'); b.box(1.2, 0.35, 1.2, [x, 5.15, z], '#e4ddd0'); b.cyl(0.7, 0.45, 0.3, 10, [x, 4.85, z], '#ece6da');
       const a2 = a + Math.PI / PLAZA_COLS, px = Math.cos(a2) * (PLAZA_COL_R + 0.4), pz = cz + Math.sin(a2) * (PLAZA_COL_R + 0.4);
       b.box(1.8, 0.5, 0.8, [px, 0.25, pz], '#d8d0c2', [0, -a2, 0]);
-      for (let k = 0; k < 2; k++) beds.push({ x: px + Math.cos(a2 + Math.PI / 2) * (k - 0.5) * 0.9, y: 0.46, z: pz + Math.sin(a2 + Math.PI / 2) * (k - 0.5) * 0.9, ry: i * 2.1 + k * 1.3, sx: 0.42, sy: 0.42, sz: 0.42 });   // (the kit's flower-on-mound patches, owner 2026-10-31)
+      // (owner 2026-10-31) real Quaternius flowers + grass tufts in the planters (no ball flowers)
+      const FLS = ['Flower_3_Group', 'N_Flowers', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single'];
+      for (let k = 0; k < 5; k++) { const sc = 0.34 + ((i * 5 + k) % 3) * 0.05, ox = Math.cos(a2 + Math.PI / 2) * (k - 2) * 0.32, oz = Math.sin(a2 + Math.PI / 2) * (k - 2) * 0.32; addBed(k % 2 ? 'Grass_Common_Short' : FLS[(i + k) % FLS.length], { x: px + ox, y: 0.46, z: pz + oz, ry: i * 2.1 + k * 1.3, sx: sc, sy: sc, sz: sc }); }
     }
     // the outer tier of the fountain: a wide marble basin around the station's fountain
     b.cyl(4.6, 4.8, 0.55, 28, [0, 0.27, cz], '#e8e2d6'); b.torus(4.55, 0.16, [0, 0.56, cz], '#f4efe6', [Math.PI / 2, 0, 0], 1, 28);
@@ -414,7 +417,7 @@ function FountainPlaza({ q }: { q: QualityCfg }) {
       <primitive object={res.water} />
       <primitive object={res.beam} />
       <primitive object={res.petals} />
-      <Suspense fallback={null}><FlowerPatches places={res.beds} shadows={q.shadowMap > 0} /></Suspense>
+      <Suspense fallback={null}><QtBatch sets={res.beds} shadows={false} /></Suspense>
       {q.lights && <pointLight position={[0, 3, res.cz]} color="#7fd8ff" intensity={18} distance={16} decay={1.5} />}
     </>
   );

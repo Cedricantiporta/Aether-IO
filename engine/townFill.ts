@@ -176,7 +176,7 @@ function prop(piece: string, x: number, z: number, ry: number, s: number, sy?: n
 /** Walk-through decoration (flowers, tufts): only needs the ground to be free of roads / doors / water. */
 const deg = (d: number): number => (d * Math.PI) / 180;
 function deco(piece: string, x: number, z: number, ry: number, s: number, sy?: number): boolean {
-  if (piece === PIECES.tuft) return false;   // (owner 2026-10-22: no loose grass tufts; owner 2026-10-31: the flower-on-mound patches + little mushroom clusters are back - they are the look he likes)
+  if (piece === PIECES.tuft) return false;   // (owner 2026-10-22: no loose grass tufts; 2026-10-31: flowers (real Quaternius flower clumps, natureLayout.flowerClump) + mushrooms are back)
   if (blocked(x, z, 0.1, 2.6)) return false;
   put(piece, x, z, ry, s, sy); return true;
 }
@@ -442,7 +442,7 @@ grove(Z(0, -47, 34, 5), 16, [PINES(3), OAKS(2), ROCKS(2, [0.6, 1.1]), BUSHES(3)]
 // stones + tufts on every bare outer edge of the meadows
 carpet(Z(0, 56, 44, 3), 60, PIECES.tuft, [0.9, 1.4], 701); carpet(Z(0, 112, 50, 14), 80, PIECES.tuft, [0.9, 1.4], 702); carpet(Z(30, 30, 24, 20), 40, PIECES.tuft, [0.9, 1.4], 703);
 carpet(Z(0, -47, 40, 4), 40, PIECES.mushrooms, [0.8, 1.2], 704);
-// (owner 2026-10-31) more flower-on-mound patches in the sparse outskirts meadows (carpet() keeps them off roads / soil paths / buildings / fields via blocked(), and thins to ~1/3: 'n' is the pre-thinning count)
+// (owner 2026-10-31) more real-flower clumps in the sparse outskirts meadows (carpet() keeps them off roads / soil paths / buildings / fields via blocked(), and thins to ~1/3: 'n' is the pre-thinning count)
 carpet(Z(0, 56, 44, 3), 70, PIECES.flowers, [0.8, 1.2], 711); carpet(Z(0, 112, 50, 14), 90, PIECES.flowers, [0.8, 1.2], 712); carpet(Z(30, 30, 24, 20), 50, PIECES.flowers, [0.8, 1.2], 713);
 carpet(Z(-44, 30, 12, 16), 36, PIECES.flowers, [0.8, 1.2], 714); carpet(Z(0, -47, 40, 4), 50, PIECES.flowers, [0.8, 1.2], 715);
 carpet(Z(0, 112, 50, 14), 24, PIECES.mushrooms, [0.8, 1.1], 716); carpet(Z(-44, 30, 12, 16), 16, PIECES.mushrooms, [0.8, 1.1], 717);
