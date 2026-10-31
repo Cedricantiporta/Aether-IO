@@ -5,7 +5,7 @@
 // portal / tower). The fade uses a chamfer distance transform over a rasterised "flat" mask, so it stays cheap.
 // Walkable: the engine keeps y = 0; renderers add it via render/lift.ts liftAt(), the ground mesh via terrainFn.groundY.
 // ============================================================================
-import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, BOSS_PORTAL, TOWN_COLLIDERS, VILLAGE_NODES } from './townData';
+import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, BOSS_PORTAL, TOWN_COLLIDERS, VILLAGE_NODES, ADV_PLAZA, ADV_VILLAGE, inAdvPlaza } from './townData';
 import { SHOP_POSITIONS } from '../constants';
 import { inCampYard } from './caveData';
 
@@ -44,6 +44,8 @@ function build(): Float32Array {
   for (const F of [...FIELDS, FARM]) rect(F.x - F.hw - 2, F.z - F.hd - 2, F.x + F.hw + 2, F.z + F.hd + 2);
   for (const s of SHOP_POSITIONS) circle(s.position[0], s.position[2], 7);
   circle(TOWER.x, TOWER.z, 11); circle(TOWER.door.x, TOWER.door.z, 3); circle(PORTAL.x, PORTAL.z, 11); circle(PORTAL.front.x, PORTAL.front.z, 3); circle(BOSS_PORTAL.x, BOSS_PORTAL.z, 11); circle(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 3);
+  mark(ADV_PLAZA.x - ADV_PLAZA.rx - 1, ADV_PLAZA.z - ADV_PLAZA.rz - 1, ADV_PLAZA.x + ADV_PLAZA.rx + 1, ADV_PLAZA.z + ADV_PLAZA.rz + 1, (x, z) => inAdvPlaza(x, z, 1.5));   // (owner 2026-10-31) the Adventure Plaza is dead flat
+  rect(ADV_VILLAGE.x0, ADV_VILLAGE.z0, ADV_VILLAGE.x1, ADV_VILLAGE.z1);   // ... and so is Lantern Lane
   for (const v of VILLAGE_NODES) circle(v.x, v.z, 3);
   mark(30, -20, 90, 40, (x, z) => inCampYard(x, z, 3));
   // every town collider (houses, barn, coop, fences, lamps, trees, carts, ruins, windmill...) with a small apron

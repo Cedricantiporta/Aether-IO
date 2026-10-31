@@ -72,7 +72,7 @@ export const AUTO_HORSE_S = 3;
 const insideWalls = (x: number, z: number, m: number): boolean => x > WALL.x0 - m && x < WALL.x1 + m && z > WALL.z0 - m && z < WALL.z1 + m;
 /** Dismount spots (owner: off the horse well before the Adventure Portal: its front and the arch itself, r + 3): the hero is about to press E at the portal / the tower door / the mine mouth (their pills need him on foot). */
 const landingNear = (x: number, z: number, r: number): boolean =>
-  (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < (r + 3) * (r + 3) || (x - BOSS_PORTAL.front.x) ** 2 + (z - BOSS_PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
+  inAdvPlaza(x, z, 0) || (x - PORTAL.front.x) ** 2 + (z - PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - PORTAL.x) ** 2 + (z - PORTAL.z) ** 2 < (r + 3) * (r + 3) || (x - BOSS_PORTAL.front.x) ** 2 + (z - BOSS_PORTAL.front.z) ** 2 < (r + 3) * (r + 3) || (x - TOWER.door.x) ** 2 + (z - TOWER.door.z) ** 2 < r * r || (x - CAVE_DOOR.x) ** 2 + (z - CAVE_DOOR.z) ** 2 < r * r;
 function autoHorse(dt: number, talking: boolean): void {
   const v = world.village, rd = v.ride, p = world.player;
   if (v.area !== 'TOWN') { rd.moveT = 0; return; }
@@ -125,7 +125,7 @@ import { npcInArea } from './npcs';
 import { CAM_PITCH0 } from '../world';
 import type { ShopTab } from '../../storeTypes';
 import { FILL_COLLIDERS } from '../townFill';
-import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, BOSS_PORTAL, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
+import { GATE, NPCS, TOWN_COLLIDERS, VILLAGE_NODES, WALL, TOWER, PORTAL, BOSS_PORTAL, inAdvPlaza, ROCKFALL, ROCKFALL_BREAK, rockfallCleared } from '../townData';
 import { npcs, bubbles, resetNpcs, updateNpcs, TALK_R } from './npcs';
 import { findPath, routeLength } from './townPath';
 import { mainNav, npcQuestNav, navSpot, navNpc, type NavTarget, type Spot, TALK_REACH } from './questNav';

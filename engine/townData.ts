@@ -85,8 +85,16 @@ export function mineBridgeDeckY(z: number): number {
 /** The Adventure Portal (owner 2026-10-24: it left the plaza and stands where the Endless Tower used to, in the forest clearing at the end of the bending forest road): the kit v3
  *  `adventure_portal` at scale PORTAL_S, turned by `ry` (PI) so its front faces north, down the road. `front` = where the hero stands to step in (E, guide arrow, minimap icon), `out` = where he
  *  reappears after a run (a little further down the road, looking at it). Nothing stands in the plaza any more. */
-export const PORTAL_S = 0.9;
-export const PORTAL = { x: 5, z: 155.4, r: 4.4, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = the arch's road-side edge PORTAL.z - (3.06 + 1.3) m)
+export const PORTAL_S = 1.125;   // (owner 2026-10-31: 1.25 x the old 0.9; the Boss Trials portal keeps BOSS_PORTAL_S)
+export const BOSS_PORTAL_S = 0.9;
+export const PORTAL = { x: 5, z: 156.2, r: 5.5, ry: Math.PI, front: { x: 5, z: 151.0 }, out: { x: 5, z: 148.6 } };   // (front = 1.4 m before the arch's road-side edge PORTAL.z - 3.4 * PORTAL_S; unchanged by the 1.25 x scale-up, the arch grew southwards)
+/** (owner 2026-10-31) the Adventure Plaza: a big cobble plaza (ellipse, centre x z, radii rx rz) round the portal's clearing: benches facing the portal, flower beds, lamps, banners, a few trees, NPCs.
+ *  The forest road enters at its north rim, the Endless Tower's dirt path leaves at its east rim, the village street (ROADS, 'Lantern Lane') at its west rim. Layout data derived from it: engine/adventurePlaza.ts. */
+export const ADV_PLAZA = { x: 5, z: 150, rx: 15, rz: 14 };
+/** Inside the plaza ellipse grown by `pad` metres (negative = shrunk). */
+export const inAdvPlaza = (x: number, z: number, pad = 0): boolean => ((x - ADV_PLAZA.x) / (ADV_PLAZA.rx + pad)) ** 2 + ((z - ADV_PLAZA.z) / (ADV_PLAZA.rz + pad)) ** 2 < 1;
+/** The Lantern Lane village stretch (houses, stalls, well, fences) west of the plaza, between it and the Boss Trials path: its bounding box (flattened, kept clear of forest). */
+export const ADV_VILLAGE = { x0: -34, z0: 128, x1: -9, z1: 160 };
 /** (owner 2026-10-26) the Boss Trials portal on the headland added at the south-west coast of the outskirts (ISLAND_BOXES [-64, -10, 0, 166]): the same kit `adventure_portal`, tinted purple. Dormant until the first game clear.
  *  Like the Adventure Portal it faces NORTH (ry = PI), down its dirt path (the Brewer's lane, bending south from (-34, 114)): `front` = where the hero stands (E, minimap), `out` = where he reappears after a trial. */
 export const BOSS_PORTAL = { x: -40, z: 152, r: 4.4, ry: Math.PI, front: { x: -40, z: 147.6 }, out: { x: -40, z: 145.2 } };
@@ -289,6 +297,9 @@ export const CHAPEL_SIDE = { x: CHURCH.x - CHURCH.w / 2 - 2.0, z: CHURCH.z - 3.7
 /** Seats (benches) the hero can sit on in the town: x, z, facing yaw (the way a seated hero looks), seat height. */
 export interface SeatSpec { x: number; z: number; yaw: number; y: number }
 export const TOWN_SEATS: SeatSpec[] = [
+  // (owner 2026-10-31) the Adventure Plaza: six benches on an arc in front of the portal, all facing it (yaw = -angle from the arch's front axis)
+  ...[-86, -62, -40, 40, 62, 86].map((a) => { const r = Math.abs(a) < 45 ? 11.6 : 10.5; return { x: PORTAL.x + r * Math.sin((a * Math.PI) / 180), z: PORTAL.z - r * Math.cos((a * Math.PI) / 180), yaw: (-a * Math.PI) / 180, y: 0.55 }; }),   // (the two inner ones sit a little further out, clear of the horse statues)
+  { x: -16.6, z: 150.5, yaw: Math.PI, y: 0.55 },   // Lantern Lane: a bench between the two south houses (faces north onto the lane)
   { x: 8.1, z: 2, yaw: -Math.PI / 2, y: 0.55 }, { x: -8.1, z: 2, yaw: Math.PI / 2, y: 0.55 },   // the plaza's east / west rim between the two shop paths, facing the portal
   { x: CHURCH.x + CHURCH.w / 2 - 0.6, z: CHURCH.z + CHURCH.d / 2 + 2.0, yaw: 0, y: 0.55 },     // in front of the chapel (its yard bench)
   { x: -36, z: -22.3, yaw: Math.PI, y: 0.55 },                                                  // the graveyard, looking over the graves
@@ -305,9 +316,9 @@ export const TOWN_SEATS: SeatSpec[] = [
 /** The little park by the river east of the bridge (nature_kit_v1 'gazebo' + 'park_fountain'; the benches are TOWN_SEATS, fronts south). */
 export const PARK_EAST = { gazebo: { x: 28, z: 48.8 }, fountain: { x: 36.4, z: 49.4 } };
 /** Village wells (nature_kit_v1 'well'): the farm yard + one between the houses of each south hamlet. */
-export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-14, 122.6]];
+export const WELLS: [number, number][] = [[30.8, 107.3], [14, 122.4], [-14, 122.6], [-24.0, 153.2]];   // (+ Lantern Lane's well)
 /** Signposts (nature_kit_v1 'signpost', 3.1 m wide: x, z) at the bridge's south end; the beach entrance + the camp have their own (beachData ENTRY_SIGN, caveData MINE_CAMP.sign). */
-export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6]];
+export const SIGNPOSTS: [number, number][] = [[6.2, 80.6], [-6.4, 80.6], [-2.4, 138.6], [-24.6, 146.2]];   // (+ the Adventure Plaza's north entrance and Lantern Lane's corner)
 /** Stepping-stone paths (nature_kit_v1 'stone_path_tile', every ~1.3 m along each run: x1, z1, x2, z2): doors and the park. */
 export const STEP_PATHS: [number, number, number, number][] = [
   [30.1, 100.2, 30.1, 101.6], [41.4, 102.0, 41.4, 103.4],   // farmhouse + barn doors
@@ -388,6 +399,9 @@ export const HOUSES: HouseSpec[] = [
   VF('Inn', 11.8, 25.6, Math.PI), VF('House_1', 21.7, 25.6, Math.PI),
   // Tavern Row: a row against the north wall, doors south onto the Tavern Row lane (z -29.2, ROADS), backs to the wall
   VF('House_1', 16, -31.6, 0), VF('House_1', 22.4, -31.6, 0), VF('House_1', 28.8, -31.6, 0), VF('House_1', 35.2, -31.6, 0),
+  // Lantern Lane (owner 2026-10-31): the little village between the Adventure Plaza and the Boss Trials path. Doors face the lane (ADV_ROADS), each a different way / wall colour.
+  { ...V('House_2', -21.0, 141.7, 0), wall: '#f2d9b8', door: '#2f5a7a' }, { ...V('House_1', -13.0, 154.5, Math.PI), wall: '#d9e6c8', door: '#8a2f22' }, { ...V('House_2', -20.2, 155.3, Math.PI), wall: '#f1c9c0', door: '#3e5a2e' },
+  { ...V('House_1', -32.6, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -24.8, 133.9, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
 ];
 
 /** (no yards: the houses stand directly on the streets, see HOUSES) */
@@ -423,7 +437,10 @@ export const SHOP_LOOK: Partial<Record<string, ShopLook>> = {
 export const shopLocal = (px: number, pz: number, rot: number, dx: number, dz: number): [number, number] => [px + dx * Math.cos(rot) + dz * Math.sin(rot), pz - dx * Math.sin(rot) + dz * Math.cos(rot)];
 
 /** Decorative market stalls (town_kit_v2 'market_stall', fronts to the south; the useful shops are the SHOP_POSITIONS row). */
-export const STALLS: StallSpec[] = [];   // (owner 2026-10-24: the two stalls in front of the castle steps are gone - an open square before the castle)
+export const STALLS: StallSpec[] = [
+  // (owner 2026-10-31) Lantern Lane's two market stalls, fronts south onto the lane
+  { x: -11.6, z: 145.4, rot: 0, c1: '#e8604a', c2: '#fff3d6', goods: 0 }, { x: -15.7, z: 145.4, rot: 0, c1: '#4aa8c8', c2: '#fff3d6', goods: 2 },
+];   // (owner 2026-10-24: the two stalls in front of the castle steps are gone - an open square before the castle)
 /** Shop row: shop x of the 7 kit shops (z 1.5, rot 0, in constants SHOP_POSITIONS); the gaps between them hold lamps, signs and barrels. */
 export const SHOP_ROW_Z = 1.5;
 export const SHOP_ROW_X = [-39.5, -31, -22.5, 14, 22.5, 31, 39.5];
@@ -470,6 +487,8 @@ export const ROADS: RoadSpec[] = [
   { x1: -34, z1: TOWER_PATH_Z + 0.4, x2: -37.5, z2: 130, w: 3.2, dirt: true }, { x1: -37.5, z1: 130, x2: BOSS_PORTAL.front.x, z2: BOSS_PORTAL.front.z - 0.4, w: 3.2, dirt: true },
   { x1: 0, z1: BRIDGE.z1 - 0.3, x2: 0, z2: 128, w: ROAD_W.main - 0.6 },   // across the bridge, on through the mainland past the hamlets
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.front.x, z2: PORTAL.front.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal's clearing (the old tower spot)
+  // (owner 2026-10-31) Lantern Lane: from the Adventure Plaza's west gate through the little village, then north-west to meet the Boss Trials path (-37.5, 130)
+  { x1: -9.4, z1: 148.5, x2: -26.3, z2: 148.5, w: 3.4, dirt: true }, { x1: -26.3, z1: 148.5, x2: -27, z2: 140, w: 3.4, dirt: true }, { x1: -27, z1: 140, x2: -32, z2: 132.4, w: 3.4, dirt: true }, { x1: -32, z1: 132.4, x2: -37.5, z2: 130.4, w: 3.4, dirt: true },
   // (owner 2026-10-24) the Endless Tower's own dirt path: branches off the forest road to the right (east) and winds deeper into the forest to the tower's door
   { x1: 4.4, z1: 143.5, x2: 14, z2: 146.5, w: 2.8, dirt: true }, { x1: 14, z1: 146.5, x2: 23.5, z2: 150.5, w: 2.8, dirt: true }, { x1: 23.5, z1: 150.5, x2: 30, z2: 155.5, w: 2.8, dirt: true }, { x1: 30, z1: 155.5, x2: TOWER.door.x, z2: TOWER.door.z + 0.4, w: 2.8, dirt: true },
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
@@ -531,6 +550,8 @@ export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: 
 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
 export const FENCES: [number, number, number, number][] = [
+  // (owner 2026-10-31) Lantern Lane's yards: the back fence of the two south houses, a gate-less stub beside the well, the back fence behind the market stalls
+  [-23.2, 159.8, -9.8, 159.8], [-23.2, 159.8, -23.2, 157.4], [-24.0, 136.6, -15.2, 136.6], [-15.2, 136.6, -15.2, 138.8],
   // (the avenue's fences made way for the market stalls; houses get their yard fences from YARD_FENCES below)
   // (owner) the horse paddock in front of the stable (open to the shed; gap in the west side)
   [STABLE.x + STABLE.w / 2, STABLE.paddock.z0, STABLE.paddock.x1, STABLE.paddock.z0],
@@ -580,6 +601,10 @@ for (let i = LAMPS.length - 1; i >= 0; i--) {
 /** Stone plant boxes (raised planters with shrubs / flowers), axis aligned, w along x and d along z. kind 1 = flowers. */
 export interface PlanterSpec { x: number; z: number; w: number; d: number; kind: 0 | 1 }
 export const PLANTERS: PlanterSpec[] = [
+  // (owner 2026-10-31) the Adventure Plaza: long flower beds flanking the entrance road, two more on the inner arc, tree-ringed corner beds (the trees are ADV_TREES); Lantern Lane: door boxes
+  { x: 1.6, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: 8.4, z: 140.4, w: 1.5, d: 4.4, kind: 1 }, { x: -1.6, z: 144.4, w: 3.6, d: 1.3, kind: 1 }, { x: 11.2, z: 142.6, w: 3.6, d: 1.3, kind: 1 },
+  { x: -1.2, z: 162.4, w: 4.0, d: 1.3, kind: 1 }, { x: 10.0, z: 162.4, w: 3.2, d: 1.3, kind: 1 },
+  { x: -14.9, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -11.2, z: 151.1, w: 1.5, d: 0.9, kind: 0 }, { x: -22.6, z: 151.1, w: 1.5, d: 0.9, kind: 1 }, { x: -18.9, z: 151.1, w: 1.5, d: 0.9, kind: 0 },
   // (owner 2026-10-23) the avenue to the gate: mirrored flower boxes on both edges, between the lamps
   { x: 3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: -3.4, z: 16.8, w: 0.9, d: 2.2, kind: 0 }, { x: 3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 }, { x: -3.4, z: 29.8, w: 0.9, d: 2.2, kind: 1 },
   // (owner) flower boxes lining the summon + tech shop paths
@@ -634,7 +659,10 @@ export const TOWN_TREES: TreeSpec[] = [
       const a = -1.95 + (3.9 * i) / 10, r = 13 + (i % 2) * 1.6;
       t.push({ x: TOWER.x + Math.sin(a) * r, z: TOWER.z + Math.cos(a) * r, s: 3.4 + (i % 3) * 0.35, kind: ((i + 1) % 4) as 0 | 1 | 2 | 3 });
     }
-    return t;
+    // (owner 2026-10-31) the Adventure Plaza + Lantern Lane are cleared of the forest; three oak accents stand in the plaza's corners (the rest of the greenery is townFill / adventurePlaza)
+    const keep = t.filter((q) => !inAdvPlaza(q.x, q.z, 2.2) && !(q.x > ADV_VILLAGE.x0 && q.x < ADV_VILLAGE.x1 && q.z > ADV_VILLAGE.z0 && q.z < ADV_VILLAGE.z1));
+    keep.push({ x: -5.2, z: 142.2, s: 2.5, kind: 0 }, { x: 15.6, z: 141.0, s: 2.5, kind: 0 }, { x: -5.6, z: 159.0, s: 2.5, kind: 0 });
+    return keep;
   })(),
   // the mainland across the bridge
   { x: -38, z: 82, s: 3.9, kind: 3 }, { x: -8, z: 83, s: 3.4, kind: 1 }, { x: -40, z: 96, s: 3.9, kind: 2 }, { x: -41, z: 106, s: 3.4, kind: 2 },
@@ -651,6 +679,7 @@ export const GRASS_PATCHES: [number, number, number, number, number?, number?][]
 /** Parked market carts on the meadow in front of the walls (nature_kit_v1 'market_cart'; kind 1 = a haystack instead). Colliders in TOWN_COLLIDERS. */
 export interface CartSpec { x: number; z: number; rot: number; kind: 0 | 1 | 2 }
 export const CARTS: CartSpec[] = [
+  { x: 12.6, z: 158.6, rot: 0, kind: 0 },   // (owner 2026-10-31) the travelling merchant's cart in the Adventure Plaza's south-east corner
   { x: 13.6, z: 57.0, rot: 0, kind: 0 }, { x: -9.4, z: 56.6, rot: 0, kind: 2 }, { x: -37, z: 56.8, rot: 0, kind: 1 }, { x: -33.5, z: 81.4, rot: 0, kind: 2 },   // (market carts: fronts south; kind 1 is a haystack)
 ];
 /** Free-standing stone gateways on the two outskirts roads (owner 2026-10-22: "a gate to the beach and a gate to the mines"). The roads start at the south gate meadow and never cross the town wall,
@@ -668,7 +697,7 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
   const c: [number, number, number][] = [];
   for (const h of HOUSES) { if (h.nk === 'chicken_coop') kitRing(c, 'chicken_coop', h.x, h.z, h.s ?? 1, 0.7); else if (h.nk) kitRing(c, h.nk, h.x, h.z, h.s ?? 1, 1.0); else if (h.kit?.startsWith('vh_')) { const sw = Math.abs(Math.sin(h.rot)) > 0.7; houseRing(c, h.x, h.z, (sw ? h.d : h.w) / 2, (sw ? h.w : h.d) / 2); } else c.push([h.x, h.z, Math.hypot(h.w, h.d) * 0.38 + 0.4]); }
   c.push([TOWER.x, TOWER.z - 0.3, TOWER.r]);
-  { const k = PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z - 0.7 * k, 0.9 * k]); for (let i = -2; i <= 2; i++) c.push([BOSS_PORTAL.x + i * 1.5 * k, BOSS_PORTAL.z - 0.7 * k, 0.9 * k]); }   // (the Boss Trials portal: the same piece)   // the adventure_portal kit piece (turned to face north): the stone arch + its base, a wall across the clearing
+  { const k = PORTAL_S / 0.7, kb = BOSS_PORTAL_S / 0.7; for (let i = -2; i <= 2; i++) c.push([PORTAL.x + i * 1.5 * k, PORTAL.z - 0.7 * k, 0.9 * k]); for (let i = -2; i <= 2; i++) c.push([BOSS_PORTAL.x + i * 1.5 * kb, BOSS_PORTAL.z - 0.7 * kb, 0.9 * kb]); }   // (the Boss Trials portal: the same piece)   // the adventure_portal kit piece (turned to face north): the stone arch + its base, a wall across the clearing
   for (const m of PLAZA_STATUES) c.push([m.x, m.z, m.r]);
   for (const m of HORSE_STATUES) c.push([m.x, m.z, m.r]);   // the horse statues (pedestal 1.4 m wide)
   for (const r of RUINS) c.push([r.x, r.z, r.kind === 0 ? 1.0 : 1.6]);
@@ -793,6 +822,8 @@ export const TOWN_CLEAR: [number, number, number][] = (() => {
   for (const F of FIELDS) c.push([F.x, F.z, Math.max(F.hw, F.hd) + 2]);
   c.push([TOWER.x, TOWER.z, 13], [TOWER.x, TOWER.z - 6, 9]);   // the tower clearing
   c.push([PORTAL.x, PORTAL.z, 9], [PORTAL.x, PORTAL.z - 5, 6], [BOSS_PORTAL.x, BOSS_PORTAL.z, 9], [BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 6]);   // the portal clearing (trees behind it are TOWN_TREES / townFill groves)
+  for (let x = ADV_PLAZA.x - ADV_PLAZA.rx + 4; x <= ADV_PLAZA.x + ADV_PLAZA.rx - 3; x += 6) for (let z = ADV_PLAZA.z - ADV_PLAZA.rz + 4; z <= ADV_PLAZA.z + ADV_PLAZA.rz - 3; z += 6) if (inAdvPlaza(x, z, 1)) c.push([x, z, 6]);   // (owner 2026-10-31) the Adventure Plaza
+  for (let x = ADV_VILLAGE.x0 + 3; x <= ADV_VILLAGE.x1 + 3; x += 6) for (let z = ADV_VILLAGE.z0 + 3; z <= ADV_VILLAGE.z1; z += 6) c.push([x, z, 6]);   // Lantern Lane
   c.push([BREWER_HUT.x, BREWER_HUT.z, 7.5]);   // the brewer's yard
   for (const s of STALLS) c.push([s.x, s.z, 4]);
   for (const n of VILLAGE_NODES) c.push([n.x, n.z, 4]);
@@ -1230,6 +1261,63 @@ export const NPCS: NpcDef[] = [
       ['I keep a little book of the places heroes tell me about. Greenwood, the Marble Halls... most pages are still blank.', 'One day I will walk through that portal myself. Just to look. Then run straight back.'],
     ],
     bubbles: ['Good luck out there!', 'Safe travels, hero.', 'What a view.', 'Hear that? Wolves, far off.', 'Another page for my book...', 'The cave in the east bay glows at night...'],
+  },
+  // ------------------------------------------------------------ the Adventure Plaza + Lantern Lane (owner 2026-10-31): filler folk, no quests
+  {
+    name: 'Rook', role: 'Adventurer', model: 'KNIGHT', tint: '#ffd9b8', scale: 1, prop: 'spear', accent: '#ff9a6a', home: [1.5, 145.8], speed: 1.2,
+    patrol: [[1.5, 145.8], [8.8, 145.8], [8.8, 147.6], [1.5, 147.6]],
+    talk: [
+      ['Third time in the plaza this morning. Not nerves. Okay, a little nerves.', 'The portal hums when you stand close. Hear it? Like a kettle the size of a house.'],
+      ['Rule one of the Adventure Portal: stretch first. Rule two: buy potions. Rule three: see rule two.', 'You:: What is rule four?', 'Do not look back at the horse statues. They judge you.'],
+      ['The benches are the best seats in the kingdom. You can watch every hero walk in. And most of them walk out again. Slower.'],
+    ],
+    bubbles: ['Stretch first!', 'Potions. Buy potions.', 'The portal hums today.', 'Those horses are judging me.'],
+  },
+  {
+    name: 'Lio', role: 'Young Adventurer', model: 'ROGUE', tint: '#d8f0ff', scale: 0.92, prop: 'none', accent: '#7ad8ff', home: [8.2, 152.7], speed: 1.6,
+    talk: [
+      ['I am going through the portal tomorrow. Or today. Definitely before lunch.', 'You:: You have been saying that since morning.', 'It is a very serious decision!'],
+      ['Everyone here looks so brave. I practiced my brave face in the well. Is it working?'],
+      ['My mum packed me twelve sandwiches. TWELVE. I will be the best fed hero in the Mire.'],
+    ],
+    bubbles: ['Tomorrow. Or today!', 'Is my brave face working?', 'Twelve sandwiches...', 'Whoa, the portal is so big.'],
+  },
+  {
+    name: 'Marigold', role: 'Cart Merchant', model: 'ARCHER', tint: '#ffe8c8', scale: 1, prop: 'basket', accent: '#ffb86a', home: [10.6, 160.6],
+    talk: [
+      ['Fresh bread, dried apples, bandages! Nothing magical, mind. Just good and honest.', 'The real shops are in town. I sell what you forgot to pack.'],
+      ['Heroes buy a lot of apples right before the portal. Then nobody wants one on the way back. Odd.'],
+      ['My cart has seen four hundred heroes. Do you know how many came back to say thanks? Eleven. You can be twelve.'],
+    ],
+    bubbles: ['Apples! Bandages!', 'Honest goods, honest prices.', 'Forgot something, hero?', 'Mind the cart wheel.'],
+  },
+  {
+    name: 'Perrin', role: 'Plaza Gardener', model: 'BARBARIAN', tint: '#e6f3c8', scale: 1, prop: 'basket', accent: '#9bd26a', home: [3.2, 142.6], speed: 1.1, noHat: true, noCape: true, tunic: '#6f9a4a', hair: '#6a4a2a', longHair: false,
+    patrol: [[3.2, 142.6], [6.8, 142.6], [6.8, 139.0], [3.2, 139.0]],
+    talk: [
+      ['Pink ones by the road, blue ones by the benches. The portal likes blue. I asked.', 'You:: The portal told you?', 'Not in words. It glows brighter. That is a yes.'],
+      ['Every hero steps on my flowers. Every. Single. One. But they grow back faster when it is heroes. Funny, that.'],
+      ['A plaza is just a garden with better shoes on. Remember that.'],
+    ],
+    bubbles: ['Mind the tulips!', 'Water, sun, a little love.', 'Pink by the road...', 'Who trampled the blue ones?'],
+  },
+  {
+    name: 'Old Hob', role: 'Well Keeper', model: 'BARBARIAN', tint: '#e8dcc4', scale: 0.96, prop: 'none', accent: '#c9b48a', home: [-25.8, 151.6], noHat: true, noCape: true, tunic: '#8a6a4a', hair: '#dcdcdc', longHair: false,
+    talk: [
+      ['Lantern Lane was only a footpath when I was young. Now it has a well AND a bench. Progress!', 'The water is sweet. Do not tell the river. It gets jealous.'],
+      ['Follow the lane west and you reach the purple portal. The Boss Trials. I never went. My knees voted no.'],
+      ['I have kept this well forty years. In all that time it asked for exactly one thing: do not drop your spoon in it.'],
+    ],
+    bubbles: ['Sweet water, this.', 'Mind the bucket.', 'Boss Trials are that way...', 'My knees voted no.'],
+  },
+  {
+    name: 'Willa', role: 'Pastry Seller', model: 'ARCHER', tint: '#ffd8e6', scale: 1, prop: 'basket', accent: '#ff9ac0', home: [-13.6, 147.4], speed: 1.2,
+    patrol: [[-13.6, 147.6], [-18.6, 147.6], [-23.6, 147.4], [-18.6, 147.8]],
+    talk: [
+      ['Honey buns, two for a smile! Okay, one for a smile. Prices are up.', 'The red stall is mine. The blue stall is my cousin Fern. We do not talk about the blue stall.'],
+      ['Adventurers eat anything on the way to the portal. Nerves. I sell a LOT of buns before the Boss Trials.'],
+    ],
+    bubbles: ['Honey buns!', 'Two for a smile!', 'Warm from the oven!', 'We do not talk about the blue stall.'],
   },
   // ------------------------------------------------------------ crystal cave, Floor 1 (see engine/caveData.ts)
   {

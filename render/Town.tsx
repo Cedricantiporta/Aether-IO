@@ -24,7 +24,7 @@ import { TownChests } from './TownChests';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
-import { TOWER, TOWER_KNOLL, PORTAL, BOSS_PORTAL, PORTAL_S, HERO_HOUSE, townLift } from '../engine/townData';
+import { TOWER, TOWER_KNOLL, PORTAL, BOSS_PORTAL, PORTAL_S, BOSS_PORTAL_S, HERO_HOUSE, townLift } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
 import { Beach } from './Beach';
@@ -429,7 +429,7 @@ function HeroHomeSign() {
 }
 
 // ---- Adventure Portal: kit v3 `adventure_portal` (engine/townFill puts it in the forest clearing at PORTAL, x PORTAL_S, turned by PORTAL.ry: front north, down the road); this adds the swirling gateway, rune stones, light + label
-function PortalLandmark({ at = PORTAL, name = 'Adventure Portal', purple = false }: { at?: typeof PORTAL; name?: string; purple?: boolean }) {
+function PortalLandmark({ at = PORTAL, name = 'Adventure Portal', purple = false, scale = PORTAL_S }: { at?: typeof PORTAL; name?: string; purple?: boolean; scale?: number }) {
   const dormant = useGameStore((s) => purple && s.progress.endings <= 0);   // (Boss Trials portal: asleep until the first game clear)
   const mats = useMemo(() => purple ? ({
     lit: litMat({ roughness: 0.92 }),
@@ -452,10 +452,10 @@ function PortalLandmark({ at = PORTAL, name = 'Adventure Portal', purple = false
     if (r2.current) r2.current.rotation.z = -t * 1.4;
     if (r3.current) { r3.current.rotation.z = t * 0.4; r3.current.scale.setScalar(1 + Math.sin(t * 2) * 0.04); }
     mats.disc.opacity = (0.45 + Math.sin(t * 1.7) * 0.1) * (dormant ? 0.25 : 1);
-    if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = 1.5 + i * 0.7 + Math.sin(t * 1.5 + i) * 0.18; }); }
+    if (stones.current) { stones.current.rotation.y = t * 0.35; stones.current.children.forEach((c, i) => { c.position.y = (1.5 + i * 0.7) * f + Math.sin(t * 1.5 + i) * 0.18; }); }
   });
   const open = () => { if (useGameStore.getState().status === GameStatus.MENU && useUiStore.getState().titleDone) walkTo(at.front.x, at.front.z, 'none', '', 2.2); };
-  const k = PORTAL_S, y0 = 0;
+  const k = scale, y0 = 0, f = k / 0.9;   // (f: 1 at the old 0.9 scale; the rune stones, label, light and click box grow with the portal)
   return (
     <group position={[at.x, y0, at.z]} rotation={[0, at.ry, 0]}>
       {/* the swirling gateway over the kit piece's stone disc (local +z = its front; the group is turned by PORTAL.ry so the front faces the forest road) */}
@@ -467,12 +467,12 @@ function PortalLandmark({ at = PORTAL, name = 'Adventure Portal', purple = false
       </group>
       {/* rune stones floating around the arch */}
       <group ref={stones}>
-        {[0, 1, 2, 3].map((i) => <mesh key={i} material={mats.glow} position={[Math.cos(i * 1.57) * 4.2, 1.6 + i * 0.7, Math.sin(i * 1.57) * 4.2]}><octahedronGeometry args={[0.24, 0]} /></mesh>)}
+        {[0, 1, 2, 3].map((i) => <mesh key={i} material={mats.glow} position={[Math.cos(i * 1.57) * 4.2 * f, (1.6 + i * 0.7) * f, Math.sin(i * 1.57) * 4.2 * f]}><octahedronGeometry args={[0.24, 0]} /></mesh>)}
       </group>
-      <sprite material={label.mat} position={[0, 6.2, 0]} scale={[label.aspect * 0.8, 0.8, 1]} />
-      <pointLight position={[0, 2.6, 2.4]} color={purple ? '#c58cff' : '#7ad8ff'} distance={10} decay={1.6} intensity={dormant ? 1.5 : 9} />
-      <mesh position={[0, 2.6, 0.6]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
-        <boxGeometry args={[6.6, 5.4, 2.4]} />
+      <sprite material={label.mat} position={[0, 6.2 * f, 0]} scale={[label.aspect * 0.8, 0.8, 1]} />
+      <pointLight position={[0, 2.6 * f, 2.4 * f]} color={purple ? '#c58cff' : '#7ad8ff'} distance={10 * f} decay={1.6} intensity={dormant ? 1.5 : 9} />
+      <mesh position={[0, 2.6 * f, 0.6 * f]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => { document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
+        <boxGeometry args={[6.6 * f, 5.4 * f, 2.4 * f]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
@@ -492,7 +492,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <Npcs />}
       {village && <TowerLandmark />}
       {village && <PortalLandmark />}
-      {village && <PortalLandmark at={BOSS_PORTAL} name="Boss Trials" purple />}
+      {village && <PortalLandmark at={BOSS_PORTAL} name="Boss Trials" purple scale={BOSS_PORTAL_S} />}
       {village && <HeroHomeSign />}
       {village && <Beach q={q} />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}

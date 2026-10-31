@@ -23,9 +23,10 @@ import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
   PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, GATEWAY, GATEWAYS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, SIDE_GATES, SIDE_GATE, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  BOSS_PORTAL, HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
+  BOSS_PORTAL, ADV_PLAZA, HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { addBossIsland } from './bossIsland';
+import { addAdventurePlaza } from './adventurePlaza';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
 import { smokePuff } from './fx';
@@ -197,6 +198,8 @@ function buildRoads(): BufferGeometry {
   // plaza (owner 2026-10-23: ONE pattern): a plain disc of the same cobble paving as the streets (no slab rings / grout disc on top of it)
   const px = PLAZA.x, pz = PLAZA.z;
   r.cyl(PLAZA.r, PLAZA.r, 0.08, 72, [px, 0.05, pz], SURF);
+  // (owner 2026-10-31) the Adventure Plaza: the same cobble, a big flat ellipse round the portal (the ground is flattened there, townHills)
+  r.cyl(ADV_PLAZA.rx, ADV_PLAZA.rx, 0.08, 96, [ADV_PLAZA.x, 0.05, ADV_PLAZA.z], SURF, [0, 0, 0], [1, 1, ADV_PLAZA.rz / ADV_PLAZA.rx]);
   // (owner 2026-10-23: no orange ring inlays - the orange lines read as clutter)
   // gate forecourt
   r.cyl(6.5, 6.5, 0.08, 24, [GATE.x, 0.05, GATE.z], SURF);
@@ -657,6 +660,8 @@ function buildTown() {
   { const c = at(CASTLE.x, CASTLE.z); addTerrace(c.b, c.g); }
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
   { const c = at(PLAZA.x, PLAZA.z); addPlaza(c.b, c.g); }
+  lifted(ADV_PLAZA.x, ADV_PLAZA.z, (b, g) => addAdventurePlaza(b, g));   // (owner 2026-10-31: the Adventure Plaza: kerb, inlay, rim lamps, banners)
+  lifted(-18, 142, (b, g) => addAdventurePlaza(b, g, true));   // (... and Lantern Lane's lamps)
   lifted(BOSS_PORTAL.x, BOSS_PORTAL.z, (b, g) => addBossIsland(b, g));   // (owner 2026-10-31: the Boss Trials headland: dais, pillars, runes, banners, altar, lanterns, lookout deck)
   // (owner 2026-10-24) every flower box gets a flat green lawn top (a plain rounded green slab, not grass blades)
   for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); at(p.x, p.z).b.box(len * 0.88, 0.06, wid * 0.72, [p.x, townLift(p.x, p.z) + PLANTER_TOP, p.z], '#7cbf4e', [0, along ? 0 : Math.PI / 2, 0]); }
