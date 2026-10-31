@@ -19,7 +19,7 @@ import { CELL, FX } from './fx';
 import { GB, TAU, clamp, commitInst, liveRange, setInst } from './util';
 import { inView } from './view';
 
-const MAXW = 12, MAXP = 110, MAXPORT = 8, MAXECHO = 4;
+const MAXW = 12, MAXP = 160, MAXPORT = 8, MAXECHO = 4;
 const _c = new Color();
 const ECHO_COL = [0x9ca3af, 0xc084fc, 0x84cc16, 0x7dd3fc, 0xff5a1a];
 const rnd = Math.random;

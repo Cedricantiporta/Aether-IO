@@ -25,9 +25,10 @@ import {
 } from './enemies';
 import {
   BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
-  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw,
+  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw, frostHit, burnHit,
 } from './bossFx';
-import { wardedBossId } from './bossMech';
+import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
+import { tickIgnarLava, resetIgnarLava } from './ignarLava';
 import { bp } from './bossPhaseState';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
 import {
@@ -72,7 +73,7 @@ export const S = {
   guardT: 0, shT: 0, dashPh: 2, dashT: 0, dashLen: 0, slashT: 0, slashD: 0, trailD: 0, sx: 0, sz: 0, sdx: 0, sdz: 1,   // (owner rework) Blazing Guard / fire shield timers, dash + slash state, fire-trail lane
   formT: 0, auraT: 0,   // (owner) Burning Form: formT = the transformation in progress; enraged = in the burning form
   // the Dune Colossus (desert war machine)
-  rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0,
+  rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0, stride: 1, strideT: 0, trailT: 0,   // (owner 2026-10-31) the flamethrower: strafe direction / timer, fire-trail timer
   // Void Herald
   voidOn: false, gravT: 0, pushed: false,
   /** form: 0 first form, 1 transforming (untouchable), 2 final form (huge wings); formT = transformation seconds left; sweep = laser sweep direction */
@@ -92,6 +93,7 @@ export function resetBosses2(): void {
   S.air = false; S.wantBlizz = false; S.blizzT = 0; S.diveZone = null;
   S.enraged = false; S.wheelA = 0; S.ringT = 0; S.cleaveCd = 0; S.wheelN = 0; S.formT = 0; S.auraT = 0; S.guardT = 0; S.shT = 0; S.dashPh = 2;
   S.voidOn = false; S.gravT = 0; S.pushed = false; S.vform = 0; S.vformT = 0; bp.xformId = -1;
+  S.stride = 1; S.strideT = 0; resetIgnarLava();
 }
 
 // ------------------------------------------------------------------ helpers ---
@@ -192,6 +194,7 @@ const ipwr = (e: Enemy): number => pwr(e) * (S.enraged ? 1.3 : 1);
 function beginAtk(e: Enemy, list: Atk[], id: number, ux: number, uz: number, dist: number): void {
   const a = list[id];
   e.pattern = id; e.patternT = 0;
+  proxBegin(e);
   enter(e, 'WINDUP');
   const b = world.boss;
   b.ability = a.name; b.abilityT = 2.6;
@@ -412,14 +415,16 @@ function treant(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   stand(e);   // rooted: Elderroot never walks, he waits for the next lash
   requestYaw(Math.atan2(ux, uz));
-  if (e.attackCd > 0) return;
+  const cDue = closeDue(e);   // (proximity) Crushing Roots + Thorn Ring are his close skills: only with someone near, more often the longer they stay
+  if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (S.wantBark && !S.bark) { S.wantBark = false; id = T_BARK; }
+  if (cDue) { id = (S.cycle++ & 1) === 0 ? T_SLAM : T_THORN; closeUsed(e, 22, LISTS.BOSS_TREANT![id].name); }
+  else if (S.wantBark && !S.bark) { S.wantBark = false; id = T_BARK; }
   else {
     id = TREANT_ORDER[S.cycle++ % TREANT_ORDER.length];
     if (id === T_BROOD && (S.bark || countAdds('BOSS_SAPLING') >= 5)) id = T_SEEDS;
-    if (id === T_SLAM && dist > e.radius + 11) id = T_SWEEP;   // (the trunk slam punishes standing at his feet: only when someone is)
     if (id === T_VINES && dist > 28) id = T_ROOTS;
+    if (id === T_SLAM || id === T_THORN) { if (bossNear(e)) closeUsed(e, 22, LISTS.BOSS_TREANT![id].name); else id = id === T_SLAM ? T_SWEEP : T_SEEDS; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -562,8 +567,14 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
   }
   requestYaw(Math.atan2(ux, uz));
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
-  if (e.attackCd > 0) return;
-  const id = HYDRA_ORDER[S.cycle++ % HYDRA_ORDER.length];
+  const cDue = closeDue(e);   // (proximity) Tidal Surge (the ring round the body) is the close skill
+  if (e.attackCd > 0 && !cDue) return;
+  let id: number;
+  if (cDue) { id = H_SURGE; closeUsed(e, 22, list[id].name); }
+  else {
+    id = HYDRA_ORDER[S.cycle++ % HYDRA_ORDER.length];
+    if (id === H_SURGE) { if (bossNear(e)) closeUsed(e, 22, list[id].name); else id = H_SPIT; }
+  }
   beginAtk(e, list, id, ux, uz, dist);
 }
 function wrap(a: number): number {
@@ -635,7 +646,8 @@ export function aiHydraHead(e: Enemy): void {
 // target (radius 4.4). Patterns reach the whole arena: a long frost-breath cone, lanes of ice, hail on you, a frost ring, the arena-wide
 // blizzard and a brood of wyrmlings that hatches at his claws.
 const G_BREATH = 0, G_SPIKES = 1, G_HAIL = 2, G_BLIZZ = 3, G_BROOD = 4, G_NOVA = 5;
-const WYRM_ORDER = [G_BREATH, G_HAIL, G_BROOD, G_SPIKES, G_NOVA, G_BLIZZ, G_BREATH, G_HAIL, G_SPIKES];
+const WYRM_ORDER = [G_BREATH, G_BROOD, G_HAIL, G_SPIKES, G_NOVA, G_BLIZZ, G_BREATH, G_BROOD, G_HAIL, G_SPIKES];   // (owner 2026-10-31: more broods)
+const WYRMLING_CAP = 10;
 
 LISTS.BOSS_WYRM = [
   { // Frost Breath: a cone that chills (4 chill stacks freeze you). The beam drifts toward you - keep moving out of it.
@@ -658,12 +670,12 @@ LISTS.BOSS_WYRM = [
     name: 'Ice Spikes!', wind: (e) => 1.0 - 0.08 * e.phase, act: (e) => (e.phase >= 1 ? 0.8 : 0.4), rec: () => 0.9,
     begin(e, ux, uz) {
       const n = 2 + e.phase, base = Math.atan2(ux, uz);
-      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.42); lane(e, Math.sin(a), Math.cos(a), 56, 3.2, 1.0 - 0.08 * e.phase, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
+      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.5); lane(e, Math.sin(a), Math.cos(a), 56, 6.4, 1.0 - 0.08 * e.phase, BT.SPIKES, pwr(e) * 1.45, 0x7dd3fc); }   // (owner 2026-10-31) ground icicles 2x wider lanes, bigger icicles, a bit harder, slow + freeze
     },
     fire(e, ux, uz) {
       if (e.phase < 1) return;
       const base = Math.atan2(ux, uz);
-      for (let i = 0; i < e.phase; i++) { const a = base + fan(i, 0.5) + 0.25; lane(e, Math.sin(a), Math.cos(a), 56, 3.2, 0.8, BT.SPIKES, pwr(e) * 1.3, 0x7dd3fc); }
+      for (let i = 0; i < e.phase; i++) { const a = base + fan(i, 0.5) + 0.25; lane(e, Math.sin(a), Math.cos(a), 56, 6.4, 0.8, BT.SPIKES, pwr(e) * 1.45, 0x7dd3fc); }
     },
   },
   { // Hail: the dragon roars at the sky; ice crashes down on marked circles around (and on) you.
@@ -689,10 +701,10 @@ LISTS.BOSS_WYRM = [
     name: 'Brood of Ice!', wind: () => 1.1, act: () => 0.4, rec: () => 0.8,
     begin(e) { circle(e.pos.x, e.pos.z, 8, 1.1, BT.VISUAL, 0, 0x8fdcff); },
     fire(e) {
-      const n = 2 + e.phase, base = Math.atan2(-e.pos.x, -e.pos.z) - 1;
+      const n = 4 + Math.min(2, e.phase), base = Math.atan2(-e.pos.x, -e.pos.z) - 1.3;   // (owner 2026-10-31) 4 / 5 / 6 baby drakes per call (was 2-4), cap 10 (was 6)
       for (let i = 0; i < n; i++) {
-        const a = base + (i / Math.max(1, n - 1)) * 2.0, r = e.radius + 2.5;
-        spawnAdd('BOSS_WYRMLING', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 1, 1, 6);
+        const a = base + (i / Math.max(1, n - 1)) * 2.6, r = e.radius + 2.5 + (i & 1) * 1.6;
+        spawnAdd('BOSS_WYRMLING', e.pos.x + Math.sin(a) * r, e.pos.z + Math.cos(a) * r, 0.85, 1, WYRMLING_CAP);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'RAISE', radius: 6 });
     },
@@ -714,10 +726,15 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
   stand(e);
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   requestYaw(Math.atan2(ux, uz));
-  if (e.attackCd > 0) return;
+  const cDue = closeDue(e);   // (proximity) the Glacial Ring (frost nova round him) is his close skill
+  if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (S.wantBlizz && S.blizzT <= 0) { S.wantBlizz = false; id = G_BLIZZ; }
-  else { id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; if (id === G_BROOD && countAdds('BOSS_WYRMLING') >= 4) id = G_HAIL; }
+  if (cDue) { id = G_NOVA; closeUsed(e, 22, list[id].name); }
+  else if (S.wantBlizz && S.blizzT <= 0) { S.wantBlizz = false; id = G_BLIZZ; }
+  else {
+    id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; if (id === G_BROOD && countAdds('BOSS_WYRMLING') >= 7) id = G_HAIL;
+    if (id === G_NOVA) { if (bossNear(e)) closeUsed(e, 22, list[id].name); else id = G_HAIL; }
+  }
   beginAtk(e, list, id, ux, uz, dist);
 }
 
@@ -734,7 +751,7 @@ const DASH_SP = 40, CRESC_SP = 27, KNIGHT_CAP = 3;
 function crescent(e: Enemy, a: number, speed: number, life: number, radius: number, dmg: number): void {
   dirV.set(Math.sin(a), 0, Math.cos(a));
   tv.set(e.pos.x + dirV.x * 1.6, 1.2, e.pos.z + dirV.z * 1.6);
-  fireEnemyProjectile(tv, dirV, 'FIRE_CRESCENT', speed, dmg, { life, radius, debuff: 2 });
+  fireEnemyProjectile(tv, dirV, 'FIRE_CRESCENT', speed, dmg, { life, radius, debuff: 5 });   // (owner 2026-10-31) 5 = Ignar's burn: 3.6 s, refreshes
 }
 /** Drops fire patches behind a travelling slash / dash: every `step` metres along the lane from (S.sx, S.sz), up to `upTo`.
  *  `halfW` > 0 (a crescent slash): each row also lays patches ACROSS the arc, `halfW` either side, the outer ones trailing back like the crescent's tips
@@ -775,7 +792,7 @@ LISTS.BOSS_WARLORD = [
         const a = S.wheelA + (i / n) * 6.283;
         dirV.set(Math.sin(a), 0, Math.cos(a));
         tv.set(e.pos.x + dirV.x * 1.5, 1.6, e.pos.z + dirV.z * 1.5);
-        fireEnemyProjectile(tv, dirV, 'BIG_FLAME', S.enraged ? 10.5 : 8.5, ipwr(e) * 0.8, { life: 3.0, radius: 1.4, debuff: 2 });
+        fireEnemyProjectile(tv, dirV, 'BIG_FLAME', S.enraged ? 10.5 : 8.5, ipwr(e) * 0.8, { life: 3.0, radius: 1.4, debuff: 5 });
       }
       S.wheelN++;
       if ((S.wheelN & 1) === 0) events.emit('shake', { amount: 0.2 });
@@ -815,7 +832,7 @@ LISTS.BOSS_WARLORD = [
     begin(e, ux, uz) { e.dir.set(ux, 0, uz); cone(e, ux, uz, S.enraged ? 12 : 10, 0.95, 0.7 * fast(e), BT.SWEEP, ipwr(e) * 1.6, 0xff6a1a); },
     fire(e) {
       const p = world.player, rg = S.enraged ? 12 : 10;
-      if (p.alive && inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, rg, 0.95)) applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
+      if (p.alive && inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, rg, 0.95)) burnHit(ipwr(e) * 0.14);
       const a0 = Math.atan2(e.dir.x, e.dir.z);
       for (let k = -1; k <= 1; k++) firePatch(e.pos.x + Math.sin(a0 + k * 0.55) * rg * 0.62, e.pos.z + Math.cos(a0 + k * 0.55) * rg * 0.62, 1.7, 2.6, ipwr(e) * 0.1);
     },
@@ -880,7 +897,7 @@ LISTS.BOSS_WARLORD = [
         const p = world.player;
         if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 2.2) ** 2) {
           S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.SLAM });   // (owner) the Blazing Rush knocks down
-          applyPlayerDebuff('BURN', 3, ipwr(e) * 0.12);
+          burnHit(ipwr(e) * 0.14);
         }
         if (S.dashT <= 0) {   // arrived: a quick aimed slash
           S.dashPh = 1; stand(e); e.dir.set(ux, 0, uz); S.slashT = 0.34 * fast(e);
@@ -937,19 +954,22 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
     if (S.auraT <= 0) {
       S.auraT = 0.5;
       const p = world.player;
-      if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true, noDotMul: true });
+      if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) { damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true, noDotMul: true }); burnHit(pwr(e) * 0.12); }
     }
   }
-  if (S.cleaveCd > 0) S.cleaveCd -= dt;
+  tickIgnarLava(e, dt);   // (owner 2026-10-31) the longer the fight, the more of the floor turns to lava (ignarLava.ts)
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   if (dist > 4.5) drive(e, ux, uz, e.speed * (1 + 0.12 * e.phase)); else stand(e);
-  if (e.attackCd > 0) return;
+  // (proximity) Hellcleave / Radiant Burst / Blazing Guard are the close skills: only with someone near, more often the longer they stay
+  const cDue = closeDue(e);
+  if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (dist < (S.enraged ? 10 : 8) && S.cleaveCd <= 0) { id = I_CLEAVE; S.cleaveCd = S.enraged ? 3.5 : 6; }
+  if (cDue) { id = (S.cycle & 3) === 3 ? I_BURST : (S.cycle & 3) === 2 && !S.enraged ? I_GUARD : I_CLEAVE; S.cycle++; closeUsed(e, S.enraged ? 14 : 20, list[id].name); }
   else {
     id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
-    if (id === I_DASH && dist < 9) id = I_BURST;                                   // too close to rush: burst instead
+    if (id === I_DASH && dist < 9) id = I_PILLARS;                                 // too close to rush: pillars instead
     if (id === I_KNIGHTS && countAdds('BOSS_DKNIGHT') >= KNIGHT_CAP) id = I_CRESCENT;   // knights capped
+    if (id === I_BURST || id === I_GUARD) { if (bossNear(e)) closeUsed(e, S.enraged ? 14 : 20, list[id].name); else id = id === I_BURST ? I_CRESCENT : I_WHEEL; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -957,6 +977,7 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
 // ============================================================ THE DUNE COLOSSUS ===
 // The Sunscorch Desert boss (shown as 'The Dune Colossus', roomDefs bossName): a six-legged war machine. Keeps its distance and shells you.
 const M_ARTY = 0, M_RAY = 1, M_STOMP = 2, M_MISSILE = 3, M_RAM = 4;
+const STRAFE_SP = 9;   // (flamethrower pacing speed)
 const WARMACH_ORDER = [M_ARTY, M_RAY, M_MISSILE, M_ARTY, M_RAM, M_RAY];
 
 LISTS.BOSS_WARMACH = [
@@ -969,22 +990,36 @@ LISTS.BOSS_WARMACH = [
     },
     fire() { /* shells land as their telegraphs expire */ },
   },
-  { // Molten Ray: the turret sweeps a stream of molten bolts across the arena.
-    name: 'Molten Ray!', wind: () => 1.4, act: () => 1.7, rec: () => 1.0,
-    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.75; cone(e, ux, uz, 62, 0.8, 1.4, BT.VISUAL, 0, 0xffa040); },
-    fire() { S.rayT = 0; S.rayN = 0; },
-    tick(e, dt) {
-      stand(e);
+  { // Molten Ray = the FLAMETHROWER (owner 2026-10-31): a much fatter, faster stream (flames 2x wider, 1.5x faster, wider telegraph cone) that
+    // sweeps wider while the Colossus PACES back and forth across the hero's line, laying FIRE TRAILS on the ground; flame hits burn.
+    name: 'Molten Ray!', wind: () => 1.0, act: () => 1.45, rec: () => 1.0,
+    begin(e, ux, uz) { S.rayA = Math.atan2(ux, uz) - 0.95; cone(e, ux, uz, 70, 1.05, 1.0, BT.VISUAL, 0, 0xffa040); },
+    fire(e) { S.rayT = 0; S.rayN = 0; S.trailT = 0; S.stride = (S.cycle & 1) ? 1 : -1; S.strideT = 0.55; void e; },
+    tick(e, dt, ux, uz) {
+      // strafe along the line perpendicular to the hero, reversing every ~0.9 s; keep inside the arena
+      S.strideT -= dt;
+      if (S.strideT <= 0) { S.strideT = 0.9; S.stride = -S.stride; }
+      tv.set(e.pos.x + uz * S.stride * 6, 0, e.pos.z - ux * S.stride * 6);
+      const lim = edgeLimit(tv.x, tv.z, e.radius + 2);
+      if (tv.x * tv.x + tv.z * tv.z > lim * lim) { S.stride = -S.stride; S.strideT = 0.9; }
+      drive(e, uz * S.stride, -ux * S.stride, STRAFE_SP);
       S.rayT -= dt;
       if (S.rayT > 0) return;
-      S.rayT = 0.05;
-      S.rayA += 1.5 / 34;   // sweeps ~1.5 rad over the attack
+      S.rayT = 0.045;
+      S.rayA += 1.9 / 32;   // sweeps ~1.9 rad over the attack (was 1.5)
       dirV.set(Math.sin(S.rayA), 0, Math.cos(S.rayA));
       tv.set(e.pos.x + dirV.x * e.radius * 0.9, 6, e.pos.z + dirV.z * e.radius * 0.9);
-      fireEnemyProjectile(tv, dirV, 'FLAME', 30, pwr(e) * 0.5, { life: 2.0, radius: 1.4, debuff: 2 });
+      fireEnemyProjectile(tv, dirV, 'FLAME', 46, pwr(e) * 0.5, { life: 1.5, radius: 2.7, debuff: 5 });
       if ((S.rayN++ & 3) === 0) events.emit('shake', { amount: 0.12 });
+      S.trailT -= 0.045;
+      if (S.trailT <= 0) {   // fire trail: a patch on the ground along the flame (within the global fire patch cap), every ~0.18 s at a random reach
+        S.trailT = 0.18;
+        const d = 12 + Math.random() * 40;
+        firePatch(e.pos.x + dirV.x * d, e.pos.z + dirV.z * d, 3.2, 4.2, pwr(e) * 0.12);
+      }
     },
-    windTick(e) { requestYaw(S.rayA + 0.75); },
+    end(e) { stand(e); },
+    windTick(e) { requestYaw(S.rayA + 0.95); },
   },
   { // Seismic Stomp: all six legs slam down; shockwaves under each leg and around the hull.
     name: 'Seismic Stomp!', wind: () => 1.2, act: () => 0.3, rec: () => 0.9,
@@ -1008,7 +1043,7 @@ LISTS.BOSS_WARMACH = [
         const a = base + (i - (n - 1) / 2) * 0.32;
         dirV.set(Math.sin(a), 0, Math.cos(a));
         tv.set(e.pos.x + dirV.x * e.radius * 0.7, 8, e.pos.z + dirV.z * e.radius * 0.7);
-        fireEnemyProjectile(tv, dirV, 'FLAME', 12, pwr(e) * 0.7, { life: 5, radius: 1.2, homing: 1.4, debuff: 2 });
+        fireEnemyProjectile(tv, dirV, 'FLAME', 12, pwr(e) * 0.7, { life: 5, radius: 1.2, homing: 1.4, debuff: 5 });
       }
     },
   },
@@ -1028,13 +1063,13 @@ LISTS.BOSS_WARMACH = [
 
 function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WARMACH!;
-  if (S.stompCd > 0) S.stompCd -= dt;
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 20, 36, e.speed * (1 + 0.12 * e.phase), 0.35);
-  if (e.attackCd > 0) return;
+  const cDue = closeDue(e);   // (proximity) Seismic Stomp is the close skill: only with someone near, more often the longer they stay
+  if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (dist < e.radius + 10 && S.stompCd <= 0) { id = M_STOMP; S.stompCd = 7; }   // too close: stomp you away
-  else id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length];
+  if (cDue) { id = M_STOMP; closeUsed(e, 22, list[id].name); }   // too close: stomp you away
+  else { id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length]; }
   beginAtk(e, list, id, ux, uz, dist);
 }
 

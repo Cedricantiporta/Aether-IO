@@ -86,6 +86,16 @@ export function pathMask(discs: Disc[], x0: number, z0: number, w: number, h: nu
   return { tex, o: new Vector4(x0, z0, 1 / w, 1 / h) };
 }
 
+/** The live Ember lava mask (Room.tsx sets it when it paints the lava floor) so Ignar's creeping lava can re-rasterise it in place. */
+export const lavaLive = { tex: null as DataTexture | null, hs: 0, seen: 0, t: 0 };
+/** Re-rasterises `discs` into an existing mask texture made by `pathMask` with the same arguments (no new GPU texture). */
+export function refreshPathMask(tex: DataTexture, discs: Disc[], x0: number, z0: number, w: number, h: number, pxPerM: number): void {
+  const m = pathMask(discs, x0, z0, w, h, pxPerM);
+  const dst = tex.image.data as Uint8Array, src = m.tex.image.data as Uint8Array;
+  if (dst.length === src.length) { dst.set(src); tex.needsUpdate = true; }
+  m.tex.dispose();
+}
+
 let soilTex: DataTexture | null = null;
 /** Tileable painted soil (rgb) + leafy-clump noise (alpha, drives the ragged edge and the leaf spill). One 512 px tile covers ~9.5 m. */
 export function soilTexture(): DataTexture {

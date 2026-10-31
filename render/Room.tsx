@@ -39,7 +39,7 @@ import { GB, commitInst, fbm, litMat, mulberry32, vnoise } from './util';
 import { thinArrowGeo } from './arrowGeo';
 import { useWorldCounter } from './hooks';
 import { Props } from './Props';
-import { applyPathShader, applyLavaShader, applyIceShader, lavaTime, pathMask, roomTrail } from './groundPath';
+import { applyPathShader, applyLavaShader, applyIceShader, lavaTime, pathMask, roomTrail, lavaLive, refreshPathMask } from './groundPath';
 import { lava, lavaAt } from '../engine/lavaFloor';
 import { ice, iceAt } from '../engine/iceFloor';
 import { labelMaterial } from './label';
@@ -415,6 +415,7 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     if (lava.on && style === 'BASALT') {   // Ember lava streams / heavy-lava islands (engine/lavaFloor.ts), glowing via the shader's emissive
       const hs = shape.maxR + 6, lm = pathMask(lava.discs, -hs, -hs, hs * 2, hs * 2, 8);
       applyLavaShader(m, lm, lava.heavy); pathTex = lm.tex;
+      lavaLive.tex = lm.tex; lavaLive.hs = hs; lavaLive.seen = lava.growVer;
     }
     if (ice.on && style === 'SNOW') {   // Frostpeak slippery ice sheets (engine/iceFloor.ts): glossy pale cyan with cracks and a frosty rim
       const hs = shape.maxR + 6, im = pathMask(ice.discs, -hs, -hs, hs * 2, hs * 2, 8);
@@ -512,7 +513,13 @@ function RoomGround({ biome, R, seed, boss, index }: { biome: number; R: number;
     return { geo: g, mat: m, tufts: inst, slabs, shrooms, kerb, pathTex };
   }, [biome, R, seed, boss]);
   useEffect(() => () => { pathTex?.dispose(); }, [pathTex]);
-  useFrame(({ clock }) => { lavaTime.value = clock.elapsedTime; });
+  useFrame(({ clock }) => {
+    lavaTime.value = clock.elapsedTime;
+    if (lava.on && lavaLive.tex && lavaLive.seen !== lava.growVer && clock.elapsedTime - lavaLive.t > 0.4) {   // Ignar's creeping lava: repaint the ground mask in place
+      lavaLive.seen = lava.growVer; lavaLive.t = clock.elapsedTime;
+      refreshPathMask(lavaLive.tex, lava.discs, -lavaLive.hs, -lavaLive.hs, lavaLive.hs * 2, lavaLive.hs * 2, 8);
+    }
+  });
   return (
     <>
       <mesh geometry={geo} material={mat} receiveShadow />

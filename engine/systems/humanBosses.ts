@@ -29,6 +29,7 @@ import { useGameStore, rollDropPlus } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { edgeLimit } from '../mapgen';
 import { bp } from './bossPhaseState';
+import { bossNear, proxTick, proxRate, closeUsed } from './bossMech';
 
 export type HumanKind = 'VARN' | 'SABLE' | 'ROOK';
 export const HUMAN_KINDS: readonly HumanKind[] = ['VARN', 'SABLE', 'ROOK'];
@@ -289,7 +290,11 @@ function addTrap(x: number, z: number, arm: number): void {
 }
 
 // ------------------------------------------------------------- skills --------
+/** (proximity, bossMech) the close skills of the human bosses: Varn's ground slam, Sable's point-blank burst, Rook's trap retreat. They need someone near. */
+const isCloseSkill = (k: number): boolean => (S.kind === 'VARN' || S.kind === 'SABLE' ? k === 3 : k === 1);
+let nearNow = false;
 function wants(k: number, d: number): boolean {
+  if (isCloseSkill(k) && !nearNow) return false;
   switch (S.kind) {
     case 'VARN': return k === 1 ? d < 10 : k === 2 ? d > 4 && d < 16 : k === 3 ? d < 7.5 : false;
     case 'SABLE': return k === 1 ? false : k === 2 ? d > 3 && S.vanishT <= 0 : k === 3 ? d < 24 : k === 4 ? d < 22 : false;
@@ -553,7 +558,8 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
     startHumanPhase(e);
   }
   const rate = e.phase > 0 ? 1.4 : 1;
-  for (let i = 0; i < S.cd.length; i++) if (S.cd[i] > 0) S.cd[i] -= dt * (kind === 'SABLE' && i === 1 ? 1 : rate);
+  proxTick(e, dt); nearNow = bossNear(e); const pr = proxRate(e);
+  for (let i = 0; i < S.cd.length; i++) if (S.cd[i] > 0) S.cd[i] -= dt * (kind === 'SABLE' && i === 1 ? 1 : rate) * (isCloseSkill(i) ? pr : 1);
   if (S.gap > 0) S.gap -= dt * rate;
 
   switch (e.state) {
@@ -586,7 +592,7 @@ export function aiHumanBoss(e: Enemy, dt: number, px: number, pz: number, d: num
     const n = kind === 'VARN' ? (S.turnT > 0 ? 0 : 3) : kind === 'SABLE' ? 4 : 5;
     for (let j = 0; j < n; j++) {
       const k = ((j + (world.frame % n)) % n) + 1;   // rotate the check order so no skill starves
-      if (S.cd[k] <= 0 && wants(k, d)) { begin(e, k, px, pz); return; }
+      if (S.cd[k] <= 0 && wants(k, d)) { if (isCloseSkill(k)) closeUsed(e, 0, `${kind} skill ${k}`); begin(e, k, px, pz); return; }
     }
   }
 

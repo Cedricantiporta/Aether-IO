@@ -504,11 +504,11 @@ export function Projectiles() {
           break;
         }
         case 'FLAME': {
-          const pu = 1 + 0.2 * Math.sin(t * 16 + n);
+          const fk = Math.max(1, p.radius / 1.4), pu = (1 + 0.2 * Math.sin(t * 16 + n)) * fk;   // (owner 2026-10-31) the Colossus flamethrower (radius 2.7) draws ~2x bigger
           place(ims, i, x, y, z, t * 2, t * 3, 0, pu);
           pushHalo(x, y, z, 2.8 * pu, 2.2, 0.8, 0.2, 0.65, CELL.GLOW);
-          pushHalo(x, y, z, 1.3, 2.2, 1.6, 0.8, 0.8, CELL.GLOW);
-          if (emit && Math.random() < dt * 34) FX.add.emit(x, y, z, (Math.random() - 0.5) * 1.2, 0.6 + Math.random() * 1.2, (Math.random() - 0.5) * 1.2, 0.45, 0.4, 0.05, 2.2, 0.9, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
+          pushHalo(x, y, z, 1.3 * fk, 2.2, 1.6, 0.8, 0.8, CELL.GLOW);
+          if (emit && Math.random() < dt * 34) FX.add.emit(x + (Math.random() - 0.5) * fk, y, z + (Math.random() - 0.5) * fk, (Math.random() - 0.5) * 1.2, (0.6 + Math.random() * 1.2) * fk, (Math.random() - 0.5) * 1.2, 0.45, 0.4 * fk, 0.05, 2.2, 0.9, 0.2, 0.8, CELL.FLAME, -0.6, 0.8);
           break;
         }
         case 'BIG_FLAME': {   // (owner) ~2.5x bigger fireball: a fat swirling core, a big halo, a streaming ember tail
