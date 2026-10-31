@@ -23,9 +23,10 @@ import { labelMaterial } from './label';
 import { nightGlow, forgetNightGlow } from './biomeLook';
 import {
   PLAZA_DECOR, PLAZA_STATUES, GATE_TOWER, CASTLE, LAKE, HERMIT_CAMP, NK_CHIMNEY, RUINS, TRAIL_ROCKS, GATE, HOUSES, LOTS, lotW, type Lot, STALLS, ROADS, GATEWAY, GATEWAYS, FENCES, LAMPS, PLAZA, WELL_POS, SIGNS, WALL, WALL_RUNS, WALL_TOWERS, SIDE_GATES, SIDE_GATE, PLANTERS, TOWN_TREES, GRASS_PATCHES, FARM, SCARECROW, HAYSTACK, CARTS,
-  BOSS_PORTAL, ADV_PLAZA, HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
+  BOSS_PORTAL, ADV_PLAZA, HouseSpec, StallSpec, TowerSpec, PlanterSpec, TreeSpec, CartSpec, PORTAL, TERRACE, townLift, TIERS, CHAPEL_SIDE, HOUSE_KIT, stairRun, tierRun, STEP_RUN, tierEdgeOnWall, type TierSpec, CHURCH, TAVERN, WINDMILL, STATUE, GRAVEYARD, GRAVES, CRYPT, TOWN_SEATS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, FIELDS, type FieldSpec } from '../engine/townData';
 import { QualityCfg } from './quality';
 import { addBossIsland } from './bossIsland';
+import { addCastleExterior } from './castleExterior';
 import { addAdventurePlaza } from './adventurePlaza';
 import { BEACH, MAIN_BEACH } from '../engine/beachData';
 import { world } from '../engine/world';
@@ -394,7 +395,7 @@ function buildRuin(kind: number, seed: number) {
  *  detailed full bricks"), a paved top, a low parapet along the open edges with gaps for the stairs, and flights of
  *  steps with plain side walls + a lamp post at the foot. */
 function addTier(b: GB, g: GB, T: TierSpec): void {
-  const h = T.h, w = T.x1 - T.x0, d = T.z1 - T.z0, cx = (T.x0 + T.x1) / 2, cz = (T.z0 + T.z1) / 2, run = stairRun(h);
+  const h = T.h, base = T.base ?? 0, w = T.x1 - T.x0, d = T.z1 - T.z0, cx = (T.x0 + T.x1) / 2, cz = (T.z0 + T.z1) / 2, run = tierRun(T);
   const face = '#ddd6c4', joint = '#c2bba9', cap = '#ebe5d6';
   b.box(w, h, d, [cx, h / 2, cz], face, [0, 0, 0], [0.94, 1.02]);
   // (the top is the shared flagstone paving: buildTierTops)
@@ -423,12 +424,12 @@ function addTier(b: GB, g: GB, T: TierSpec): void {
     const f = st.side === 'N' ? T.z0 : st.side === 'S' ? T.z1 : st.side === 'W' ? T.x0 : T.x1;
     const P = (a: number, y: number, o: number): [number, number, number] => alongX ? [a, y, f + out * o] : [f + out * o, y, a];
     for (let k = 0; k < n; k++) {
-      const hh = h * (n - k) / n, o = STEP_RUN * (k + 0.5);
+      const hh = base + (h - base) * (n - k) / n, o = STEP_RUN * (k + 0.5);
       b.box(alongX ? st.hw * 2 : STEP_RUN + 0.02, hh, alongX ? STEP_RUN + 0.02 : st.hw * 2, P(st.c, hh / 2, o), k % 2 ? '#e2dccb' : '#d9d2c0');
     }
     for (const sd of [-1, 1]) {
       const a = st.c + sd * (st.hw + 0.22);
-      for (let k = 0; k < n; k++) { const hh = h * (n - k) / n + 0.35; b.box(alongX ? 0.44 : STEP_RUN + 0.02, hh, alongX ? STEP_RUN + 0.02 : 0.44, P(a, hh / 2, STEP_RUN * (k + 0.5)), face); }
+      for (let k = 0; k < n; k++) { const hh = base + (h - base) * (n - k) / n + 0.35; b.box(alongX ? 0.44 : STEP_RUN + 0.02, hh, alongX ? STEP_RUN + 0.02 : 0.44, P(a, hh / 2, STEP_RUN * (k + 0.5)), face); }
       const [lx, , lz] = P(a, 0, run + 0.25);
       b.box(0.5, 0.5, 0.5, [lx, 0.25, lz], cap);
       b.cyl(0.06, 0.08, 1.7, 6, [lx, 1.35, lz], '#34343a'); b.box(0.3, 0.05, 0.3, [lx, 2.25, lz], '#2a2a2e');
@@ -442,7 +443,6 @@ function buildTierTops(): BufferGeometry {
   const pos: number[] = [], idx: number[] = [];
   const quad = (x0: number, x1: number, z0: number, z1: number, y: number) => { const o = pos.length / 3; pos.push(x0, y, z0, x1, y, z0, x1, y, z1, x0, y, z1); idx.push(o, o + 2, o + 1, o, o + 3, o + 2); };
   for (const T of TIERS) quad(T.x0 + 0.1, T.x1 - 0.1, T.z0 + 0.1, T.z1 - 0.1, T.h + 0.04);
-  quad(TERRACE.x0 + 0.15, TERRACE.x1 - 0.15, TERRACE.z0 + 0.15, TERRACE.z1 - 0.15, TERRACE.h + 0.04);
   const g = new BufferGeometry();
   g.setAttribute('position', new Float32BufferAttribute(pos, 3));
   g.setAttribute('normal', new Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
@@ -463,34 +463,6 @@ function addChapelSideDoor(b: GB, g: GB): void {
   b.box(1.1, 0.2, 2.0, [x0 - 0.75, 0.1, z], LIGHT); b.box(0.6, 0.38, 1.7, [x0 - 0.5, 0.19, z], STN);
   b.box(0.08, 0.8, 0.08, [x0 - 0.3, 2.9, z + 1.1], '#34363d'); g.sph(0.17, [x0 - 0.3, 2.45, z + 1.1], '#ffd070', 1, 6);
 }
-
-/** The raised stone terrace in front of the keep: block + paved top, low parapet along the edges (gap for the stairs), a
- *  wide flight of steps with sloped balustrades and lamp posts, and the foundation the keep stands on. */
-function addTerrace(b: GB, g: GB): void {
-  const T = TERRACE, h = T.h, cx = (T.x0 + T.x1) / 2, w = T.x1 - T.x0, d = T.z1 - T.z0, cz = (T.z0 + T.z1) / 2;
-  const st = '#a39d90', cap = '#c4beb0';
-  b.box(w, h, d, [cx, h / 2, cz], st, [0, 0, 0], [0.8, 1.02]);
-  const { x: kx, z: kz, w: kw, d: kd } = CASTLE;
-  b.box(kw + 2.4, h, kd + 1.6, [kx, h / 2, kz - 0.4], st, [0, 0, 0], [0.8, 1.02]);   // the keep's foundation
-  for (let x = T.x0 + 0.6; x < T.x1; x += 1.6) b.box(1.3, 0.12, 0.4, [x, h * 0.5, T.z1 + 0.02], '#958f82');      // stone courses on the front face
-  // parapet: front (both sides of the stairs) + sides
-  for (const sx of [-1, 1]) {
-    const a = T.stairHw + 0.35, bb = sx < 0 ? -T.x0 : T.x1, len = bb - a;
-    b.box(len, 0.55, 0.45, [sx * (a + len / 2), h + 0.27, T.z1 + 0.2], cap);
-    for (let x = a + 0.2; x <= bb; x += 2.0) b.box(0.6, 0.75, 0.6, [sx * x, h + 0.37, T.z1 + 0.2], st);
-    b.box(0.45, 0.55, d, [sx < 0 ? T.x0 + 0.2 : T.x1 - 0.2, h + 0.27, cz], cap);
-  }
-  // stairs: kit v3 stairs_stone (engine/townFill, stretched to the lift ramp); the lamp posts at the foot stay code-built
-  for (const sx of [-1, 1]) {
-    const x = sx * (T.stairHw + 0.3);
-    b.box(0.7, 1.1, 0.7, [x, 0.55, T.stairZ + 0.1], st); b.box(0.85, 0.12, 0.85, [x, 1.14, T.stairZ + 0.1], cap);
-    b.cyl(0.08, 0.08, 1.2, 6, [x, 1.8, T.stairZ + 0.1], '#2a2a2e'); g.sph(0.24, [x, 2.5, T.stairZ + 0.1], '#ffd070', 1, 8);
-  }
-}
-
-
-
-
 
 /** The graveyard: gravestones, the crypt at the west end, a dead tree, lanterns, a gravel path, candles + flowers. */
 function addGraveyard(b: GB, g: GB, rnd: () => number): void {
@@ -654,7 +626,7 @@ function buildTown() {
   };
   for (const T of TIERS) { const c = at((T.x0 + T.x1) / 2, (T.z0 + T.z1) / 2); addTier(c.b, c.g, T); }
   HOUSES.forEach((h, i) => { if (!h.kit && !h.nk) put(h.x, h.z, h.rot, buildHouse(h, i)); });   // (every house is a Blender kit piece: town_kit_v2 in render/townKit.tsx, the farm buildings nature_kit_v1 in render/NatureScenery.tsx)
-  { const c = at(CASTLE.x, CASTLE.z); addTerrace(c.b, c.g); }
+  lifted(CASTLE.x, CASTLE.z, (b, g) => addCastleExterior(b, g));   // (Town Plan v6: the wings, towers, gatehouse porch, statue plinths + the Royal Yard floor on Castle Hill)
   lifted(CHURCH.x - 3, CHURCH.z, (b, g) => addChapelSideDoor(b, g));   // (keep, chapel, tavern: town_kit_v2, render/townKit.tsx)
   { const c = at(PLAZA.x, PLAZA.z); addPlaza(c.b, c.g); }
   lifted(ADV_PLAZA.x, ADV_PLAZA.z, (b, g) => addAdventurePlaza(b, g));   // (owner 2026-10-31: the Adventure Plaza: kerb, inlay, rim lamps, banners)

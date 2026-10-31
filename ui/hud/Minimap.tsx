@@ -16,7 +16,7 @@ import { TAP } from '../../engine/tavernData';
 import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
 import { world, SHRINE_POS, TRAINER_POS } from '../../engine/world';
 import {
-  GATE, WALL_RUNS, WALL_TOWERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
+  GATE, WALL_RUNS, WALL_TOWERS, CASTLE_WING, TIERS, ROADS, TRAIL_ROCKS, ROCKFALL, ROCKFALL_BREAK, rockfallCleared, STABLE, ANIMALS, NPCS, PLAZA, HOUSES, CASTLE, CHURCH, TAVERN,
   WINDMILL, FIELDS, RIVER, riverBank, BRIDGE, MINE_BRIDGE, TOWN_TREES, PORTAL, BOSS_PORTAL, ADV_PLAZA, TOWER, GRAVEYARD,
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
@@ -141,6 +141,8 @@ function bakeTown(): void {
     g.restore();
     // fields
     for (const f of FIELDS) { g.fillStyle = f.crop === 'WHEAT' ? '#ecd77f' : f.crop === 'PUMPKIN' ? '#f3b868' : '#a8de78'; rr(g, f.x - f.hw, f.z - f.hd, f.hw * 2, f.hd * 2, 2); g.fill(); }
+    // the terraces (Town Plan v6): Middle Town + Castle Hill as soft lighter paving blocks
+    for (const T of TIERS) { if (T.h < 1.5) continue; g.fillStyle = T.h > 3 ? 'rgba(255,248,226,.55)' : 'rgba(255,244,214,.32)'; rr(g, T.x0, T.z0, T.x1 - T.x0, T.z1 - T.z0, 1.4); g.fill(); }
     // roads (dirt first, paved on top) + the plaza
     for (const pass of [true, false]) for (const r of ROADS) {
       if (!!r.dirt !== pass) continue;
@@ -168,7 +170,11 @@ function bakeTown(): void {
     for (const t of WALL_TOWERS) disc(g, t.x, t.z, (t.corner ? 2.2 : 1.7), C.stone);
     // buildings
     for (const h of HOUSES) building(g, h.x, h.z, h.rot, h.w, h.d, h.wall);
-    building(g, CASTLE.x, CASTLE.z, 0, CASTLE.w, CASTLE.d + 3, '#f0e8d6');
+    for (const sx of [-1, 1]) {   // (Town Plan v6) the castle: keep + two wings + their corner towers
+      const W = CASTLE_WING; building(g, sx * (W.x0 + W.x1) / 2, (W.z0 + W.z1) / 2, 0, W.x1 - W.x0, W.z1 - W.z0, '#efe6d0');
+      disc(g, sx * (W.x1 - 0.3), W.z0 + 0.9, W.towerR, '#cfc4a9'); disc(g, sx * (W.x1 - 0.3), W.z1 - 0.9, W.towerR, '#cfc4a9');
+    }
+    building(g, CASTLE.x, CASTLE.z, 0, CASTLE.w, CASTLE.d + 1, '#f0e8d6');
     building(g, CHURCH.x, CHURCH.z, CHURCH.rot, CHURCH.w, CHURCH.d, '#f0e8d6');
     building(g, TAVERN.x, TAVERN.z, TAVERN.rot, TAVERN.w, TAVERN.d, '#d8b890');
     building(g, STABLE.x, STABLE.z, 0, STABLE.w, STABLE.d, '#a07050');

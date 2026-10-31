@@ -16,10 +16,11 @@
 // Everything else is forest, hedges, rocks and props: nothing is left as bare grass or bare paving.
 // ============================================================================
 import { HORSE_STATUES } from './qtVillage';
+import { CG_BANNERS, CG_HEDGES, CG_STATUES, CG_PROPS, CG_TREES, CG_FLOWERS, CG_BEDS, CG_YARD_RACKS, CG_YARD_HAY, CG_SEATS } from './castleGrounds';
 import {
-  TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
+  TOWN_COLLIDERS, SHOP_LOOK, shopLocal, NK, HOUSES, LOTS, lotW, HOUSE_KIT, ROADS, NPCS, ANIMALS, TOWN_SEATS, FIELDS, FARM, TIERS, stairRun, tierRun, RIVER, BRIDGE, MINE_BRIDGE, riverBank, isTownWater,
   PORTAL, BOSS_PORTAL, BOSS_PORTAL_S, bossAt, ADV_VILLAGE, inAdvPlaza, TOWER, TOWER_KNOLL, NESTS, ANIMAL_PEN, VILLAGE_NODES, WHEEL_PIN, HIDDEN_CAT, WALL, GATE, CASTLE, HERO_HOUSE, townLift, TERRACE, PLAZA, PLAZA_DECOR, WELL_POS, LAKE, PLAZA_STATUES, PORTAL_S,
-  SIDE_GATES, PARK_EAST,
+  SIDE_GATES, PARK_EAST, NORTH_GROWTH,
 } from './townData';
 import { TOWN_CHESTS } from './townChests';
 import { QT_PREFIX, QT_FLOWERS, QT_GRASS, QT_CLOVER, QT_PEBBLES } from './qtData';
@@ -101,7 +102,7 @@ for (let x = ANIMAL_PEN.x0 + 1; x < ANIMAL_PEN.x1; x += 2.5) for (let z = ANIMAL
 for (const n of VILLAGE_NODES) resv(n.x, n.z, 3.2);
 resv(WHEEL_PIN.x, WHEEL_PIN.z, 2.4); resv(HIDDEN_CAT.x, HIDDEN_CAT.z, 2.4); resv(PORTAL.x, PORTAL.z, 5.5); resv(PORTAL.front.x, PORTAL.front.z, 3); resv(PORTAL.out.x, PORTAL.out.z, 3); resv(BOSS_PORTAL.x, BOSS_PORTAL.z, 5.5); resv(BOSS_PORTAL.front.x, BOSS_PORTAL.front.z, 3); resv(BOSS_PORTAL.out.x, BOSS_PORTAL.out.z, 3);
 for (const h of HORSE_STATUES) resv(h.x, h.z, 2.4);   // (the horse statues by the portal)
-resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOWER.x, TOWER.z, TOWER.r + 2); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + 5, 6); resv(GATE.x, GATE.z + 2, 6);
+resv(TOWER.door.x, TOWER.door.z, 4); resv(TOWER.out.x, TOWER.out.z, 3); resv(TOWER.x, TOWER.z, TOWER.r + 2); resv(CAVE_DOOR.x, CAVE_DOOR.z, 5); resv(0, CASTLE.z + CASTLE.d / 2 + 3, 6); resv(GATE.x, GATE.z + 2, 6);
 for (const f of FISH_SPOTS) resv(f.x, f.z, 3.6);
 resv(HERO_HOUSE.x, HERO_HOUSE.z - HERO_HOUSE.d / 2 - 1.1, 3.2); resv(HERO_HOUSE.wake.x, HERO_HOUSE.wake.z, 2.4);   // (the adventurer's door + wake spot)
 for (const s of TOWN_SEATS) resv(s.x, s.z, 1.7);
@@ -110,7 +111,7 @@ for (const g of SIDE_GATES) for (const dx of [-3.5, 0, 3.5]) resv(g.x + dx, g.z,
 const rects: [number, number, number, number][] = [];   // x0 z0 x1 z1
 for (const F of [...FIELDS, FARM]) rects.push([F.x - F.hw - 1.5, F.z - F.hd - 1.5, F.x + F.hw + 1.5, F.z + F.hd + 1.5]);
 for (const T of TIERS) {
-  const run = stairRun(T.h);
+  const run = tierRun(T);
   for (const s of T.stairs) {
     const a = s.c - s.hw - 0.9, b = s.c + s.hw + 0.9;
     if (s.side === 'S') rects.push([a, T.z1 - 1, b, T.z1 + run + 1]);
@@ -120,10 +121,10 @@ for (const T of TIERS) {
   }
 }
 // (houses are axis-aligned boxes on the streets: no hedge / grove / bed of the loose fill may run through one)
-for (const h of HOUSES) if (h.kit && Math.abs(h.x) < 44 && h.z > -40 && h.z < 37) { const k = HOUSE_KIT[h.kit], sc = h.s ?? 1, hw = k.half * sc + 0.2, d0 = (k.d / 2 + 0.4) * sc, d1 = k.front * sc; rects.push(h.rot ? [h.x - hw, h.z - d1, h.x + hw, h.z + d0] : [h.x - hw, h.z - d0, h.x + hw, h.z + d1]); }
+for (const h of HOUSES) if (h.kit && Math.abs(h.x) < 44 && h.z > WALL.z0 && h.z < 37) { const k = HOUSE_KIT[h.kit], sc = h.s ?? 1, hw = k.half * sc + 0.2, d0 = (k.d / 2 + 0.4) * sc, d1 = k.front * sc; rects.push(h.rot ? [h.x - hw, h.z - d1, h.x + hw, h.z + d0] : [h.x - hw, h.z - d0, h.x + hw, h.z + d1]); }
 rects.push([-BRIDGE.hw - 2, BRIDGE.z0 - 3, BRIDGE.hw + 2, BRIDGE.z1 + 3], [MINE_BRIDGE.x - 3, MINE_BRIDGE.z0 - 3, MINE_BRIDGE.x + 3, MINE_BRIDGE.z1 + 3]);
 // the hermit's trail round the north-east corner and along the north wall (narrow, rocky): keep a 5 m lane
-legs.push([55, -4, 55, -47, 2.6], [55, -47, 10, -47.5, 2.6], [10, -47.5, -44, -47.5, 2.6]);
+legs.push([55, -4, 55, -47 - NORTH_GROWTH, 2.6], [55, -47 - NORTH_GROWTH, 10, -47.5 - NORTH_GROWTH, 2.6], [10, -47.5 - NORTH_GROWTH, -44, -47.5 - NORTH_GROWTH, 2.6]);   // (Town Plan v6: the trail now runs along the new north wall, 51 m further north)
 const distSeg = (x: number, z: number, x1: number, z1: number, x2: number, z2: number): number => {
   const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz, t = l2 > 0 ? Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / l2)) : 0;
   return Math.hypot(x - x1 - dx * t, z - z1 - dz * t);
@@ -336,10 +337,8 @@ put('adventure_portal', BOSS_PORTAL.x, BOSS_PORTAL.z, BOSS_PORTAL.ry, BOSS_PORTA
   for (const m of PLAZA_STATUES) put('statue_hero', m.x, m.z, 0, m.s, m.s, m.s, D.statueY);
   claim(PLAZA.x, PLAZA.z, PLAZA.r + 0.3);
   for (const sx of [-1, 1]) for (const dz of [-1, 1]) decor('lamp_post_double', PLAZA.x + sx * 5.7, PLAZA.z + dz * 5.7, 0, 1, { solid: 'disc', r: 0.35, force: true });
-  decor('banner_pole', -5.4, -16.6, 0, 1, { solid: 'disc', r: 0.35 }); decor('banner_pole', 5.4, -16.6, 0, 1, { solid: 'disc', r: 0.35 });
 }
-// ---- the castle terrace's great flight: stairs_stone stretched to the lift ramp (TERRACE: z1 -> stairZ over h; the code-built steps in TownScenery addTerrace are gone)
-{ const T = TERRACE, run = T.stairZ - T.z1; put('stairs_stone', 0, T.z1 + run + 0.5 * (-1.9 + 2.23) * 0 - 2.23 * (run / 4.13), 0, (T.stairHw * 2) / 4.18, T.h / 1.75, run / 4.13, 0); }
+// ---- (Town Plan v6) the castle terrace's great flights are code-built tier stairs (TownScenery addTier); the castle grounds are placed in the block 'CASTLE GROUNDS' below
 // ---- the market street: two market_tents (red / green) a side between the stalls, a flower cart on the south street
 // (owner: the open market tents looked unfinished: removed, with the market stalls in townData STALLS)
 { let n = 0; for (const [x, z, ry] of [[-20.0, 12.9, 0.3], [-4.6, 13.0, 0.2], [4.8, 13.0, -0.2], [17.0, 13.0, -0.3], [-33, 12.9, 0.1]] as const) if (n < 2 && decor('flower_cart', x, z, ry, 1, { solid: 'ring', r: 0.5, rad: 0.8 })) n++; }
@@ -392,10 +391,10 @@ grove(Z(-23, 8, 2.2, 2), 2, [OAKS(1, [0.7, 0.9]), BUSHES(2, [0.6, 0.8])], 819, 0
 grove(Z(-36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 23, 0.6, 1.4); grove(Z(36.5, 22.4, 6.4, 1.8), 2, [OAKS(1, [0.6, 0.8])], 24, 0.6, 1.4);   // (owner: no loose bushes on the town paving)
 // ---- chapel quarter: a cloister garden east of the chapel (hedged on three sides, beds inside), pines on the hill's north edge
 hedge(-22.6, -37.2, -13.4, -37.2); hedge(-13.4, -37.2, -13.4, -22.6);
-grove(Z(-31, -37.4, 5, 1.4), 4, [PINES(1, [0.8, 1])], 32, 1.0, 2.4); grove(Z(-11.8, -26, 1.2, 9), 5, [PINES(1, [0.8, 1.05])], 33, 1.0, 2.4);
+grove(Z(-31, -37.4, 5, 1.4), 4, [PINES(1, [0.8, 1])], 32, 1.0, 2.4);
 // ---- trainer yard (north of the street, west of the castle path): hay, crates, a verge of flowers
 // (owner 2026-10-22: loose barrels / crates are tucked against walls, never in the open: the hill's retaining wall, the terrace corner)
-cluster([-32.6, -18.1, 0.2], [-9.4, -16.6, 0.3]);
+cluster([-32.6, -18.1, 0.2]);
 
 // ---- castle approach: a bush + bed either side of the terrace stairs' foot
 
@@ -409,7 +408,27 @@ cluster([-35.9, 4.6, 0.7], [-25.6, 4.4, 2.1]);
 for (const sx of [-1, 1]) {
   grove(Z(sx * 42.6, 0, 0.7, 38), 22, [PINES(1, [0.55, 0.7])], 71 + sx, 0.5, 1.2);   // (owner: no bushes along the walls)
 }
-grove(Z(0, -38.6, 42, 0.9), 10, [PINES(1, [0.6, 0.8])], 73, 0.6, 1.2);
+
+
+// ================================================================ CASTLE GROUNDS (Town Plan v6): the Royal Way lawns on the Middle Town and the gardens ring of Castle Hill (data: engine/castleGrounds.ts)
+// The colliders of the statues / fountain / gazebo / well / racks / hay are in townData TOWN_COLLIDERS; hedges and trees add their own solids here.
+{
+  const r = rng(6001);
+  for (const [x, z, sc] of CG_STATUES) { put('statue_hero', x, z, 0, sc, sc, sc, townLift(x, z) + 0.55); claim(x, z, 1.4); }   // (the round plinth is built in TownScenery addCastleGrounds)
+  for (const [pc, x, z, sc] of CG_PROPS) { put(pc, x, z, 0, sc, sc, sc); claim(x, z, pc === 'gazebo' ? 3.6 : 3.0); }
+  for (const [pc, x, z, yaw] of CG_YARD_RACKS) { put(pc, x, z, yaw, 1, 1, 1); claim(x, z, 1.2); }
+  for (const [x, z, yaw, sc] of CG_YARD_HAY) { put(PIECES.haystack, x, z, yaw, sc, sc, sc); claim(x, z, 1.5 * sc); }
+  for (const [x, z] of CG_SEATS) claim(x, z, 1.2);
+  for (const [x, z] of CG_BANNERS) decor('banner_pole', x, z, 0, 1, { solid: 'disc', r: 0.35 });
+  for (const [x1, z1, x2, z2] of CG_HEDGES) hedge(x1, z1, x2, z2);
+  for (const [x, z, role] of CG_TREES) {
+    const piece = role === 0 ? PIECES.oak : role === 1 ? PIECES.blossom : PIECES.fruit, p = pick(piece, r()), sc = 0.8 + r() * 0.2;
+    if (!prop(p, x, z, r() * TAU, sc, sc * (0.95 + r() * 0.15), 0.4)) continue;
+    const rad = (SOLID_R[p] ?? 0.7) * sc;
+    for (let k = 0; k < 2; k++) { const a = r() * TAU, d = rad + 0.55 + r() * 0.7, fx = x + Math.cos(a) * d, fz = z + Math.sin(a) * d; deco(PIECES.flowers, fx, fz, r() * TAU, 0.55 + r() * 0.3, undefined); }
+  }
+  for (const [x, z, sc] of [...CG_FLOWERS, ...CG_BEDS]) deco(PIECES.flowers, x, z, r() * TAU, sc, sc * (0.9 + r() * 0.2));
+}
 
 // ================================================================ OUTSIDE: THE GATE MEADOW (z 38..60)
 // west half: a thick grove of oaks and pines (the woodcutters' wood) with the beach path + the carts' lane left open; flowers on the clearings

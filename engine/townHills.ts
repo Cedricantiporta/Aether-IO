@@ -9,7 +9,7 @@ import { ROADS, FIELDS, FARM, WALL, RIVER, BRIDGE, TOWER, PORTAL, BOSS_PORTAL, O
 import { SHOP_POSITIONS } from '../constants';
 import { inCampYard } from './caveData';
 
-const X0 = -80, Z0 = -80, NX = 170, NZ = 345;   // grid covers x -80..90, z -80..265 (the forest south of the portal clearing + the tower clearing)
+const X0 = -80, Z0 = -128, NX = 170, NZ = 393;   // grid covers x -80..90, z -128..265 (Town Plan v6: the kingdom grew 51 m north; the forest south of the portal clearing + the tower clearing)
 let H: Float32Array | null = null;
 
 function noise(x: number, z: number): number {
