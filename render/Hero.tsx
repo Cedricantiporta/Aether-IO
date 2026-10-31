@@ -6,7 +6,7 @@ import { labelMaterial } from './label';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
-  AdditiveBlending, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
+  AdditiveBlending, Vector3, AnimationAction, AnimationMixer, BufferGeometry, Color, CylinderGeometry, Group, InstancedMesh, LoopOnce, Mesh, MeshBasicMaterial,
   MeshStandardMaterial, SphereGeometry, Points, PointsMaterial, Float32BufferAttribute, BufferAttribute, DoubleSide, CanvasTexture, SRGBColorSpace, ShaderMaterial, FrontSide,
   type Object3D,
 } from 'three';
@@ -18,11 +18,12 @@ import { abilityState, LP_CHARGE } from '../engine/systems/abilities';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
-import { CELL, FX, dustPuff, embers, sparks } from './fx';
+import { CELL, FX, dustPuff, embers, sparks, flashStar } from './fx';
 import { GB, TAU, angleLerp, clamp, damp, glowMat, litMat, mulberry32, setInst } from './util';
 import { useCharacterInstance, useClips, upperBody, CharKey } from './characters';
 import { PICKAXE_ID } from '../itemClass';
-import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, makePickaxe, WeaponGeo } from './weapons';
+import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, makePickaxe, wopts, WeaponGeo, type WOpts } from './weapons';
+import { gradeOf } from '../grade';
 import { makeBeamMaterial } from './beam';
 import { isLobbyStatus } from './CameraRig';
 import { QualityCfg } from './quality';
@@ -37,8 +38,30 @@ const GHOST_TINT: Record<HeroClass, number> = { ARCHER: 0x7dff9a, WIZARD: 0x8fb0
 
 const _col = new Color();
 
-function buildWeapon(cls: HeroClass, accent: string, tier: number): WeaponGeo {
-  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(cls === 'NECROMANCER' ? '#7a4ad0' : accent, tier) : cls === 'KNIGHT' ? makeSword(accent, tier) : makeAxe(accent, tier);
+function buildWeapon(cls: HeroClass, accent: string, tier: number, o?: WOpts): WeaponGeo {
+  return cls === 'ARCHER' ? makeBow(accent, tier, o) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(accent, tier, o) : cls === 'KNIGHT' ? makeSword(accent, tier, o) : makeAxe(accent, tier, o);
+}
+const _wv = new Vector3();
+/** Per-weapon look effects: pulsing emissive, spinning halo / shards, soft sparkles (Legendary gold, Mythic crimson). All state preallocated. */
+interface WeaponFx { mat: MeshBasicMaterial; base: number; L: number; g: number; grp: Group; tip: [number, number, number]; spins: { m: Mesh; axis: 0 | 1 | 2; speed: number }[]; acc: number }
+function addSpins(grp: Group, w: WeaponGeo, glowM: Mesh): WeaponFx['spins'] {
+  const out: WeaponFx['spins'] = [];
+  for (const sp of w.spins ?? []) { const m = new Mesh(sp.geo, glowM.material); m.position.set(sp.pos[0], sp.pos[1], sp.pos[2]); grp.add(m); out.push({ m, axis: sp.axis, speed: sp.speed }); }
+  return out;
+}
+function tickWeaponFx(f: WeaponFx, t: number, dt: number, shield: boolean) {
+  const pulse = 0.5 + 0.5 * Math.sin(t * (f.L >= 5 ? 4.2 : 2.6) + f.g);
+  if (f.L >= 3) { const k = (f.L - 2) * 0.16 * (1 + 0.25 * f.g); f.mat.color.setScalar(f.base + k * pulse); }
+  for (let i = 0; i < f.spins.length; i++) { const sp = f.spins[i]; if (sp.axis === 0) sp.m.rotation.x += dt * sp.speed; else if (sp.axis === 1) sp.m.rotation.y += dt * sp.speed; else sp.m.rotation.z += dt * sp.speed; }
+  if (f.L >= 4 && dt > 0) {
+    f.acc += dt * ((f.L >= 5 ? 9 : 5) + 2 * f.g) * (shield ? 0.6 : 1);
+    if (f.acc >= 1) {
+      f.acc = 0;
+      _wv.set(f.tip[0] + (Math.random() - 0.5) * 0.5, f.tip[1] * (0.35 + Math.random() * 0.65), f.tip[2] + (Math.random() - 0.5) * 0.4);
+      f.grp.localToWorld(_wv);
+      if (f.L >= 5) flashStar(_wv.x, _wv.y, _wv.z, 0xff4a5e, 0.5, 0.35); else flashStar(_wv.x, _wv.y, _wv.z, 0xffd35a, 0.38, 0.32);
+    }
+  }
 }
 
 function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
@@ -50,6 +73,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     for (const mt of ch.mats as MeshStandardMaterial[]) if (mt.color) { mt.color.set(t); if (cls === 'NECROMANCER') mt.color.multiply(NECRO_TINT); }
   }, [ch, cls]);
   const rarity = useGameStore((s) => s.equipment?.weapon?.rarity) || 'COMMON';
+  const wgrade = useGameStore((s) => (s.equipment?.weapon ? gradeOf(s.equipment.weapon) : 'MID'));
   const isPick = useGameStore((s) => s.equipment?.weapon?.id === PICKAXE_ID);   // the Mining Pickaxe is the equipped weapon: shown in hand instead of the class weapon
   const eq = useGameStore((s) => s.equipment);
   const weaponGlowKey = useGameStore((s) => glowKeyOf(s.equipment?.weapon));
@@ -62,7 +86,7 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     idle: null as AnimationAction | null, run: null as AnimationAction | null, walk: null as AnimationAction | null,
     hit: null as AnimationAction | null, death: null as AnimationAction | null, atk: null as AnimationAction | null, cast: null as AnimationAction | null,
     wIdle: 1, wRun: 0, wDeath: 0, prevAtk: 0, prevCast: 0, prevHurt: 0, wasAlive: true, yaw: 0, lean: 0, t: 0, tscale: 1,
-    pick: null as Group | null, wpn: null as Group | null, pickT: 0, emissiveKey: '', wearGlow: [] as WearGlow[], wpnGlow: null as null | { body: MeshStandardMaterial; glow: MeshBasicMaterial; gr: number; gg: number; gb: number; amt: number; base: number }, gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
+    pick: null as Group | null, wpn: null as Group | null, wfx: null as WeaponFx | null, sfx: null as WeaponFx | null, pickT: 0, emissiveKey: '', wearGlow: [] as WearGlow[], wpnGlow: null as null | { body: MeshStandardMaterial; glow: MeshBasicMaterial; gr: number; gg: number; gb: number; amt: number; base: number }, gem: [0, 0, 0] as [number, number, number], stepEmit: 0,
   });
 
   // ---- weapon attachment
@@ -70,7 +94,8 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     if (!ch.handR) return;
     const tier = RARITY_TIER[rarity] ?? 0;
     const accent = RARITY_ACCENT[rarity] || RARITY_ACCENT.COMMON;
-    const w = isPick ? makePickaxe() : buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier);
+    const w = isPick ? makePickaxe() : buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier, wopts(rarity, wgrade, cls === 'NECROMANCER'));
+    const wo = wopts(rarity, wgrade);
     const grp = new Group();
     grp.quaternion.copy(HANDSLOT_QUAT);
     grp.scale.setScalar(1 + 0.05 * tier);
@@ -78,31 +103,35 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
     body.castShadow = true;
     const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5 + 0.35 * tier, 1.5 + 0.35 * tier, 1.5 + 0.35 * tier) }));
     grp.add(body, glowM);
+    const spins = addSpins(grp, w, glowM);
     ch.handR.add(grp);
     S.current.wpn = grp;
+    S.current.wfx = isPick ? null : { mat: glowM.material as MeshBasicMaterial, base: 1.5 + 0.35 * tier, L: wo.r!, g: wo.g!, grp, tip: w.tip, spins, acc: 0 };
     // enhanced weapon (+7): its materials (created just above, private to this weapon) get a rarity-coloured emissive pulse in useFrame
     const wg = parseGlowKey(weaponGlowKey), wamt = wg ? glowAmt(wg.plus) : 0;
     if (wg && wamt > 0) { const c = glowColor(wg.rarity); S.current.wpnGlow = { body: body.material as MeshStandardMaterial, glow: glowM.material as MeshBasicMaterial, gr: c.r, gg: c.g, gb: c.b, amt: wamt, base: 1.5 + 0.35 * tier }; }
     S.current.gem = w.tip;
     (grp as any).userData.tier = tier;
     const g = grp;
-    return () => { S.current.wpn = null; S.current.wpnGlow = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
-  }, [ch, cls, rarity, weaponGlowKey, isPick]);
+    return () => { S.current.wpn = null; S.current.wfx = null; S.current.wpnGlow = null; ch.handR!.remove(g); w.body.dispose(); w.glow.dispose(); for (const sp of w.spins ?? []) sp.geo.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+  }, [ch, cls, rarity, wgrade, weaponGlowKey, isPick]);
 
   // ---- the knight's shield on the left arm (tinted like the weapon's rarity)
   useEffect(() => {
     if (cls !== 'KNIGHT' || !ch.handL) return;
     const tier = RARITY_TIER[rarity] ?? 0, accent = RARITY_ACCENT[rarity] || RARITY_ACCENT.COMMON;
-    const w = makeShield(accent, tier);
+    const wo = wopts(rarity, wgrade), w = makeShield(accent, tier, wo);
     const grp = new Group();
     grp.position.set(SHIELD_POS[0], SHIELD_POS[1], SHIELD_POS[2]); grp.rotation.set(SHIELD_ROT[0], SHIELD_ROT[1], SHIELD_ROT[2]);
     grp.scale.setScalar(SHIELD_SCALE);
     const body = new Mesh(w.body, litMat({ roughness: 0.45, metalness: 0.4 })); body.castShadow = true;
     const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.6) }));
     grp.add(body, glowM);
+    const spins = addSpins(grp, w, glowM);
     ch.handL.add(grp);
-    return () => { ch.handL!.remove(grp); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
-  }, [ch, cls, rarity]);
+    S.current.sfx = { mat: glowM.material as MeshBasicMaterial, base: 1.6, L: wo.r!, g: wo.g!, grp, tip: w.tip, spins, acc: 0 };
+    return () => { S.current.sfx = null; ch.handL!.remove(grp); w.body.dispose(); w.glow.dispose(); for (const sp of w.spins ?? []) sp.geo.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose(); };
+  }, [ch, cls, rarity, wgrade]);
 
   // ---- gear look: the model keeps its original design; equipped gear recolours its parts by rarity
   // (re-applied only when a slot's rarity changes; runs after the outfit tint above)
@@ -261,6 +290,8 @@ function HeroModel({ cls, q }: { cls: HeroClass; q: QualityCfg }) {
         e.mat.emissive.setRGB(r + e.r * k, gg + e.g * k, bb + e.b * k);
       }
     }
+    if (s.wfx && s.wpn?.visible) tickWeaponFx(s.wfx, t, dt, false);
+    if (s.sfx) tickWeaponFx(s.sfx, t, dt, true);
     const wp = s.wpnGlow;
     if (wp) {
       const pl = 0.65 + 0.35 * Math.sin(t * 3.1), k = wp.amt * pl;

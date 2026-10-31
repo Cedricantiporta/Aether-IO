@@ -4024,3 +4024,12 @@ select.dbg-in option { background: #2a2a32; color: #fff; }
 .so-card.on { background: rgba(255, 210, 120, .14) !important; }
 .so-card span { line-height: 1.4; } .so-card em { margin-top: .2rem; }
 .so-modes { gap: .8rem; }
+
+/* weapon icon dressing (ItemArt WeaponImg): twinkling sparkles, Mythic halo + shards */
+@keyframes wi-twinkle { 0%, 100% { opacity: .15; transform: scale(.5); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes wi-spin { to { transform: rotate(360deg); } }
+@keyframes wi-bob { 0%, 100% { opacity: .5; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+.wi-spark { animation: wi-twinkle 2.2s ease-in-out infinite; }
+.wi-halo { animation: wi-spin 14s linear infinite; transform-origin: 32px 32px; }
+.wi-shard { animation: wi-bob 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .wi-spark, .wi-halo, .wi-shard { animation: none; } }

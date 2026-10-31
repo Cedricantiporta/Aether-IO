@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Item } from '../../types';
 import { RARITY_TEXT } from '../lib/game';
+import { gradeOf } from '../../grade';
 import { LOOT, LOOT_BY_NAME } from '../../loot';
 import { ELIXIRS, ELIXIR_IDS, ELIXIR_BY_NAME } from '../../elixirs';
 import { ITEMS_POOL, PETS_POOL } from '../../constants';
@@ -635,6 +636,35 @@ export const GearImg: React.FC<{ slug: string; size: number | string }> = React.
 ));
 GearImg.displayName = 'GearImg';
 
+/** Weapon icon = the painted art + a procedural rarity / grade dressing (matches the 3D weapons): a rarity-coloured soft glow that grows with the tier,
+ *  twinkling sparkles from Epic, a gold glint from Legendary and a halo + floating shards for Mythic. Grade (Low / Mid / High) adds glow and sparkles. */
+const W_LOOK: Record<string, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3, LEGENDARY: 4, MYTHIC: 5 };
+const W_COL = ['#ffffff', '#6fe07c', '#5b9dff', '#c070ff', '#ffc933', '#ff4a5e'];
+const W_SPARK: [number, number, number][] = [[50, 12, 3.4], [14, 20, 2.6], [54, 44, 2.8], [10, 50, 2.4], [30, 6, 2.4], [58, 28, 2.2], [20, 58, 2.2]];
+export const WeaponImg: React.FC<{ slug: string; size: number | string; rarity: string; grade: string }> = React.memo(({ slug, size, rarity, grade }) => {
+  const L = W_LOOK[rarity] ?? 0, gi = grade === 'HIGH' ? 2 : grade === 'LOW' ? 0 : 1, c = W_COL[L];
+  const glow = L === 0 ? '' : `drop-shadow(0 0 ${1.5 + L * 0.8 + gi * 0.7}px ${c}) ${L >= 3 ? `drop-shadow(0 0 ${3 + L * 1.4 + gi * 1.5}px ${c})` : ''}`;
+  const nSpark = L < 3 ? 0 : L === 3 ? 1 + gi : L === 4 ? 3 + gi : 4 + gi;
+  return (
+    <span style={{ display: 'block', position: 'relative', width: size, height: size }}>
+      <img src={`${GEAR_URL}${slug}.webp`} alt="" draggable={false} decoding="async"
+        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', transform: 'scale(1.22)', filter: `${glow} drop-shadow(0 2px 2px rgba(0,0,0,.55))`.trim(), pointerEvents: 'none' }} />
+      {L >= 3 && (
+        <svg viewBox="0 0 64 64" aria-hidden style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', transform: 'scale(1.22)' }}>
+          {L >= 5 && <><circle cx="32" cy="32" r="29" fill="none" stroke={c} strokeOpacity=".55" strokeWidth="1.6" strokeDasharray="5 4" className="wi-halo" />
+            {[0, 1, 2, 3].map((i) => <path key={i} d={`M${32 + Math.cos(i * 1.57 + 0.4) * 29} ${32 + Math.sin(i * 1.57 + 0.4) * 29 - 3} l2.2 3 l-2.2 3 l-2.2 -3z`} fill={c} className="wi-shard" style={{ animationDelay: `${i * 0.5}s` }} />)}</>}
+          {L === 4 && <circle cx="32" cy="32" r="28" fill="none" stroke={c} strokeOpacity=".35" strokeWidth="1.2" />}
+          {W_SPARK.slice(0, nSpark).map(([x, y, r], i) => (
+            <path key={i} d={`M${x} ${y - r} L${x + r * .3} ${y - r * .3} L${x + r} ${y} L${x + r * .3} ${y + r * .3} L${x} ${y + r} L${x - r * .3} ${y + r * .3} L${x - r} ${y} L${x - r * .3} ${y - r * .3}Z`}
+              fill={L >= 4 ? '#fff6c4' : '#ffffff'} className="wi-spark" style={{ animationDelay: `${i * 0.37}s`, transformOrigin: `${x}px ${y}px` }} />
+          ))}
+        </svg>
+      )}
+    </span>
+  );
+});
+WeaponImg.displayName = 'WeaponImg';
+
 /** Painted loot / fish icons (public/art/loot|fish/<slug>.webp, sheets B6-B9), slug = lowercased name, no apostrophes, spaces -> _. */
 const LOOT_PAINT = new Set(['forbidden_sigil', 'abyssal_diamond', 'adamant_ore', 'ancient_acorn', 'ancient_relic', 'bat_wing', 'beetle_shell', 'bone_crown', 'champions_medal', 'cinder_core', 'crown_of_the_mountain', 'cultist_rune', 'cursed_skull', 'dark_tome_page', 'echo_crystal', 'echo_of_ruin', 'elderroot_heartwood', 'elite_trophy', 'goblin_chiefs_totem', 'goblin_ear', 'goblin_fang_necklace', 'golem_heartstone', 'grave_locket', 'heart_of_glacius', 'heart_of_the_void', 'herald_void_shard', 'hydra_fang', 'ignars_brand', 'iron_knuckle', 'lich_phylactery_shard', 'lichs_eye', 'malakars_soul_ember', 'marsh_scale', 'mithril_ore', 'ogre_tusk', 'ogre_war_banner', 'old_bone', 'old_coin_pouch', 'ore_nugget', 'pulsing_jelly_heart', 'raw_gemstone', 'royal_seal', 'rusty_tin_can', 'shimmering_core', 'silver_goblet', 'slime_gel', 'soggy_boot', 'volatile_gland', 'wyrm_frostscale']);
 const FISH_PAINT = new Set(['aetherfin_koi', 'crimson_salmon', 'crystal_sturgeon', 'deep_geode', 'ghost_catfish', 'golden_carp', 'lake_perch', 'lake_serpent_eel', 'lanternfish', 'moon_dragon_carp', 'moonlit_bream', 'rainbow_trout', 'reed_gudgeon', 'silver_minnow', 'silver_pike', 'starfire_crystal']);
@@ -649,7 +679,7 @@ const SHARD_PAINT = new Set(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC']);
 export const ItemArt: React.FC<{ item: Item; size?: number | string }> = ({ item, size = 26 }) => {
   const gs = gearSlug(item);
   const la = gs ? undefined : lootArt(item);
-  return gs ? <GearImg slug={gs} size={size} /> : la ? <img src={la} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} /> : (
+  return gs ? (item.type === 'WEAPON' ? <WeaponImg slug={gs} size={size} rarity={item.rarity} grade={gradeOf(item)} /> : <GearImg slug={gs} size={size} />) : la ? <img src={la} alt="" draggable={false} decoding="async" style={{ display: 'block', width: size, height: size, objectFit: 'contain', transform: 'scale(1.22)', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,.55))', pointerEvents: 'none' }} /> : (
   item.type === 'SHARD' ? (SHARD_PAINT.has(item.rarity) ? <PaintImg file={`shard_${item.rarity}`} size={size} /> : <ShardArt rarity={item.rarity} size={size} />) : item.type === 'CRYSTAL' ? <PaintImg file="aether_crystal" size={size} /> : <Art k={artKey(item)} c={RARITY_TEXT[item.rarity]} size={size} />
   );
 };

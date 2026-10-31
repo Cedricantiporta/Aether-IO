@@ -11,7 +11,7 @@ import { useCoop } from '../net/coopStore';
 import type { HeroSnap } from '../net/protocol';
 import { F_ALIVE, F_ATTACK, F_CAST } from '../net/protocol';
 import { useCharacterInstance, useClips, upperBody, type CharKey } from './characters';
-import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, type WeaponGeo } from './weapons';
+import { NECRO_TINT, HANDSLOT_QUAT, RARITY_ACCENT, RARITY_TIER, makeAxe, makeBow, makeStaff, makeSword, makeShield, wopts, type WOpts, type WeaponGeo } from './weapons';
 import { tintGear } from './gear';
 import { labelMaterial } from './label';
 import { angleLerp, damp, clamp, litMat } from './util';
@@ -19,8 +19,8 @@ import { angleLerp, damp, clamp, litMat } from './util';
 const CHAR: Record<HeroClass, CharKey> = { ARCHER: 'ARCHER', WIZARD: 'WIZARD', BARBARIAN: 'BARBARIAN', KNIGHT: 'KNIGHT', NECROMANCER: 'ROGUE' };
 const RING = '#7fe3ff';
 
-function buildWeapon(cls: HeroClass, accent: string, tier: number): WeaponGeo {
-  return cls === 'ARCHER' ? makeBow(accent, tier) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(cls === 'NECROMANCER' ? '#7a4ad0' : accent, tier) : cls === 'KNIGHT' ? makeSword(accent, tier) : makeAxe(accent, tier);
+function buildWeapon(cls: HeroClass, accent: string, tier: number, o?: WOpts): WeaponGeo {
+  return cls === 'ARCHER' ? makeBow(accent, tier, o) : cls === 'WIZARD' || cls === 'NECROMANCER' ? makeStaff(accent, tier, o) : cls === 'KNIGHT' ? makeSword(accent, tier, o) : makeAxe(accent, tier, o);
 }
 
 function RemoteModel({ snap }: { snap: HeroSnap }) {
@@ -46,20 +46,21 @@ function RemoteModel({ snap }: { snap: HeroSnap }) {
   useEffect(() => {
     if (!ch.handR) return;
     const rarity = snap.w || 'COMMON', tier = RARITY_TIER[rarity] ?? 0, accent = RARITY_ACCENT[rarity] || RARITY_ACCENT.COMMON;
-    const w = buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier);
+    const wo = wopts(rarity, 'MID', cls === 'NECROMANCER'), w = buildWeapon(cls, cls === 'WIZARD' && tier === 0 ? '#8fb8ff' : accent, tier, wo);
     const grp = new Group(); grp.quaternion.copy(HANDSLOT_QUAT); grp.scale.setScalar(1 + 0.05 * tier);
     const body = new Mesh(w.body, litMat({ roughness: 0.55, metalness: 0.25 }));
     const glowM = new Mesh(w.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.5 + 0.35 * tier, 1.5 + 0.35 * tier, 1.5 + 0.35 * tier) }));
     grp.add(body, glowM); ch.handR.add(grp);
+    for (const sp of w.spins ?? []) { const m = new Mesh(sp.geo, glowM.material); m.position.set(sp.pos[0], sp.pos[1], sp.pos[2]); grp.add(m); }
     let sh: { g: Group; w: WeaponGeo; b: Mesh; m: Mesh } | null = null;
     if (cls === 'KNIGHT' && ch.handL) {
-      const sw = makeShield(accent, tier), g = new Group();
+      const sw = makeShield(accent, tier, wo), g = new Group();
       g.position.set(0, 0.05, 0.12); g.rotation.set(Math.PI / 2, Math.PI / 2, 0); g.scale.setScalar(0.9);
       const b = new Mesh(sw.body, litMat({ roughness: 0.45, metalness: 0.4 })), m = new Mesh(sw.glow, new MeshBasicMaterial({ vertexColors: true, toneMapped: false, color: new Color(1.6, 1.6, 1.6) }));
       g.add(b, m); ch.handL.add(g); sh = { g, w: sw, b, m };
     }
     return () => {
-      ch.handR!.remove(grp); w.body.dispose(); w.glow.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose();
+      ch.handR!.remove(grp); w.body.dispose(); w.glow.dispose(); for (const sp of w.spins ?? []) sp.geo.dispose(); (body.material as any).dispose(); (glowM.material as any).dispose();
       if (sh) { ch.handL!.remove(sh.g); sh.w.body.dispose(); sh.w.glow.dispose(); (sh.b.material as any).dispose(); (sh.m.material as any).dispose(); }
     };
   }, [ch, cls, snap.w]);
