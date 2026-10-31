@@ -35,6 +35,7 @@ export function gatePlan(gate: number, step: number): RoomPlan {
   return p;
 }
 export const isLastStep = (p: RoomPlan): boolean => p.gate !== undefined && (p.step ?? 0) >= GATES[p.gate].steps.length - 1;
+export const hallPlan = (): RoomPlan => ({ type: 'HALL', reward: 'NONE' });
 export const hubPlan = (): RoomPlan => ({ type: 'GATEKEEPER', reward: 'NONE' });
 
 /** Courtyard layout (round room, forward = -z): the castle door at the back, five gates on a ring around the middle. */
@@ -49,6 +50,9 @@ export function gatePos(i: number, out: [number, number]): number {
   return Math.atan2(-out[0], -out[1]);
 }
 
+/** The Hall of the Undying (forward = -z): a narrow dark hall from the Dark Castle door to the purple portal into the Void Throne. */
+export const HALL_HL = 66, HALL_HW = 8;                 // walkable half length / half width (m)
+export const HALL_START_Z = 59, HALL_PORTAL_Z = -57;      // arrival / the portal at the far end
 export const GATEKEEPER_LINES = [
   'Five gates, five trials. Each holds a shard of the key that seals the Dark Castle.',
   'Bring me all five shards and the castle will open. The Void Herald waits on the stolen throne.',

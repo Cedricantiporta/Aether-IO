@@ -6,9 +6,10 @@
 // ============================================================================
 
 import { runInfo } from './runMods';
+import { HALL_HL, HALL_HW, HALL_START_Z, HALL_PORTAL_Z } from './gates';
 import { halls, buildHallsLayout, hallsSdf, placeMargin, type HallsVariant } from './roomHalls';
 
-export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'SQUARE' | 'CROSS' | 'HALLS';
+export type ShapeKind = 'ROUND' | 'ELLIPSE' | 'SEMI' | 'HEX' | 'OCT' | 'PEANUT' | 'RECT' | 'SQUARE' | 'CROSS' | 'HALLS' | 'HALL';
 export const SHAPE_N = 256;
 const TAU = Math.PI * 2;
 
@@ -112,6 +113,7 @@ function pickKind(type: string, rnd: () => number): ShapeKind {
 export interface ShapeOpts { ring?: boolean; force?: ShapeKind; weights?: [string, number][]; long?: boolean; style?: string; name?: string }
 export function buildShape(type: string, R: number, seed: number, opts?: ShapeOpts): ShapeKind {
   fixed.on = false;
+  if (type === 'HALL') return buildHallShape();
   const rnd = mulberry(seed ^ 0x7f4a7c15);
   let picked = pickKind(type, rnd);
   if (opts?.weights && type !== 'BOSS') {   // biome outline table (interior halls prefer rectangles / crosses)
@@ -178,6 +180,22 @@ export function buildShape(type: string, R: number, seed: number, opts?: ShapeOp
   return kind;
 }
 
+/** The Hall of the Undying: one long rounded rectangle (HALL_HW x HALL_HL half sizes) centred on the origin, forward = -z. Not scaled to an area. */
+function buildHallShape(): ShapeKind {
+  const T = shape.table, dA = TAU / SHAPE_N;
+  let mx = 0, mn = 1e9;
+  for (let i = 0; i < SHAPE_N; i++) {
+    const a = -Math.PI + i * dA, dx = Math.cos(a), dz = Math.sin(a);
+    let lo = 0, hi = HALL_HL + 4;
+    for (let it = 0; it < 26; it++) { const m = (lo + hi) * 0.5; if (boxF(dx * m, dz * m, HALL_HW, HALL_HL, 1.2) <= 0) lo = m; else hi = m; }
+    T[i] = lo; if (lo > mx) mx = lo; if (lo < mn) mn = lo;
+  }
+  T[SHAPE_N] = T[0]; T[SHAPE_N + 1] = T[1];
+  shape.kind = 'HALL'; shape.maxR = mx; shape.minR = mn; shape.baseR = Math.sqrt((HALL_HW * HALL_HL * 4) / Math.PI); shape.version++;
+  shape.fx = 0; shape.fz = -1;
+  return 'HALL';
+}
+
 /** HALLS: builds the walkable mask (engine/roomHalls.ts) and fills `shape` with the star-convex kernel seen from the hub
  *  centre (so any code that still clamps radially with edgeLimit stays inside the open floor of the hub chamber). */
 function buildHallsShape(type: string, R: number, seed: number, style: string, name: string, ring: boolean): ShapeKind {
@@ -198,6 +216,7 @@ function buildHallsShape(type: string, R: number, seed: number, style: string, n
 
 /** Hero arrival point (back side of the room). */
 export function startPoint(out: [number, number]): void {
+  if (shape.kind === 'HALL') { out[0] = 0; out[1] = HALL_START_Z; return; }
   if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.sx; out[1] = halls.sz; return; }
   if (fixed.on) { out[0] = fixed.sx; out[1] = fixed.sz; return; }
   const k = 0.55 * shapeAt(Math.atan2(-shape.fz, -shape.fx));
@@ -205,12 +224,14 @@ export function startPoint(out: [number, number]): void {
 }
 /** Station (fountain / merchant / chest / altar) point, just ahead of the centroid. */
 export function stationPoint(out: [number, number]): void {
+  if (shape.kind === 'HALL') { out[0] = 0; out[1] = HALL_START_Z - 8; return; }
   if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.stx; out[1] = halls.stz; return; }
   if (fixed.on) { out[0] = fixed.stx; out[1] = fixed.stz; return; }
   out[0] = shape.fx * shape.baseR * 0.1; out[1] = shape.fz * shape.baseR * 0.1;
 }
 /** The boss-shortcut door: behind the middle exit, 10 units further into the room. */
 export function shortcutPoint(out: [number, number]): void {
+  if (shape.kind === 'HALL') { out[0] = 0; out[1] = HALL_PORTAL_Z + 12; return; }
   if (shape.kind === 'HALLS' && !fixed.on) { out[0] = halls.scx; out[1] = halls.scz; return; }
   if (fixed.on) { out[0] = fixed.ex - fixed.dx * 9; out[1] = fixed.ez - fixed.dz * 9; return; }
   portalPoint(1, 3, out);
@@ -219,6 +240,7 @@ export function shortcutPoint(out: [number, number]): void {
 }
 /** Exit portal i of n: spread across the width at the front-most spot that keeps >= 5 of clearance to the outline. */
 export function portalPoint(i: number, n: number, out: [number, number]): void {
+  if (shape.kind === 'HALL') { out[0] = 0; out[1] = HALL_PORTAL_Z; return; }
   if (shape.kind === 'HALLS' && !fixed.on) {   // the far end of the journey: the slots spread across the last chamber
     const cap = Math.max(2, halls.exitHalf - 3.4), w = Math.min(4.8, cap);
     // the two arches stand from the start (dormant): 1 door = the left arch, 2 doors = both, 3 doors (boss key) = both + one a little further back in the middle

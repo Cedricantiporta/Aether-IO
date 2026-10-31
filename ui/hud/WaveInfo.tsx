@@ -19,6 +19,7 @@ function subText(): string {
   const d = world.director, r = world.room, t = r.plan.type;
   if (d.phase === 'BIOME_DONE') return `${biomeOf(r.biome).name} conquered`;
   if (d.phase === 'LEAVING') return '';
+  if (t === 'HALL') return 'Walk to the dark portal at the far end (E)';
   if (t === 'GATEKEEPER') return gateState.keys >= GATE_KEYS_NEEDED ? `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · the Dark Castle is open` : `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED} · enter a gate (E)`;
   if (d.phase === 'CLEARED') {
     if (daily.on && daily.result) return `Trial complete · Score ${daily.result.score.toLocaleString()}`;
@@ -57,7 +58,7 @@ export const RoomPlaque: React.FC = () => {
       sig.current = key;
       const loop = loopOf(r.biome);
       const tower = runInfo.mode === 'TOWER', throne = r.plan.type === 'BOSS' && r.biome === BIOMES.length - 1 && world.boss.final;
-      const gname = r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
+      const gname = r.plan.type === 'HALL' ? 'The Hall of the Undying' : r.plan.type === 'GATEKEEPER' ? 'The Gatekeeper' : r.plan.gate !== undefined ? GATES[r.plan.gate].name : '';
       if (name.current) name.current.textContent = tower ? climbTitle() : throne ? 'The Undying Throne' : gname || biomeOf(r.biome).name + (loop > 0 ? ` +${loop}` : '');
       if (depth.current) depth.current.textContent = (tower ? climbFloor(towerState.floor) : `Depth ${shownDepth(r.biome % BIOMES.length, r.plan.type === 'BOSS' ? BOSS_INDEX : r.index)}${runInfo.ascension > 0 ? ` · Ascension ${runInfo.ascension}` : ''}`) + (runInfo.hard ? ' · HARD' : '');
       if (sub.current) sub.current.textContent = text + (bossKeyState.has && r.plan.type !== 'BOSS' ? '  ·  Boss Key ✓' : '');

@@ -58,7 +58,7 @@ import type { Interactable } from './village';
 import { spawnDarkHero, DARK_CLASSES } from './darkHero';
 import { spawnHumanBoss, HUMAN_KINDS, debugHuman, type HumanKind } from './humanBosses';
 import { isArenaRoom, arenaRadius } from '../arenaRooms';
-import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
+import { GATES, GATE_KEYS_NEEDED, GATEKEEPER_LINES, gateState, resetGates, gatePlan, isLastStep, hubPlan, hallPlan, HALL_PORTAL_Z, gatePos, CASTLE_DOOR, KEEPER_POS, HUB_START } from '../gates';
 import type { HeroClass } from '../../types';
 import { maybeAlly, resetAlly, removeAlly } from './ally';
 import { maybeWanderer, talkWanderer, clearWanderer, resetWanderers, wander, WANDERERS, placeKeeper, placeCampWanderer, placeShipCaptain, RHEA_GOODBYE } from '../wanderers';
@@ -377,7 +377,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const pl = world.player;
   const [sx, sz] = startPos(R);
   pl.pos.set(sx, 0, sz); pl.vel.set(0, 0, 0); pl.dashT = 0; pl.facing = campPath ? campStartFacing() : Math.PI;
-  if (p.type === 'GATEKEEPER') enterHub(); else if (p.gate !== undefined) { gateState.on = true; gateState.cur = p.gate; }
+  if (p.type === 'GATEKEEPER') enterHub(); else if (p.type === 'HALL') enterHall(); else if (p.gate !== undefined) { gateState.on = true; gateState.cur = p.gate; }
   world.pet.pos.set(pl.pos.x + 1.2, 1, pl.pos.z + 1.2);
   {   // summons (necromancer skeletons / golem) arrive in a ring beside the hero instead of walking in from where the last room left them
     const M = world.minions; let n = 0, tot = 0;
@@ -407,7 +407,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : finalFight ? 'The Void Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : p.type === 'HALL' ? 'The Hall of the Undying' : finalFight ? 'The Void Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`${duelQ.length > 1 ? `${duelQ.length} dark champions step into the ring at once!` : `A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`}`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -440,6 +440,20 @@ function enterHub(): void {
     st.addNotification(`The Gatekeeper: "${GATEKEEPER_LINES[1]}"`, '#c9a2ff', 'SYSTEM');
   } else if (left > 0) st.addNotification(`The Gatekeeper: "${left} gate${left > 1 ? 's' : ''} remain. My flame mends you."`, '#c9a2ff', 'SYSTEM');
   else st.addNotification('The Gatekeeper: "All five keys. The Dark Castle opens for you. End him."', '#ffd24a', 'BOSS');
+}
+
+/** Arriving in the Hall of the Undying: the hero stands at the near end facing the far portal; a quiet, tense walk (no monsters). */
+function enterHall(): void {
+  const pl = world.player;
+  pl.facing = Math.PI;
+  useGameStore.getState().addNotification('A long dark hall. At its far end, a purple portal hums: the Void Herald waits beyond it.', '#b58cff', 'SYSTEM');
+}
+/** The Hall has nothing to clear: its single dark portal stands at the far end from the start (E to enter once you reach it). */
+function openHallPortal(): void {
+  const r = world.room;
+  for (const q of r.portals) q.active = false;
+  const po = r.portals[0];
+  po.active = true; po.x = 0; po.z = HALL_PORTAL_Z; po.t = 0; po.big = false; po.plan = { type: 'BOSS', reward: 'NONE', final: true };
 }
 
 /** A trial room is clear: the next trial room, or (last room) the gate's key + the way back to the Gatekeeper. */
@@ -1095,6 +1109,7 @@ function onCleared(): void {
   phaseClock = 0;
   vacuumT = VACUUM_AFTER; vacuumTick = 0;
   roomEventCleared();
+  if (plan.type === 'HALL') { openHallPortal(); return; }   // the long dark hall: nothing to clear, only the portal at its far end
   if (plan.type === 'GATEKEEPER') return;   // the courtyard: nothing to clear, the gates are entered with E
   // the boss key: rooms from the champion on may hold it (more often the deeper you go; chests are the best bet)
   // (owner: disabled - the biome boss is always at depth 15, the merchant always at depth 14)
@@ -1346,6 +1361,7 @@ export function interactRoom(it: Interactable, fromPartner = false): void {
     const po = r.portals[it.node];
     if (po.active && d.phase === 'CLEARED' && po.t >= PORTAL_ARM && r.fade < 0.3 && world.player.alive) {
       if (runInfo.mode === 'TOWER') { towerFloor++; towerState.floor = towerFloor; beginLeave(po.plan, towerBiome(towerFloor), (towerFloor - 1) % ROOMS_PER_BIOME); }
+      else if (po.plan.final) { finalFight = true; endingDone = false; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); }   // the Hall's dark portal: the Void Herald
       else if (po.plan.shortcut) beginLeave(po.plan, biome, BOSS_INDEX);   // the conquered biome's shortcut: straight to the boss (depth 15)
       else if (po.plan.gate !== undefined || po.plan.type === 'GATEKEEPER') beginLeave(po.plan, biome, BOSS_INDEX);   // trials and the courtyard keep the boss depth
       else beginLeave(po.plan, biome, index + 1);
@@ -1438,7 +1454,7 @@ function interactHub(node: number): void {
     if (gateState.done[g]) { st.addNotification(`${GATES[g].name} is already cleared.`, '#9aa0b4', 'SYSTEM'); return; }
     beginLeave(gatePlan(g, 0), biome, BOSS_INDEX);
   } else if (node === 55) {
-    if (gateState.keys >= GATE_KEYS_NEEDED) { finalFight = true; beginLeave({ type: 'BOSS', reward: 'NONE' }, biome, BOSS_INDEX); }   // the Void Throne
+    if (gateState.keys >= GATE_KEYS_NEEDED) beginLeave(hallPlan(), biome, BOSS_INDEX);   // the Dark Castle: first the long Hall of the Undying, its far portal leads to the Void Throne
     else {
       st.addNotification(`The castle door is sealed: ${GATE_KEYS_NEEDED - gateState.keys} more Gate Key${GATE_KEYS_NEEDED - gateState.keys > 1 ? 's' : ''} needed.`, '#c9a2ff', 'SYSTEM');
       events.emit('floatText', { pos: world.player.pos, text: `SEALED ${gateState.keys}/${GATE_KEYS_NEEDED}`, color: 0xc9a2ff, scale: 1, dy: 2.4 });

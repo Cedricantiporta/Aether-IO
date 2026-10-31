@@ -101,6 +101,11 @@ export const Vignettes: React.FC = () => {
     const l = world.player.alive && world.player.hp / Math.max(1, maxRef.current) < 0.3;
     if (l !== on.current && low.current) { on.current = l; low.current.dataset.on = l ? '1' : '0'; }
   });
+  const hall = useRef<HTMLDivElement>(null), hallOn = useRef(false);
+  useRaf(() => {   // the Hall of the Undying: a soft dark-violet vignette
+    const h = world.room.active && world.room.plan.type === 'HALL';
+    if (h !== hallOn.current && hall.current) { hallOn.current = h; hall.current.style.opacity = h ? '1' : '0'; }
+  });
   const gold = useRef<HTMLDivElement>(null);
   const hurt = useRef<HTMLDivElement>(null);
   const lastG = useRef(-1), lastH = useRef(-1);
@@ -120,6 +125,7 @@ export const Vignettes: React.FC = () => {
   });
   return (
     <>
+      <div ref={hall} className="vignette-hall" aria-hidden />
       <div ref={low} className="vignette-low" data-on="0" />
       <div ref={hit} className="vignette-hit" />
       <div ref={hurt} className="absolute inset-0 pointer-events-none" style={{ opacity: 0, zIndex: 9 }} />

@@ -12,15 +12,18 @@ import { biomeOf } from './roomDefs';
 import { buildShape, shape, dbg } from './roomShape';
 import { disableRoomNav, buildRoomNav } from './roomNav';
 import { feat, resetFeatures, liquidCode, MAX_LAKES } from './roomFeatures';
-import { HUB_R, CASTLE_DOOR, KEEPER_POS, gatePos } from './gates';
+import { HUB_R, CASTLE_DOOR, KEEPER_POS, gatePos, HALL_HL } from './gates';
 
-export const isArenaRoom = (t: RoomType): boolean => t === 'DUEL' || t === 'GATEKEEPER' || t === 'FOUNTAIN';
-export function arenaRadius(t: RoomType): number { return t === 'GATEKEEPER' ? HUB_R : t === 'DUEL' ? 21 : t === 'FOUNTAIN' ? 23 : 19; }
+export const isArenaRoom = (t: RoomType): boolean => t === 'DUEL' || t === 'GATEKEEPER' || t === 'FOUNTAIN' || t === 'HALL';
+export function arenaRadius(t: RoomType): number { return t === 'HALL' ? HALL_HL : t === 'GATEKEEPER' ? HUB_R : t === 'DUEL' ? 21 : t === 'FOUNTAIN' ? 23 : 19; }
 /** Fountain plaza: marble columns ring (radius around the station). */
 /** Fountain island: the moat's mid radius / half width (visual pools) / collider half width; the 8 columns stand on the outer bank. */
 export const PLAZA_COLS = 8, PLAZA_COL_R = 12.8, MOAT_R = 8.6, MOAT_HW = 2.3, MOAT_BW = 1.7;
 /** Duel ring: braziers stand just inside the pillar ring at this fraction of R. */
 export const DUEL_BRAZIERS = 8;
+/** Hall of the Undying: pillar / brazier layout along the hall (shared with render/DarkHall.tsx). Pillars stand in the wall line, a brazier between each pair. */
+export const HALL_PILLAR_X = 6.9, HALL_BRAZIER_X = 5.7, HALL_PILLAR_STEP = 8, HALL_PILLARS = 15, HALL_PILLAR_Z0 = 56;
+export const hallPillarZ = (i: number): number => HALL_PILLAR_Z0 - i * HALL_PILLAR_STEP;
 
 const SPEC: Record<string, { s: [number, number]; r: (s: number) => number }> = {
   TREE: { s: [1.5, 2.4], r: (s) => 0.8 + s * 0.25 }, PINE: { s: [1.5, 2.4], r: (s) => 0.8 + s * 0.25 },
@@ -32,6 +35,7 @@ const gp: [number, number] = [0, 0];
 export function buildArena(biome: number, type: RoomType, R: number, seed: number): void {
   disableRoomNav();
   resetFeatures();   // (no stage liquids of the previous room)
+  if (type === 'HALL') { buildHall(); return; }
   const f = dbg.force; dbg.force = 'ROUND';
   buildShape(type, R, seed);
   dbg.force = f;
@@ -114,4 +118,19 @@ function buildMoat(cx: number, cz: number, colliders: Collider[]): void {
       colliders.push({ x: cx + Math.cos(a) * (MOAT_R + d), z: cz + Math.sin(a) * (MOAT_R + d), r: 0.6, blocksProjectiles: false, liquid: code });
     }
   }
+}
+
+/** The Hall of the Undying: no props, no clutter; the only colliders are the brazier bowls between the pillars (the pillars stand in the wall line, outside the walkable limit). */
+function buildHall(): void {
+  buildShape('HALL', HALL_HL, 0);
+  const colliders: Collider[] = [];
+  for (let i = 0; i < HALL_PILLARS - 1; i++) {
+    const z = hallPillarZ(i) - HALL_PILLAR_STEP / 2;
+    colliders.push({ x: -HALL_BRAZIER_X, z, r: 0.55, blocksProjectiles: false }, { x: HALL_BRAZIER_X, z, r: 0.55, blocksProjectiles: false });
+  }
+  world.obstacles = [];
+  world.obstaclesVersion++;
+  installRoom(colliders, shape.maxR + 1);
+  commitCrates([], mulberry32(7));
+  feat.version++;
 }
