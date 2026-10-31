@@ -19,7 +19,7 @@ import { cullRegister } from './distCull';
 import { setInst } from './util';
 import { kitColor, ROYAL_ROOF } from './townPalette';
 import {
-  HOUSES, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, STALLS, LAMPS, PLANTERS, SHOP_LOOK, shopLocal,
+  HOUSES, WALL, WALL_RUNS, WALL_TOWERS, GATE, CASTLE, CASTLE_S, CHURCH, TAVERN, TAVERN_DZ, TERRACE, STALLS, LAMPS, PLANTERS, SHOP_LOOK, shopLocal,
   townLift,
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
@@ -124,14 +124,14 @@ function placements(): Record<string, Place[]> {
   // landmarks
   add(2, 'tavern', { x: TAVERN.x, y: lift(TAVERN.x, TAVERN.z), z: TAVERN.z + TAVERN_DZ, ry: 0, sx: 1, sy: 1, sz: 1 });
   add(2, 'chapel', { x: CHURCH.x, y: lift(CHURCH.x, CHURCH.z), z: CHURCH.z, ry: 0, sx: 1, sy: 1, sz: 1 });
-  add(2, 'castle_keep', { x: CASTLE.x, y: TERRACE.h, z: CASTLE.z, ry: 0, sx: CASTLE_S, sy: CASTLE_S, sz: CASTLE_S });
+  add(2, 'castle_keep', { x: CASTLE.x, y: TERRACE.h + 0.4, z: CASTLE.z, ry: 0, sx: CASTLE_S, sy: CASTLE_S, sz: CASTLE_S });
   // town wall: v2 segments (6 m, thickness 1.6 -> x1.5 = 2.4, height 4.65 -> x1.2) + the old round towers
   for (const [x1, z1, x2, z2, ox, oz] of WALL_RUNS) {
     const len = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(len / 5)), L = len / n, ry = Math.atan2(ox, oz);   // local +Z (outer face) faces outward
     for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; add(2, 'castle_wall_segment', { x: x1 + (x2 - x1) * t, z: z1 + (z2 - z1) * t, ry, sx: (L + 0.04) / 6, sy: 1.2, sz: 1.5 }); }
   }
   // street furniture
-  for (const [x, z] of LAMPS) if (z < 46 && z > -40 && Math.abs(x) < 44) add(2, 'lamp_post', { x, y: lift(x, z), z, ry: 0, sx: 0.72, sy: 0.72, sz: 0.72 });
+  for (const [x, z] of LAMPS) if (z < 46 && z > WALL.z0 && Math.abs(x) < 44) add(2, 'lamp_post', { x, y: lift(x, z), z, ry: 0, sx: 0.72, sy: 0.72, sz: 0.72 });
   for (const p of PLANTERS) { const along = p.w >= p.d, len = Math.max(p.w, p.d), wid = Math.min(p.w, p.d); add(2, 'flower_planter', { x: p.x, y: lift(p.x, p.z), z: p.z, ry: along ? 0 : Math.PI / 2, sx: len / 1.7, sy: 1, sz: wid / 0.9 }); }
   for (const s of STALLS) add(2, 'market_stall', { x: s.x, y: lift(s.x, s.z), z: s.z, ry: s.rot, sx: 1, sy: 1, sz: 1 });
   for (const [x, z, s] of BANNERS) add(2, 'banner', { x, y: lift(x, z), z, ry: 0, sx: s, sy: s, sz: s });

@@ -22,9 +22,9 @@ const DAIS_STEP = 0.7;
 export const CASTLE_SPAWN = { x: 0, z: 16.5 };
 export const CASTLE_EXIT = { x: 0, z: 19, r: 4.2 };
 /** Hero position on the castle steps outside (south of the keep, facing the town). */
-export const CASTLE_STEPS = { x: 0, z: -21.2 };
+export const CASTLE_STEPS = { x: 0, z: -62.8 };   // (Town Plan v6: the castle stands on Castle Hill, in front of its gatehouse porch)
 /** Interact spot for the keep door in the town. */
-export const CASTLE_DOOR = { x: 0, z: -23.2, r: 4.6 };
+export const CASTLE_DOOR = { x: 0, z: -64.4, r: 4.6 };
 
 export const PILLARS: [number, number][] = [];
 for (const x of [-7.5, 7.5]) for (const z of [-8, -1, 6, 13]) PILLARS.push([x, z]);

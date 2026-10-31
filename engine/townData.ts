@@ -14,6 +14,7 @@
 //   'BREWER'), the wheat field east of the road beside the barn (FARM), the barn / coop clearing further east, the Endless Tower at the road's end. The Adventure Portal is the plaza's centrepiece.
 //   Houses / stalls are decoration. Harvest nodes sit on the outskirts.
 // ============================================================================
+import { CG_LAWNS, CG_LAMPS, CG_SEATS, CG_PLANTERS, CG_STATUES, CG_PROPS, CG_GAZEBO, CG_YARD_RACKS, CG_YARD_HAY } from './castleGrounds';
 import { HORSE_STATUES } from './qtVillage';
 import { SHRINE_POS, TRAINER_POS } from './world';
 import { SHOP_POSITIONS, shopFront } from '../constants';
@@ -166,8 +167,8 @@ export const LAKE = { x0: -170, x1: -49.5, z0: -95, z1: 85, shore: 7 };
 export const lakeSouth = (x: number): number => lakeSouthZ(x, LAKE.z1);
 
 export const ISLAND_BOXES: [number, number, number, number][] = [
-  [-48.5, -54, 56.5, 56], // walled town + a NARROW trail outside the walls on the back / east (the west side is the lake)
-  [-9, -58.5, 9, 0],    // the hermit's clearing behind the north wall (Old Wend's camp, HERMIT_CAMP)
+  [-48.5, -110, 56.5, 56], // walled town (the kingdom grew 51 m to the north, Town Plan v6: z0 -92) + a NARROW trail outside the walls on the back / east (the west side is the lake)
+  [-9, -112, 9, 0],    // the hermit's clearing behind the (new, far north) wall (Old Wend's camp, HERMIT_CAMP)
   [-10, -2, 68, 58],    // the wide east side south of the trail: the mining camp at the Crystal Cave (caveData CAVE_BAY) + the way to the farm
   [0, 0, 64, 112],      // the strip east of the farm: the dirt path from the chicken coop up to the mines (round the river's east end)
   [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
@@ -192,19 +193,21 @@ const H = (x: number, z: number, rot: number, w: number, d: number, floors: 1 | 
 /** Decorative houses (old shop-style: stone footing, timber frame, big gabled roof, striped awning). */
 /** Castle keep against the north wall, (door faces south). x0..x1 / z0..z1 = footprint of the main hall. */
 /** Hermit's camp outside the north wall (campfire + bedroll, drawn in TownScenery). */
-export const HERMIT_CAMP = { x: 0, z: -51 };
+/** (Town Plan v6) the north wall moved 51 m north (WALL.z0 -41 -> -92): everything of the hermit's trail that lay north of the old wall moved with it. */
+export const NORTH_GROWTH = 51;
+export const HERMIT_CAMP = { x: 0, z: -51 - NORTH_GROWTH };
 /** The way to the hermit (outside the walls: east ring, then the north ring): overgrown ruins and lurking monsters. */
 export interface RuinSpec { x: number; z: number; rot: number; kind: 0 | 2 }   // 0 broken pillar, 2 fallen arch (owner 2026-10-24: the ruined wall stubs are gone)
 export const RUINS: RuinSpec[] = [];   // (owner 2026-10-25: no old ruin pillars anywhere)
 /** Big boulders along the narrow back trail (x, z, collider r, render scale): a rocky, half-blocked way round to the hermit,
  *  always leaving a gap (walk grid checked). Drawn by render/TownScenery (merged rock meshes). */
-export const TRAIL_ROCKS: [number, number, number, number][] = [
+export const TRAIL_ROCKS: [number, number, number, number][] = ([
   [59.2, -5.2, 2.3, 2.6], [61.5, -2.8, 1.4, 1.6],          // the corner where the wide camp narrows into the trail
   [53.4, -9.5, 1.5, 1.8], [54.6, -21.5, 1.6, 1.9], [53.6, -34.5, 1.6, 1.9],
   [54.2, -49, 2.3, 2.6], [51.5, -52, 1.5, 1.8],            // round the north-east corner tower
   [39, -49.8, 1.6, 1.9], [30.5, -44.2, 0.9, 1.1], [21.5, -50.2, 1.4, 1.7],
   [-13.5, -50.2, 1.5, 1.8], [-21, -44.6, 0.9, 1.1], [-27.5, -50.4, 1.7, 2.0], [-38, -48.8, 1.9, 2.2], [-44, -51.5, 1.6, 1.9],
-];
+].map(([x, z, r, k]): [number, number, number, number] => [x, z < -43 ? z - NORTH_GROWTH : z, r, k]).concat([[54.8, -50, 1.6, 1.9], [53.2, -64, 1.5, 1.8], [54.6, -78, 1.6, 1.9]] as [number, number, number, number][]));   // (Town Plan v6: the rocks of the old north stretch moved 51 m north with the hermit; three more on the longer east stretch)
 /** (owner) the rockfall from the south-east wall tower down to the river: until Erin's quest chain is done (the boulders are
  *  frozen and split, npcQuests 'erin_frost' turned in) the green in front of the gate is no shortcut to the mines - the way
  *  there is over the bridge, past the farm and up the fenced mine path. Drawn by render/Rockfall, colliders in village.ts. */
@@ -217,43 +220,57 @@ export const ROCKFALL_BREAK = 2;
 export const rockfallCleared = (nq: { q: Record<string, { s: number }> } | undefined): boolean => nq?.q?.erin_frost?.s === 2;
 /** Monsters on the hermit path (leashed near their spot; respawn a minute after dying). */
 export const TOWN_MONSTERS: { kind: 'SLIME' | 'GOBLIN' | 'BOAR' | 'BRUTE' | 'BANDIT'; x: number; z: number }[] = [];   // (removed: no monsters outside town)
-/** The keep = town_kit_v2 'castle_keep' at CASTLE_S scale, standing on the terrace (its door at z + d/2 faces south; the door trigger is castleData CASTLE_DOOR).
- *  w x d = footprint incl. the four round towers (colliders ring). */
-export const CASTLE_S = 0.85;
-export const CASTLE = { x: 0, z: -27.5, w: 17.4, d: 7.7, h: 12 };
-/** Raised stone terrace in front of the keep (h above the town paving), reached by a wide flight of stairs in the middle
- *  of its front edge (x +-stairHw, from z1 down to stairZ). The keep stands on it. */
-export const TERRACE = { x0: -11, x1: 11, z0: -27.5, z1: -19, h: 2.2, stairHw: 3.5, stairZ: -14.6 };
+/** (Town Plan v6, owner 2026-10-31 'the 3-tier kingdom') THREE LEVELS inside the walls: L1 = the lower town (plaza, shops, market, gate; ground 0), L2 = the middle terrace
+ *  (`TIERS[1]`, h 1.8: chapel quarter, Tavern Row, the Royal Way gardens, terraced houses), L3 = the castle terrace (`TIERS[0]`, h 3.8). One straight grand avenue (x 0) climbs
+ *  gate -> plaza -> north street -> L2 stairs (z -14) -> Royal Way -> L3 stairs (z -52) -> the castle door.
+ *  The keep = town_kit_v2 'castle_keep' at CASTLE_S scale (1.3 now: a grand keep), standing on L3 with a code-built west + east wing, towers and gatehouse porch (render/castleExterior.ts, footprints below).
+ *  Its door at z + d/2 faces south; the door trigger is castleData CASTLE_DOOR. w x d = the keep footprint incl. its four round towers (collider ring). */
+export const CASTLE_S = 1.3;
+export const CASTLE = { x: 0, z: -73.5, w: 26.6, d: 11.8, h: 18.4 };
+/** The castle's two wings (west / east, code-built): x from the keep's side (overlapping it) to the outer wall, z0..z1, wall height; corner towers (radius, height) stand on the outer corners. */
+export const CASTLE_WING = { x0: 12, x1: 33, z0: -78.5, z1: -68.5, h: 9, towerR: 2.7, towerH: 14 };
+/** Front porch of the keep (gatehouse arch + steps): centre x 0, depth, half width; the door spot is just in front of it. */
+export const CASTLE_PORCH = { hw: 3.6, d: 2.6, h: 4.4 };
+/** L1 / L2 / L3 ground heights above the town paving. */
+export const L2_H = 1.8, L3_H = 3.8;
+/** The castle terrace (L3): kept as a plain rect for the legacy readers (townKit foundation y, NPC y); the stairs live in TIERS. */
+export const TERRACE = { x0: -43.7, x1: 43.7, z0: -90.7, z1: -52, h: L3_H };
+/** The castle ring road (a loop round the castle, 3.4 m wide, 8+ m of garden between the castle and the walls on every side): centre lines. */
+export const CASTLE_RING = { x0: -40, x1: 40, zFront: -57, zBack: -85.6, w: 3.4 };
 /** (owner: "elevation with stairs inside the kingdom, varying height, not all flat") Raised stone districts inside the
  *  walls: a block with a simple cream retaining wall + low parapet, reached by flights of steps that run OUTWARD from
  *  the given side (N = toward -z, S = +z, W = -x, E = +x), centred at c along that side, half-width hw. Edges that sit
- *  against the town wall get no parapet / collider (the wall already blocks). Drawn by TownScenery addTier. */
+ *  against the town wall get no parapet / collider (the wall already blocks). `base` = the ground the stairs come down to (L3's stairs land on L2, h 1.8; default 0), `hide` = edges with no
+ *  parapet / collider (a tier that sits against a higher one). Drawn by TownScenery addTier. */
 export interface TierStair { side: 'N' | 'S' | 'E' | 'W'; c: number; hw: number }
-export interface TierSpec { name: string; x0: number; x1: number; z0: number; z1: number; h: number; stairs: TierStair[] }
+export interface TierSpec { name: string; x0: number; x1: number; z0: number; z1: number; h: number; stairs: TierStair[]; base?: number; hide?: ('N' | 'S' | 'E' | 'W')[] }
 export const STEP_RISE = 0.2, STEP_RUN = 0.42;
 export const stairRun = (h: number) => Math.ceil(h / STEP_RISE - 1e-6) * STEP_RUN;
+/** Length of a tier's flights (ground run from its edge to the level below). */
+export const tierRun = (T: TierSpec) => stairRun(T.h - (T.base ?? 0));
+// (the higher tier is listed FIRST: townLift returns the first match, and L3's flights land inside L2's rectangle)
 export const TIERS: TierSpec[] = [
-  { name: 'Chapel Hill', x0: -43.7, x1: -11.4, z0: -39.7, z1: -19.5, h: 1.6, stairs: [{ side: 'S', c: -27, hw: 2.2 }, { side: 'S', c: -38, hw: 2.0 }] },
-  { name: 'Tavern Row', x0: 11.4, x1: 43.7, z0: -39.7, z1: -16.5, h: 0.9, stairs: [{ side: 'S', c: 28, hw: 2.2 }, { side: 'S', c: 18.5, hw: 2.0 }, { side: 'S', c: 40, hw: 2.0 }] },
+  { name: 'Castle Hill', x0: TERRACE.x0, x1: TERRACE.x1, z0: TERRACE.z0, z1: TERRACE.z1, h: L3_H, base: L2_H, stairs: [{ side: 'S', c: 0, hw: 5.2 }, { side: 'S', c: -30, hw: 2.2 }, { side: 'S', c: 30, hw: 2.2 }] },
+  { name: 'Middle Town', x0: -43.7, x1: 43.7, z0: -52, z1: -14, h: L2_H, hide: ['N'], stairs: [{ side: 'S', c: 0, hw: 5.2 }, { side: 'S', c: -38, hw: 2.0 }, { side: 'S', c: -26, hw: 2.2 }, { side: 'S', c: -16, hw: 2.0 }, { side: 'S', c: 28, hw: 2.2 }] },
   { name: 'West Rise', x0: -43.7, x1: -29, z0: 13, z1: 36.7, h: 1.2, stairs: [{ side: 'E', c: 23.2, hw: 2.0 }, { side: 'E', c: 32.4, hw: 2.0 }, { side: 'N', c: -31.2, hw: 2.0 }] },
   { name: 'East Rise', x0: 29, x1: 43.7, z0: 13, z1: 36.7, h: 0.8, stairs: [{ side: 'W', c: 23.2, hw: 2.0 }, { side: 'W', c: 32.4, hw: 2.0 }, { side: 'N', c: 31.2, hw: 2.0 }] },
 ];
 /** Edge of a tier that runs along the town wall (no parapet, no collider). */
 export const tierEdgeOnWall = (side: 'N' | 'S' | 'E' | 'W', T: TierSpec) =>
-  side === 'W' ? T.x0 < WALL.x0 + 2 : side === 'E' ? T.x1 > WALL.x1 - 2 : side === 'N' ? T.z0 < WALL.z0 + 2 : T.z1 > WALL.z1 - 2;
+  !!T.hide?.includes(side) || (side === 'W' ? T.x0 < WALL.x0 + 2 : side === 'E' ? T.x1 > WALL.x1 - 2 : side === 'N' ? T.z0 < WALL.z0 + 2 : T.z1 > WALL.z1 - 2);
 function tierLift(x: number, z: number): number {
   for (const T of TIERS) {
     if (x >= T.x0 && x <= T.x1 && z >= T.z0 && z <= T.z1) return T.h;
-    const run = stairRun(T.h);
+    const base = T.base ?? 0, run = tierRun(T);
     for (const s of T.stairs) {
       if (s.side === 'S' || s.side === 'N') {
         if (Math.abs(x - s.c) > s.hw) continue;
         const d = s.side === 'S' ? z - T.z1 : T.z0 - z;
-        if (d >= 0 && d <= run) return T.h * (1 - d / run);
+        if (d >= 0 && d <= run) return base + (T.h - base) * (1 - d / run);
       } else {
         if (Math.abs(z - s.c) > s.hw) continue;
         const d = s.side === 'E' ? x - T.x1 : T.x0 - x;
-        if (d >= 0 && d <= run) return T.h * (1 - d / run);
+        if (d >= 0 && d <= run) return base + (T.h - base) * (1 - d / run);
       }
     }
   }
@@ -267,10 +284,6 @@ export function townLift(x: number, z: number): number {
   if (Math.abs(x - MINE_BRIDGE.x) <= MINE_BRIDGE.dw + 0.2 && z > MINE_BRIDGE.z0 && z < MINE_BRIDGE.z1) return mineBridgeDeckY(z);
   // the Endless Tower's knoll (a raised mound; the path ramps up to the door)
   { const kn = towerKnollAt(x, z); if (kn > 0) return kn; }
-  const T = TERRACE;
-  if (x < T.x0 || x > T.x1 || z > T.stairZ || z < T.z0 - 12) return 0;
-  if (z <= T.z1) return T.h;
-  if (Math.abs(x) <= T.stairHw) return T.h * (T.stairZ - z) / (T.stairZ - T.z1);
   return 0;
 }
 /** Landmarks (owner: "more structure, not more houses"). Doors face +z at rot 0 like the houses.
@@ -324,6 +337,7 @@ export const TOWN_SEATS: SeatSpec[] = [
   { x: WELL_POS.x - 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z - 2.4, yaw: 0, y: 0.55 },
   { x: WELL_POS.x - 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 }, { x: WELL_POS.x + 3.0, z: WELL_POS.z + 3.0, yaw: Math.PI, y: 0.55 },
   { x: 24.4, z: -8.9, yaw: 0, y: 0.55 }, { x: 31.4, z: -8.9, yaw: 0, y: 0.55 },                 // the tavern square
+  ...CG_SEATS.map(([x, z, yaw]) => ({ x, z, yaw, y: 0.55 })),   // (Town Plan v6: the Royal Way lawns, the castle gardens)
   // (owner 2026-10-25) no benches on the south street or the avenue any more (they stood in the walkways)
   { x: -6.5, z: 46, yaw: -Math.PI / 2, y: 0.55 }, { x: 6.5, z: 52.6, yaw: Math.PI / 2, y: 0.55 },   // the meadow, both sides facing the road
   { x: -5.8, z: 96, yaw: -Math.PI / 2, y: 0.55 }, { x: 5.8, z: 102, yaw: Math.PI / 2, y: 0.55 },   // (audit 2026-10-31) the long bare stretch of the forest road: a rest bench each side, facing the road
@@ -417,6 +431,8 @@ export const HOUSES: HouseSpec[] = [
   VF('Inn', 11.8, 26.4, Math.PI), VF('House_1', 21.7, 26.4, Math.PI),
   // Tavern Row: a row against the north wall, doors south onto the Tavern Row lane (z -29.2, ROADS), backs to the wall
   VF('House_1', 16, -31.6, 0), VF('House_1', 22.4, -31.6, 0), VF('House_1', 28.8, -31.6, 0), VF('House_1', 35.2, -31.6, 0),
+  // Middle Town (Town Plan v6): the north row of terraced houses on Terrace Street (z -41.4), doors south, a gap at x +-30 for the flights up to Castle Hill
+  VF('House_1', -36.8, -44.3, 0), VF('House_2', -20.9, -44.3, 0), VF('House_1', -14, -44.3, 0), VF('House_1', 14, -44.3, 0), VF('House_2', 20.9, -44.3, 0), VF('House_1', 36.8, -44.3, 0),
   // Lantern Lane (owner 2026-10-31): the little village between the Adventure Plaza and the Boss Trials path. Doors face the lane (ADV_ROADS), each a different way / wall colour.
   { ...V('House_2', -21.0, 141.7, 0), wall: '#f2d9b8', door: '#2f5a7a' }, { ...V('House_1', -13.0, 154.5, Math.PI), wall: '#d9e6c8', door: '#8a2f22' }, { ...V('House_2', -20.2, 155.3, Math.PI), wall: '#f1c9c0', door: '#3e5a2e' },
   { ...V('House_1', -32.6, 143.0, Math.PI / 2), wall: '#cfe0ea', door: '#5a3a1e' }, { ...V('House_1', -23.4, 133.2, -Math.PI / 2), wall: '#efe3a8', door: '#7a3a2a' },
@@ -493,13 +509,18 @@ export const ROADS: RoadSpec[] = [
   { x1: -42, z1: 23.2, x2: -2.4, z2: 23.2, w: ROAD_W.lane }, { x1: 2.4, z1: 23.2, x2: 42, z2: 23.2, w: ROAD_W.lane },
   // (the shops' counters are reached from the street / lane in front of each: SHOP_SPURS, a short path from the shop's front point to the street, whatever its yaw)
   ...SHOP_SPURS,
-  { x1: -38, z1: -6, x2: -38, z2: -16.2, w: ROAD_W.branch }, { x1: 28, z1: -6, x2: 28, z2: -12.5, w: ROAD_W.branch },   // (the graveyard stairs and the tavern square get their own paths off the north street, the barriers line its edge)
-  { x1: 0, z1: -6, x2: 0, z2: TERRACE.stairZ + 0.3, w: ROAD_W.branch + 0.6 },     // castle path (to the terrace stairs)
+  { x1: -38, z1: -6, x2: -38, z2: -21.2, w: ROAD_W.branch }, { x1: 28, z1: -6, x2: 28, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // (the graveyard stairs and the tavern get their own paths off the north street)
+  // (Town Plan v6) THE GRAND AVENUE: gate -> plaza -> north street -> the Middle Town stairs (z -14) -> the Royal Way (x 0, 5.2 m) -> the Castle Hill stairs (z -52) -> the castle way (6.4 m) to the keep door
+  { x1: 0, z1: -6, x2: 0, z2: TERRACE.z1 + 0.3, w: ROAD_W.main }, { x1: 0, z1: TERRACE.z1 - 0.3, x2: 0, z2: -64.6, w: 6.4 },
   { x1: CHURCH.x, z1: -6, x2: CHURCH.x, z2: CHURCH.z + CHURCH.d / 2 + 0.4, w: ROAD_W.branch + 0.6 },   // chapel door
-  { x1: TAVERN.x, z1: -12.5, x2: TAVERN.x, z2: TAVERN.z + TAVERN.d / 2 + 0.4, w: ROAD_W.branch },   // tavern door
-  { x1: 13, z1: -29.2, x2: 42.5, z2: -29.2, w: ROAD_W.lane },   // Tavern Row lane (the back row of houses faces it)
-  { x1: 18, z1: -12.5, x2: TAVERN.x + 1.4, z2: -12.5, w: ROAD_W.branch },   // lane from the north street end to the tavern
-  { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (west of the castle terrace)
+  { x1: 0, z1: -29.2, x2: 42.5, z2: -29.2, w: ROAD_W.lane },   // Tavern Row lane (the back row of houses faces it; from the Royal Way)
+  { x1: -31, z1: -41.4, x2: 40, z2: -41.4, w: ROAD_W.lane },   // Terrace Street (the north row of Middle Town houses faces it; crosses the Royal Way)
+  { x1: -30, z1: -41.4, x2: -30, z2: TERRACE.z1 + 0.3, w: ROAD_W.branch }, { x1: 30, z1: -41.4, x2: 30, z2: TERRACE.z1 + 0.3, w: ROAD_W.branch },   // to the side flights up to Castle Hill
+  { x1: TRAINER_POS[0], z1: -6, x2: TRAINER_POS[0], z2: TRAINER_POS[2] + 2.4, w: ROAD_W.branch }, // skill trainer (on the Middle Town, west of the Royal Way)
+  // the castle ring road: a loop all the way round the castle (walkable 360 degrees, 8+ m of garden each side), the side flights land on it
+  { x1: CASTLE_RING.x0, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x1, z2: CASTLE_RING.zFront, w: CASTLE_RING.w }, { x1: CASTLE_RING.x0, z1: CASTLE_RING.zBack, x2: CASTLE_RING.x1, z2: CASTLE_RING.zBack, w: CASTLE_RING.w },
+  { x1: CASTLE_RING.x0, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x0, z2: CASTLE_RING.zBack, w: CASTLE_RING.w }, { x1: CASTLE_RING.x1, z1: CASTLE_RING.zFront, x2: CASTLE_RING.x1, z2: CASTLE_RING.zBack, w: CASTLE_RING.w },
+  { x1: -30, z1: TERRACE.z1 - 0.3, x2: -30, z2: CASTLE_RING.zFront, w: ROAD_W.branch }, { x1: 30, z1: TERRACE.z1 - 0.3, x2: 30, z2: CASTLE_RING.zFront, w: ROAD_W.branch },
   { x1: 0, z1: FARM.z, x2: FARM.x - FARM.hw + 0.6, z2: FARM.z, w: ROAD_W.branch },   // farm gate (the field's west side, facing the road)
   { x1: 0, z1: TOWER_PATH_Z, x2: -17, z2: TOWER_PATH_Z, w: 3.4, dirt: true }, { x1: -17, z1: TOWER_PATH_Z, x2: -34, z2: TOWER_PATH_Z + 0.4, w: 3.4, dirt: true },   // the Brewer's lane (owner 2026-10-26: wider + longer dirt path west from the road past her door, then on south-west to the Boss Trials plaza)
   { x1: -34, z1: TOWER_PATH_Z + 0.4, x2: -37.5, z2: 130, w: 3.2, dirt: true }, { x1: -37.5, z1: 130, x2: OLD_SPOT.x, z2: OLD_SPOT.z - 3.6, w: 3.2, dirt: true },   // (ends at the old seaside rest spot)
@@ -527,7 +548,7 @@ export const ROADS: RoadSpec[] = [
 
 // --------------------------------------------------------------- town wall ---
 /** Stone town wall ring. Centre line of the wall; the south side is cut by the gatehouse (GATE towers at x = +-6.6). */
-export const WALL = { x0: -45, x1: 45, z0: -41, z1: 38, thick: 2.6, gateHalf: 5.0 };   // (gateHalf: the v2 gatehouse is 10.4 wide; the wall runs end against it)
+export const WALL = { x0: -45, x1: 45, z0: -92, z1: 38, thick: 2.6, gateHalf: 5.0 };   // (gateHalf: the v2 gatehouse is 10.4 wide; the wall runs end against it)
 export interface TowerSpec { x: number; z: number; r: number; corner: boolean }
 export const WALL_TOWERS: TowerSpec[] = [
   { x: WALL.x0, z: WALL.z0, r: 3.6, corner: true }, { x: WALL.x1, z: WALL.z0, r: 3.6, corner: true },
@@ -535,6 +556,7 @@ export const WALL_TOWERS: TowerSpec[] = [
   { x: -22.5, z: WALL.z0, r: 3.1, corner: false }, { x: 0, z: WALL.z0, r: 3.1, corner: false }, { x: 22.5, z: WALL.z0, r: 3.1, corner: false },
   { x: WALL.x0, z: -14.7, r: 3.1, corner: false },
   { x: WALL.x1, z: -14.7, r: 3.1, corner: false },   // (the towers at z 11.7 are now the SIDE_GATES)
+  { x: WALL.x0, z: -40, r: 3.1, corner: false }, { x: WALL.x1, z: -40, r: 3.1, corner: false }, { x: WALL.x0, z: -66, r: 3.1, corner: false }, { x: WALL.x1, z: -66, r: 3.1, corner: false },   // (Town Plan v6: the longer side walls)
   { x: -27, z: WALL.z1, r: 3.1, corner: false }, { x: 27, z: WALL.z1, r: 3.1, corner: false },
 ];
 /** Straight wall runs [x1, z1, x2, z2, outwardX, outwardZ] (outward normal is where the merlons stand). */
@@ -648,6 +670,7 @@ export const LAMPS: [number, number][] = [
   [-11, 53.9], [-27.5, 54.6], [-42.2, 52.3],
   // the riverside park
   [22, riverBank(22, 0) - 3.4], [31, riverBank(31, 0) - 3.4],
+  ...CG_LAMPS,   // (Town Plan v6: the Royal Way, the castle way and the ring road, engine/castleGrounds)
 ];
 // (lamps never stand inside a cottage lot or in its gate opening)
 for (let i = LAMPS.length - 1; i >= 0; i--) {
@@ -672,8 +695,7 @@ export const PLANTERS: PlanterSpec[] = [
   // north street + castle path
   // (owner 2026-10-24: no flower boxes in front of the castle steps)
   // castle approach: flower beds lining the path and the castle front
-  { x: -4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 }, { x: 4.7, z: -22.2, w: 2.2, d: 1.0, kind: 1 },   // (flanking the keep's door steps)
-  { x: -6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 }, { x: 6.2, z: -20.2, w: 3.0, d: 1.2, kind: 1 },
+  ...CG_PLANTERS.map(([x, z, w, d, kind]) => ({ x, z, w, d, kind })),   // (Town Plan v6: the Royal Way / Castle Hill beds, engine/castleGrounds)
   ...YARD_PLANTERS,
   // flower bed in front of the gate (outside)
   { x: -10.5, z: 46.5, w: 5, d: 2, kind: 1 },   // (its east twin made way for the horse paddock)
@@ -688,7 +710,7 @@ export const PLANTERS: PlanterSpec[] = [
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
 export const TOWN_TREES: TreeSpec[] = [
   // hermit path (outside the walls): east ring and north ring, both sides of the trail
-  { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
+  { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5 - NORTH_GROWTH, s: 2.8, kind: 1 }, { x: 18, z: -44.5 - NORTH_GROWTH, s: 2.9, kind: 0 }, { x: 49, z: -62, s: 3.0, kind: 0 }, { x: 58, z: -78, s: 3.2, kind: 1 },
   { x: 49.5, z: 4.2, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
   // inside the walls: the park, the tavern square, the castle approach (the rest of the greenery is townFill.ts: groves, hedges, beds)
   { x: -27.6, z: 14.4, s: 3.3, kind: 0 }, { x: -17.4, z: 13.9, s: 3.0, kind: 0 }, { x: -27.4, z: 19.6, s: 3.0, kind: 0 },
@@ -735,6 +757,7 @@ export const GRASS_PATCHES: [number, number, number, number, number?, number?][]
   [WELL_POS.x + 0.3, WELL_POS.z, 6.9, 4.7],   // the park lawn round the fountain (owner 2026-10-23: bigger; x -29..-15, z 12.3..21.7 between the Rise, the Armory and the street / lane)
   [PEN.x, PEN.z, PEN.hw + 1.3, PEN.hd + 1.2],
   [-38.1, -34.6, 5.4, 4.6], [-38.1, -26.4, 5.4, 4.8],   // the graveyard (two blocks either side of the path)
+  ...CG_LAWNS,   // (Town Plan v6: the Royal Way lawns + the castle gardens)
   ...LOT_PATCHES,
 ];
 /** Farm props (outside the walls): scarecrow + haystack positions. */
@@ -774,13 +797,26 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     for (const o of [-0.5, 0.5]) c.push([S.paddock.x1 - 0.9, S.paddock.z1 - 1.4 + o, 0.5]); }   // (+ the paddock's water trough)
   c.push([HERMIT_CAMP.x, HERMIT_CAMP.z, 0.9]);   // campfire
   for (const k of CARTS) { if (k.kind === 1) c.push([k.x, k.z + 0.2, 1.7]); else kitRing(c, 'market_cart', k.x, k.z, 1, 0.8); }   // carts: footprint rings (a hay cart is a haystack)
-  // castle: ring of circles around the hall footprint + corner towers
+  // castle (Town Plan v6): the keep's footprint ring + its four round towers, the two wings (perimeter circles) with their corner towers, the gatehouse porch posts
   {
     const { x, z, w, d } = CASTLE, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
     for (let px = x0; px <= x1 + 0.01; px += 2) { c.push([px, z0, 1.6], [px, z1, 1.6]); }
     for (let pz = z0; pz <= z1 + 0.01; pz += 2) { c.push([x0, pz, 1.6], [x1, pz, 1.6]); }
     for (const [tx, tz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) c.push([tx, tz, 2.6]);
+    const W = CASTLE_WING;
+    for (const sx of [-1, 1]) {
+      const xa = Math.min(sx * W.x0, sx * W.x1), xb = Math.max(sx * W.x0, sx * W.x1);
+      for (let px = xa; px <= xb + 0.01; px += 1.8) c.push([px, W.z0, 1.0], [px, W.z1, 1.0]);
+      for (let pz = W.z0; pz <= W.z1 + 0.01; pz += 1.8) c.push([sx * W.x1, pz, 1.0]);
+      for (const tz of [W.z0 + 0.9, W.z1 - 0.9]) c.push([sx * (W.x1 - 0.3), tz, W.towerR + 0.3]);
+    }
+    for (const sx of [-1, 1]) c.push([sx * (CASTLE_PORCH.hw + 0.4), z1 + CASTLE_PORCH.d - 0.5, 0.6]);   // (the porch pillars; the opening between them is the door way)
   }
+  // castle gardens (engine/castleGrounds): statue plinths, the fountain, the gazebo, the well, the yard's racks + hay
+  for (const [x, z] of CG_STATUES) c.push([x, z, 0.95]);
+  for (const [pc, x, z, , r] of CG_PROPS) { if (pc === 'gazebo') kitRing(c, 'gazebo', x, z, CG_GAZEBO.s, 0.9, 'front'); else c.push([x, z, r]); }
+  for (const [pc, x, z] of CG_YARD_RACKS) { if (pc === 'armor_stand') c.push([x, z, 0.5]); else for (const o of [-0.9, 0, 0.9]) c.push([x + o, z, 0.55]); }
+  for (const [x, z, , sc] of CG_YARD_HAY) c.push([x, z, 1.6 * sc]);
   // plant boxes: circles along the long axis
   for (const p of PLANTERS) {
     const r = Math.min(p.w, p.d) / 2 + 0.2, alongX = p.w >= p.d, len = Math.max(p.w, p.d), n = Math.max(1, Math.ceil((len - 2 * r) / 0.7));
@@ -803,14 +839,9 @@ export const TOWN_COLLIDERS: [number, number, number][] = (() => {
     for (const [, dx, dz, , , r] of [...L.extra, ...L.dress]) if (r) { const [wx, wz] = shopLocal(sx, sz, rot, dx, dz); c.push([wx, wz, r]); }
     for (const [dx, dz] of L.cluster) { const [wx, wz] = shopLocal(sx, sz, rot, dx, dz); c.push([wx, wz, 1.0]); }
   }
-  // castle terrace: retaining wall along the front (gap for the stairs) and the sides, stair balustrades
-  { const T = TERRACE;
-    for (let x = T.x0; x <= T.x1 + 0.01; x += 0.8) if (Math.abs(x) > T.stairHw + 0.3) c.push([x, T.z1 + 0.35, 0.5]);
-    for (const x of [T.x0 - 0.35, T.x1 + 0.35]) for (let z = T.z0; z <= T.z1 + 0.35; z += 0.8) c.push([x, z, 0.5]);
-    for (const sx of [-1, 1]) for (let z = T.z1; z <= T.stairZ + 0.01; z += 0.7) c.push([sx * (T.stairHw + 0.35), z, 0.4]); }
   // raised districts: retaining wall along every open edge (gaps for the stairs), stair balustrades
   for (const T of TIERS) {
-    const run = stairRun(T.h);
+    const run = tierRun(T);
     const edge = (side: 'N' | 'S' | 'E' | 'W') => {
       if (tierEdgeOnWall(side, T)) return;
       const alongX = side === 'N' || side === 'S', a0 = alongX ? T.x0 : T.z0, a1 = alongX ? T.x1 : T.z1;
@@ -1002,7 +1033,7 @@ export const NPCS: NpcDef[] = [
   },
   // the castle doors: two royal guards flank the steps (stationary, facing the plaza)
   {
-    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-2.6, -20.6], y: TERRACE.h,
+    name: 'Sir Aldo', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-6.6, -64.2], y: TERRACE.h,
     talk: [
       ['The King receives heroes in the throne hall. Go on in.'],
       ['I have stood at this door for eleven years. The door has never once tried anything.', 'Still. One must be ready.'],
@@ -1010,12 +1041,47 @@ export const NPCS: NpcDef[] = [
     bubbles: ['For the King!', 'All quiet at the castle.', 'Stand tall, Bram.'],
   },
   {
-    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [2.6, -20.6], y: TERRACE.h,
+    name: 'Sir Bram', role: 'Castle Guard', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [6.6, -64.2], y: TERRACE.h,
     talk: [
       ['Halt! State your... ah, the new guard. Welcome to the castle.'],
       ['Aldo snores standing up. Do not tell him I said that.'],
     ],
     bubbles: ['Long live King Aldric.', 'I am standing tall, Aldo.', 'No loitering on the steps.'],
+  },
+  // ---- (Town Plan v6) the castle grounds on Castle Hill: two sentries on the ring road, the Queen's gardener by her fountain, a squire in the Royal Yard (filler folk, no quests)
+  {
+    name: 'Sentry Hale', role: 'Castle Sentry', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [-40, -60], speed: 0.9,
+    patrol: [[-40, -60], [-40, -83.5]],
+    talk: [
+      ['Ring road, west side. Forty-one paces down, forty-one back. I count them so the walk does not count me.'],
+      ['The garden is the Queen\'s pride. The King pretends he is not jealous of the roses.', 'He is very jealous of the roses.'],
+    ],
+    bubbles: ['All quiet on the west side.', 'Forty-one paces...', 'Mind the roses.'],
+  },
+  {
+    name: 'Sentry Vero', role: 'Castle Sentry', model: 'KNIGHT', tint: '#ffffff', scale: 1, prop: 'spear', accent: '#ffd36a', home: [40, -83.5], speed: 0.9,
+    patrol: [[40, -83.5], [40, -60]],
+    talk: [
+      ['East side is the quiet side. The squire shouts at hay all day on the other one.', 'The hay never shouts back. I envy the hay.'],
+      ['You can walk all the way round the castle, you know. Most heroes only see the front door.', 'The back garden has the best bench.'],
+    ],
+    bubbles: ['East side, all quiet.', 'Nice evening for a walk round.', 'The hay never shouts back.'],
+  },
+  {
+    name: 'Gardener Pim', role: 'Royal Gardener', model: 'BARBARIAN', tint: '#e8ffd8', scale: 0.95, prop: 'basket', accent: '#7ee0a0', home: [-24.6, -60.6], speed: 1.0,
+    talk: [
+      ['Tulips by the fountain, roses by the wall, and a very polite snail under the third bush.', 'Do not tread on the snail. He has the Queen\'s ear.'],
+      ['The gazebo is the best seat in the castle. The King hides there when the council gets long.'],
+    ],
+    bubbles: ['Water, sun, patience.', 'The roses are sulking today.', 'Do not tread on the snail!'],
+  },
+  {
+    name: 'Squire Tavi', role: 'Royal Squire', model: 'ROGUE', tint: '#ffe8c8', scale: 0.95, prop: 'none', accent: '#ff9a6a', home: [24, -60.9], speed: 1.2,
+    talk: [
+      ['This is the Royal Yard! I am training to guard the door. Right now I am guarding the hay.', 'It is going very well.'],
+      ['Sir Aldo says a guard stands still for eleven years. I lasted four minutes. Progress!'],
+    ],
+    bubbles: ['Hup! Hup!', 'Guarding the hay!', 'Four minutes, personal best.'],
   },
   {
     name: 'Lysa', role: 'Herbalist', model: 'WIZARD', tint: '#d9f7da', scale: 1, prop: 'basket', accent: '#7ee0a0', home: [-15, 10.4], speed: 1.4,
@@ -1242,7 +1308,7 @@ export const NPCS: NpcDef[] = [
     bubbles: ['Cluck cluck!', 'Where did that one go...', 'Eggs, eggs, eggs.'],
   },
   {
-    name: 'Old Wend', role: 'Hermit', model: 'ROGUE', tint: '#c9b79a', scale: 1, prop: 'staff', accent: '#e6c27a', home: [2.2, -50.2],
+    name: 'Old Wend', role: 'Hermit', model: 'ROGUE', tint: '#c9b79a', scale: 1, prop: 'staff', accent: '#e6c27a', home: [2.2, -50.2 - NORTH_GROWTH],
     talk: [
       ['Hm? A visitor? Nobody finds old Wend out here, behind the walls. The fire keeps the Mire damp away.', 'Sit, if you like. Not on the bedroll. The bedroll bites.'],
       ['The walls keep the world out, and the world is where the best mushrooms grow. Funny, that.', 'Stay for the fire if you like. I only ask you leave the bedroll alone.'],

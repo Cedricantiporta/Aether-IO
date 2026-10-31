@@ -23,7 +23,7 @@ export const CHEST_REACH = 2.7;
 export const CHEST_OPEN_S = 0.9;
 
 export const TOWN_CHESTS: TownChest[] = [
-  { id: 'nw_corner',  x: -43.0, z: -48.4, yaw: 0.5,  where: 'outside the north-west corner tower, by the lake', reward: { gold: 2500, gems: 12 } },
+  { id: 'nw_corner',  x: -43.0, z: -99.4, yaw: 0.5,  where: 'outside the north-west corner tower, by the lake', reward: { gold: 2500, gems: 12 } },
   { id: 'tower_lawn', x: 43.0,  z: 147.0, yaw: -2.4, where: 'the forest lawn north-east of the Endless Tower',    reward: { gold: 1500, crystals: 3 } },
   { id: 'pumpkin_w',  x: -40.8, z: 113.2, yaw: 0.9,  where: 'the dark forest corner west of the pumpkin field',   reward: { gold: 1800, gems: 8, item: { id: 'potion_hp_big', qty: 2 } } },
   { id: 'beach_n',    x: -51.0, z: -4.6,  yaw: 1.6,  where: 'the north end of the beach, by the headland rocks',  reward: { gold: 1200, shards: ['RARE', 3] } },
