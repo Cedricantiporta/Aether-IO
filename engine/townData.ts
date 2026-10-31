@@ -392,7 +392,7 @@ export const HOUSES: HouseSpec[] = [
   // ---- the Quaternius village houses (owner 2026-10-24): every door faces the nearest street / lane, rows share one setback (front line) parallel to it, the back of a row
   // faces the kingdom wall or a back garden. Few, well spaced; nothing between two houses without a door onto a path.
   // the hamlet on the forest road south of the farm bridge: two houses a side, doors toward the road (x 0)
-  V('House_1', 6.7, 118, -Math.PI / 2), V('House_2', 7.1, 125.2, -Math.PI / 2), V('House_2', -7.1, 118.8, Math.PI / 2), V('House_1', -6.7, 126.6, Math.PI / 2),
+  V('House_1', 6.7, 118, -Math.PI / 2), V('House_2', 7.1, 125.2, -Math.PI / 2), V('House_2', -11.4, 118.8, Math.PI / 2), V('House_1', -11.0, 126.6, Math.PI / 2),
   // the adventurer's house (HERO_HOUSE): West Rise, south row of the lane z 23.2, door north onto the lane, back to the south wall
   { ...VF('House_1', HERO_HOUSE.x, 25.6, Math.PI), wall: '#e9dfc8', door: '#8a2f22' },
   // North Street, south side (doors north onto the street, front line z -3.4): a west row and an east row
