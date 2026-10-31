@@ -118,6 +118,7 @@ export interface Enemy {
   burnStacks: number; burnStackCd: number; // burn stacks up to 3 (dps x stacks)
   mini: boolean;         // mini-boss (stagger bar, no full stun, reduced knockback)
   stagger: number; staggerMax: number; staggerT: number; staggerCd: number; // boss/mini-boss stagger bar; staggerT>0 = staggered (+25% dmg)
+  downT: number; downMax: number; downResT: number; // DOWN (hero skills on monsters / dark heroes, never bosses / mini-bosses): lying time left, its length, anti-chain resistance left (combat.downEnemy)
   trickCd: number; trickT: number; trickKind: number; // monster signature trick (telegraphed, own cooldown)
   bigCd: number; bigT: number; bigRec: number; bigDash: number; bigKind: number; // elite signature big attack (systems/eliteBig.ts)
   spKind: number; spT: number; spStep: number; spCd: number; // boss / mini-boss signature attack (see bossSpecials.ts)
@@ -165,6 +166,7 @@ export interface Projectile {
   pierce: number;        // remaining enemy hits before despawn (Infinity ok)
   bounces: number;       // STORM chain bounces left
   knockback: number;
+  down?: number;         // knockdown seconds on monsters (combat.downEnemy); 0 / unset = none
   effect?: { type: StatusEffectType; duration: number; value?: number; chance?: number };
   hitIds: number[];      // enemies already hit (cleared on AXE return)
   state: number;         // generic sub-state (AXE: 0 out, 1 returning)

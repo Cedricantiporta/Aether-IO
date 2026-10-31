@@ -886,7 +886,7 @@ export function tickDarkHero(dt: number): void {
     n++; hpSum += e.hp; maxSum += e.maxHp; if (e.phase > phase) phase = e.phase;
     if (!lead) { lead = e; leadSlot = k; }
     const bar = world.darkBars[k]; bar.active = true; bar.id = e.id; bar.hp = e.hp; bar.maxHp = e.maxHp; bar.name = DARK_NAMES[S.cls].name;
-    if (e.staggerT > 0 && (e.state === 'WINDUP' || e.state === 'ATTACK')) cancel(e);
+    if ((e.staggerT > 0 || e.downT > 0) && (e.state === 'WINDUP' || e.state === 'ATTACK')) cancel(e);
     if (S.inv > 0) S.inv -= dt;
     keepApart(e);
     tickAxes(e, dt);

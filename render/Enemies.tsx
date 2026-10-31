@@ -7,7 +7,7 @@ import { questIconMat } from './Npcs';
 const Q_MAX = 24;
 const qKinds = new Map<string, boolean>();
 let qTick = 0;
-import { currentTarget } from '../engine/systems/combat';
+import { currentTarget, DOWN_FALL, DOWN_GETUP } from '../engine/systems/combat';
 import React, { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
@@ -170,7 +170,7 @@ export function Enemies() {
         fy = Math.max(0.02, 1 - k * 1.25); fx = 1 + k * 0.5 * (1 - k) + 0.1; if (k > 0.55) { fx *= Math.max(0, 1 - (k - 0.55) / 0.45); } alpha = 1 - k;
       }
       // animation clock (frozen / stunned hold their pose)
-      const hold = e.freezeT > 0 || e.stunT > 0;
+      const hold = e.freezeT > 0 || e.stunT > 0 || e.downT > 0;
       if (hold && !sys.wasFrozen[i]) sys.frozenAt[i] = e.animT;
       sys.wasFrozen[i] = hold ? 1 : 0;
       const at = hold ? sys.frozenAt[i] : e.animT;
@@ -186,6 +186,7 @@ export function Enemies() {
         }
       }
       poser.meshes = K.meshes; poser.idx = idx;
+      if (e.downT > 0) { const dk = Math.min((e.downMax - e.downT) / DOWN_FALL, e.downT / DOWN_GETUP); poser.down = dk <= 0 ? 0 : dk >= 1 ? 1 : dk * dk * (3 - 2 * dk); } else poser.down = 0;   // fall in 0.18 s, lie, get up over the last 0.4 s
       poser.begin(ax, e.pos.y, az, e.facing, s, fx, fy, yOff);
       K.def.pose(e, poser, at);
 

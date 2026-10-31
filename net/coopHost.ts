@@ -13,7 +13,7 @@ import { damageEnemy, applyStatus, type DamageOpts, type PlayerDebuff } from '..
 import { Vector3 } from 'three';
 import {
   MSG, HIT_STRIDE, STAT_STRIDE, DMG_KINDS, STATUS_TYPES, DEBUFF_TYPES, ENEMY_STATES, ROOM_PHASES, EP_KINDS,
-  F_ALIVE, F_DASH, HF_DOT, HF_ENV, HF_NODOT, HF_PROJ, HF_CRIT, DF_CRIT, DF_DOT, DF_BASIC, DF_ABREAK, DF_FROST, DF_NOBACK, DF_KNOCK, DF_LAUNCH, isNum, clampInt,
+  F_ALIVE, F_DASH, HF_DOT, HF_ENV, HF_NODOT, HF_PROJ, HF_CRIT, DF_CRIT, DF_DOT, DF_BASIC, DF_ABREAK, DF_FROST, DF_NOBACK, DF_KNOCK, DF_LAUNCH, DF_DOWN, isNum, clampInt,
 } from './protocol';
 import { u16ToB64, EV_H2G, EV_G2H, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
@@ -127,6 +127,7 @@ function onDmg(d: unknown[]): void {
       o.source = 'PET';   // not the host's own hit: no host combo / cards / ult charge / life steal (the guest did his own on his side)
       o.fromX = num(hits[i + 4]) / 10; o.fromZ = num(hits[i + 5]) / 10;
       o.knockDir = undefined; o.knockback = undefined; o.launch = undefined; o.slam = undefined;
+      o.down = fl & DF_DOWN ? Math.min(3, ((fl >> 10) & 31) / 10) : undefined;
       if (fl & (DF_KNOCK | DF_LAUNCH)) {
         knockDir.set(num(hits[i + 6]) / 100, 0, num(hits[i + 7]) / 100); o.knockDir = knockDir;
         if (fl & DF_KNOCK) o.knockback = Math.min(8, num(hits[i + 8]) / 100);
@@ -214,7 +215,7 @@ function sendSnap(now: number): void {
     const hpF = e.maxHp > 0 ? Math.max(0, Math.min(1, e.hp / e.maxHp)) : 0;
     const st = (e.freezeT > 0 ? 1 : 0) | (e.burnT > 0 ? 2 : 0) | (e.poisonT > 0 ? 4 : 0) | (e.stunT > 0 ? 8 : 0) | (e.fearT > 0 ? 16 : 0) | (e.slowT > 0.05 ? 32 : 0) | (e.winT > 0 ? 64 : 0)
       | (e.hideT > 0 ? 128 : 0) | (e.armorBreakT > 0 ? 256 : 0) | (e.staggerT > 0 ? 512 : 0);
-    U[n++] = (i & 511) | (si << 9) | ((e.phase & 3) << 12) | (e.hitFlash > 0.6 ? 1 << 14 : 0);
+    U[n++] = (i & 511) | (si << 9) | ((e.phase & 3) << 12) | (e.hitFlash > 0.6 ? 1 << 14 : 0) | (e.downT > 0 ? 1 << 15 : 0);
     U[n++] = q16((e.pos.x + 300) * 100); U[n++] = q16((e.pos.z + 300) * 100); U[n++] = q16((e.pos.y + 20) * 1000);
     U[n++] = q16((wrapPi(e.facing) + Math.PI) * 10000);
     U[n++] = q16(hpF * 65535);

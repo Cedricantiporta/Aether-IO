@@ -209,7 +209,7 @@ function chainLightning(x: number, z: number, first: Enemy, dmg: number): void {
 // ---- bone golem extras (owner 2026-10-25): area slam, boulder lob, burning explosion when it ends
 const GOLEM_HIT_R = 3.4;
 const rockO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 1.5 };
-const boomO: DamageOpts = { kind: 'FIRE', source: 'PET', knockback: 2 };
+const boomO: DamageOpts = { kind: 'FIRE', source: 'PET', knockback: 2, down: 1.2 };   // the golem's explosion knocks down
 const boomBurn = { type: 'BURN' as const, duration: 4, value: 4 };
 const rockStun = { type: 'STUN' as const, duration: 0.5 };
 const ROCK_T = 0.9, ROCK_R = 3.6;

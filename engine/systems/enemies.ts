@@ -400,7 +400,7 @@ export function spawnEnemy(
   // (owner 2026-10-26) The Void breeds corrupted monsters: 2x damage, 1.3x bigger (the shots turn black-purple in render)
   e.corrupt = !boss && !opts?.fixed && !isStationary(kind) && world.room.active && ((world.room.biome | 0) % BIOMES.length) === VOID_BIOME && Math.random() < CORRUPT_CHANCE;
   if (e.corrupt) { e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3; }
-  e.mini = false;
+  e.mini = false; e.downT = e.downMax = e.downResT = 0;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
   e.dodgeCd = 1 + Math.random() * 2.5;
   e.staggerMax = boss ? 100 : 0;
@@ -1591,6 +1591,8 @@ function updateEnemy(e: Enemy): void {
   if (e.boss || e.mini) tickInterrupt(e, dt);
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
+  if (e.downResT > 0) e.downResT -= dt;   // DOWN: lying time, then the anti-chain resistance (combat.downEnemy)
+  if (e.downT > 0) { e.downT -= dt; e.vel.set(0, 0, 0); if (e.downT <= 0) e.downT = 0; }
   if (e.traits & TR.CC_RESIST) { if (e.freezeT > 0) e.freezeT -= dt * 1.5; if (e.stunT > 0) e.stunT -= dt * 1.5; if (e.fearT > 0) e.fearT -= dt * 1.5; }   // Steadfast: CC wears off ~2.5x sooner
   if (e.fearT > 0) {   // terrified: frozen in place; when it wears off, slowed 30% for a while
     e.fearT -= dt;
@@ -1612,7 +1614,7 @@ function updateEnemy(e: Enemy): void {
   if (contactCd[e.id] > 0) contactCd[e.id] -= dt;
 
   // ---- AI
-  const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0;
+  const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0 || e.downT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz);
   if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)

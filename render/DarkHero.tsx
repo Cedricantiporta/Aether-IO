@@ -11,6 +11,7 @@ import {
 } from 'three';
 import { world } from '../engine/world';
 import { darkViews, DARK_MAX, DARK_CLASSES, darkShots, darkOrbs, SHOT_GALE, SHOT_LIGHT, SHOT_FIRE, SHOT_XSLASH, SHOT_HOLY, SHOT_BONE, SHOT_SLASH, SHOT_CLEAVE } from '../engine/systems/darkHero';
+import { DOWN_FALL, DOWN_GETUP } from '../engine/systems/combat';
 import { GameStatus } from '../types';
 import type { HeroClass } from '../types';
 import { useGameStore } from '../store';
@@ -114,6 +115,11 @@ function DarkHeroModel({ cls, slot }: { cls: HeroClass; slot: number }) {
     s.yaw = angleLerp(s.yaw, e.facing, 1 - Math.exp(-18 * dt));
     body.current.rotation.y = darkView.spin > 0 && !dying ? t * 18 : 0;
     g.rotation.y = s.yaw;
+    { // DOWN: topples onto its back (fall 0.18 s, lie, get up over the last 0.4 s)
+      let dk = 0;
+      if (e.downT > 0 && !dying) { const q = Math.min((e.downMax - e.downT) / DOWN_FALL, e.downT / DOWN_GETUP); dk = q <= 0 ? 0 : q >= 1 ? 1 : q * q * (3 - 2 * q); }
+      body.current.rotation.x = -1.5 * dk; body.current.position.y = 0.45 * dk;
+    }
     // animation weights
     if (dying && !s.dead) { s.dead = true; s.death?.reset().play(); }
     const speed = Math.hypot(e.vel.x, e.vel.z);

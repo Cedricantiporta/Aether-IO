@@ -66,7 +66,7 @@ export const PROJ_KINDS = ['ARROW', 'MAGIC', 'AXE', 'SLASH', 'HOLY_WAVE', 'FIREB
 /** HIT flags */
 export const HF_DOT = 1, HF_ENV = 2, HF_NODOT = 4, HF_PROJ = 8, HF_CRIT = 16;
 /** DMG hit flags (guest -> host) */
-export const DF_CRIT = 1, DF_DOT = 2, DF_BASIC = 4, DF_ABREAK = 8, DF_FROST = 16, DF_NOBACK = 32, DF_PLAYER = 64, DF_KNOCK = 128, DF_LAUNCH = 256;
+export const DF_CRIT = 1, DF_DOT = 2, DF_BASIC = 4, DF_ABREAK = 8, DF_FROST = 16, DF_NOBACK = 32, DF_PLAYER = 64, DF_KNOCK = 128, DF_LAUNCH = 256, DF_DOWN = 512;   // DF_DOWN: knockdown seconds x10 ride in bits 10..14 of the same flag word
 
 /** POS flags */
 export const F_ALIVE = 1, F_ATTACK = 2, F_DASH = 4, F_CAST = 8, F_DOWN = 16, F_PAUSED = 32;
