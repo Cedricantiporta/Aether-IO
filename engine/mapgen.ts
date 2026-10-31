@@ -12,6 +12,7 @@ import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
 import { ISLAND_BOXES, FARM, TOWER, BOSS_HEAD } from './townData';
 import { CAVE_BAY } from './caveData';
+import { TY_DUMMIES, TY_TARGETS, TY_RACK, TY_HAY, TY_POSTS, TY_BANNERS } from './trainerYard';
 import { DECK_RECTS, onDeckRect } from './beachData';
 
 /** Circle collider used for movement push-out and projectile blocking. */
@@ -285,8 +286,13 @@ export function generateMap(): void {
   for (const s of SHOP_POSITIONS) add('SHOP', s.position[0], s.position[2], 3, 1, true, 0);
   add('SHOP', SHRINE_POS[0], SHRINE_POS[2], 2.2, 1, true, 0);
   // skill trainer pavilion (two circles) + its dummies / rack / target
-  add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 0.4, 2.6, 1, true, 0); add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 2.4, 2.6, 1, true, 0);
-  for (const [dx, dz, r] of [[-3.4, 1.7, 0.55], [-3.9, 3.6, 0.55], [3.7, 1.5, 0.9], [4.0, 3.7, 0.8], [2.6, 3.9, 0.6]] as const) add('SHOP', TRAINER_POS[0] + dx, TRAINER_POS[2] + dz, r, 1, true, 0);
+  add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 0.2, 2.45, 1, true, 0); add('SHOP', TRAINER_POS[0], TRAINER_POS[2] - 2.4, 2.45, 1, true, 0);
+  for (const [x, z] of TY_DUMMIES) add('SHOP', x, z, 0.55, 1, true, 0);   // (engine/trainerYard.ts: the training yard east of the chapel)
+  for (const [x, z] of TY_TARGETS) add('SHOP', x, z, 0.5, 1, true, 0);
+  add('SHOP', TY_RACK.x, TY_RACK.z, 0.6, 1, true, 0); add('SHOP', TY_RACK.x, TY_RACK.z + 0.8, 0.6, 1, true, 0); add('SHOP', TY_RACK.x, TY_RACK.z - 0.8, 0.6, 1, true, 0);
+  for (const [x, z] of TY_HAY) add('SHOP', x, z, 0.8, 1, true, 0);
+  for (const [x, z] of TY_POSTS) add('SHOP', x, z, 0.3, 1, true, 0);
+  for (const [x, z] of TY_BANNERS) add('SHOP', x, z, 0.3, 1, true, 0);
   world.obstacles = obstacles;
   world.obstaclesVersion++;
   rebuildColliderGrid();

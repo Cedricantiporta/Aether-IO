@@ -6,6 +6,7 @@ import {
 } from 'three';
 import { SHOP_TAB, SHOP_POSITIONS } from '../constants';
 import { world, TRAINER_POS } from '../engine/world';
+import { TY_DUMMIES, TY_TARGETS, TY_RACK, TY_HAY, TY_BANNERS, TY_POSTS } from '../engine/trainerYard';
 import { isLobbyStatus } from './CameraRig';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
@@ -274,7 +275,7 @@ function buildShrine() {
   return { body: b.build(), glow: g.build() };
 }
 /** Skill Trainer: open-front striped training pavilion (rug, bench, scroll shelf, weapon wall) with straw dummies,
- *  a weapon rack, an archery target and hay bales out front. Faces +z (the north street). */
+ *  an archery row, a weapon rack, hay bales, banners and a sand floor (the whole training yard east of the chapel, Middle Town; data engine/trainerYard.ts). The tent faces +z (south, the camera). */
 function buildTrainer() {
   const b = new GB([0.85, 1.05]), g = new GB([1, 1]);
   const wood = '#7a5230', dark = '#4a3020', canvas = '#efe4cc', red = '#a8352b', straw = '#d6b56a', steel = '#b8bcc6';
@@ -304,7 +305,15 @@ function buildTrainer() {
   b.cyl(0.35, 0.35, 0.06, 10, [-0.25, 1.55, tz - half + 0.22], '#7a1f22', [Math.PI / 2, 0, 0]);
   b.box(1.8, 0.12, 0.5, [-1.2, 0.62, tz + 0.6], wood); for (const x of [-1.95, -0.45]) b.box(0.12, 0.42, 0.42, [x, 0.4, tz + 0.6], dark);
   b.box(0.9, 1.3, 0.4, [1.7, 0.85, tz - 1.6], dark); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) b.cyl(0.07, 0.07, 0.34, 6, [1.45 + j * 0.25, 0.55 + i * 0.4, tz - 1.45], i === 1 ? '#e8dcc0' : '#d8c49a', [0, 0, Math.PI / 2]);
-  // straw training dummies (left of the entrance)
+  // ---- the training yard dressing (world coords from engine/trainerYard.ts, drawn relative to the tent anchor TRAINER_POS)
+  const ox = -TRAINER_POS[0], oz = -TRAINER_POS[2];
+  // sand floor: the main yard + the north strip (thin slabs just above the paving, rounded look from two overlapping boxes)
+  b.box(9.6, 0.05, 9.2, [-17.8 + ox, 0.03, -26.3 + oz], '#d9c48f'); b.box(8.4, 0.06, 8.8, [-17.8 + ox, 0.032, -26.3 + oz], '#e0cc98');
+  b.box(15.0, 0.05, 6.1, [-20.4 + ox, 0.03, -34.65 + oz], '#d9c48f');
+  // chalk shooting line + two stakes with a rope
+  b.box(8.0, 0.02, 0.14, [-23.2 + ox, 0.07, -31.7 + oz], '#f4efe0');
+  for (const x of [-27.2, -19.2]) b.cyl(0.07, 0.07, 0.5, 6, [x + ox, 0.25, -31.7 + oz], dark);
+  // straw training dummies
   const dummy = (x: number, z: number, r: number) => {
     b.cyl(0.55, 0.6, 0.16, 8, [x, 0.08, z], '#6a6358');
     b.box(0.16, 1.9, 0.16, [x, 0.95, z], wood);
@@ -315,22 +324,33 @@ function buildTrainer() {
     b.box(0.5, 0.05, 0.5, [x, 1.4, z], red, [0, r + 0.4, 0]);
     b.torus(0.31, 0.04, [x, 1.25, z], '#7a5230', [Math.PI / 2, 0, 0]); b.torus(0.33, 0.04, [x, 1.85 - 0.25, z], '#7a5230', [Math.PI / 2, 0, 0]);
   };
-  dummy(-3.4, 1.7, 0.3); dummy(-3.9, 3.6, -0.4);
-  // weapon rack + archery target + hay (right of the entrance)
-  b.box(0.16, 1.6, 0.16, [2.9, 0.8, 1.5], dark); b.box(0.16, 1.6, 0.16, [4.5, 0.8, 1.5], dark);
-  b.box(1.8, 0.12, 0.16, [3.7, 1.45, 1.5], dark); b.box(1.8, 0.12, 0.16, [3.7, 0.55, 1.5], dark);
-  for (let i = 0; i < 4; i++) { b.box(0.08, 1.5, 0.06, [3.1 + i * 0.4, 1.15, 1.62], steel, [0, 0, 0.1 - i * 0.07]); b.box(0.3, 0.07, 0.1, [3.1 + i * 0.4, 0.5, 1.62], '#6b4a2a'); }
-  b.box(0.12, 1.7, 0.12, [3.6, 0.85, 3.6], dark, [0.25, 0, 0]); b.box(0.12, 1.7, 0.12, [4.4, 0.85, 3.6], dark, [0.25, 0, 0]);
-  b.cyl(0.75, 0.75, 0.16, 16, [4.0, 1.55, 3.85], straw, [Math.PI / 2 - 0.2, 0, 0]);
-  b.cyl(0.55, 0.55, 0.17, 16, [4.0, 1.55, 3.86], '#efe4cc', [Math.PI / 2 - 0.2, 0, 0]);
-  b.cyl(0.36, 0.36, 0.18, 16, [4.0, 1.55, 3.87], red, [Math.PI / 2 - 0.2, 0, 0]);
-  b.cyl(0.16, 0.16, 0.19, 12, [4.0, 1.55, 3.88], '#e9b949', [Math.PI / 2 - 0.2, 0, 0]);
-  b.box(0.04, 0.04, 0.7, [3.85, 1.7, 4.15], dark, [0.3, 0.2, 0]); b.box(0.04, 0.04, 0.7, [4.2, 1.45, 4.2], dark, [0.2, -0.2, 0]);
-  b.box(1.1, 0.6, 0.7, [2.6, 0.3, 3.9], straw); b.box(1.1, 0.06, 0.72, [2.6, 0.45, 3.9], '#b89850'); b.box(0.9, 0.5, 0.6, [2.75, 0.85, 3.85], straw, [0, 0.3, 0]);
-  // banner pole (left back corner)
-  b.box(0.18, 4.4, 0.18, [-3.6, 2.2, -2.6], dark); b.box(1.6, 0.14, 0.14, [-2.85, 4.2, -2.6], dark); b.box(1.3, 2.0, 0.06, [-2.85, 3.15, -2.6], red);
-  b.tri([-3.5, 2.15, -2.57], [-2.2, 2.15, -2.57], [-2.85, 1.6, -2.57], red);
-  g.sph(0.14, [-3.6, 4.5, -2.6], '#ffd070', 1, 6); g.box(0.7, 0.1, 0.02, [-2.85, 3.35, -2.54], '#ffd070'); g.box(0.1, 0.7, 0.02, [-2.85, 3.35, -2.54], '#ffd070');
+  for (const [x, z, r] of TY_DUMMIES) dummy(x + ox, z + oz, r);
+  // archery row: round straw targets on tilted stands along the north hedge, facing south
+  const target = (x: number, z: number) => {
+    b.box(0.12, 1.7, 0.12, [x - 0.4, 0.85, z - 0.2], dark, [0.25, 0, 0]); b.box(0.12, 1.7, 0.12, [x + 0.4, 0.85, z - 0.2], dark, [0.25, 0, 0]);
+    b.cyl(0.75, 0.75, 0.16, 16, [x, 1.55, z + 0.05], straw, [Math.PI / 2 - 0.2, 0, 0]);
+    b.cyl(0.55, 0.55, 0.17, 16, [x, 1.55, z + 0.06], '#efe4cc', [Math.PI / 2 - 0.2, 0, 0]);
+    b.cyl(0.36, 0.36, 0.18, 16, [x, 1.55, z + 0.07], red, [Math.PI / 2 - 0.2, 0, 0]);
+    b.cyl(0.16, 0.16, 0.19, 12, [x, 1.55, z + 0.08], '#e9b949', [Math.PI / 2 - 0.2, 0, 0]);
+    b.box(0.04, 0.04, 0.7, [x - 0.15, 1.7, z + 0.35], dark, [0.3, 0.2, 0]);
+  };
+  for (const [x, z] of TY_TARGETS) target(x + ox, z + oz);
+  // weapon rack against the east hedge (long side along z, weapons face west)
+  { const x = TY_RACK.x + ox, z = TY_RACK.z + oz;
+    for (const dz of [-0.8, 0.8]) b.box(0.16, 1.6, 0.16, [x, 0.8, z + dz], dark);
+    b.box(0.16, 0.12, 1.8, [x, 1.45, z], dark); b.box(0.16, 0.12, 1.8, [x, 0.55, z], dark);
+    for (let i = 0; i < 4; i++) { b.box(0.06, 1.5, 0.08, [x - 0.12, 1.15, z - 0.6 + i * 0.4], steel, [0.1 - i * 0.07, 0, 0]); b.box(0.1, 0.07, 0.3, [x - 0.12, 0.5, z - 0.6 + i * 0.4], '#6b4a2a'); } }
+  // hay bales
+  for (const [hx, hz] of TY_HAY) { const x = hx + ox, z = hz + oz; b.box(0.7, 0.6, 1.1, [x, 0.3, z], straw); b.box(0.72, 0.06, 1.1, [x, 0.45, z], '#b89850'); b.box(0.6, 0.5, 0.9, [x + 0.05, 0.85, z + 0.1], straw, [0, 0.3, 0]); }
+  // banner poles inside the south gate (flag points toward `dir`)
+  for (const [bx, bz, dir] of TY_BANNERS) {
+    const x = bx + ox, z = bz + oz;
+    b.box(0.18, 4.4, 0.18, [x, 2.2, z], dark); b.box(1.6, 0.14, 0.14, [x + dir * 0.75, 4.2, z], dark); b.box(1.3, 2.0, 0.06, [x + dir * 0.85, 3.15, z], red);
+    b.tri(dir > 0 ? [x + 0.15, 2.15, z + 0.03] : [x - 0.15, 2.15, z + 0.03], dir > 0 ? [x + 1.45, 2.15, z + 0.03] : [x - 1.45, 2.15, z + 0.03], [x + dir * 0.8, 1.6, z + 0.03], red);
+    g.sph(0.14, [x, 4.5, z], '#ffd070', 1, 6); g.box(0.7, 0.1, 0.02, [x + dir * 0.85, 3.35, z + 0.04], '#ffd070'); g.box(0.1, 0.7, 0.02, [x + dir * 0.85, 3.35, z + 0.04], '#ffd070');
+  }
+  // gate posts: stone pillars with a lantern
+  for (const [px, pz] of TY_POSTS) { const x = px + ox, z = pz + oz; b.box(0.5, 1.5, 0.5, [x, 0.75, z], '#9a968c'); b.box(0.62, 0.14, 0.62, [x, 1.55, z], '#b4b0a4'); g.sph(0.15, [x, 1.82, z], '#ffd88a', 1, 6); }
   // lanterns on the front poles
   for (const sx of [-1, 1]) { g.sph(0.13, [sx * half, 2.1, tz + half + 0.15], '#ffd88a', 1, 6); b.box(0.22, 0.05, 0.22, [sx * half, 2.27, tz + half + 0.15], dark); }
   return { body: b.build(), glow: g.build() };
@@ -391,8 +411,8 @@ function Station({ kind, position }: { kind: 'SHRINE' | 'TRAINER'; position: [nu
       </>}
       <sprite ref={titleRef} material={label.mat} position={[0, shrine ? 5.4 : 6.2, 0]} scale={[label.aspect * 0.85, 0.85, 1]} />
       {spLabel && !shrine && <sprite ref={spRef} material={spLabel.mat} position={[0, 7.4, 0]} scale={[spLabel.aspect * 0.8, 0.8, 1]} />}
-      <mesh position={[0, 1.8, shrine ? 0 : 0.4]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
-        <boxGeometry args={shrine ? [5, 4, 5] : [9, 4.4, 7.4]} />
+      <mesh position={[0, 1.8, shrine ? 0 : -1.0]} onClick={(e) => { e.stopPropagation(); open(); }} onPointerOver={() => hover(true)} onPointerOut={() => hover(false)}>
+        <boxGeometry args={shrine ? [5, 4, 5] : [6.4, 4.4, 6.2]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
@@ -498,7 +518,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <HeroHomeSign />}
       {village && <Beach q={q} />}
       {SHOP_POSITIONS.map((s) => <Shop key={s.type} type={s.type as ShopType} position={s.position} color={s.color} q={q} facing={s.rot ?? 0} />)}
-      <Station kind="TRAINER" position={TRAINER_POS} />
+      <Station kind="TRAINER" position={[TRAINER_POS[0], townLift(TRAINER_POS[0], TRAINER_POS[2]), TRAINER_POS[2]]} />   {/* (on the Middle Town terrace: the old y 0 sank the tent into it) */}
     </>
   );
 }

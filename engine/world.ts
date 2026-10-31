@@ -21,7 +21,7 @@ export const MAX_PICKUPS = 500;
 export const MAX_FX = 420;
 export const MAX_CRATES = 96;
 export const SHRINE_POS: [number, number, number] = [-31, 0, 1.5]; // fortune teller (summons) - the old shrine is gone
-export const TRAINER_POS: [number, number, number] = [-16, 0, -17]; // skill trainer: open paving west of the castle terrace (faces south)
+export const TRAINER_POS: [number, number, number] = [-16.2, 0, -32]; // skill trainer's tent anchor: the training yard east of the chapel on the Middle Town (h 1.8; y is lifted by townLift when drawn; the tent faces south). Yard data: engine/trainerYard.ts
 
 const v = () => new Vector3();
 
