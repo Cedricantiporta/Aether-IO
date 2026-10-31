@@ -1,6 +1,6 @@
 // ============================================================================
 // Pet Collection: every pet species the hero ever owned (store `petSeen`, template ids, saved per character); only REGISTERED ones (store `petReg`, a button per species) count.
-// Milestones by number of species collected: reaching one makes it claimable (Collection window), CLAIMED ones give permanent stats,
+// Milestones by number of species collected: reaching one auto-claims it (store.autoClaimPets), CLAIMED ones give permanent stats,
 // applied in store.calculateStats. Pure data. `petMirror` holds the claimed list for calculateStats (kept in sync by store.ts).
 // ============================================================================
 import { PETS_POOL } from './constants';

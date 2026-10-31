@@ -1092,20 +1092,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       const petReg = [...s.petReg, ...add];
       petMirror.n = petReg.length;
       set({ petReg });
-      const ready = petClaimable(petReg.length, s.petClaimed).length;
-      notify(ready ? `Registered! Collection ${petReg.length} / ${PET_TOTAL}: a reward is ready to claim` : `Registered! Collection ${petReg.length} / ${PET_TOTAL}`, COLORS.uiAccent, 'SYSTEM');
-      return true;
-    },
-    claimPetMilestone: (n) => {
-      const s = get();
-      const list = petClaimable(s.petReg.length, s.petClaimed).filter((m) => n === undefined || m.n === n);
-      if (!list.length) return false;
-      const petClaimed = [...s.petClaimed, ...list.map((m) => m.n)], gems = list.reduce((a, m) => a + (m.gems ?? 0), 0);
-      petMirror.claimed = petClaimed;
-      set({ petClaimed, gems: s.gems + gems, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, s.attrs?.[s.hero]) });
-      if (gems) feedReward({ gems });
-      const fin = list.find((m) => m.final);
-      notify(fin ? `Pet Collection complete! Title "${fin.title}" + ${gems} gems` : `Collection reward claimed: ${list.map((m) => m.label).join(' / ')}`, COLORS.uiAccent, 'SYSTEM');
+      if (!autoClaimPets()) notify(`Registered! Collection ${petReg.length} / ${PET_TOTAL}`, COLORS.uiAccent, 'SYSTEM');
       return true;
     },
     claimCodexReward: (tab) => {
@@ -2371,6 +2358,21 @@ function syncDiscoveries(): void {
   events.on('bossSpawn', (e) => { const k = monsterKeyByName(e.name); if (k) mon(k); });
 }
 
+/** Pet Collection (owner 2026-10-31): milestones are claimed automatically the moment the registered count reaches them (bonuses, gems, title).
+ *  Also the old-save migration (called once at startup). Returns true when something was claimed. */
+function autoClaimPets(quiet = false): boolean {
+  const s = useGameStore.getState();
+  const list = petClaimable(s.petReg.length, s.petClaimed);
+  if (!list.length) return false;
+  const petClaimed = [...s.petClaimed, ...list.map((m) => m.n)], gems = list.reduce((a, m) => a + (m.gems ?? 0), 0);
+  petMirror.claimed = petClaimed;
+  useGameStore.setState({ petClaimed, gems: s.gems + gems, stats: calculateStats(s.baseStats, s.equipment, s.hero, s.talents, s.attrs?.[s.hero]) });
+  if (gems && !quiet) feedReward({ gems });
+  const fin = list.find((m) => m.final);
+  s.addNotification(fin ? `Reward unlocked! Pet Collection complete: title "${fin.title}" + ${gems} gems` : `Reward unlocked! ${list.map((m) => m.label).join(' / ')}`, '#ffd36a', 'SYSTEM');
+  return true;
+}
+
 // ---- Pet Collection: record every pet species ever owned (bag / equipment / shared warehouse), apply the milestone bonuses.
 function syncPetSeen(quiet = false): void {
   const s = useGameStore.getState();
@@ -2387,6 +2389,7 @@ function syncPetSeen(quiet = false): void {
 {
   useGameStore.subscribe((s, prev) => { if (s.inventory !== prev.inventory || s.equipment !== prev.equipment || s.warehouse !== prev.warehouse) syncPetSeen(); });
   syncPetSeen(true);   // old saves: seed from the pets owned right now
+  autoClaimPets(true);   // old saves: claim every milestone the registered species already reach
 }
 
 // The active character's class is fixed (characters.ts): a brand-new character starts on its chosen class.

@@ -15,7 +15,6 @@ import { CODEX_KEYS, type CodexTab } from '../../codexData';
 import { allocBlock, talentPointsTotal, talentsOf, talentsSpent } from '../../talents';
 import { allClaimed, goalClaimable } from '../../goals';
 import { unseenQuests } from '../../questSeen';
-import { petClaimable } from '../../petCollection';
 
 const KEY = 'aether-survivor-seen-v1';
 interface Seen { items: string[]; codex: number }
@@ -66,7 +65,7 @@ export function useCodexAlert(): boolean {
 }
 /** Pet Collection: a milestone is reached but not claimed yet, or an owned species is not registered yet (dot on the Collection button + the Pet House entry). */
 export function usePetCollectionAlert(): boolean {
-  return useGameStore((s) => petClaimable(s.petReg.length, s.petClaimed).length > 0 || s.petSeen.length > s.petReg.length);
+  return useGameStore((s) => s.petSeen.length > s.petReg.length);
 }
 /** Unspent run skill points / permanent talent points (the dot stays until they are spent). */
 /** Something the Skill Trainer can teach right now: an unlocked skill below max whose SP cost is affordable (owner: no dot
