@@ -209,7 +209,7 @@ town (and closes the open panel first).
   spikes, quicksand, tide puddles, lava rifts, brambles/spores, ice sheets/icicles, Void black holes (see below).
   **Stationary hazards / war machines** (`systems/roomTraps.ts` + `render/RoomTraps.tsx`, set up in `director.enterRoom`
   after the biome hazards, only in COMBAT / ELITE rooms; kinds, count and strength scale with depth, Greenwood d1-3 only
-  gets bomb barrels / vines): ballista (locks a lane, fast bolt), catapult (lobs a boulder at where you were: floor circle +
+  gets bomb barrels / vines): ballista (locks a lane, very fast bolt: `BALLISTA_SPEED` 50 u/s, life = range / speed so 62.5 m reach / 105 m in the Halls; wind-up 1.8 s, lane locked at 40% so the orange line shows 1.08 s; swept hit test in `updateEnemyProjectiles` so a low frame rate cannot tunnel; render trail = 3 puffs per frame), catapult (lobs a boulder at where you were: floor circle +
   short stun), magic tower (charge ring, then a 360 degree ring of slow orbs, rotated half a step each volley), fire bars
   (rotating cross), fire jet (warn / blast / rest), rooting vines (root 1 s, a dash breaks free), freezing pools (slip via
   `trapMods.grip` + `bossFx.addChill`, 4 stacks freeze) and clusters of bomb barrels (`crates.ts` EXPLOSIVE_BARREL, chain
@@ -219,9 +219,9 @@ town (and closes the open panel first).
   A room with stationaries has ONE kind, max 3 pieces. **Destructible** (siege weapons, magic towers, breath statues; `TrapObj`: hp from
   `trapHp`, `hitRoomTraps` from `damageEnemiesInRadius`, projectiles (once each, hit radius ~ projectile radius), meteor / charge / smite /
   blades / consecrate): hit flash + sparks, a small HP bar (instanced, enemy bar shader) once damaged or aimed at, break burst + `DESTROYED!`,
-  rubble heap, 4 gold + xp pickups. **Targeting**: `player.ts` picks the nearest live piece when no monster is clearly closer (1.5 u
-  hysteresis, range 22) into `trapAim.obj` (autoAim.id = -1 then); `getAimDir` / `aimPoint` / `autoTarget` / axe throw length follow it;
-  a click on a piece sets `trapLock` (`target.selectAt`, cleared by `clearTarget`); the AUTO bot walks to and swings at it during FIGHT.
+  rubble heap, 4 gold + xp pickups. **Targeting**: `player.ts` picks the nearest live piece (`nearestTrapPri`: one that is winding up / shooting, `trapBusy`, counts 3 m nearer) when it is strictly nearer than the monster target (1.5 u
+  hysteresis, range 22; the AUTO bot 80), OR it is busy and within 3 m of the monster's distance, OR it is in weapon reach while no monster is (a far monster never keeps the hero off a stationary in reach), into `trapAim.obj` (autoAim.id = -1 then); `getAimDir` / `aimPoint` / `autoTarget` / axe throw length follow it;
+  every single-target hero skill of `heroExtra.ts` (Aegis Throw, Blessed Hammers, Ancient Spear, Soul Siphon, Chain Lightning, Explosive Trap trigger) also hits stationaries (`strikeTrap` / `hitRoomTraps`); a click on a piece sets `trapLock` (`target.selectAt`, cleared by `clearTarget`); the AUTO bot walks to and swings at it during FIGHT.
   **Fire / frost statue** (`TRAP.STATUE`, dbg `dbgTraps.statue` 0 fire / 1 frost): stone dragon head on the rim, telegraph 1.4 s (glowing
   mouth + two lane strips + wedge, tracks you for 60% then locks), breath 2 s sweeping 0.5 rad, cone 11.5 m (0.55 -> 1.5 m half width),
   tick 0.4 s: fire = 0.9% maxHP env damage + BURN, frost = 0.6% + SLOW + chill stack every 0.8 s; cooldown ~7 s. Weights: Ember 38, Desert 26,
@@ -825,7 +825,7 @@ screens, max-level question: class level cap is 50) have been removed.
   (8) Coral Isles HALLS: `HALLS_BORDER['Coral Isles']` = pack-2 palms (`shore` kit: palms + beach rocks only on the sand rim), the ground sinks under passages / outside the chambers,
   the Coral sea plane shows, `render/HallsBridges.tsx` draws plank bridges over `halls.bridgeSegs` (`halls.bridge` = corridor cells outside every chamber). No TwistedTree outside deep Greenwood.
 - **Marble Halls traps (v6)**: no goblin ARCHER_TOWERs in Marble (roomgen skips the pocket towers; pockets keep the 15% chest). `roomTraps.setupRoomTraps` (`marbleH`) places 1-2 siege
-  weapons per pocket + 2-3 along the walls (alternating ballista / catapult, `rt.siege` max 6), long range (`siegeLong`: fire up to 95 m, bolt life 3.4 s, 90 m lane); they fire while the
+  weapons per pocket + 2-3 along the walls (alternating ballista / catapult, `rt.siege` max 6), long range (`siegeLong`: fire up to 95 m, bolt life 2.1 s at 50 u/s, 90 m lane); they fire while the
   fight lasts, are destructible, and do NOT gate room clear. Marble COMBAT / ELITE halls always get the TRAPS twist (spikes, roomEvents), 1-3 breath statues, 1-2 jets, 1-2 rotating beams
   (rest after clear). Fire breath statues + jets everywhere: 1.5x length (statue 17.25 m, jets 15-22 m) and continuous direct hits every 0.25 s (`FIRE_TICK`; statue 1.6%, jet 2% max HP) plus burn.
 - **Desert**: Sunscorch Desert has no spike traps (roomDefs never rolls the TRAPS twist there, roomEvents drops it, `placeTraps` returns empty). Cactus colliders (`Collider.thorn`, set in roomgen `add`) hurt on contact: `player.resolveStep` deals 3.5% max HP (scaled by depth) + 1.4 u knockback, 0.6 s apart.

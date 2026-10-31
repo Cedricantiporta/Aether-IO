@@ -10,7 +10,7 @@ import { useGameStore, DMG_INFLATE } from '../../store';
 import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target';
-import { trapAim, lockedTrap, nearestTrap, trapDist, type TrapObj } from './roomTraps';
+import { trapAim, lockedTrap, nearestTrapPri, trapBusy, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack } from './projectiles';
@@ -372,13 +372,17 @@ export function updatePlayer(dt: number): void {
     const lt = lockedEnemy() ? null : lockedTrap();
     if (lt) tr = lt;
     else if (st.settings.autoAim !== false && !lockedEnemy()) {
-      const tn = nearestTrap(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : AUTO_TARGET_RANGE);   // (owner 2026-10-31) the AUTO bot hunts stationaries (towers / ballistae) anywhere in the room, like it hunts monsters
+      // the nearest stationary (one that is shooting / winding up counts 3 m nearer); the AUTO bot hunts them anywhere in the room, like monsters
+      const tn = nearestTrapPri(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : AUTO_TARGET_RANGE, 3);
       if (tn) {
         const en = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
         const de = en ? Math.hypot(en.pos.x - p.pos.x, en.pos.z - p.pos.z) - en.radius : 1e9;
         const cur = trapAim.obj && !trapAim.obj.dead ? trapAim.obj : null;
         const pick = cur && trapDist(cur, p.pos.x, p.pos.z) <= trapDist(tn, p.pos.x, p.pos.z) + 1.5 ? cur : tn;
-        if (trapDist(pick, p.pos.x, p.pos.z) + (cur === pick ? 1.5 : 0) < de) tr = pick;
+        const dt0 = trapDist(pick, p.pos.x, p.pos.z), rng = heroRange(st);
+        // (1) strictly nearer than the monster target (hysteresis for the current pick), (2) a stationary that is shooting at the hero wins a tie within 3 m,
+        // (3) a stationary in weapon reach while no monster is in weapon reach is the target even if a monster is farther than it (a monster 'clearly nearer' still wins via 1 / 2)
+        if (dt0 + (cur === pick ? 1.5 : 0) < de || (trapBusy(pick) && dt0 <= de + 3) || (dt0 <= rng + 0.8 && !findNearestEnemy(p.pos.x, p.pos.z, rng + 0.8))) tr = pick;
       }
     }
     if (tr) autoAim.id = -1;
