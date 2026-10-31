@@ -388,7 +388,7 @@ function PetActor({ id, def, ghost }: { id: string; def: PetDef; ghost?: boolean
     s.phase += dt * (1 + clamp01(s.speed / 6) * 1.2) * animK;
     const moving = clamp01(s.speed / 4);
     const bob = Math.sin(s.phase * 3 + 1) * (0.12 + moving * 0.05);
-    const stg = pet.stage, gs = (PET_STAGE_SCALE[stg] ?? 1) * petSizeBonus(stg, pet.stars);   // evolution: bigger body + aura (stage 2 gold, stage 3 violet)
+    const stg = pet.stage, gs = 1.35 * (PET_STAGE_SCALE[stg] ?? 1) * petSizeBonus(stg, pet.stars);   // (owner: pets bigger, x1.35)   // evolution: bigger body + aura (stage 2 gold, stage 3 violet)
     let y = (def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0)) * gs;
     let sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
