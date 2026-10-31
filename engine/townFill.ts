@@ -211,6 +211,7 @@ function grove(zn: Zone, n: number, roles: { piece: readonly string[]; w: number
     const s = role.s[0] + r() * (role.s[1] - role.s[0]), piece = pick(role.piece, r());
     const rad = (SOLID_R[piece] ?? 0.5) * s;
     if (!free(x, z, rad, gap, edge)) continue;
+    if (z > 60 && piece.startsWith('tree_') && ROADS.some((rd) => { const dx = rd.x2 - rd.x1, dz = rd.z2 - rd.z1, l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((x - rd.x1) * dx + (z - rd.z1) * dz) / l2)); return Math.hypot(x - (rd.x1 + dx * u), z - (rd.z1 + dz * u)) < rd.w / 2 + 3.4; })) continue;   // (owner 2026-10-31) no tree in / beside a mainland road
     put(piece, x, z, r() * TAU, s, s * (0.92 + r() * 0.2)); claim(x, z, rad); if (SOLID_R[piece]) addSolid(x, z, rad); placedN++;
   }
   return placedN;

@@ -686,7 +686,7 @@ export const PLANTERS: PlanterSpec[] = [
 
 /** Trees: x, z, scale, kind (0 oak, 1 palm, 2 pineA, 3 pineB). Inside the walls they stand on the grass patches. */
 export interface TreeSpec { x: number; z: number; s: number; kind: 0 | 1 | 2 | 3 }
-export const TOWN_TREES: TreeSpec[] = [
+const TOWN_TREES_RAW: TreeSpec[] = [
   // hermit path (outside the walls): east ring and north ring, both sides of the trail
   { x: 48.5, z: -6, s: 3.0, kind: 1 }, { x: 48.5, z: -30, s: 2.9, kind: 0 }, { x: 40, z: -44.5, s: 2.8, kind: 1 }, { x: 18, z: -44.5, s: 2.9, kind: 0 },
   { x: 49.5, z: 4.2, s: 2.8, kind: 0 }, { x: 53.2, z: 34, s: 3.4, kind: 1 },   // (owner: moved left, off the path) (the mining camp + the way down to the farm)
@@ -730,6 +730,11 @@ export const TOWN_TREES: TreeSpec[] = [
   { x: -9.6, z: 90.4, s: 3.4, kind: 0 }, { x: -13.6, z: 98.6, s: 3.6, kind: 2 }, { x: -10.4, z: 102.4, s: 3.3, kind: 0 }, { x: -17.6, z: 109.4, s: 3.5, kind: 1 },   // (audit 2026-10-31) the forest road's bare west side
   { x: -10, z: 117, s: 3.5, kind: 0 }, { x: 14, z: 116, s: 3.7, kind: 0 }, { x: 28, z: 117, s: 3.5, kind: 0 }, { x: 50.4, z: 84.2, s: 3.6, kind: 0 },
 ];
+/** (owner 2026-10-31) no tree stands on or beside a mainland road / dirt path (z > 60: the outskirts): any tree closer than half the road width + 3.4 m to a ROADS segment is dropped. */
+export const TOWN_TREES: TreeSpec[] = TOWN_TREES_RAW.filter((q) => q.z <= 60 || !ROADS.some((r) => {
+  const dx = r.x2 - r.x1, dz = r.z2 - r.z1, l2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((q.x - r.x1) * dx + (q.z - r.z1) * dz) / l2));
+  return Math.hypot(q.x - (r.x1 + dx * u), q.z - (r.z1 + dz * u)) < r.w / 2 + 3.4;
+}));
 /** Small grass patches inside the walls (everything else is paved): x, z, rx, rz. */
 export const GRASS_PATCHES: [number, number, number, number, number?, number?][] = [
   [WELL_POS.x + 0.3, WELL_POS.z, 6.9, 4.7],   // the park lawn round the fountain (owner 2026-10-23: bigger; x -29..-15, z 12.3..21.7 between the Rise, the Armory and the street / lane)
