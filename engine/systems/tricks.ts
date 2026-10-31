@@ -11,7 +11,9 @@ import { events } from '../events';
 import type { Enemy, EnemyKind, Zone, ZoneKind } from '../types';
 import { applyPlayerDebuff, damagePlayer, KB } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
-import { addTempCollider, removeTempCollider, type Collider } from '../mapgen';
+import { addTempCollider, removeTempCollider, queryColliders, edgeLimit, type Collider } from '../mapgen';
+import { useGameStore } from '../../store';
+import { heroRange } from './player';
 import { WEAK_KINDS } from '../enemyDefs';
 import { veteran, VET } from '../runMods';
 import { isEliteBigTrick, resolveEliteBig } from './eliteBig';
@@ -103,16 +105,22 @@ export function tryStartTrick(e: Enemy, tdist: number, ux: number, uz: number): 
   if (def.id === TRICK.PIN) {
     z = spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, Math.min(24, tdist + 4), 1.4, windup, COLOR[def.id]);
   } else if (def.id === TRICK.WALL) {
-    // wall segment between the golemite and the player, ~5 units in front of the player
-    const wx = p.x - ux * 5, wz = p.z - uz * 5;
-    const half = 3.6;
-    z = spawnTelegraphLine(wx + uz * half, wz - ux * half, -uz, ux, half * 2, 2.2, windup, COLOR[def.id]);
+    if (Math.random() < wallCChance()) {
+      // (owner 2026-10-31) C-shaped wall: forms on the hero, closed behind him, the opening faces the caster
+      z = spawnTelegraphCircle(p.x, p.z, C_WALL_R + 0.9, windup, 0, COLOR[def.id]);
+      if (z) { z.dir.set(-ux, 0, -uz); z.length = 1; }
+    } else {
+      // straight wall segment between the golemite and the player, ~5 units in front of the player
+      const wx = p.x - ux * 5, wz = p.z - uz * 5;
+      const half = 3.6;
+      z = spawnTelegraphLine(wx + uz * half, wz - ux * half, -uz, ux, half * 2, 2.2, windup, COLOR[def.id]);
+    }
   } else if (def.atSelf) {
     z = spawnTelegraphCircle(e.pos.x, e.pos.z, def.r * Math.max(1, e.scale * 0.8), windup, power, COLOR[def.id]);
   } else {
     z = spawnTelegraphCircle(p.x, p.z, def.r, windup, power, COLOR[def.id]);
   }
-  if (z) { z.trick = def.id; z.damage = power; }
+  if (z) { z.trick = def.id; z.damage = def.id === TRICK.WALL ? 0 : power; }
   events.emit('trick', { pos: e.pos, kind: TRICK_NAME[def.id] + '_CAST', radius: def.r });
   return true;
 }
@@ -207,7 +215,32 @@ export function raiseWallAt(x: number, zz: number, r: number, life: number, rock
   w.active = true;
   return true;
 }
+/** C-wall geometry (m / rad): ring radius, segment radius, segments, arc covered (the rest is the opening toward the caster). Clear opening = 2R sin(gap/2) - 2r ~ 3.7 m. */
+export const C_WALL_R = 3.2, C_WALL_SEG_R = 0.9, C_WALL_SEGS = 10, C_WALL_ARC = Math.PI * 4 / 3;   // arc 240 deg, opening 120 deg
+/** Chance that a golemite wall is a C (else straight): short-ranged heroes (melee) 30%, long-ranged (archer / wizard / necro) 70%. */
+export function wallCChance(): number {
+  const st = useGameStore.getState();
+  return heroRange(st as any) < 12 ? 0.3 : 0.7;
+}
+/** Raise the C: centred on z.pos, opening toward z.dir (the caster). Segments touching static colliders, the arena edge or a portal are skipped (only ever widens the opening). */
+function raiseCWall(z: Zone): void {
+  const a0 = Math.atan2(z.dir.x, z.dir.z), start = a0 + (Math.PI * 2 - C_WALL_ARC) / 2;
+  for (let k = 0; k < C_WALL_SEGS; k++) {
+    const a = start + k / (C_WALL_SEGS - 1) * C_WALL_ARC;
+    const x = z.pos.x + Math.sin(a) * C_WALL_R, zz = z.pos.z + Math.cos(a) * C_WALL_R;
+    if (x * x + zz * zz > edgeLimit(x, zz, 1.5) ** 2) continue;
+    let ok = true;
+    for (const pt of world.room.portals) if (pt.active && (pt.x - x) ** 2 + (pt.z - zz) ** 2 < 25) { ok = false; break; }
+    if (!ok) continue;
+    const cs = queryColliders(x, zz, C_WALL_SEG_R + 2, colTmp);
+    for (let i = 0; i < cs.length; i++) { const c = cs[i]; if ((c.x - x) ** 2 + (c.z - zz) ** 2 < (c.r + C_WALL_SEG_R * 0.8) ** 2) { ok = false; break; } }
+    if (ok) raiseWallAt(x, zz, C_WALL_SEG_R, WALL_LIFE, false);
+  }
+  events.emit('shake', { amount: 0.25 });
+}
+const colTmp: Collider[] = [];
 function raiseWall(z: Zone): void {
+  if (z.kind === 'TELEGRAPH_CIRCLE') { raiseCWall(z); return; }
   const len = z.length, n = Math.max(3, Math.round(len / 1.5));
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n * len;

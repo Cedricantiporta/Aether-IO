@@ -37,13 +37,18 @@ function countSkeletons(src: number): number { skN[0] = skN[1] = skN[2] = skN[3]
  *  (3W+1A+1M, 3W+2A or 3W+2M): warriors rise first, the 4th and 5th are the ranged pair. A full army recast replaces
  *  its oldest skeleton within the same group (warrior -> warrior, archer/mage -> a re-rolled archer or mage). */
 export const RAISE_WARRIORS = 3;
-export function pickRaiseKind(): number {
+export function pickRaiseKind(meleeOnly = false): number {
+  if (meleeOnly) return MINION_WARRIOR;
   const n = countSkeletons(SRC_RAISE), war = skN[MINION_WARRIOR];
   if (n < MAX_SKELETONS) return war < RAISE_WARRIORS ? MINION_WARRIOR : randRanged();
   let oldK = MINION_WARRIOR, ol = 1e9;
   for (const m of world.minions) if (m.active && m.kind !== MINION_GOLEM && m.src === SRC_RAISE && m.born < ol) { ol = m.born; oldK = m.kind; }
   return oldK === MINION_WARRIOR ? MINION_WARRIOR : randRanged();
 }
+/** (owner 2026-10-31) Raise Dead live army: how many Raise Dead skeletons stand (`.alive`). The skill is castable again once every MELEE one
+ *  (skeleton warrior) is dead even if archers / mages stand; that recast only raises the MISSING amount (cap - alive), all warriors (`.partial`). */
+export const raiseInfo = { alive: 0, partial: false };
+export function raiseArmy(): typeof raiseInfo { raiseInfo.alive = countSkeletons(SRC_RAISE); raiseInfo.partial = raiseInfo.alive > 0; return raiseInfo; }
 function randRanged(): number { return Math.random() < 0.5 ? MINION_ARCHER : MINION_MAGE; }
 const ids: number[] = [];
 const hitO: DamageOpts = { kind: 'PHYSICAL', source: 'PET', knockback: 0.3 };
@@ -273,16 +278,16 @@ export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
   updateRocks(dt);
   updateAlly(dt);   // the run ally lives in a minion slot but has its own brain
-  let slotI = 0, army = false, raised = false;
+  let slotI = 0, army = false, raised = false;   // raised = a Raise Dead MELEE skeleton stands
   let alive = 0;
-  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE) raised = true; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
+  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE && M[i].kind === MINION_WARRIOR) raised = true; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
   // the last summon fell: one skeleton warrior claws up beside the hero for a few seconds (not again until a new summon has risen)
   if (alive === 0 && summonedN > 0 && pl.alive && world.room.active) {
     const st = useGameStore.getState();
     if (st.hero === 'NECROMANCER') spawnMinion(MINION_WARRIOR, pl.pos.x + Math.sin(pl.facing) * 2, pl.pos.z + Math.cos(pl.facing) * 2, st.stats.damage * 0.9, LAST_LIFE, SRC_LAST, true);
   }
   summonedN = alive;
-  // Raise Dead: its cooldown stays full while any of its skeletons stands (it only ticks once the last one has fallen)
+  // Raise Dead: its cooldown stays full while any of its MELEE skeletons stands (it ticks once the last warrior has fallen, even if archers / mages remain)
   if (raised && pl.cdMax.q > 0) pl.cd.q = pl.cdMax.q;
   // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen
   if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;

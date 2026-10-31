@@ -3,7 +3,7 @@
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
 import { iceAt } from '../iceFloor';
-import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind } from './minions';
+import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind, raiseArmy } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { dashModStart, dashModFx, dashDmgBonus, updateDashMods } from './dashMods';
@@ -484,11 +484,13 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   // ---- NECROMANCER
   if (hero === 'NECROMANCER') {
     if (slot === 'q') {   // RAISE DEAD: skeletons (warriors, archers or mages) claw out of the ground around you
-      const n = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 2 / 3 / 4 / 5 / 5 by level (max 5)
+      const cap = Math.min(MAX_SKELETONS, RAISE_N[Math.min(5, Math.max(1, lv)) - 1] + (stats.minionCount | 0));   // 2 / 3 / 4 / 5 / 5 by level (max 5)
+      // (owner 2026-10-31) recast while only archers / mages stand: raise just the missing amount, all skeleton warriors
+      const ra = raiseArmy(), melee = ra.partial, n = melee ? Math.max(1, cap - ra.alive) : cap;
       for (let i = 0; i < n; i++) {
         const an = p.facing + (i - (n - 1) / 2) * 0.75;
         // random warrior / archer / mage, at least one of each in the army
-        spawnMinion(pickRaiseKind(), p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9 / Math.sqrt(lvMul(lv)), PERMANENT, 1);   // (owner: skill level counts as sqrt)
+        spawnMinion(pickRaiseKind(melee), p.pos.x + Math.sin(an) * 2.4, p.pos.z + Math.cos(an) * 2.4, b * 0.9 / Math.sqrt(lvMul(lv)), PERMANENT, 1);   // (owner: skill level counts as sqrt)
       }
       announce('RAISE_DEAD');
     } else if (slot === 'e') {   // SOUL STEP: blink, bone shards burst where you stood
