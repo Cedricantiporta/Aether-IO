@@ -202,8 +202,14 @@ export function updateSkillInput(): void {
   if (rclickDash.n > 0) rclickDash.n--;
   for (let i = 0; i < SKILL_KEYS.length; i++) {
     const [code, id] = SKILL_KEYS[i];
-    const down = !!inp.keys[code] || (code === 'Space' && rclickDash.n > 0);   // (right click = dash)
-    const was = !!held[code];
+    // (owner 2026-10-31) a press must register whatever else is held: the keydown latches `pressed[code]` (input.ts), which counts as "down" for this frame even
+    // if the key was already released again (a tap shorter than a frame / a hit-stop frame), and a key stuck "down" (keyup lost: Shift / Alt / Win combos,
+    // focus changes) is treated as released first so the fresh keydown is a new edge.
+    const fresh = !!inp.pressed[code];
+    const down = !!inp.keys[code] || fresh || (code === 'Space' && rclickDash.n > 0);   // (right click = dash)
+    let was = !!held[code];
+    if (fresh && was && code !== 'Space') { was = false; if (aimState.active && aimState.id === id) aimState.active = false; }
+    if (fresh && code !== 'Space') inp.pressed[code] = false;   // consumed here (only Space is also read by player.ts / village.ts)
     held[code] = down;
     if (down && !was) {
       // a fresh press after a cancel must be released first (down edge only)
