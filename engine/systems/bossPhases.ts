@@ -35,7 +35,7 @@ const MECH: Record<string, PhaseKind> = {
   BOSS_WYRM: 'AVALANCHE', BOSS_GOLEM: 'PINBALL', BOSS_TREANT: 'SPORES', BOSS_HYDRA: 'TIDAL', BOSS_WARLORD: 'LAVA',
   BOSS_WARMACH: 'SAND', BOSS_VOID: 'VOIDPULL',
 };
-const TH_BOSS = [0.7, 0.35], TH_SLIME = [0.5];
+const TH_BOSS = [0.5], TH_SLIME = [0.5];   // (owner 2026-10-31) every boss shields ONCE, at 50% hp (was 70% and 35%)
 const INFO: Record<string, { name: string; sub: string; color: number }> = {
   AVALANCHE: { name: 'AVALANCHE', sub: 'Run into a glowing circle - the cold slows you!', color: 0x9fe4ff },
   SPLIT: { name: 'SLIME SPLIT', sub: 'Pop the slimes before they merge back!', color: 0x86efac },
