@@ -27,6 +27,7 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
+import { formName } from './bossForms';
 import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
@@ -60,8 +61,8 @@ function syncHud(e: Enemy): void {
   const b = world.boss;
   const names = BOSS_NAMES[e.kind as BossKind];
   b.active = e.state !== 'DYING';
-  b.name = names.name;
-  if (!b.final) b.title = e.kind === 'BOSS_WARLORD' && bossView.enraged ? 'The Burning Form' : bossWarded(e) ? `INVULNERABLE - ${bp.name}` : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
+  b.name = formName(e, names.name);   // (a second form adds its suffix, bossForms.ts)
+  if (!b.final) b.title = bossWarded(e) ? `INVULNERABLE - ${bp.name}` : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
   b.hp = e.hp;
   b.maxHp = e.maxHp;
   b.phase = e.phase;

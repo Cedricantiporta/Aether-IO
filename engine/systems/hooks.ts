@@ -14,6 +14,8 @@ export const hooks = {
   phaseReset: (): void => {},
   /** The hero hit a boss / illusion during a phase (Find the Real One, Sable's reveal). */
   phaseHit: (_e: Enemy): void => {},
+  /** A transforming boss's HP hit 0 (combat.damageEnemy): bossForm.ts starts the form switch instead of the kill. True = it did not die. */
+  bossFormDeath: (_e: Enemy): boolean => false,
   /** Damage multiplier a phase gives the boss (Gorath cracked = more damage). */
   phaseMul: (_e: Enemy): number => 1,
   /** A boss / mini-boss just became staggered (stagger bar filled). */

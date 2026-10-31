@@ -5,10 +5,12 @@
 import { BossWard } from './BossWard';
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Group, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import { AdditiveBlending, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, RingGeometry } from 'three';
 import { world } from '../engine/world';
 import type { Enemy, EnemyKind } from '../engine/types';
 import { bossView } from '../engine/systems/bosses2';
+import { bf, FORMS, BEAT_T, SWAP_T } from '../engine/systems/bossForms';
+import { coopRoom } from '../net/coopRoom';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
 import { dustPuff, embers, smokePuff, FX, CELL } from './fx';
@@ -310,9 +312,9 @@ function targets(e: Enemy, T: Pose, t: number): void {
       break;
     case 'BOSS_WARLORD':
       T.dy = Math.abs(sin(t * 3)) * 0.06 * (st === 'CHASE' ? 1 : 0);
-      if (bossView.enraged) T.glow += 1.8;
-      if (bossView.formT > 0) { T.armL = T.armR = -2.8; T.glow += 2.5 + (2 - bossView.formT) * 1.5; T.dy = 0.25; }   // igniting
-      if (p === 0) { if (W) { const w = clamp(k, 0, 1); T.armR = -2.9 * w; T.armL = -1.5 * w; T.glow += w * 1.5; } else if (A) { T.armR = -2.4; T.armL = -1.2; T.spin = bossView.enraged ? 11 : 8; T.glow += 1.8; } }
+      if (bf.form[e.id] === 1) T.glow += 1.8;
+      if (bf.beat[e.id] > 0) { T.armL = T.armR = -2.8; T.glow += 2.5 + (BEAT_T - bf.beat[e.id]) * 0.9; T.dy = 0.25; }   // the form switch (bossForm.ts): arms thrown up
+      if (p === 0) { if (W) { const w = clamp(k, 0, 1); T.armR = -2.9 * w; T.armL = -1.5 * w; T.glow += w * 1.5; } else if (A) { T.armR = -2.4; T.armL = -1.2; T.spin = bf.form[e.id] === 1 ? 11 : 8; T.glow += 1.8; } }
       else if (p === 1) { if (W) { const w = clamp(k, 0, 1); T.armR = -3.0 * w; T.glow += w; } else if (A) { T.armR = 0.5; T.pitch = 0.3; T.dy = -0.2; T.glow += 1.4; } }
       else if (p === 2) { if (W || A) { T.armR = T.armL = -2.7; T.glow += 1.3; } }
       else if (p === 3) { if (W) { T.armR = -1.2 * clamp(k / 0.8, 0, 1); T.pitch = -0.2; } else if (A) { T.armR = 0.9; T.pitch = 0.3; T.glow += 1.4; } }
@@ -341,6 +343,10 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
   const wing = useMemo<{ skin: BufferGeometry; bones: BufferGeometry; glow?: BufferGeometry } | null>(() => (kind === 'BOSS_WARLORD' ? buildDevilWing() : kind === 'BOSS_VOID' ? buildVoidWing() : null), [kind]);
   const wingMat = useMemo(() => new MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.8, metalness: 0, side: DoubleSide, emissive: new Color(kind === 'BOSS_VOID' ? '#3b0f6e' : '#5a0c12'), emissiveIntensity: kind === 'BOSS_VOID' ? 0.9 : 0.7 }), [kind]);
   const km = useMemo(() => makeBossMats(), []), rig2 = useBossRig(KIT_PIECE[kind] || '', km);
+  const ring = useRef<Mesh>(null!), ring2 = useRef<Mesh>(null!);
+  const ringGeo = useMemo(() => new RingGeometry(0.9, 1, 64).rotateX(-Math.PI / 2), []), ring2Geo = useMemo(() => new RingGeometry(0.93, 0.975, 48, 1).rotateX(-Math.PI / 2), []);
+  const ringMat = useMemo(() => new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }), []);
+  const ring2Mat = useMemo(() => new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }), []);
   const S = useRef<Pose & { yaw: number; lastStep: number }>({ armL: 0, armR: 0, spread: 0.12, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0, yaw: 0, lastStep: 0 });
   const T = useMemo<Pose>(() => ({ armL: 0, armR: 0, spread: 0, pitch: 0, dy: 0, glow: 1, extraY: 0, spin: 0 }), []);
 
@@ -350,12 +356,23 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
     const id = bossView.id;
     let e: Enemy | null = null;
     if (decoy >= 0) { let k = 0; const arr = world.enemies; for (let i = 0; i < arr.length; i++) { const x = arr[i]; if (x.active && x.decoy && x.kind === kind && x.trickKind === 1 && x.state !== 'DYING' && k++ === decoy) { e = x; break; } } }
-    else e = id >= 0 ? world.enemies[id] : null;
+    else e = id >= 0 ? world.enemies[id] : coopRoom.guest && world.director.bossId >= 0 ? world.enemies[world.director.bossId] : null;   // (a co-op guest has no bossView.id: the boss bar's id)
     if (!e || !e.active || e.kind !== kind || (decoy < 0 && e.decoy) || status === GameStatus.MENU || status === GameStatus.HERO_SELECT) { r.visible = false; return; }
     if (e.hideT > 0 && e.state !== 'DYING') { r.visible = false; return; }   // submerged / airborne
     r.visible = true;
     const dt = status === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
     const s = S.current, t = e.animT, TT = clock.elapsedTime;
+    // form switch (bossForms.ts): form 0 / 1, beat = seconds left of the transformation (the guest counts it down locally between host messages)
+    const mid = decoy >= 0 ? bossView.id : e.id;   // (the Herald's illusions wear the real boss's form)
+    const fm = FORMS[kind], form = fm ? bf.form[mid] : 0;
+    if (fm && decoy < 0 && coopRoom.guest && bf.beat[mid] > 0) bf.beat[mid] = Math.max(0, bf.beat[mid] - dt);
+    const beat = fm ? bf.beat[mid] : 0, f2 = fm !== undefined && form === 1;
+    let vm = 1, bGlow = 0, bRise = 0;
+    if (fm && beat > 0) {
+      const el = BEAT_T - beat;
+      if (form === 0) { const k = clamp(el / SWAP_T, 0, 1); vm = 1 - 0.18 * k; bGlow = 1.2 + 3 * k; }   // form 1 dies: it sags and flares
+      else { const k = clamp((el - SWAP_T) / (BEAT_T - SWAP_T), 0, 1), ek = 1 - (1 - k) * (1 - k) * (1 - k); vm = 0.6 + 0.4 * ek; bGlow = 3.2 * (1 - k); bRise = (1 - ek) * -1.6; }   // form 2 rises, bigger and brighter
+    }
     targets(e, T, t);
     const fast = e.state === 'WINDUP' || e.state === 'ATTACK' ? 14 : 8;
     s.armL = damp(s.armL, T.armL, fast, dt); s.armR = damp(s.armR, T.armR, fast, dt); s.spread = damp(s.spread, T.spread, fast, dt);
@@ -366,12 +383,13 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
     let yOff = 0, fy = 1, shx = 0;
     if (kind === 'BOSS_HYDRA') yOff = -2.4;   // (rooted beyond the rim) the body lies low, mostly below the arena edge
     if (e.state === 'SPAWN') { const k = clamp(e.stateT / 1.6, 0, 1); yOff += -(1 - k * k) * 4; shx = sin(TT * 60) * 0.05 * (1 - k); }
+    if (fm && beat > 0 && form === 0) { const k = clamp((BEAT_T - beat) / SWAP_T, 0, 1); fy = 1 - 0.4 * k * k; shx += sin(TT * 70) * 0.1 * k; }
     if (e.state === 'DYING') { const k = clamp(e.deathT / 0.6, 0, 1); fy = 1 - k * 0.7; shx = sin(TT * 80) * 0.08 * (1 - k); s.glow = 3 * (1 - k); }
     const sc = e.radius / rig.r;
-    r.position.set(e.pos.x + shx * sc, e.pos.y + yOff, e.pos.z);
+    r.position.set(e.pos.x + shx * sc, e.pos.y + yOff + bRise, e.pos.z);
     r.rotation.y = e.facing + s.yaw;
-    const big = kind === 'BOSS_WARLORD' && bossView.enraged ? 1.12 : 1;   // (owner) the Burning Form looms larger
-    r.scale.set(sc * big, sc * fy * big, sc * big);
+    const big = 1;   // (the second form's size comes from e.radius itself, bossForms.ts)
+    r.scale.set(sc * vm, sc * fy * vm, sc * vm);
     const b = body.current;
     b.position.y = s.dy; b.rotation.x = s.pitch; b.rotation.z = e.state === 'CHASE' ? sin(t * (kind === 'BOSS_TREANT' ? 3 : 2.6)) * (kind === 'BOSS_TREANT' ? 0.09 : 0.035) : 0;
     if (aL.current) { aL.current.rotation.x = s.armL; aL.current.rotation.z = s.spread * (kind === 'BOSS_WYRM' ? 1 : 1); }
@@ -383,7 +401,7 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
     }
     if (wingL.current) {   // devil wings in Ignar's Burning Form / the Void Herald's final form: they unfurl during the transformation and flap a little
       const vo = kind === 'BOSS_VOID';
-      const f = vo ? (bossView.vform === 2 ? 1 : bossView.vform === 1 ? clamp(1 - bossView.vformT / 3, 0, 1) : 0) : bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, wr = wingR.current, wl = wingL.current;
+      const f = f2 ? (beat > 0 ? clamp(1 - beat / (BEAT_T - SWAP_T), 0, 1) : 1) : 0, wr = wingR.current, wl = wingL.current;   // (they unfurl while the second form rises)
       wl.visible = wr.visible = f > 0.02;
       const act = e.state === 'WINDUP' || e.state === 'ATTACK', fl = sin(TT * (act ? 7 : 4)) * (act ? 0.3 : 0.2), open = 0.25 + 0.35 * f;
       const ws = (vo ? 0.6 : 0.85) * f;
@@ -392,9 +410,30 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
       wr.rotation.z = 0.12 + fl * 0.35; wl.rotation.z = -(0.12 + fl * 0.35);
       if (vo) { wr.position.y = wl.position.y = 2.6 + s.dy; wl.position.x = -0.5; wr.position.x = 0.5; }
     }
-    mats.glow.color.setScalar(1.1 + s.glow * 0.9 + 0.2 * sin(TT * 5));
+    const gs = 1.1 + (s.glow + bGlow) * 0.9 + 0.2 * sin(TT * 5);
+    if (fm && f2) { const tn = fm.tint, mx = Math.max(tn[0], tn[1], tn[2]); mats.glow.color.setRGB(gs * tn[0] / mx * 1.2, gs * tn[1] / mx * 1.2, gs * tn[2] / mx * 1.2); }   // form 2: the glowing parts take the form colour
+    else mats.glow.color.setScalar(gs);
     if (kind === 'BOSS_TREANT') mats.lit.color.setRGB(bossView.bark ? 0.62 : 1, bossView.bark ? 0.58 : 1, bossView.bark ? 0.55 : 1);
-    if (kind === 'BOSS_WARLORD') { const f = bossView.enraged ? 1 : bossView.formT > 0 ? 1 - bossView.formT / 2 : 0, fl = 0.15 * sin(TT * 9) * f; mats.lit.color.setRGB(1 + 0.8 * f + fl, 1 - 0.3 * f, 1 - 0.45 * f); }   // charred red-hot body, flickering
+    if (fm) {   // form 2: the body takes the form tint (vertex colours x tint) + an emissive glow; the dying first form flares in its own colour
+      const f = f2 ? 1 : 0, fl = f * 0.1 * sin(TT * (kind === 'BOSS_WARLORD' ? 9 : 5)), tn = fm.tint;
+      mats.lit.color.setRGB(1 + (tn[0] - 1) * f + fl, 1 + (tn[1] - 1) * f + fl, 1 + (tn[2] - 1) * f + fl);
+      mats.lit.emissive.setHex(f ? fm.emissive : fm.burst);
+      mats.lit.emissiveIntensity = f * fm.emissiveI * (0.85 + 0.15 * sin(TT * 4)) + bGlow * 0.16;
+      wingMat.emissive.setHex(f2 ? fm.wing : kind === 'BOSS_VOID' ? 0x3b0f6e : 0x5a0c12); wingMat.emissiveIntensity = f2 ? 1.1 : kind === 'BOSS_VOID' ? 0.9 : 0.7;
+      const rg = ring.current;
+      if (rg) {   // the form aura: two glowing rings round the feet (cheap: one mesh each), only in form 2 / during the switch
+        const on = f2 || beat > 0;
+        rg.visible = on;
+        if (ring2.current) ring2.current.visible = on;
+        if (on) {
+          const pulse = 1 + 0.06 * sin(TT * 3.2), sz = rig.r * 1.45 * pulse;
+          rg.position.y = 0.1 / sc; rg.scale.set(sz, 1, sz); rg.rotation.y = TT * 0.6;
+          ringMat.color.setHex(f2 ? fm.aura : fm.burst); ringMat.opacity = (0.55 + 0.2 * sin(TT * 5)) * (f2 ? 1 : clamp(bGlow / 3, 0.2, 1));
+          const r2 = ring2.current; if (r2) { r2.scale.set(sz * 0.7, 1, sz * 0.7); r2.rotation.y = -TT * 0.9; r2.position.y = 0.14 / sc; }
+          ring2Mat.color.setHex(f2 ? fm.auraAlt : fm.burst);
+        }
+      }
+    }
 
     if (rig2 && kw.current) {   // creature-kit joints follow the same targets as the old rig
       const J = rig2.J, K = J.armL;
@@ -420,10 +459,11 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
         case 'BOSS_HYDRA': if (Math.random() < dt * 3) smokePuff(wx, 0.4, wz, 1, 0x4c8a3a, 1.5, 1.2, 0.6, 1.0, 0.3); break;
         case 'BOSS_WYRM': if (Math.random() < dt * 6) smokePuff(wx, 1.2 + s.dy, wz, 1, 0xd6f1ff, 1.6, 1.2, 0.3, 1.5, 0.3); break;
         case 'BOSS_WARLORD':
-          if (Math.random() < dt * (bossView.enraged ? 30 : bossView.formT > 0 ? 45 : 8)) embers(wx, 1 + Math.random() * 5, wz, 1, 0xff7a1a, 0.3, 2.4, 0.9, 0.2);
-          if ((bossView.enraged || bossView.formT > 0) && Math.random() < dt * 14) smokePuff(wx, 0.6 + Math.random() * 3, wz, 1, Math.random() < 0.5 ? 0xff5a1a : 0xffb02a, 1.4, 1.6, 0.25, 2.2, 0.35);   // body flames
+          if (Math.random() < dt * (f2 ? 30 : beat > 0 ? 45 : 8)) embers(wx, 1 + Math.random() * 5, wz, 1, f2 && fm ? fm.aura : 0xff7a1a, 0.3, 2.4, 0.9, 0.2);
+          if ((f2 || beat > 0) && fm && Math.random() < dt * 14) smokePuff(wx, 0.6 + Math.random() * 3, wz, 1, Math.random() < 0.5 ? (f2 ? fm.aura : 0xff5a1a) : (f2 ? fm.auraAlt : 0xffb02a), 1.4, 1.6, 0.25, 2.2, 0.35);   // body flames (form 2: azure)
           break;
         default: if (Math.random() < dt * 10) FX.add.emit(wx, 1 + Math.random() * 5, wz, 0, 1.5, 0, 0.9, 0.3, 0.05, 1.6, 0.4, 2.0, 0.9, CELL.STAR, 0, 0.3, 0, 2);
+          if (fm && (f2 || beat > 0) && Math.random() < dt * (f2 ? 22 : 40)) embers(wx, 0.5 + Math.random() * 6, wz, 1, f2 ? fm.aura : fm.burst, 0.3, 3, 1.1, 0.22);   // form 2 / the switch: rising sparks in the form colour
       }
       if (kind === 'BOSS_TREANT' || kind === 'BOSS_WARLORD' || kind === 'BOSS_HYDRA') {
         const ph = Math.sin(t * (kind === 'BOSS_HYDRA' ? 2 : 3)) > 0 ? 1 : 0;
@@ -434,6 +474,7 @@ function Boss2({ kind, decoy = -1 }: { kind: EnemyKind; decoy?: number }) {   //
 
   return (
     <group ref={root} visible={false}>
+      {FORMS[kind] && decoy < 0 && <><mesh ref={ring} geometry={ringGeo} material={ringMat} visible={false} renderOrder={2} /><mesh ref={ring2} geometry={ring2Geo} material={ring2Mat} visible={false} renderOrder={2} /></>}
       {wing && ([wingR, wingL] as const).map((ref, k) => (
         <group key={k} ref={ref} position={[k === 0 ? 0.55 : -0.55, kind === 'BOSS_VOID' ? 2.6 : 2.3, -0.7]} visible={false}>
           <mesh geometry={wing.skin} material={wingMat} castShadow />

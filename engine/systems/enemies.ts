@@ -50,6 +50,8 @@ import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
 import { bp } from './bossPhaseState';
 import { addChill, frostHit, burnHit } from './bossFx';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
+import { bf, formColor, formTel, setFormCaster } from './bossForms';
+import { tickFormBeat } from './bossForm';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
 import { towerMode, towerCrystals, dropTable } from './combat';
@@ -266,7 +268,7 @@ const BOSS_TEL_R = 1.3, BOSS_TEL_T = 0.88;
 export function spawnTelegraphCircle(
   x: number, z: number, radius: number, life: number, damage: number, color: number,
 ): Zone | null {
-  if (bossTel) { radius *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; }
+  if (bossTel) { radius *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); life *= BOSS_TEL_T; color = formColor(color); }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
@@ -282,7 +284,7 @@ export function spawnTelegraphCircle(
 export function spawnTelegraphLine(
   x: number, z: number, dirX: number, dirZ: number, length: number, width: number, life: number, color: number,
 ): Zone | null {
-  if (bossTel) { width *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1); length *= 1.12 * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; }
+  if (bossTel) { width *= BOSS_TEL_R * (trial.on ? TRIAL_TELE : 1) * formTel(); length *= 1.12 * (trial.on ? TRIAL_TELE : 1); life *= BOSS_TEL_T; color = formColor(color); }
   if (curTraits & TR.QUICK) life /= QUICK_RATE;
   const zn = allocZone();
   if (!zn) return null;
@@ -297,7 +299,7 @@ export function spawnTelegraphLine(
 export function spawnTelegraphCone(
   x: number, z: number, dirX: number, dirZ: number, range: number, half: number, life: number, color: number, trick: number, damage: number,
 ): Zone | null {
-  if (bossTel) { range *= 1.2 * (trial.on ? TRIAL_TELE : 1); half = Math.min(1.5, half * (trial.on ? 1.15 * TRIAL_TELE : 1.15)); life *= BOSS_TEL_T; }
+  if (bossTel) { range *= 1.2 * (trial.on ? TRIAL_TELE : 1) * formTel(); half = Math.min(1.5, half * (trial.on ? 1.15 * TRIAL_TELE : 1.15)); life *= BOSS_TEL_T; color = formColor(color); }
   const zn = allocZone();
   if (!zn) return null;
   zn.active = true; zn.kind = 'TELEGRAPH_CONE'; zn.hostile = true;
@@ -1636,11 +1638,13 @@ function updateEnemy(e: Enemy): void {
     } else asleep = true;
   }
   bossTel = e.boss;   // boss telegraphs: bigger + faster (reset below)
+  setFormCaster(e);   // a boss in its second form: its telegraphs / waves use the form palette (bossForms.ts)
   const winded = (e.boss || e.mini) && !e.decoy && tickWinded(e, dt, locked);
   const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
   const tg = isTreasureGoblin(e);   // (owner: the treasure goblin flees at a steady, readable speed: no dodge dash / flank / retreat)
   const dodging = ENEMY_DODGE && !tg && !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
-  if (bp.on && phaseOwns(e)) { desiredYaw = phaseDrive(e, dt); }   // an invulnerable phase runs this enemy (boss / its slimes / spare heads)
+  if (e.boss && bf.beat[e.id] > 0) { tickFormBeat(e, dt); stop(e); }   // a boss's form switch (bossForm.ts): untouchable, no AI
+  else if (bp.on && phaseOwns(e)) { desiredYaw = phaseDrive(e, dt); }   // an invulnerable phase runs this enemy (boss / its slimes / spare heads)
   else if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
   else if (dodging) { /* velocity set by tickDodge */ }   // free-hit window: stands there panting (no attacks, no new casts)
   else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }
@@ -1662,7 +1666,7 @@ function updateEnemy(e: Enemy): void {
     if (e.spKind !== 0) cancelSpecial(e);
     stop(e);
   }
-  bossTel = false;
+  bossTel = false; setFormCaster(null);
   curShooter = -1; curTraits = 0; curMage = false;
   if (isDying(e)) return; // bomber exploded
   if (!tg && !dodging && !still && !e.boss && !e.mini && !locked && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0) packAndFlank(e);

@@ -11,7 +11,7 @@ import { useGameStore } from '../store';
 import { damp, clamp } from './util';
 import { useUiStore } from '../ui/uiStore';
 import { feel } from '../engine/game';
-import { bossCamZoom } from '../engine/enemyDefs';
+import { bossCamZoom, ENEMY_DEFS } from '../engine/enemyDefs';
 import { device } from '../engine/device';
 
 /** World height just above a boss's head: big bosses (Hydra, Colossus...) are sized by radius, not scale. */
@@ -80,7 +80,7 @@ export function CameraRig() {
     s.uz = damp(s.uz, C.uz ?? 1, 10, dt);
     // the giant guardians (Colossus-sized, enemyDefs.bossCamZoom): pull the camera back during their fight so the boss, its telegraphs and the hero all fit
     const bId = world.director.bossId, bE = bId >= 0 ? world.enemies[bId] : null;
-    s.bossK = damp(s.bossK, world.room.active && world.room.plan.type === 'HALL' ? 1.12 : bE && bE.active && bE.state !== 'DYING' && !bE.mini && status === GameStatus.PLAYING ? bossCamZoom(bE.kind) : 1, 1.5, dt);   // every giant guardian (Gorath, Elderroot, Hydra, Glacius, Colossus, Ignar, Void Herald): eased in on spawn, out on death
+    s.bossK = damp(s.bossK, world.room.active && world.room.plan.type === 'HALL' ? 1.12 : bE && bE.active && bE.state !== 'DYING' && !bE.mini && status === GameStatus.PLAYING ? bossCamZoom(bE.kind, bE.radius / ENEMY_DEFS[bE.kind].radius) : 1, 1.5, dt);   // every giant guardian: eased in on spawn, out on death; the live body size drives the zoom (form 2 is bigger)
     const R = CAM_DIST0 * s.bossK * s.zoom * s.uz * s.dist * s.tele * (CAM_CLOSE + (CAM_CLOSE_IN - CAM_CLOSE) * clamp((1 - s.dist) / 0.2, 0, 1)), hr = Math.cos(s.pitch) * R;
     _pos.set(_tgt.x + Math.sin(s.yaw) * hr, Math.sin(s.pitch) * R, _tgt.z + Math.cos(s.yaw) * hr);
 

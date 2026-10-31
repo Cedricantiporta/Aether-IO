@@ -17,6 +17,7 @@ import { heroRange } from './player';
 import { WEAK_KINDS } from '../enemyDefs';
 import { veteran, VET } from '../runMods';
 import { isEliteBigTrick, resolveEliteBig } from './eliteBig';
+import { formColor } from './bossForms';
 
 export const TRICK = {
   NONE: 0, STAMPEDE: 15, GOO: 1, FIREBOMB: 2, SCREECH: 3, PIN: 4, CURSE: 5, STOMP: 7, PLAGUE: 9, TERROR: 10, WALL: 11, CALTROPS: 12, SMOKE: 13, PINCH: 14,
@@ -131,7 +132,7 @@ export function spawnHostileZone(kind: ZoneKind, x: number, zz: number, r: numbe
   const z = allocZone();
   if (!z) return null;
   z.active = true; z.kind = kind; z.hostile = true;
-  z.pos.set(x, 0, zz); z.radius = r; z.life = z.maxLife = life; z.damage = dps; z.color = color; z.tickT = 0;
+  z.pos.set(x, 0, zz); z.radius = r; z.life = z.maxLife = life; z.damage = dps; z.color = formColor(color); z.tickT = 0;   // (a boss in its second form recolours its hazards, bossForms.ts)
   return z;
 }
 

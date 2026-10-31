@@ -12,6 +12,7 @@ import type { Zone } from '../types';
 import { applyPlayerDebuff, damagePlayer, addShake, freezePlayer, KB, SLOW_BOSS } from './combat';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from './enemies';
+import { formColor } from './bossForms';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
 import { forEachHero, nearestHero, randomHero, isAlly, shoveHero } from '../heroes';
@@ -75,7 +76,7 @@ export function spawnWave(x: number, z: number, speed: number, maxR: number, thi
   for (let i = 0; i < waves.length; i++) {
     const w = waves[i];
     if (w.active) continue;
-    w.active = true; w.x = x; w.z = z; w.r = startR; w.speed = speed; w.maxR = maxR; w.thick = thick; w.dmg = dmg; w.kind = kind; w.color = color; w.hit = false; w.hitA = false;
+    w.active = true; w.x = x; w.z = z; w.r = startR; w.speed = speed; w.maxR = maxR; w.thick = thick; w.dmg = dmg; w.kind = kind; w.color = formColor(color);   // (a boss in its second form recolours its rings, bossForms.ts) w.hit = false; w.hitA = false;
     return;
   }
 }

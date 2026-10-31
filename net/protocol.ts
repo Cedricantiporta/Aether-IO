@@ -28,7 +28,7 @@ export const MSG = {
   KNOCK: 14,  // [14, rv, fromX*10, fromZ*10, force*100, down*100, cancel]   host -> guest: shove / knockdown
   KILL: 15,   // [15, rv, xp, gold, flags(1 elite, 2 boss), x*10, z*10]   host -> guest: a monster died, the guest earns the same XP / gold
   RST: 16,    // [16, rv, phase, wave, enemiesLeft, alive, portals[[x, z, type, reward, big, pre]]]   host -> guest: room state (on change + 1 Hz)
-  BOSS: 17,   // [17, rv, active, hp, maxHp, phase, stagger*100, staggered, ability, abilityT, name, title, interrupt*100, interruptOn, interruptLabel, shield, shieldMax, final, stage, bossId]
+  BOSS: 17,   // [17, rv, active, hp, maxHp, phase, stagger*100, staggered, ability, abilityT, name, title, interrupt*100, interruptOn, interruptLabel, shield, shieldMax, final, stage, bossId]   // (+ layers, formIdx, beat*100 appended)
   GP: 18,     // [18, rv, base64]                  both ways, ~15 Hz: the sender's own projectiles, drawn as harmless copies on the partner's screen
   // ---- STEP 3 (loot, cards, downed)
   REVIVE: 19, // [19, rv]                          both ways: "your friend finished reviving you" (the receiver stands up at ~30% HP)

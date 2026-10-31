@@ -30,9 +30,10 @@ import {
 import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { tickIgnarLava, resetIgnarLava } from './ignarLava';
 import { bp } from './bossPhaseState';
+import { initBossForm } from './bossForms';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
 import {
-  mfx, queueHole, holesBusy, tickVoidFx, clearVoidFx, spawnRune,
+  mfx, queueHole, holesBusy, tickVoidFx, clearVoidFx,
 } from './voidFx';
 
 export function isBoss2(k: EnemyKind): boolean {
@@ -250,6 +251,7 @@ hooks.damageMul = (e: Enemy): number => {
 export function initBoss2(e: Enemy): void {
   resetBosses2();
   S.id = e.id;
+  initBossForm(e);   // transforming bosses (Ignar, the Void Herald) start in their smaller first form (bossForms.ts)
   e.pattern = 0; e.attackCd = 3.2;
   if (e.kind === 'BOSS_VOID') voidStage(e);   // the Void stage is up from the first second
   if (e.kind === 'BOSS_HYDRA') {
@@ -922,31 +924,7 @@ LISTS.BOSS_WARLORD = [
 
 function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_WARLORD!;
-  // (owner) Second form at half health: Ignar bursts into flame (a short untouchable transformation that ends in a fire
-  // nova), then fights as the Burning Form - faster moves, shorter telegraphs, harder hits, a scorching aura, devil wings.
-  if (!S.enraged && S.formT <= 0 && e.hp < e.maxHp * 0.5) {
-    const a = list[e.pattern];
-    if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
-    enter(e, 'CHASE'); stand(e);
-    S.formT = 2.0; S.guardT = 0;
-    circle(e.pos.x, e.pos.z, 9, 2.0, BT.PILLAR, pwr(e) * 1.4, 0xff2a0a);   // get out before the nova
-    events.emit('shake', { amount: 0.6 });
-    events.emit('floatText', { pos: e.pos, text: 'IGNITING...', color: 0xff6a1a, scale: 1.3, dy: 2.6 });
-    notify('Ignar ignites - get clear of the flames!', '#ff5a1a');
-    world.boss.ability = 'Burning Form'; world.boss.abilityT = 2.6;
-  }
-  if (S.formT > 0) {
-    S.formT -= dt; stand(e);
-    if (S.formT <= 0) {
-      S.enraged = true; e.speed *= 1.3;
-      spawnWave(e.pos.x, e.pos.z, 16, 22, 1.4, pwr(e) * 0.8, WAVE_FIRE, 0xff4a1a, e.radius);
-      events.emit('shake', { amount: 1.0 });
-      events.emit('floatText', { pos: e.pos, text: 'BURNING FORM', color: 0xff3a1a, scale: 1.5, dy: 2.8 });
-      notify('IGNAR, THE BURNING FORM!', '#ff3a1a');
-      e.attackCd = 0.6; S.cleaveCd = 0;
-    }
-    return;
-  }
+  // (owner 2026-10-31) the Burning Form is a real second form now: when the first form dies it respawns bigger (bossForm.ts sets S.enraged).
   if (S.guardT > 0) S.guardT -= dt;
   if (S.shT > 0) { S.shT -= dt; if (S.shT <= 0) e.shield = 0; }
   if (S.enraged) {   // scorching aura: standing close to him burns
@@ -1173,25 +1151,8 @@ LISTS.BOSS_VOID!.push(
     end() { S.pushed = false; },
   },
 );
-/** The final fight's HP pool = form 1 (1x the Void boss's HP) + form 2 (1.25x); the transformation starts when form 1's share is spent. */
-export const FINAL_SPLIT = 1.25 / 2.25;
 const HERALD_F1 = [V_PORTALS, V_ECHOES, V_GRAVITY, V_MIRRORS, V_PORTALS, V_HOLES, V_ECHOES, V_GRAVITY, V_MIRRORS, V_HOLES];
 const HERALD_F2 = [V_STORM, V_PORTALS, V_HOLES, V_GRAVITY, V_MIRRORS, V_ECHOES, V_STORM, V_HOLES, V_PORTALS, V_GRAVITY];
-
-/** Starts the transformation at half health: an untouchable 3 s burst (wings tear open) that ends in a void nova and the final form. */
-function startTransform(e: Enemy): void {
-  const list = LISTS.BOSS_VOID!, a = list[e.pattern];
-  if (a && a.end && (e.state === 'WINDUP' || e.state === 'ATTACK')) a.end(e);
-  enter(e, 'CHASE'); stand(e);
-  S.vformT = 3.0; S.vform = 1; e.attackCd = 1.0; bp.xformId = e.id;   // untouchable while the wings tear open
-  clearDecoys(); clearVoidFx();
-  circle(e.pos.x, e.pos.z, 12, 3.0, BT.VISUAL, 0, 0xc084fc);   // get clear of the nova
-  events.emit('shake', { amount: 0.7 });
-  events.emit('floatText', { pos: e.pos, text: 'THE VOID UNFOLDS...', color: 0xe9d5ff, scale: 1.4, dy: 5 });
-  notify('The Void Herald tears open his wings - get clear of the nova!', '#c084fc');
-  world.boss.ability = 'Final Form'; world.boss.abilityT = 3;
-  spawnRune(e.pos.x, e.pos.z, 6, 3.0);
-}
 
 /** The void stage: a fixed ring (the room outline minus a margin) the heroes cannot leave; outside it is the dark swirling void (render/BossFx veil). */
 function voidStage(e: Enemy): void {
@@ -1206,22 +1167,6 @@ function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   const list = LISTS.BOSS_VOID!;
   tickVoidFx(dt);
   mfx.major = e.state !== 'CHASE' && (e.pattern === V_HOLES || e.pattern === V_STORM || e.pattern === V_GRAVITY) && S.vformT <= 0;   // his illusions hold their basic volleys during a major skill
-  if (S.vform === 0 && !bp.on && e.hp < e.maxHp * (world.boss.final ? FINAL_SPLIT : 0.5)) startTransform(e);
-  if (S.vformT > 0) {
-    S.vformT -= dt; stand(e);
-    if (Math.random() < dt * 6) events.emit('explosion', { pos: tv.set(e.pos.x + (Math.random() - 0.5) * 8, 1 + Math.random() * 5, e.pos.z + (Math.random() - 0.5) * 8).clone(), radius: 1.6, color: 0xa855f7 });
-    if (S.vformT <= 0) {
-      S.vform = 2; S.cycle = 0; bp.xformId = -1;
-      e.radius *= 1.15; e.scale *= 1.15; e.speed *= 1.2; e.projectileDamage *= 1.15; e.contactDamage *= 1.15; e.attackCd = 0.8;
-      world.boss.stage = 2;
-      spawnWave(e.pos.x, e.pos.z, 18, 26, 1.8, pwr(e) * 1.1, WAVE_VOID, 0xc084fc, e.radius);
-      events.emit('shockwave', { pos: e.pos.clone(), radius: 22, color: 0xe9d5ff });
-      events.emit('shake', { amount: 1.0 });
-      events.emit('floatText', { pos: e.pos, text: 'FINAL FORM', color: 0xe9d5ff, scale: 1.6, dy: 5 });
-      notify('THE VOID HERALD - FINAL FORM!', '#e9d5ff');
-    }
-    return;
-  }
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 10, 17, e.speed * (1 + 0.12 * e.phase), 0.45);
   if (e.attackCd > 0) return;

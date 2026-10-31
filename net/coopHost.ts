@@ -22,6 +22,7 @@ import { pullTick } from './coopPull';
 import { hazTick, hazReset, onTrapHit } from './coopHaz';
 import { minTick } from './coopMinions';
 import { rate } from './coopRate';
+import { bf } from '../engine/systems/bossForms';
 import { coopUse, stationBits } from '../engine/systems/director';
 
 export interface HostIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
@@ -276,11 +277,12 @@ function sendSnap(now: number): void {
   }
   // ---- boss bar (<= 10 Hz, on change)
   const b = world.boss;
-  const bk = `${b.active ? 1 : 0}|${Math.round(b.hp / Math.max(1, b.maxHp) * 400)}|${Math.round(b.maxHp)}|${b.phase}|${b.ability}|${Math.round(b.stagger * 100)}|${b.staggered ? 1 : 0}|${Math.round(b.interrupt * 50)}|${Math.round(b.shield)}|${b.stage}|${d.bossId}|${b.name}`;
+  const bfm = d.bossId >= 0 ? bf.form[d.bossId] | 0 : 0, bbt = d.bossId >= 0 ? bf.beat[d.bossId] || 0 : 0;
+  const bk = `${b.active ? 1 : 0}|${Math.round(b.hp / Math.max(1, b.maxHp) * 400)}|${Math.round(b.maxHp)}|${b.phase}|${b.ability}|${Math.round(b.stagger * 100)}|${b.staggered ? 1 : 0}|${Math.round(b.interrupt * 50)}|${Math.round(b.shield)}|${b.stage}|${d.bossId}|${b.name}|${bfm}|${Math.round(bbt * 10)}`;
   if (bk !== bossKey && now - lastBossSent >= 100) {
     bossKey = bk; lastBossSent = now;
     io.send([MSG.BOSS, rv, b.active ? 1 : 0, Math.round(b.hp), Math.round(b.maxHp), b.phase, Math.round(b.stagger * 100), b.staggered ? 1 : 0, b.ability, Math.round(b.abilityT * 10), b.name, b.title,
-      Math.round(b.interrupt * 100), b.interruptOn ? 1 : 0, b.interruptLabel, Math.round(b.shield), Math.round(b.shieldMax), b.final ? 1 : 0, b.stage, d.bossId, b.layers]);
+      Math.round(b.interrupt * 100), b.interruptOn ? 1 : 0, b.interruptLabel, Math.round(b.shield), Math.round(b.shieldMax), b.final ? 1 : 0, b.stage, d.bossId, b.layers, bfm, Math.round(bbt * 100)]);   // (form index + beat seconds*100 appended: older peers ignore them)
   }
   // ---- my own shots / zones as harmless copies on his screen
   const gp = packGhosts();
