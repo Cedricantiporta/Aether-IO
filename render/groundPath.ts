@@ -8,10 +8,10 @@
 // ============================================================================
 import { type Texture, DataTexture, LinearFilter, LinearMipmapLinearFilter, MeshStandardMaterial, NoColorSpace, RepeatWrapping, RGBAFormat, SRGBColorSpace, Vector4 } from 'three';
 import { shape, shapeLimit } from '../engine/roomShape';
-import { ROADS, WALL } from '../engine/townData';
 import { mulberry32, vnoise } from './util';
 
-export interface Disc { x: number; z: number; r: number }
+import type { Disc } from '../engine/dirtPath';
+export type { Disc };
 export interface Trail { discs: Disc[]; main: Disc[] }
 
 /** The run room's winding trail + a side branch + two bare clearings (deterministic per seed). `main` is the centre line every ~0.35 m (r = half width). */
@@ -38,27 +38,9 @@ export function roomTrail(seed: number): Trail {
   return { discs, main };
 }
 
-/** The outskirts' dirt tracks (townData ROADS dirt:true): wandering a little off the straight segment, width varying, a few bare patches. */
-export function dirtDiscs(): Disc[] {
-  const out: Disc[] = [], rnd = mulberry32(4242);
-  let k = 0;
-  for (const rd0 of ROADS) {
-    let rd = rd0;
-    if (!rd0.dirt) {   // a paved street's part beyond the wall is a dirt track too
-      const z0 = WALL.z1 + 2.5, a = rd0.z1, b = rd0.z2, dzz = b - a;
-      if (Math.max(a, b) <= z0) continue;
-      if (Math.abs(dzz) < 1e-6) { if (a < z0) continue; }
-      else { let t0 = (z0 - a) / dzz; if (dzz > 0) rd = { ...rd0, x1: rd0.x1 + (rd0.x2 - rd0.x1) * Math.max(0, t0), z1: z0 }; else rd = { ...rd0, x2: rd0.x1 + (rd0.x2 - rd0.x1) * Math.min(1, t0), z2: z0 }; }
-    }
-    const dx = rd.x2 - rd.x1, dz = rd.z2 - rd.z1, len = Math.hypot(dx, dz), nx = -dz / len, nz = dx / len, n = Math.max(2, Math.round(len / 0.4)), ph = k * 1.7; k++;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n, w = Math.sin(t * Math.PI) ** 0.6, off = (Math.sin(t * len * 0.21 + ph) * 0.7 + Math.sin(t * len * 0.53 + ph * 2) * 0.3) * 1.0 * w;
-      out.push({ x: rd.x1 + dx * t + nx * off, z: rd.z1 + dz * t + nz * off, r: Math.max(0.8, rd.w * 0.5) * (0.78 + vnoise(t * len * 0.2 + ph, 5.5) * 0.5) });
-    }
-    if (rnd() < 0.5) { const t = 0.25 + rnd() * 0.5, sd = rnd() < 0.5 ? -1 : 1, cx = rd.x1 + dx * t + nx * sd * 1.6, cz = rd.z1 + dz * t + nz * sd * 1.6, rad = 1.6 + rnd() * 1.2; out.push({ x: cx, z: cz, r: rad * 0.7 }); for (let i = 0; i < 6; i++) { const a = (i / 6) * 6.283 + rnd(), d = rad * 0.6; out.push({ x: cx + Math.cos(a) * d, z: cz + Math.sin(a) * d, r: rad * 0.45 }); } }
-  }
-  return out;
-}
+import { DIRT_DISCS } from '../engine/townData';
+/** The outskirts' dirt tracks as discs (built once in townData from ROADS: engine/dirtPath.ts). */
+export const dirtDiscs = (): Disc[] => DIRT_DISCS;
 
 export interface PathMask { tex: DataTexture; o: Vector4 }
 /** Rasterise discs into a blurred coverage mask over [x0, x0+w] x [z0, z0+h] (`pxPerM` pixels per metre). Value 0.5 = the path edge, > 0.5 inside. */

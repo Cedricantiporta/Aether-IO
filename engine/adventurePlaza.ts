@@ -10,7 +10,7 @@ const deg = (d: number): number => (d * Math.PI) / 180;
 /** Lamp posts: 8 round the plaza rim (flanking the road mouths), 5 along Lantern Lane. [x, z] */
 export const AP_LAMPS: [number, number][] = [
   [-3.4, 138.6], [13.4, 138.6], [-8.6, 144.5], [18.6, 144.5], [-8.8, 153.8], [18.8, 153.8], [-3.0, 159.8], [14.8, 161.0],
-  [-9.8, 147.3], [-18.1, 146.8], [-24.7, 141.5], [-26.0, 137.8], [-25.6, 150.4],
+  [-9.8, 147.3], [-18.1, 144.6], [-22.6, 144.6], [-24.9, 137.1], [-27.4, 152.0],
 ];
 /** Banner poles: the plaza's north entrance, the west gate onto the lane. [x, z, cloth colour] (the cloth faces the walker coming in) */
 export const AP_BANNERS: { x: number; z: number; ry: number; cloth: string; trim: string }[] = [
@@ -33,7 +33,7 @@ export const AP_FLOWERS: [number, number, number][] = (() => {
     out.push([x, z, 0.85 + ((i * 7) % 5) * 0.08]);
   }
   for (const [x, z] of [[-2.4, 154.2], [12.4, 154.2], [-3.0, 148.4], [13.2, 148.6]] as const) if (!near(x, z, 1.4) && inAdvPlaza(x, z, -1)) out.push([x, z, 0.8]);
-  for (const [x, z] of [[-10.6, 153.6], [-23.8, 148.0], [-9.6, 142.0], [-19.4, 148.2], [-25.0, 137.4], [-28.4, 138.2], [-14.0, 148.0]] as const) out.push([x, z, 0.75]);
+  for (const [x, z] of [[-10.6, 153.6], [-24.6, 152.7], [-9.6, 142.0], [-19.4, 144.4], [-23.7, 138.3], [-32.5, 138.9], [-14.0, 144.2]] as const) out.push([x, z, 0.75]);
   return out;
 })();
 /** Haystack + barrel/crate cluster spots (townFill places them where they fit). */
