@@ -227,7 +227,10 @@ export function startRunRooms(): void {
   world.room.fade = 1;
   if (trial.on) { enterRoom(trial.boss, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // Boss Trial (bossTrials.ts): straight into that biome's boss arena
   if (showcase.on) { enterRoom(SHOWCASE_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' }); return; }   // (owner) the new character's fully powered showcase arena (engine/showcase.ts)
-  if (runInfo.mode === 'TOWER') { towerFloor = 1; towerState.floor = 1; enterRoom(towerBiome(1), waves.on ? waveIndex(1) : 0, towerPlan(1)); return; }
+  if (runInfo.mode === 'TOWER') {
+    const f0 = waves.on || daily.on ? 1 : Math.max(1, Math.floor(runInfo.startFloor || 1)); runInfo.startFloor = 1;   // (owner) skip ahead: start the Endless Tower on a floor already reached; only floors cleared from here count
+    towerFloor = f0; towerState.floor = f0; enterRoom(towerBiome(f0), waves.on ? waveIndex(1) : f0 > 1 ? (f0 - 1) % ROOMS_PER_BIOME : 0, towerPlan(f0)); return;
+  }
   if (runInfo.dream) { runInfo.dream = false; enterRoom(0, 0, { type: 'CAMP', reward: 'NONE', epilogue: true, dream: true }); return; }   // (owner) a Font dream: the Greenwood clearing, Aelia at the far end
   const sb = runInfo.startBiome; runInfo.startBiome = 0;   // (the ship to the Coral Isles: opens in that biome's camp, where Captain Rhea hands out a card deck)
   if (sb > 0) {   // (owner 2026-10-26) the camp's exit stays shut until the hero has talked to the captain and chosen a deck (4 cards per skipped biome)

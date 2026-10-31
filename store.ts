@@ -1280,8 +1280,9 @@ export const useGameStore = create<GameState>()((set, get) => {
       get().startMode('ADVENTURE', 3);
       return true;
     },
-    startMode: (mode: RunMode, startBiome = 0) => {
+    startMode: (mode: RunMode, startBiome = 0, startFloor = 1) => {
       disarmDaily(); disarmWaves(); disarmTrial();
+      runInfo.startFloor = mode === 'TOWER' ? Math.max(1, Math.min(Math.floor(startFloor) || 1, get().progress.towerBest[get().hero] || 1)) : 1;   // (never above the class best)
       runInfo.mode = mode; runInfo.back = mode === 'TOWER' ? 'TOWER' : ''; runInfo.startBiome = mode === 'ADVENTURE' ? startBiome : 0;
       set({ difficulty: get().settings.hardMode && get().progress.endings > 0 ? 'HARD' : 'NORMAL' });   // Hard mode applies from the next run on
       runInfo.ascension = mode === 'ADVENTURE' ? Math.min(get().progress.ascension, get().progress.ascensionMax) : 0;

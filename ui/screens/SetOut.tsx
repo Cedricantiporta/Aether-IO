@@ -28,10 +28,11 @@ export const SetOutWindow: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('ADVENTURE');
   const [remote, setRemote] = useState(false);
+  const [floorSel, setFloorSel] = useState<number | null>(null);   // Endless Tower: the floor to start from (null = the class best)
   const [tab, setTab] = useState<'RUN' | 'DAILY' | 'WAVES' | 'ASC'>('RUN');   // the tower hub: Endless Tower | Daily Trial | Endless Waves | Ascension (owner: all at the tower; the portal sets out on E)
   useGameEvent('openSetOut', (e) => {
     // (the gate window always opens now: the Daily Trial tab is a choice even before Ascension unlocks)
-    setMode(e.mode); setTab(e.tab ?? 'RUN'); setRemote(!!e.remote); setOpen(true);
+    setMode(e.mode); setTab(e.tab ?? 'RUN'); setFloorSel(null); setRemote(!!e.remote); setOpen(true);
   });   // gate = Adventure, the tower building = Endless Tower
   // walking off (e.g. on through the gate to the outskirts) closes it: it only stays while the hero stands at the gate / tower door
   useRaf(() => {
@@ -56,25 +57,25 @@ export const SetOutWindow: React.FC = () => {
   const towerLocked = progress.endings <= 0;   // the Endless Tower opens after one full adventure (Void Herald defeated)
   const runLocked = tab === 'RUN' && mode === 'TOWER' && towerLocked;
   const claimed = progress.towerClaimed?.[hero] ?? [];
+  const startFloor = Math.max(1, Math.min(Math.max(1, best), floorSel ?? best));
   let ready = false;   // a floor prize waits to be claimed (red dot on the Tower tab)
   for (let f = TOWER_STEP; f <= best; f += TOWER_STEP) if (!claimed.includes(f)) { ready = true; break; }
-  const go = () => { if (coopGuest && mode === 'ADVENTURE' && tab === 'RUN') return; if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode); };
+  const go = () => { if (coopGuest && mode === 'ADVENTURE' && tab === 'RUN') return; if (isAsc) { setOpen(false); return; } if (runLocked) return; if ((isDaily && dailyLocked) || (isWaves && wavesLocked)) return; setOpen(false); if (isDaily) startDaily(); else if (isWaves) startWaves(); else startMode(mode, 0, mode === 'TOWER' ? startFloor : 1); };
   const tabs: { id: typeof tab; label: string; icon: React.ReactNode; tid: string; dot?: boolean; lock?: number; hide?: boolean }[] = [
     { id: 'RUN', label: 'Tower', icon: <Castle size={15} />, tid: 'so-tab-run', dot: !towerLocked && ready },
     { id: 'DAILY', label: 'Daily Trial', icon: <CalendarDays size={15} />, tid: 'so-tab-daily', dot: dailyDot, lock: dailyLocked ? UNLOCK_LV.DAILY : undefined },
     { id: 'WAVES', label: 'Endless Waves', icon: <Waves size={15} />, tid: 'so-tab-waves', lock: wavesLocked ? UNLOCK_LV.WAVES : undefined },
     { id: 'ASC', label: 'Ascension', icon: <Swords size={15} />, tid: 'so-tab-asc', hide: progress.ascensionMax <= 0 },
   ];
-  const goLabel = coopGuest && mode === 'ADVENTURE' && tab === 'RUN' ? 'Waiting for the host' : featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out';
+  const goLabel = coopGuest && mode === 'ADVENTURE' && tab === 'RUN' ? 'Waiting for the host' : featLocked ? 'Locked' : isAsc ? 'Done' : isDaily ? 'Begin the Daily Trial' : isWaves ? 'Enter the arena' : mode === 'TOWER' ? (towerLocked ? 'Sealed' : tab === 'RUN' && startFloor > 1 ? `Enter the Tower · floor ${startFloor}` : 'Enter the Tower') : asc > 0 ? `Set out · Ascension ${asc}` : 'Set out';
   const goBtn = <Button className="w-full" variant="primary" size="lg" pulse={!runLocked && !featLocked && !isAsc} disabled={runLocked || featLocked || (coopGuest && mode === 'ADVENTURE' && tab === 'RUN')} onClick={go} data-testid="so-go">{goLabel}</Button>;
   const onConfirm = () => { if (lobbyInput.submit) lobbyInput.submit(); else go(); };
   if (mode === 'TOWER') {
     // the tower hub: a wide window, tabs as a pill column on the left (a row on top on narrow screens), one page on the right
     return (
-      <Modal open={open} width="min(56rem, calc(100vw - 1.5rem))" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
+      <Modal open={open} title="Tower Hub" icon={<Castle size={22} />} width="min(56rem, calc(100vw - 1.5rem))" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
         <div className="th-split" data-testid="tower-hub">
           <nav className="th-tabs" role="tablist">
-            <div className="th-brand"><Castle size={18} /><b>Tower Hub</b></div>
             {tabs.filter((t) => !t.hide).map((t) => (
               <button key={t.id} role="tab" aria-selected={tab === t.id} className={`th-tab t-${t.id.toLowerCase()} pe ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)} data-testid={t.tid}>
                 {tab === t.id && <motion.span layoutId="th-tab-bg" className="th-tab-bg" transition={{ type: 'spring', stiffness: 520, damping: 38 }} />}
@@ -91,7 +92,7 @@ export const SetOutWindow: React.FC = () => {
                   {featLocked && <HubLock testid="so-locked" title={isDaily ? 'Daily Trial' : 'Endless Waves'} text={`Unlocks at level ${isDaily ? UNLOCK_LV.DAILY : UNLOCK_LV.WAVES}. You are level ${level}.`} />}
                   {isDaily && !dailyLocked && <DailyCard />}
                   {isWaves && !wavesLocked && <WavesCard />}
-                  {tab === 'RUN' && <TowerPage locked={towerLocked} heroTitle={HERO_META[hero].title} best={best} claimed={claimed} onClaim={claimTower} />}
+                  {tab === 'RUN' && <TowerPage locked={towerLocked} heroTitle={HERO_META[hero].title} best={best} claimed={claimed} onClaim={claimTower} startFloor={startFloor} onStartFloor={setFloorSel} />}
                   {isAsc && <AscensionPage asc={asc} max={progress.ascensionMax} claimed={progress.ascClaimed ?? []} onSelect={setAscension} />}
                 </motion.div>
               </AnimatePresence>
@@ -103,7 +104,7 @@ export const SetOutWindow: React.FC = () => {
     );
   }
   return (
-    <Modal open={open} title="Set Out" ribbon tone="gold" width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
+    <Modal open={open} title="Set Out" icon={<Swords size={22} />} width="24rem" z={160} onClose={() => setOpen(false)} onConfirm={onConfirm}>
       <div>
         <div className="so-modes one" data-testid="setout">
           <div className="so-card on" data-testid="so-adventure">

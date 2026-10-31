@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Panel, PanelHead, Ribbon } from './Frame';
+import { Panel, PanelHead } from './Frame';
 import { Button } from './Button';
-import { X } from './GoldIcons';
 import { CloseX } from './CloseX';
 
 interface ModalProps {
@@ -36,11 +35,11 @@ const ModalBody: React.FC<ModalProps> = ({ open, onClose, title, ribbon, tone = 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onPointerDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
           <motion.div initial={{ scale: .85, y: 24, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: .9, y: 10, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 26 }} style={{ width, maxWidth: '94vw', maxHeight: '92vh' }} className={`relative modal-card${full ? ' modal-full' : ''}`}>
-            {onClose && <CloseX className="modal-x" onClick={onClose} />}
-            {ribbon && title && <div className="absolute left-1/2 -top-5 -translate-x-1/2 z-10 modal-ribbon"><Ribbon tone={tone}>{title}</Ribbon></div>}
             <Panel className="flex flex-col" style={{ maxHeight: '92vh' }}>
-              {!ribbon && title && <PanelHead icon={icon} title={title} onClose={onClose} />}
-              <div className={`flex-1 p-4 ${ribbon ? 'pt-8' : ''} rpg-scroll`} style={{ minHeight: 0 }}>{children}</div>
+              {title
+                ? <PanelHead icon={icon} title={title} onClose={onClose} />
+                : onClose && <div className="modal-bar"><CloseX onClick={onClose} /></div>}
+              <div className="flex-1 p-4 rpg-scroll" style={{ minHeight: 0 }}>{children}</div>
             </Panel>
           </motion.div>
         </motion.div>
