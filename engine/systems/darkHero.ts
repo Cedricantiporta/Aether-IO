@@ -555,7 +555,7 @@ function release(e: Enemy, px: number, pz: number): void {
     } else if (k === 2) { S.orbT = 4.5; S.orbTick = 0.9; darkView.orbR = 8; }
     else if (k === 3) { field('BLACKHOLE', S.toX, S.toZ, 7, 2.6, P * 0.25, 0x6d28d9); events.emit('shockwave', { pos: tmp.set(S.toX, 0, S.toZ), radius: 7, color: 0x8a3aff }); }
     else if (k === DASH) {   // Blink Nova: nova where it stood, blink away, nova where it lands
-      if (playerIn(e.pos.x, e.pos.z, 5)) { damagePlayer(P * 0.9, { pos: e.pos, kind: 'ICE' }); effects(FREEZE | SLOW | KNOCK, P, e.pos.x, e.pos.z); }
+      if (playerIn(e.pos.x, e.pos.z, 5)) { damagePlayer(P * 0.9, { pos: e.pos, kind: 'ICE' }); effects(FREEZE | SLOW | DOWN, P, e.pos.x, e.pos.z); }   // the nova in the hero's face knocks down (the landing nova only shoves)
       events.emit('frostNova', { pos: e.pos, radius: 5 });
       retreatPoint(e, px, pz, 12, dirV);
       blinkFx(e.pos, dirV);
