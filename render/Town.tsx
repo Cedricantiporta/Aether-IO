@@ -24,6 +24,7 @@ import { TownChests } from './TownChests';
 import { Stable } from './Stable';
 import { Npcs } from './Npcs';
 import { walkAndOpen, walkTo } from '../engine/systems/village';
+import { GloomTower } from './GloomTower';
 import { TOWER, TOWER_KNOLL, PORTAL, BOSS_PORTAL, PORTAL_S, HERO_HOUSE, townLift } from '../engine/townData';
 import { useUiStore } from '../ui/uiStore';
 import { nightGlow } from './biomeLook';
@@ -491,6 +492,7 @@ export function Town({ q }: { q: QualityCfg }) {
       {village && <Stable />}
       {village && <Npcs />}
       {village && <TowerLandmark />}
+      {village && <GloomTower q={q} />}
       {village && <PortalLandmark />}
       {village && <PortalLandmark at={BOSS_PORTAL} name="Boss Trials" purple />}
       {village && <HeroHomeSign />}

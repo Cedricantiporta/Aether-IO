@@ -56,6 +56,13 @@ function groundColor(x: number, z: number, y: number, out: Color) {
     cT.set(rg.style.color).multiplyScalar(0.9 + n3 * 0.2);
     if (rg.kind === 'CRYSTAL_GROVE') cT.lerp(cD.set('#8fe8ff'), sstep(0.65, 0.9, n2) * 0.35);
     cG.lerp(cT, rg.w * rg.style.w);
+    if (rg.kind === 'GLOOM') {   // dead patchy grass: bare dark earth blotches, a few pale dust drifts, thin hairline cracks (ridged noise)
+      const dirt = sstep(0.5, 0.64, fbm(x * 0.09 + 90, z * 0.09 + 40, 3)) * rg.w;
+      cG.lerp(cT.set('#4d4350').lerp(cD.set('#5f5048'), n2), dirt * 0.8);
+      cG.lerp(cT.set('#a39aae'), sstep(0.66, 0.8, fbm(x * 0.07 + 7, z * 0.07 + 70, 2)) * rg.w * 0.35);
+      const crack = 1 - Math.abs(fbm(x * 0.2 + 33, z * 0.2 + 11, 2) - 0.5) * 2;
+      cG.multiplyScalar(1 - sstep(0.93, 0.985, crack) * rg.w * 0.4);
+    }
   }
   out.copy(cG).lerp(cD2.set('#b58a58').lerp(cT.set('#8d6840'), sstep(0.3, 0.7, n2)).multiplyScalar(0.92 + n3 * 0.16), d);
   // pond shore
