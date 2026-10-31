@@ -2,14 +2,16 @@
 // Boss Trials (owner 2026-10-26): the purple portal on the south-west headland of the outskirts (townData BOSS_PORTAL) opens after the first game clear.
 // Each of the seven biome bosses can be fought alone, at Void strength, for one guaranteed top-tier piece of gear (a slot per boss).
 // Once per boss per day, counted only after a WIN (loot received; a death / abandon does not use the try; local calendar day, dailyChallenge.dayKey, saved per character in progress.trialDay); a "Boss Trial Ticket" (300 gems) buys a rematch.
-// Pure data + run state (no React, no store import). The store (startBossTrial / claimBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
+// Pure data + run state (no React, no store import). The store (startBossTrial / rollBossTrialLoot), the director (arena + win) and enemies.ts (strength) read it.
 // ============================================================================
-import type { Rarity } from './types';
+import type { HeroClass, Item, ItemGrade, Rarity } from './types';
+import { ITEMS_POOL, PETS_POOL } from './constants';
+import { canUseClass, PICKAXE_ID } from './itemClass';
 
 /** The run in progress is a Boss Trial (set at run start by store.startBossTrial, cleared when the hero is back in town). */
-export const trial = { on: false, boss: 0, /** seconds until the summary after the kill (-1 = not won) */ endT: -1, won: false, lootName: '' };
-export function armTrial(boss: number): void { trial.on = true; trial.boss = boss; trial.endT = -1; trial.won = false; trial.lootName = ''; }
-export function disarmTrial(): void { trial.on = false; trial.endT = -1; trial.won = false; }
+export const trial = { on: false, boss: 0, /** loot panel dismissed ("Stay a while"): the HUD shows a small Return button */ stay: false, /** seconds until the summary after the kill (-1 = not won) */ endT: -1, won: false, lootName: '' };
+export function armTrial(boss: number): void { trial.on = true; trial.boss = boss; trial.endT = -1; trial.won = false; trial.lootName = ''; trial.stay = false; }
+export function disarmTrial(): void { trial.on = false; trial.endT = -1; trial.won = false; trial.stay = false; }
 
 /** Strength: the boss arena of biome `boss`, but monsters scale like the Void's boss room (depthWave(6, BOSS_INDEX) = wave 70, biome 6 multipliers + level curve). */
 export const TRIAL_SCALE_BIOME = 6;
@@ -22,23 +24,36 @@ export const TRIAL_CD = 1 / 0.85;  // boss attack cooldowns tick this much faste
 export const TICKET_GEMS = 300;
 export const TICKET_NAME = 'Boss Trial Ticket';
 
-export interface TrialBoss { biome: number; slot: 'boots' | 'gloves' | 'armor' | 'helmet' | 'accessory' | 'weapon' | 'pet'; slotLabel: string; icon: string }
+export interface TrialBoss { biome: number; slot: 'boots' | 'gloves' | 'armor' | 'helmet' | 'accessory' | 'weapon' | 'pet'; slotLabel: string }
 /** One row per biome (index = biome): the slot its boss drops. Names come from roomDefs.bossNameIn(biomeOf(b).boss, b). */
 export const TRIAL_BOSSES: readonly TrialBoss[] = [
-  { biome: 0, slot: 'boots', slotLabel: 'Boots', icon: '\u{1F462}' },
-  { biome: 1, slot: 'gloves', slotLabel: 'Gloves', icon: '\u{1F9E4}' },
-  { biome: 2, slot: 'armor', slotLabel: 'Body Armour', icon: '\u{1F6E1}️' },
-  { biome: 3, slot: 'helmet', slotLabel: 'Helmet', icon: '⛑️' },
-  { biome: 4, slot: 'accessory', slotLabel: 'Accessory', icon: '\u{1F48D}' },
-  { biome: 5, slot: 'weapon', slotLabel: 'Weapon', icon: '⚔️' },
-  { biome: 6, slot: 'pet', slotLabel: 'Pet', icon: '\u{1F43E}' },
+  { biome: 0, slot: 'boots', slotLabel: 'Boots' },
+  { biome: 1, slot: 'gloves', slotLabel: 'Gloves' },
+  { biome: 2, slot: 'armor', slotLabel: 'Body Armour' },
+  { biome: 3, slot: 'helmet', slotLabel: 'Helmet' },
+  { biome: 4, slot: 'accessory', slotLabel: 'Accessory' },
+  { biome: 5, slot: 'weapon', slotLabel: 'Weapon' },
+  { biome: 6, slot: 'pet', slotLabel: 'Pet' },
 ];
+
+/** Every item of `slot` at `rarity` this hero class can get from the trial (class-restricted weapons / wear only for the class; pets from the pet pool). Used by the roll and the popup's drop list. */
+const SLOT_TYPE = { boots: 'BOOTS', gloves: 'GLOVES', armor: 'ARMOR', helmet: 'HELMET', accessory: 'ACCESSORY', weapon: 'WEAPON', pet: 'PET' } as const;
+export function trialPool(slot: TrialBoss['slot'], r: Rarity, hero: HeroClass): Item[] {
+  if (slot === 'pet') return PETS_POOL.filter((i) => i.rarity === r);
+  return ITEMS_POOL.filter((i) => i.type === SLOT_TYPE[slot] && !i.retired && i.id !== PICKAXE_ID && i.rarity === r && canUseClass(i, hero));
+}
 
 /** Chance of a 2nd item (same slot, rolled like the first) on every win (the first one is guaranteed). */
 export const TRIAL_BONUS_ITEM = 0.5;
-/** Loot odds: never below Legendary. */
-export const TRIAL_MYTHIC = 0.3;
+/** Loot odds (owner 2026-10-31): never below Legendary. Mythic is very rare, and each rarity rolls its own grade (gear only; pets have none): High Mythic is the rarest result. */
+export const TRIAL_MYTHIC = 0.12;
+/** [low, mid, high] shares inside each rarity. */
+export const TRIAL_GRADES: Record<'LEGENDARY' | 'MYTHIC', readonly [number, number, number]> = { LEGENDARY: [0.5, 0.38, 0.12], MYTHIC: [0.7, 0.25, 0.05] };
 export const rollTrialRarity = (rng: () => number = Math.random): Rarity => (rng() < TRIAL_MYTHIC ? 'MYTHIC' : 'LEGENDARY');
+export function rollTrialGrade(r: Rarity, rng: () => number = Math.random): ItemGrade {
+  const g = TRIAL_GRADES[r === 'MYTHIC' ? 'MYTHIC' : 'LEGENDARY'], x = rng();
+  return x < g[0] ? 'LOW' : x < g[0] + g[1] ? 'MID' : 'HIGH';
+}
 /** Bonus (special) lines roll the yellow Perfect quality this many times as often as normal drops (affixes.PERFECT_CHANCE 5% -> 25%). */
 export const TRIAL_PERFECT_LUCK = 5;
 /** Upgrade level of the drop: chance of at least +1..+5 (each step rarer): +1 70%, +2 45%, +3 25%, +4 12%, +5 5%. */

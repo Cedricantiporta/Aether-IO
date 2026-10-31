@@ -8,6 +8,7 @@ import { clickMoveTo } from '../../engine/systems/target';
 import { walkTo } from '../../engine/systems/village';
 import { createPortal } from 'react-dom';
 import { HOME_ROOM, HOME_DOOR } from '../../engine/homeData';
+import { BI_DAIS } from '../../engine/bossIsland';
 import { useGameStore } from '../../store';
 import { TAP } from '../../engine/tavernData';
 import { NAVE, CHURCH_DOOR } from '../../engine/churchData';
@@ -140,6 +141,7 @@ function bakeTown(): void {
       g.beginPath(); g.moveTo(r.x1, r.z1); g.lineTo(r.x2, r.z2); g.stroke();
     }
     disc(g, PLAZA.x, PLAZA.z, PLAZA.r, C.roadPaved);
+    disc(g, BI_DAIS.x, BI_DAIS.z, BI_DAIS.r, '#d4cce0');   // (owner 2026-10-31) the Boss Trials dais
     // forest: the town's trees and every tree-like obstacle merge into soft darker blobs
     for (const t of TOWN_TREES) blob(g, t.x, t.z, Math.max(1.6, t.s * 0.7), C.forest, C.forestHi);
     const obs = world.obstacles;

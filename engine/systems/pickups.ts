@@ -12,6 +12,7 @@ import type { PickupKind } from '../types';
 import { hardMul, runInfo } from '../runMods';
 import { waves } from '../../endlessWaves';
 import { showcase } from '../showcase';
+import { trial } from '../../bossTrials';
 import type { Item, Rarity } from '../../types';
 import { canUseClass } from '../../itemClass';
 import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
@@ -223,7 +224,7 @@ export function updatePickups(dt: number): void {
     const o = pk[i];
     if (!o.active) continue;
     o.t += dt;
-    if (o.kind === 'ITEM' && o.t > ITEM_DESPAWN && !o.magnet) {   // items left on the field vanish after 3 minutes (owner)
+    if (o.kind === 'ITEM' && o.t > ITEM_DESPAWN && !o.magnet && !(trial.on && trial.won)) {   // (a won Boss Trial keeps its loot on the floor until you leave)   // items left on the field vanish after 3 minutes (owner)
       o.active = false; if (o.item) droppedItems.delete(o.item.id);
       events.emit('floatText', { pos: o.pos, text: 'vanished', color: 0x9a9a9a, scale: 0.6, dy: 0.8 });
       continue;
