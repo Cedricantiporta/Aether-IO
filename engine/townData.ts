@@ -596,6 +596,36 @@ const HAND_FENCES: [number, number, number, number][] = [
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
 
+/** (owner 2026-10-31 "fences on houses outside town") Small fenced yards round the houses out on the mainland: the hamlet pair east of the road (one shared
+ *  yard: back / side returns + a front picket fence with a 3.6 m gate at each door), the hamlet pair west of the road and Lantern Lane's two bare houses (3 sides, front
+ *  left open: the doors are only ~2 m from the road / lane), the Brewer's hut (back + west side, the lane's fence is its front) and the farm yard behind the farmhouse + barn.
+ *  Every run is cut into ~3.4 m pieces and a hashed few of the inner ones are missing (a broken fence); doors, wells and lanes stay open. */
+const YARD_FENCES: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  const hy = (a: number, b: number): number => { const v = Math.sin(a * 91.7 + b * 213.3) * 43758.5453; return v - Math.floor(v); };
+  const run = (x1: number, z1: number, x2: number, z2: number): void => {
+    const L = Math.hypot(x2 - x1, z2 - z1), n = Math.max(1, Math.round(L / 3.4));
+    for (let i = 0; i < n; i++) {
+      const a = i / n, b = (i + 1) / n, ax = x1 + (x2 - x1) * a, az = z1 + (z2 - z1) * a, bx = x1 + (x2 - x1) * b, bz = z1 + (z2 - z1) * b;
+      if (n >= 3 && i > 0 && i < n - 1 && hy((ax + bx) / 2, (az + bz) / 2) < 0.16) continue;
+      out.push([ax, az, bx, bz]);
+    }
+  };
+  // east hamlet pair (doors west onto the forest road at z 118 / 125.2; the well at (14, 122.4) stays inside the yard)
+  run(7.2, 114.6, 18.9, 114.6); run(7.2, 129.4, 18.9, 129.4); run(18.9, 114.6, 18.9, 129.4);
+  run(7.2, 114.6, 7.2, 116.2); run(7.2, 119.8, 7.2, 123.4); run(7.2, 127.0, 7.2, 129.4);
+  // west hamlet pair (doors east onto the road; the well at (-11.4, 122.6) inside; open front)
+  run(-13.7, 115.9, -13.7, 130.3); run(-13.7, 130.3, -4.9, 130.3); run(-13.7, 115.9, -10.6, 115.9);
+  // Lantern Lane: the west house (-32.6, 143) and the SW house (-23.4, 133.2) (its north side is the stub beside the well above)
+  run(-37.0, 139.5, -37.0, 146.5); run(-37.0, 139.5, -32.5, 139.5); run(-37.0, 146.5, -30.2, 146.5);
+  run(-19.0, 129.5, -19.0, 136.6); run(-19.0, 129.5, -24.5, 129.5);
+  // the Elixir Brewer's hut (-6.4, 107.4): back and west side
+  run(-11.8, 102.6, -4.4, 102.6); run(-11.8, 102.6, -11.8, 112.4);
+  // the farm yard: west side continued north from the farmhouse stub (gap at z 95-98.6 for the cows' way), back fence behind the farmhouse + barn (gap north of the farm yard gate)
+  run(27, 101.8, 27, 98.6); run(27, 95.2, 27, 89.6); run(27, 89.6, 33.5, 89.6); run(37, 89.6, 47, 89.6);
+  return out;
+})();
+
 /** (owner 2026-10-31 "fences on dirt pathways, at least on the farm sides") Low wooden fences beside the farm-side dirt tracks.
  *  Same `fence_wood` runs as every other fence (render/natureLayout, colliders in TOWN_COLLIDERS), generated as ~3.4 m pieces
  *  along each track's two sides: every 5th-6th piece is left out (a gate), a hashed ~15% more are missing (broken fence),
@@ -609,6 +639,14 @@ const PATH_FENCES: [number, number, number, number][] = (() => {
     { pts: [[48.5, 100.5], [54, 91], [58, 79]], w: 2.6, sides: [-1, 1], gaps: [[48.5, 100.5, 4.2], [55.2, 81, 3.6], [54, 91, 2.2]] },
     // the Endless Tower's lane right after it leaves the forest road (the nests / hens' grass further on stay open)
     { pts: [[2.6, 134.5], [13, 134], [24, 138.5]], w: 2.8, sides: [-1, 1], gaps: [[2.6, 134.5, 5.0], [24, 138.5, 3.0]] },
+    // (owner 2026-10-31 "more path sides") the tower lane on past the nests / hens' grass, up to where the Haunted Hollow's gloom begins (z ~ 193; the gloomy stretch keeps its own broken look)
+    { pts: [[24, 138.5], [34, 137], [45, 142], [52, 152], [53, 163], [46, 173], [37, 183], [34, 193]], w: 2.8, sides: [-1, 1], gaps: [[24, 138.5, 3.0], [34, 137, 3.0], [45, 142, 3.4], [52, 152, 3.4], [53, 163, 3.4], [46, 173, 3.4], [37, 183, 3.4], [34, 193, 3.4]] },
+    // the MAIN forest road, both sides, from the bridge's south end down past the farm gate and the Brewer's door (gaps: signposts, farm gate, farm track, Brewer's lane; the hamlet stretch and the plaza mouth stay open)
+    { pts: [[0, 81], [0, 108.5]], w: 4.6, sides: [-1, 1], gaps: [[0, 94, 4.6], [3.6, 91.2, 3.4], [-3.6, 110.2, 3.4], [2.4, 110.6, 5.2], [0, 81, 3.2]] },
+    // the Brewer's lane west from the road (north side only: the hamlet's yard stands south of it) up to the Boss Trials meadow
+    { pts: [[-1, 113.6], [-17, 113.6], [-29, 114]], w: 3.4, sides: [1], gaps: [[-1, 113.6, 5.4], [-6.4, 113.6, 4.4], [-17, 113.6, 3.4]] },
+    // the mine path east side: from the footbridge's north end up towards the mining camp (gaps at the story gate, the footbridge end, the ore node, the camp mouth)
+    { pts: [[59.5, 60], [60, 33]], w: 2.6, sides: [-1, 1], gaps: [[59.5, 60, 4.6], [59.7, 47, 6.5], [60, 33, 4.5], [53, 32, 4]] },
   ];
   const hh = (a: number, b: number): number => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
   const sd = (px: number, pz: number, a: number, b: number, c: number, d: number): number => { const dx = c - a, dz = d - b, L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((px - a) * dx + (pz - b) * dz) / L)); return Math.hypot(px - a - dx * t, pz - b - dz * t); };
@@ -624,6 +662,8 @@ const PATH_FENCES: [number, number, number, number][] = (() => {
       if (i % 6 === 5 || hh(mx, mz) < 0.15) continue;   // (a gate every sixth piece, a few broken sections)
       if (T.gaps.some(([gx, gz, gr]) => Math.hypot(mx - gx, mz - gz) < gr || Math.hypot(x1 - gx, z1 - gz) < gr * 0.7 || Math.hypot(x2 - gx, z2 - gz) < gr * 0.7)) continue;
       if (WELLS.some(([wx, wz]) => Math.hypot(mx - wx, mz - wz) < 3.2)) continue;
+      if (NESTS.some(([nx_, nz_]) => Math.hypot(mx - nx_, mz - nz_) < 3.4) || SIGNPOSTS.some(([sx_, sz_]) => Math.hypot(mx - sx_, mz - sz_) < 3.0)) continue;
+      if (YARD_FENCES.some((f) => sd(mx, mz, f[0], f[1], f[2], f[3]) < 1.9)) continue;
       if (HOUSES.some((h) => Math.hypot(mx - h.x, mz - h.z) < 6)) continue;
       if (HAND_FENCES.some((f) => sd(mx, mz, f[0], f[1], f[2], f[3]) < 1.9 || sd(x1, z1, f[0], f[1], f[2], f[3]) < 1.4 || sd(x2, z2, f[0], f[1], f[2], f[3]) < 1.4)) continue;
       out.push([x1, z1, x2, z2]);
@@ -631,7 +671,7 @@ const PATH_FENCES: [number, number, number, number][] = (() => {
   }
   return out;
 })();
-export const FENCES: [number, number, number, number][] = [...HAND_FENCES, ...PATH_FENCES];
+export const FENCES: [number, number, number, number][] = [...HAND_FENCES, ...YARD_FENCES, ...PATH_FENCES];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
 /** Gate signposts were removed at the owner's request (a ground arrow points to the gate instead). */
