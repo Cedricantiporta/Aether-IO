@@ -49,7 +49,7 @@ import { updateBoss } from './bosses';
 import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded } from './bossMech';
 import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
 import { bp } from './bossPhaseState';
-import { addChill, frostHit, burnHit } from './bossFx';
+import { addChill, frostHit, burnHit, voidRotHit } from './bossFx';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
 import { bf, formColor, formTel, setFormCaster } from './bossForms';
 import { tickFormBeat } from './bossForm';
@@ -480,7 +480,7 @@ function bossDmgScale(e: Enemy, wave: number): number {
   const mods = runMods(st.difficulty);
   const mit = DMG_INFLATE * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce));
   const raw = Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * 1.5;   // = bossMech pwr(e) x BOSS_SKILL_MUL
-  return bossHitScale(raw, mit, st.stats.maxHealth, trial.on);
+  return bossHitScale(raw, mit, st.stats.maxHealth, trial.on, e.kind === 'BOSS_VOID' ? 0.05 : undefined, e.kind === 'BOSS_VOID' ? 1 : undefined);   // (the Herald: exact target share, may soften)
 }
 /** (owner 2026-10-26) The HP `bossKind` would have in the room the freshly spawned ordinary enemy `e` stands in (same depth / level / tower / biome scaling):
  *  the dark heroes are sized against their biome's guardian with this. Call it right after spawnEnemy, before touching e.maxHp. */
@@ -2040,7 +2040,7 @@ const ELEM_DMG: Partial<Record<EnemyProjectileKind, 'FIRE' | 'ICE' | 'POISON' | 
 const ENEMY_ARROW_SPEED = 0.8;
 export function fireEnemyProjectile(
   from: Vector3, dir: Vector3, kind: EnemyProjectileKind, speed: number, damage: number,
-  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number; dark?: boolean; trail?: number; pct?: number },
+  opts?: { homing?: number; slow?: number; radius?: number; life?: number; debuff?: number; dark?: boolean; trail?: number; pct?: number; accel?: number; vmax?: number },
 ): void {
   const p = allocEnemyProjectile();
   if (!p) return;
@@ -2060,6 +2060,7 @@ export function fireEnemyProjectile(
   p.owner = curShooter;
   p.dark = opts?.dark ?? (curShooter >= 0 && world.enemies[curShooter].corrupt);
   p.pct = opts?.pct ?? 0;
+  p.accel = opts?.accel ?? 0; p.vmax = opts?.vmax ?? 0;   // (Herald seeker orbs: speed ramps up by `accel` u/s^2 to `vmax`)
   p.trail = opts?.trail ?? 0; p.trailT = 0;   // a corrupted monster's shot is black-purple
   if (curTraits & TR.QUICK) { p.vel.x *= 1.3; p.vel.y *= 1.3; p.vel.z *= 1.3; }   // Quickdraw: faster projectiles
   if (curMage) { p.vel.x *= MAGE_PROJ.speed; p.vel.y *= MAGE_PROJ.speed; p.vel.z *= MAGE_PROJ.speed; p.life *= MAGE_PROJ.range / MAGE_PROJ.speed; }   // (owner) range x2 = speed x1.2 * life x1.67
@@ -2088,6 +2089,7 @@ export function updateEnemyProjectiles(dt: number): void {
     const p = list[i];
     if (!p.active) continue;
 
+    if (p.accel! > 0) { const sp0 = Math.hypot(p.vel.x, p.vel.z); if (sp0 > 0 && sp0 < p.vmax!) { const k = Math.min(p.vmax!, sp0 + p.accel! * dt) / sp0; p.vel.x *= k; p.vel.z *= k; } }
     if (p.homing > 0 && player.alive) {
       const speed = Math.hypot(p.vel.x, p.vel.z);
       const cur = Math.atan2(p.vel.x, p.vel.z);
@@ -2206,6 +2208,7 @@ function shotHitsHero(p: EnemyProjectile): void {
   if (p.debuff === 1) { if (applyPlayerDebuff('ROOT', 0.8)) events.emit('trick', { pos: p.pos.clone(), kind: 'PIN_HIT', radius: 1 }); }
   else if (p.debuff === 2) applyPlayerDebuff('BURN', 2.5, Math.max(2, p.damage * 0.12));
   else if (p.debuff === 5) burnHit(p.damage * 0.14);   // (owner 2026-10-31) Ignar / Colossus flames: 3.6 s burn, refreshes
+  else if (p.debuff === 7) voidRotHit(p.damage);   // Void Herald orbs: Void Rot
   else if (p.debuff === 6) frostHit(2.4, 0.22);        // Glacius' wyrmling shards: strong slow + 22% freeze
   else if (p.debuff === 4) { if (Math.random() < 0.45) freezePlayer(0.8); }   // the dark ranger's Freezing Arrow
   if (p.kind === 'BIG_FLAME') hooks.fireImpact(p.pos.x, p.pos.z, p.radius);

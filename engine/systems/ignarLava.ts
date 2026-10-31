@@ -1,6 +1,7 @@
 // ============================================================================
 // Ignar's creeping lava (owner 2026-10-31): "the longer the fight, the more floor turns to lava".
-// His arena starts at ~40% lava (lavaFloor.setupLavaFloor bossLava). Every LAVA_EVERY seconds of the fight two new lava patches (a main pool +
+// His arena STARTS at ~10% lava hugging the rim (lavaFloor.rimPools) and grows toward LAVA_CAP: the target coverage follows fight time AND the boss's
+// lost HP (a fast kill sees less lava; ~60% at ~35-40% HP of the burning form). Every LAVA_EVERY seconds of the fight two new lava patches (a main pool +
 // 2 satellites, planned by lavaFloor.planLavaPatch: spreading out from the existing lava or the arena edge, never on the arrival keep zone, the
 // bare lane from the arrival spot to the middle, or the centre) are marked with an orange telegraph for LAVA_WARN s and then become lava
 // (lavaFloor.addLavaDisc: the burn grid changes at once, render/Room.tsx re-rasterises the ground mask). Stops at LAVA_CAP of the floor.
@@ -12,16 +13,17 @@ import { lava, planLavaPatch, addLavaDisc, lavaCoverage, type LDisc } from '../l
 import { spawnTelegraphCircle } from './enemies';
 import { BT } from './bossFx';
 import { bp } from './bossPhaseState';
+import { S } from './bosses2';
 import { mulberry32 } from '../mapgen';
 
-const LAVA_FIRST = 9, LAVA_EVERY = 13, LAVA_WARN = 2.4, LAVA_CAP = 0.65, PATCHES = 3, MAXQ = 16;
+const LAVA_FIRST = 4, LAVA_EVERY = 2.5, LAVA_WARN = 2.4, LAVA_CAP = 0.65, LAVA_BASE = 0.1, PATCHES = 3, MAXQ = 16, T_FULL = 200;
 const plan: LDisc[] = [];
 const q = Array.from({ length: MAXQ }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0 }));
-export const ignarLava = { id: -1, t: 0, batches: 0, start: 0, cov: 0, log: [] as number[] };
+export const ignarLava = { id: -1, t: 0, batches: 0, start: 0, cov: 0, fight: 0, want: 0, log: [] as number[] };
 let rnd = mulberry32(1);
 
 export function resetIgnarLava(): void {
-  ignarLava.id = -1; ignarLava.t = 0; ignarLava.batches = 0; ignarLava.log.length = 0;
+  ignarLava.id = -1; ignarLava.t = 0; ignarLava.batches = 0; ignarLava.fight = 0; ignarLava.want = 0; ignarLava.log.length = 0;
   for (const s of q) s.on = false;
 }
 
@@ -40,13 +42,18 @@ export function tickIgnarLava(e: Enemy, dt: number): void {
     s.t -= dt;
     if (s.t <= 0) { s.on = false; addLavaDisc(s.x, s.z, s.r); }
   }
+  ignarLava.fight += dt;
+  // wanted coverage: 10% -> 65% by a mix of elapsed time (50%) and HP lost (85%, over both forms; the burning form is the second half)
+  const hpLost = e.maxHp > 0 ? 1 - Math.max(0, e.hp) / e.maxHp : 0, hpP = S.enraged ? 0.5 + hpLost * 0.5 : hpLost * 0.5;
+  const prog = Math.min(1, 0.5 * Math.min(1, ignarLava.fight / T_FULL) + 0.85 * Math.min(1, hpP / 0.8));
+  ignarLava.want = LAVA_BASE + (LAVA_CAP - LAVA_BASE) * prog;
   ignarLava.t -= dt;
   if (ignarLava.t > 0) return;
   ignarLava.t = LAVA_EVERY;
   let pend = 0; for (let i = 0; i < MAXQ; i++) if (q[i].on) pend++;
   if (pend > 0) return;
   ignarLava.cov = lavaCoverage();
-  if (ignarLava.cov >= LAVA_CAP - 0.015) return;   // (a batch adds ~2-3%: this keeps the total at or under the cap)
+  if (ignarLava.cov >= LAVA_CAP - 0.015 || ignarLava.cov >= ignarLava.want) return;   // (a batch adds ~2-3%: this keeps the total at or under the cap)
   let n = 0;
   for (let k = 0; k < PATCHES; k++) {
     if (planLavaPatch(plan, rnd) === 0) continue;
@@ -67,6 +74,6 @@ export function tickIgnarLava(e: Enemy, dt: number): void {
 
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {   // QA: `__ignarLava.state()`
   (window as unknown as Record<string, unknown>).__ignarLava = {
-    state: () => ({ id: ignarLava.id, t: ignarLava.t, batches: ignarLava.batches, start: ignarLava.start, cov: lavaCoverage(), log: ignarLava.log.slice(), on: lava.on }),
+    state: () => ({ fight: ignarLava.fight, want: ignarLava.want, id: ignarLava.id, t: ignarLava.t, batches: ignarLava.batches, start: ignarLava.start, cov: lavaCoverage(), log: ignarLava.log.slice(), on: lava.on }),
   };
 }

@@ -69,6 +69,8 @@ export const VP_RINGS = [
   { r: 4.7, w: 1.8, n: 3, a0: 1.9 },
 ] as const;
 export const VP_ORBS = 8;
+/** Seeker orbs (Event Horizon + the Herald's Seeker Orbs skill): start speed, acceleration, max speed (u/s) and turn rate (rad/s). The old Black Hole chase was a flat 5 u/s. */
+export const SEEKER = { v0: 7, acc: 7, vmax: 16, turn: 2.4 } as const;
 /** World position of orb `i` (0..VP_ORBS) at phase time `t` around (cx, cz); the rings spread out from the core during the warm-up. */
 export function vpOrb(i: number, t: number, cx: number, cz: number, br: number, out: { x: number; y: number; z: number }): number {
   let k = i, ri = 0;

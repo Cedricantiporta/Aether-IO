@@ -25,7 +25,7 @@ import { edgeLimit } from '../mapgen';
 export const C_DARK = 0x4c1d95, C_DEEP = 0x2e1065, C_VIOLET = 0x7c3aed, C_LILAC = 0xa855f7;
 export const METEOR_FOLLOW = 1.0, METEOR_FALL = 0.6, METEOR_R = 3.4;
 export const GRAV_IND = 1.2, GRAV_DUR = 4.0, GRAV_CORE = 6.0, LASER_FIRE = 0.4;
-const HOLE_LIFE = 9, HOLE_FOLLOW = 5.0, HOLE_WARN = 0.8, VISUAL = 30;   // VISUAL = bossFx BT.VISUAL (a telegraph that only shows its colour)
+const HOLE_LIFE = 7, HOLE_FOLLOW = 11.0, HOLE_WARN = 0.8, VISUAL = 30;   // VISUAL = bossFx BT.VISUAL (a telegraph that only shows its colour)
 export const EH_IND = 1.6, EH_DUR = 6.0, EH_POCKET_R = 3.0, EH_MAX_POCKETS = 3, EH_PCT = 0.85;
 export const MIR_LINE = 1.0;
 const tmp = new Vector3();

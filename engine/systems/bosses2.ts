@@ -25,11 +25,11 @@ import {
 } from './enemies';
 import {
   BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
-  spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw, frostHit, burnHit,
+  spawnWave, spawnProp, spawnPortal, spawnEcho, spawnRamp, rot, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw, frostHit, burnHit,
 } from './bossFx';
 import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { tickIgnarLava, resetIgnarLava } from './ignarLava';
-import { bp } from './bossPhaseState';
+import { bp, SEEKER } from './bossPhaseState';
 import { initBossForm } from './bossForms';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
 import {
@@ -180,11 +180,11 @@ interface Atk {
   windTick?(e: Enemy): void;
 }
 const LISTS: Partial<Record<EnemyKind, Atk[]>> = {};
-const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.5, BOSS_HYDRA: 2.3, BOSS_WYRM: 2.1, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.9, BOSS_VOID: 1.9 };
+const BASE_CD: Partial<Record<EnemyKind, number>> = { BOSS_TREANT: 2.5, BOSS_HYDRA: 2.3, BOSS_WYRM: 2.1, BOSS_WARLORD: 1.8, BOSS_WARMACH: 1.9, BOSS_VOID: 1.15 };
 
 function cdFor(e: Enemy): number {
   // (balance pass 2026-10-26: Burning Form 0.5 -> 0.65 and a floor of 1.5 s so major attacks never chain back to back)
-  return Math.max(1.5, (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.65 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1));
+  return Math.max(e.kind === 'BOSS_VOID' ? 0.7 : 1.5, (BASE_CD[e.kind] ?? 2) * (1 - 0.14 * e.phase) * (S.enraged ? 0.65 : 1) * (S.bark ? 0.8 : 1) * (S.blizzT > 0 ? 0.85 : 1));
 }
 
 /** (owner) Ignar's Burning Form: wind-ups, telegraphs and recoveries take 70% of the time. */
@@ -1052,123 +1052,227 @@ function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
 }
 
 // ============================================================ VOID HERALD =====
-const V_PORTALS = 0, V_GRAVITY = 1, V_ECHOES = 2;
-
+// Void Herald kit (owner 2026-10-31 rework: "easy to dodge, skills make no sense, damage too low, no downs"). Flat hits go through `hz(e, m)` /
+// `pwr(e) * m`, which bossDmgScale already scaled to ~10% of a hero's max HP at m = 1 (Boss Trials 14%): normal skills m ~1.1-1.4, big slams m ~2.6 (25-35%).
+// Statuses: VOID ROT (bossFx.voidRotHit, stacking poison + slow, like Ignar's burn), knockdowns (KB.SLAM) on cones / collapses / the ring, SILENCE on the
+// Rift Collapse finisher, slow on beams / rot, two CONTINUOUS ramp zones (Collapsing Void pool, Void Beam: bossFx.spawnRamp).
+const V_PORTALS = 0, V_COLLAPSE = 1, V_ECHOES = 2, V_MIRRORS = 3, V_HOLES = 4, V_STORM = 5, V_NOVA = 6, V_LANES = 7, V_SPIRAL = 8, V_ORBS = 9, V_POOL = 10, V_BEAM = 11;
 /** (owner) the Dune Colossus' stomp knocks the hero down. */
 function stompKd(z: import('../types').Zone | null): void { if (z) { z.kb = KB.SLAM.kb; z.down = KB.SLAM.down; } }
+/** Zone / wave damage that lands at `m` x the reference hit (resolveBossZone and the rings multiply by BOSS_SKILL_MUL again, so divide it out). */
+const hz = (e: Enemy, m: number): number => (pwr(e) * m) / BOSS_SKILL_MUL;
+const f2 = (): boolean => S.vform === 2;
+const DARKP = { dark: true } as const;
+const VCOL = 0xa855f7;
+/** Seeker orbs: speed ramps from ORB_V0 to ORB_VMAX (u/s), turn rate ORB_TURN (rad/s) (the old Black Hole chase was a flat 5 u/s). */
+const ORB_V0 = SEEKER.v0, ORB_ACC = SEEKER.acc, ORB_VMAX = SEEKER.vmax, ORB_TURN = SEEKER.turn;
 
 LISTS.BOSS_VOID = [
-  { // Rift Portals: portals open around you and fire aimed volleys.
-    name: 'Rift Portals!', wind: () => 0.9, act: () => 0.4, rec: () => 1.0, windMove: 0.4,
+  { // Rift Portals: portals open round you and fire aimed volleys (void rot orbs), faster than before.
+    name: 'Rift Portals!', wind: () => 0.6, act: () => 0.4, rec: () => 0.7, windMove: 0.4,
     begin() { /* portals appear on fire */ },
     fire(e) {
-      const p = world.player.pos, n = 3 + e.phase, base = Math.random() * 6.283;
+      const p = world.player.pos, n = 3 + e.phase + (f2() ? 1 : 0), base = Math.random() * 6.283;
       for (let i = 0; i < n; i++) {
         const a = base + (i / n) * 6.283, r = 7 + Math.random() * 6;
         tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 2); clampToVoid(tv, 2);
-        spawnPortal(tv.x, tv.z, 0.9, 5.2, 3, pwr(e) * 0.7);
+        spawnPortal(tv.x, tv.z, 0.7, 4.4, 3, pwr(e) * 0.8);
       }
       events.emit('trick', { pos: e.pos.clone(), kind: 'RIFT', radius: 6 });
     },
   },
-  { // Gravity Flip: pulls you in, then PUSHES with a shockwave - dash / jump through the ring.
-    name: 'Gravity Flip!', wind: () => 1.3, act: () => 1.85, rec: () => 1.1,
-    begin(e) { circle(e.pos.x, e.pos.z, 16, 1.3, BT.VISUAL, 0, 0xa855f7); },
+  { // Rift Collapse (replaces Gravity Flip): three void rifts collapse on marked rings one after another (the 2nd and 3rd after short 0.8-0.9 s warnings).
+    // Each collapse = slam + knockdown + Void Rot; the last, bigger one also SILENCES. Pure ground telegraphs: run out of the ring.
+    name: 'Rift Collapse!', wind: () => 0.7, act: () => 2.0, rec: () => 0.7,
+    begin(e) {
+      const p = world.player;
+      tv.set(p.pos.x + p.vel.x * 0.35, 0, p.pos.z + p.vel.z * 0.35); clampArena(tv, 3); clampToVoid(tv, 3);
+      const z = circle(tv.x, tv.z, 5.0, 1.0, BT.VCOLLAPSE, hz(e, 1.2), VCOL); if (z) z.aux = 0;
+      S.pushed = false; S.gravT = 0;
+    },
     fire() { S.gravT = 0; S.pushed = false; },
     tick(e, dt) {
       stand(e);
       S.gravT += dt;
       const p = world.player;
-      if (S.gravT < 1.4) { // PULL
-        if (p.alive && p.dashT <= 0 && p.stunT <= 0) {
-          const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-          if (d > 3.5) { p.pos.x += (dx / d) * 7 * dt; p.pos.z += (dz / d) * 7 * dt; }
-        }
-      } else if (!S.pushed) { // FLIP -> PUSH
+      if (!S.pushed && S.gravT >= 0.45) {   // second ring on where you ran to
         S.pushed = true;
-        spawnWave(e.pos.x, e.pos.z, 24, 30, 2.2, pwr(e) * 1.4, WAVE_VOID, 0xc084fc, e.radius);
-        events.emit('shockwave', { pos: e.pos.clone(), radius: 14, color: 0xc084fc });
-        events.emit('trick', { pos: e.pos.clone(), kind: 'GRAVITY_PUSH', radius: 8 });
-        events.emit('shake', { amount: 0.6 });
+        tv.set(p.pos.x + p.vel.x * 0.3, 0, p.pos.z + p.vel.z * 0.3); clampArena(tv, 3); clampToVoid(tv, 3);
+        const z = circle(tv.x, tv.z, 5.4, 0.8, BT.VCOLLAPSE, hz(e, 1.2), VCOL); if (z) z.aux = 0;
+      }
+      if (S.gravT >= 0.95 && S.gravT - dt < 0.95) {   // the big finisher
+        tv.set(p.pos.x + p.vel.x * 0.3, 0, p.pos.z + p.vel.z * 0.3); clampArena(tv, 3.5); clampToVoid(tv, 3.5);
+        const z = circle(tv.x, tv.z, 6.6, 0.9, BT.VCOLLAPSE, hz(e, 2.2), VCOL); if (z) z.aux = 1;
+        events.emit('shockwave', { pos: e.pos.clone(), radius: 10, color: VCOL });
       }
     },
+    end() { S.pushed = false; },
   },
   { // Echoes: shadow copies of the earlier bosses replay their signature attacks around you.
-    name: 'Echoes of the Fallen!', wind: () => 0.9, act: () => 0.5, rec: () => 1.0,
-    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.9, BT.VISUAL, 0, 0xa8a29e); },
+    name: 'Echoes of the Fallen!', wind: () => 0.7, act: () => 0.4, rec: () => 0.8,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.7, BT.VISUAL, 0, 0xa8a29e); },
     fire(e) {
-      const p = world.player.pos, n = 2 + (e.phase >= 1 ? 1 : 0) + (e.phase >= 2 ? 1 : 0), base = Math.random() * 6.283;
+      const p = world.player.pos, n = 3 + (e.phase >= 1 ? 1 : 0) + (e.phase >= 2 ? 1 : 0), base = Math.random() * 6.283;
       for (let i = 0; i < n; i++) {
         const a = base + (i / n) * 6.283, kind = ((Math.random() * 5) | 0);
-        tv.set(p.x + Math.sin(a) * 13, 0, p.z + Math.cos(a) * 13); clampArena(tv, 3); clampToVoid(tv, 3);
-        spawnEcho(tv.x, tv.z, kind, pwr(e));
+        tv.set(p.x + Math.sin(a) * 12, 0, p.z + Math.cos(a) * 12); clampArena(tv, 3); clampToVoid(tv, 3);
+        spawnEcho(tv.x, tv.z, kind, hz(e, 0.9));
       }
       stat('EchoCast');
     },
   },
-];
-
-// ---- the Herald's three additions on top of his original kit (portals / gravity flip / echoes): illusions, black-hole summons, the final form's wing storm.
-const V_MIRRORS = 3, V_HOLES = 4, V_STORM = 5;
-const f2 = (): boolean => S.vform === 2;
-const DARKP = { dark: true } as const;
-LISTS.BOSS_VOID!.push(
   { // Mirror Images: up to 4 illusions of the Herald (same bar, same shield, they crumble 3x faster) and one teleport into a ring round you.
-    name: 'Mirror Images!', wind: () => 0.8, act: () => 1.0, rec: () => 0.9,
-    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.8, BT.VISUAL, 0, 0xc084fc); },
+    name: 'Mirror Images!', wind: () => 0.7, act: () => 0.8, rec: () => 0.7,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.7, BT.VISUAL, 0, 0xc084fc); },
     fire(e) { spawnIllusions(e, 4, f2() ? 30 : 22, 4); stat('Illusions'); },
   },
-  { // Black Holes: warning circles follow you, each opens a hole under you that then drifts after you (at most 4 alive).
-    name: 'Black Holes!', wind: () => 0.8, act: () => 1, rec: () => 1.0,
-    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.8, BT.VISUAL, 0, 0xc084fc); },
-    fire() { const n = f2() ? 3 : 2; for (let i = 0; i < n; i++) queueHole(i * 1.0); },
-    tick() { /* waits */ },
-    done: (e) => e.stateT >= 0.8 && !holesBusy(),
+  { // Black Holes: warning circles follow you, each opens a hole under you that then CHASES you (11 -> 16 u/s, was a flat 5) and drains + rots at its core.
+    name: 'Black Holes!', wind: () => 0.7, act: () => 0.9, rec: () => 0.7,
+    begin(e) { circle(e.pos.x, e.pos.z, 4, 0.7, BT.VISUAL, 0, 0xc084fc); },
+    fire() { const n = f2() ? 3 : 2; for (let i = 0; i < n; i++) queueHole(i * 0.8); },
+    tick() { /* the holes live on while he casts on */ },
+    done: (e) => e.stateT >= 0.9,
   },
-  { // (final form) Wing Storm: the great wings beat out spiralling void feathers, then a void shockwave ring.
-    name: 'Wing Storm!', wind: () => 1.0, act: () => 3.4, rec: () => 1.1,
-    begin(e) { circle(e.pos.x, e.pos.z, 7, 1.0, BT.VISUAL, 0, 0xc084fc); e.angle = Math.random() * 6.283; e.patternT = 0; S.pushed = false; },
+  { // (final form) Wing Storm: the great wings beat out spiralling void feathers (rot), then a void shockwave ring (knockdown).
+    name: 'Wing Storm!', wind: () => 0.8, act: () => 3.0, rec: () => 0.8,
+    begin(e) { circle(e.pos.x, e.pos.z, 7, 0.8, BT.VISUAL, 0, 0xc084fc); e.angle = Math.random() * 6.283; e.patternT = 0; S.pushed = false; },
     fire() { /* feathers in tick */ },
     tick(e, dt) {
       stand(e);
       e.angle += 1.9 * dt;
       if (e.stateT >= e.patternT * 0.14) {
         e.patternT++;
-        for (let k = 0; k < 4; k++) {
-          const a = e.angle + (k * Math.PI) / 2;
+        for (let k = 0; k < 5; k++) {
+          const a = e.angle + (k * 2 * Math.PI) / 5;
           dirV.set(Math.sin(a), 0, Math.cos(a));
-          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 11, e.projectileDamage * 0.6, { pct: 0.04, life: 5, radius: 0.9, ...DARKP });
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 11, pwr(e) * 0.5, { life: 5, radius: 0.9, debuff: 7, ...DARKP });
         }
       }
-      if (S.pushed === false && e.stateT >= 1.8) {
+      if (S.pushed === false && e.stateT >= 1.6) {
         S.pushed = true;
-        spawnWave(e.pos.x, e.pos.z, 20, 30, 2.2, pwr(e) * 1.2, WAVE_VOID, 0xc084fc, e.radius);
+        spawnWave(e.pos.x, e.pos.z, 20, 30, 2.4, hz(e, 1.1), WAVE_VOID, 0xc084fc, e.radius);
         events.emit('shockwave', { pos: e.pos.clone(), radius: 14, color: 0xc084fc });
         events.emit('shake', { amount: 0.5 });
       }
     },
-    done: (e) => e.stateT >= 3.4,
+    done: (e) => e.stateT >= 3.0,
     end() { S.pushed = false; },
   },
-);
-const HERALD_F1 = [V_PORTALS, V_ECHOES, V_GRAVITY, V_MIRRORS, V_PORTALS, V_HOLES, V_ECHOES, V_GRAVITY, V_MIRRORS, V_HOLES];
-const HERALD_F2 = [V_STORM, V_PORTALS, V_HOLES, V_GRAVITY, V_MIRRORS, V_ECHOES, V_STORM, V_HOLES, V_PORTALS, V_GRAVITY];
+  { // Void Nova: a fan of cones (slam + knockdown + rot) with a delayed ring behind it; form 2 follows up with mirrored cones in the gaps.
+    name: 'Void Nova!', wind: () => 0.75, act: () => 1.0, rec: () => 0.7,
+    begin(e, ux, uz) {
+      const base = Math.atan2(ux, uz), n = f2() ? 5 : 3;
+      for (let i = 0; i < n; i++) { const a = base + fan(i, 0.5); cone(e, Math.sin(a), Math.cos(a), 34, 0.2, 0.75, BT.VCONE, hz(e, 2.0), VCOL); }
+      circle(e.pos.x, e.pos.z, 8, 0.75, BT.VISUAL, 0, 0xc084fc);
+      S.pushed = false; S.sweep = Math.atan2(ux, uz);
+    },
+    fire(e) {
+      spawnWave(e.pos.x, e.pos.z, 19, 32, 2.4, hz(e, 1.0), WAVE_VOID, VCOL, e.radius);   // the delayed second hit
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 10, color: VCOL });
+    },
+    tick(e) {
+      stand(e);
+      if (f2() && !S.pushed && e.stateT >= 0.3) {   // mirrored cones in the gaps, short 0.55 s warning
+        S.pushed = true;
+        const base = S.sweep + 0.25;
+        for (let i = 0; i < 4; i++) { const a = base + fan(i, 0.5); cone(e, Math.sin(a), Math.cos(a), 34, 0.2, 0.55, BT.VCONE, hz(e, 1.6), VCOL); }
+      }
+    },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
+    end() { S.pushed = false; },
+  },
+  { // Mirrored Lanes: two lanes mirrored about your line, then (0.55 s later) the centre lane (+ outer lanes in the gaps in form 2).
+    name: 'Mirrored Lanes!', wind: () => 0.8, act: () => 0.9, rec: () => 0.7,
+    begin(e, ux, uz) {
+      const base = Math.atan2(ux, uz);
+      for (let s = -1; s <= 1; s += 2) { const a = base + s * 0.3; const z = lane(e, Math.sin(a), Math.cos(a), 40, 3.6, 0.8, BT.VLANE, hz(e, 1.0), VCOL); if (z) z.aux = 0; }
+    },
+    fire(e) {
+      const p = world.player.pos, base = Math.atan2(p.x - e.pos.x, p.z - e.pos.z), n = f2() ? 3 : 1;
+      for (let i = 0; i < n; i++) { const a = base + (i === 0 ? 0 : (i === 1 ? -0.62 : 0.62)); const z = lane(e, Math.sin(a), Math.cos(a), 40, 3.6, 0.55, BT.VLANE, hz(e, 1.5), VCOL); if (z) z.aux = 1; }
+    },
+    windTick(e) { requestYaw(Math.atan2(world.player.pos.x - e.pos.x, world.player.pos.z - e.pos.z)); },
+  },
+  { // Void Spiral: a rotating ring of void bullets (6 arms, 8 in form 2 which also reverses mid-way); each bullet carries Void Rot. Slip through the gaps.
+    name: 'Void Spiral!', wind: () => 0.6, act: () => 3.0, rec: () => 0.8,
+    begin(e) { circle(e.pos.x, e.pos.z, 6, 0.6, BT.VISUAL, 0, 0xc084fc); e.angle = Math.random() * 6.283; e.patternT = 0; },
+    fire() { /* bullets in tick */ },
+    tick(e, dt) {
+      stand(e);
+      const arms = f2() ? 8 : 6, dir = f2() && e.stateT > 1.5 ? -1 : 1;
+      e.angle += 1.05 * dt * dir;
+      if (e.stateT >= e.patternT * 0.26) {
+        e.patternT++;
+        for (let k = 0; k < arms; k++) {
+          const a = e.angle + (k * 2 * Math.PI) / arms;
+          dirV.set(Math.sin(a), 0, Math.cos(a));
+          fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', 9.5, pwr(e) * 0.55, { life: 4.6, radius: 0.85, debuff: 7, ...DARKP });
+        }
+      }
+    },
+    done: (e) => e.stateT >= 3.0,
+  },
+  { // Seeker Orbs: void orbs that HOME on you, speeding up as they live (7 -> 16 u/s, turning 2.4 rad/s, big hit area): sidestep late or dash through them.
+    name: 'Seeker Orbs!', wind: () => 0.6, act: () => 0.6, rec: () => 0.8,
+    begin(e) { circle(e.pos.x, e.pos.z, 5, 0.6, BT.VISUAL, 0, 0xc084fc); },
+    fire(e, ux, uz) {
+      const n = f2() ? 4 : 3, base = Math.atan2(ux, uz);
+      for (let i = 0; i < n; i++) {
+        const a = base + fan(i, 0.7);
+        dirV.set(Math.sin(a), 0, Math.cos(a));
+        fireEnemyProjectile(e.pos, dirV, 'BOSS_ORB', ORB_V0, pwr(e) * 1.0, { homing: ORB_TURN, accel: ORB_ACC, vmax: ORB_VMAX, life: 6, radius: 1.0, debuff: 7, ...DARKP });
+      }
+      events.emit('trick', { pos: e.pos.clone(), kind: 'RIFT', radius: 5 });
+    },
+  },
+  { // Collapsing Void (CONTINUOUS): void pools open on you (and beside you); after a ~1 s ring-fill warning they tick harder the longer you stay (1x -> 3x over 3 s). Step out.
+    name: 'Collapsing Void!', wind: () => 0.7, act: () => 1.0, rec: () => 0.6,
+    begin() { /* the pools carry their own warning */ },
+    fire(e) {
+      const p = world.player, n = f2() ? 3 : 2, base = Math.random() * 6.283;
+      for (let i = 0; i < n; i++) {
+        if (i === 0) tv.set(p.pos.x + p.vel.x * 0.4, 0, p.pos.z + p.vel.z * 0.4);
+        else { const a = base + (i / n) * 6.283; tv.set(p.pos.x + Math.sin(a) * 9, 0, p.pos.z + Math.cos(a) * 9); }
+        clampArena(tv, 4); clampToVoid(tv, 4);
+        spawnRamp(false, tv.x, tv.z, 5.4, 0.95, 5.2, 0.026, VCOL);
+      }
+      events.emit('shockwave', { pos: e.pos.clone(), radius: 9, color: VCOL });
+    },
+  },
+  { // Void Beam (CONTINUOUS): a line telegraph, then a rotating beam sweeps the arena (form 2: two opposite beams); standing in it slows and burns harder every tick. Dash across.
+    name: 'Void Beam!', wind: () => 1.0, act: () => 4.2, rec: () => 0.8,
+    begin(e, ux, uz) {
+      const side = (S.cycle & 1) ? 1 : -1, base = Math.atan2(ux, uz) + side * 0.9;
+      for (let k = 0; k < (f2() ? 2 : 1); k++) spawnRamp(true, e.pos.x, e.pos.z, 3.2, 1.0, 4.2, 0.022, VCOL, base + k * Math.PI, -side * 0.62, 44);
+    },
+    fire() { /* the beam is live from here */ },
+    windTick(e) { stand(e); },
+    done: (e) => e.stateT >= 4.0,
+  },
+];
+const HERALD_F1 = [V_NOVA, V_PORTALS, V_LANES, V_COLLAPSE, V_ORBS, V_ECHOES, V_SPIRAL, V_POOL, V_MIRRORS, V_NOVA, V_HOLES, V_LANES, V_BEAM, V_COLLAPSE, V_ORBS, V_PORTALS];
+const HERALD_F2 = [V_STORM, V_NOVA, V_ORBS, V_LANES, V_POOL, V_COLLAPSE, V_SPIRAL, V_BEAM, V_PORTALS, V_HOLES, V_NOVA, V_ECHOES, V_ORBS, V_MIRRORS, V_STORM, V_LANES, V_COLLAPSE, V_POOL];
 
 /** The void stage: a fixed ring (the room outline minus a margin) the heroes cannot leave; outside it is the dark swirling void (render/BossFx veil). */
+const SAFE_FRAC = 0.72, SAFE_CREEP = 0.10;   // safe radius = 72% of the old arena; it creeps in up to 10% over the fight (with the boss's HP lost; pauses by itself in the invulnerable phases)
 function voidStage(e: Enemy): void {
   let r = 1e9;
   for (let k = 0; k < 24; k++) { const a = (k / 24) * 6.2832; r = Math.min(r, edgeLimit(Math.cos(a) * 10, Math.sin(a) * 10, 0)); }
   arena.shrink = true; arena.hard = true; arena.cx = 0; arena.cz = 0; arena.r = Math.max(24, r - 3); arena.minR = arena.r; arena.rate = 0; arena.edgeT = 0;
+  arena.safe0 = arena.safeR = Math.max(16, arena.r * SAFE_FRAC); arena.voidT = 0; arena.graceT = 7;   // (owner 2026-10-31) the burning void starts at 72% of the old wall radius; 7 s grace on arrival
   notify('The Void is all around - you cannot leave the ring!', '#c084fc');
   void e;
 }
 
 function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): void {
   const list = LISTS.BOSS_VOID!;
+  rot.ref = pwr(e);
+  if (arena.safe0 > 0) { const lost = e.maxHp > 0 ? 1 - Math.max(0, e.hp) / e.maxHp : 0; arena.safeR = arena.safe0 * (1 - SAFE_CREEP * (S.vform === 2 ? 0.5 + lost * 0.5 : lost * 0.5)); }
   tickVoidFx(dt);
-  mfx.major = e.state !== 'CHASE' && (e.pattern === V_HOLES || e.pattern === V_STORM || e.pattern === V_GRAVITY) && S.vformT <= 0;   // his illusions hold their basic volleys during a major skill
+  mfx.major = e.state !== 'CHASE' && (e.pattern === V_HOLES || e.pattern === V_STORM || e.pattern === V_COLLAPSE || e.pattern === V_SPIRAL || e.pattern === V_BEAM || e.pattern === V_POOL) && S.vformT <= 0;   // his illusions hold their basic volleys during a major skill
   if (e.state !== 'CHASE') { runAtk(e, list, dt, ux, uz, dist); return; }
   keepRange(e, ux, uz, dist, 10, 17, e.speed * (1 + 0.12 * e.phase), 0.45);
+  { const pl = world.player; if (pl.downT > 0 || pl.knockImmuneT > 0 || pl.stunT > 0) e.attackCd = Math.max(e.attackCd, pl.downT > 0 ? 1.0 : 0.5); }   // fairness: no new skill lands on a hero who is down / just got up (the anti-chain rules only stop the CC, not the damage)
   if (e.attackCd > 0) return;
   const order = S.vform === 2 ? HERALD_F2 : HERALD_F1;
   beginAtk(e, list, order[S.cycle++ % order.length], ux, uz, dist);
