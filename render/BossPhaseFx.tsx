@@ -10,7 +10,7 @@ import {
   InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, ShaderMaterial, Vector4, type BufferGeometry,
 } from 'three';
 import { world } from '../engine/world';
-import { bp, MAX_TILES, LAVA_HITS } from '../engine/systems/bossPhaseState';
+import { bp, MAX_TILES, LAVA_HITS, VP_ORBS, VP_ORB_R, VP_WARM, VP_END, VP_CORE_R, vpOrb } from '../engine/systems/bossPhaseState';
 import { humanView, humanFoot } from '../engine/systems/humanBosses';
 import { CELL, pushHalo } from './fx';
 import { commitInst, setInst, smooth } from './util';
@@ -25,6 +25,7 @@ const solid = (g: BufferGeometry, color: number, cap: number): InstancedMesh => 
 };
 const flat = (g: BufferGeometry): BufferGeometry => g.rotateX(-Math.PI / 2);
 const _c = new Color();
+const _o = { x: 0, y: 0, z: 0 };
 const FLOOR_FRAG = `
 uniform float uT; uniform float uA; uniform float uMode; uniform float uProg; uniform float uFlash;
 uniform vec3 uC; uniform vec3 uFC; uniform vec2 uD; uniform vec2 uBoss; uniform vec4 uP[4];
@@ -105,6 +106,10 @@ export function BossPhaseFx() {
       realDisc: mk(flat(new CircleGeometry(1, 24)), new Color(0.05, 0.02, 0.1), 0.92, 1),
       fakeDisc: mk(flat(new CircleGeometry(1, 24)), new Color(0.35, 0.2, 0.6), 0.5, 4),
       foot: mk(flat(new CircleGeometry(1, 12)), new Color(0.8, 0.6, 1.5), 0.7, 12, true),
+      // Void Maelstrom orbs: a black core, a glowing violet accretion ring (tilted, spinning) and a thin outer halo ring
+      orbCore: solid(new IcosahedronGeometry(1, 2), 0x07020f, VP_ORBS),
+      orbRing: mk(new RingGeometry(1.25, 1.75, 40), new Color(1.8, 0.7, 3.0), 0.95, VP_ORBS, true),
+      orbRing2: mk(new RingGeometry(1.0, 1.12, 40), new Color(2.6, 1.6, 3.4), 0.9, VP_ORBS, true),
     };
   }, []);
   const hold = useMemo(() => ({ k: 0 }), []);
@@ -194,18 +199,32 @@ export function BossPhaseFx() {
         if (dtE >= 0 && dtE < 0.35) pushHalo(bp.tx[i], 1.0, bp.tz[i], 4, 2, 1, 0.2, 0.3 * (1 - dtE / 0.35), CELL.GLOW);
       }
     }
-    // ---- void hands
-    if (vis && kind === 'DARK') {
-      for (let i = 0; i < bp.hands.length; i++) {
-        const h = bp.hands[i]; if (!h.on) continue;
-        const k = Math.min(1, h.t / h.T);
-        _c.setRGB(0.9, 0.35 + k * 0.2, 1.8); S.rings.setColorAt(nring, _c);
-        setInst(S.rings, nring++, h.x, 0.11, h.z, 0, 2.7, 1, 2.7);
-        _c.setRGB(0.5 + k, 0.15, 1.2); S.discs.setColorAt(ndisc, _c);
-        setInst(S.discs, ndisc++, h.x, 0.1, h.z, 0, 2.7 * Math.max(0.1, k), 1, 2.7 * Math.max(0.1, k));
-        pushHalo(h.x, 0.6, h.z, 3 + k * 2, 0.7, 0.25, 1.6, 0.35 + 0.4 * k, CELL.GLOW);
+    // ---- Void Maelstrom: contracting pull rings on the floor, the core danger ring and the spinning black-hole orbs
+    let norb = 0;
+    if (vis && kind === 'VOIDPULL' && e0) {
+      const warm = bp.on ? Math.min(1, bp.t / (VP_WARM * 0.5)) : live, cx = e0.pos.x, cz = e0.pos.z;
+      const coreR = e0.radius + VP_CORE_R * 0.7;
+      for (let k = 0; k < 4; k++) {   // rings sliding in toward him: the direction of the pull
+        const f = ((t * 0.55 + k / 4) % 1), rr = 24 * (1 - f) + coreR;
+        _c.setRGB(0.3 + 0.35 * f, 0.1, 0.7 + 0.4 * f); S.rings.setColorAt(nring, _c);
+        setInst(S.rings, nring++, cx, 0.1, cz, 0, rr, 1, rr);
+      }
+      _c.setRGB(2.4, 0.4, 0.7 + 0.6 * Math.sin(t * 8)); S.rings.setColorAt(nring, _c);   // the crush zone
+      setInst(S.rings, nring++, cx, 0.12, cz, 0, coreR, 1, coreR);
+      _c.setRGB(0.55, 0.08, 0.3); S.discs.setColorAt(ndisc, _c);
+      setInst(S.discs, ndisc++, cx, 0.09, cz, 0, coreR, 1, coreR);
+      pushHalo(cx, 2.5, cz, 14 * warm, 0.8, 0.25, 1.9, 0.4 * live * warm, CELL.GLOW);
+      for (let i = 0; i < VP_ORBS && norb < VP_ORBS; i++) {
+        vpOrb(i, bp.t, cx, cz, e0.radius, _o);
+        const s0 = VP_ORB_R * (bp.on ? Math.min(1, bp.t / 0.7) : live);
+        setInst(S.orbCore, norb, _o.x, _o.y, _o.z, 0, s0, s0, s0);
+        setInst(S.orbRing, norb, _o.x, _o.y, _o.z, t * 3 + i, s0 * 1.0, s0 * 1.0, s0 * 1.0, Math.PI / 2 - 0.45, 0);   // accretion disc: nearly flat
+        setInst(S.orbRing2, norb, _o.x, _o.y, _o.z, -t * 4 + i, s0, s0, s0, Math.PI / 2 + 0.5, 0);
+        pushHalo(_o.x, _o.y, _o.z, 3.2 * s0, 0.8, 0.3, 2.0, 0.55 * live, CELL.GLOW);
+        norb++;
       }
     }
+    commitInst(S.orbCore, norb); commitInst(S.orbRing, norb); commitInst(S.orbRing2, norb);
     commitInst(S.rocks, nr); commitInst(S.rocksTop, nr); commitInst(S.pillars, np); commitInst(S.slabs, ns); commitInst(S.beams, nb);
     commitInst(S.pods, npod); commitInst(S.rings, nring); commitInst(S.discs, ndisc); commitInst(S.tiles, nt);
     for (const m of [S.pods, S.rings, S.discs, S.tiles]) if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -260,6 +279,7 @@ export function BossPhaseFx() {
       <primitive object={S.beams} /><primitive object={S.rocks} /><primitive object={S.rocksTop} /><primitive object={S.pillars} /><primitive object={S.slabs} />
       <primitive object={S.pods} /><primitive object={S.rings} /><primitive object={S.discs} /><primitive object={S.tiles} />
       <primitive object={S.ball} /><primitive object={S.ballTop} /><primitive object={S.realDisc} /><primitive object={S.fakeDisc} /><primitive object={S.foot} />
+      <primitive object={S.orbCore} /><primitive object={S.orbRing} /><primitive object={S.orbRing2} />
     </>
   );
 }

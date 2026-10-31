@@ -178,7 +178,7 @@ export function hazTick(now: number): void {
     }
   }
 }
-const PH: PhaseKind[] = ['', 'AVALANCHE', 'SPLIT', 'PINBALL', 'SPORES', 'TIDAL', 'LAVA', 'SAND', 'DARK'];
+const PH: PhaseKind[] = ['', 'AVALANCHE', 'SPLIT', 'PINBALL', 'SPORES', 'TIDAL', 'LAVA', 'SAND', 'VOIDPULL'];
 const OBJ = ['', 'DEFEND', 'RESCUE', 'GOBLIN', 'HUNT', 'SPEED'], TW = ['', 'DARK', 'CURSED', 'TRAPS', 'GOLDEN'];
 
 /** New room / run / disconnect (host side). */

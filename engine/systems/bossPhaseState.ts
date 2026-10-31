@@ -3,7 +3,7 @@
 // Every boss has its own mechanic (`bp.kind`): at set HP thresholds it turns invulnerable (bubble + banner) and runs it, then
 // becomes vulnerable again on its own.
 export type PhaseKind =
-  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'LAVA' | 'SAND' | 'DARK';
+  | '' | 'AVALANCHE' | 'SPLIT' | 'PINBALL' | 'SPORES' | 'TIDAL' | 'LAVA' | 'SAND' | 'VOIDPULL';
 
 /** A prop / circle on the floor: safe circles (Avalanche), rocks and pillars (cover / pinball), pods (Spore Garden). */
 export interface PhaseProp { x: number; z: number; r: number; /** free value: pod swell 0..1, pillar hp... */ h: number; on: boolean }
@@ -56,3 +56,25 @@ export const bp = {
 
 /** The boss's own state of "invulnerable phases done" lives in bossPhases.ts; this only says whether a phase runs. */
 export function phaseImmune(id: number): boolean { return bp.xformId === id || (bp.on && bp.immune && bp.id === id); }
+
+/**
+ * Void Herald phase VOIDPULL (replaces Lights Out): a universal pull drags every hero toward him while VP_ORBS black-hole-style orbs
+ * spin round him on fast rings. Orbs are a pure function of the phase clock `bp.t` (the co-op guest mirrors bp.t, so no extra sync).
+ * ring distance from the BOSS'S BODY (his radius is added: ~4.2-4.8 m, so the rings sit 6-9.5 m from his centre) / angular speed (rad/s, sign = direction) / orbs on the ring / phase offset.
+ */
+export const VP_WARM = 1.4, VP_END = 9.0, VP_CORE_R = 2.0, VP_ORB_R = 0.95;
+export const VP_RINGS = [
+  { r: 1.9, w: 2.9, n: 2, a0: 0.0 },
+  { r: 3.3, w: -2.3, n: 3, a0: 0.7 },
+  { r: 4.7, w: 1.8, n: 3, a0: 1.9 },
+] as const;
+export const VP_ORBS = 8;
+/** World position of orb `i` (0..VP_ORBS) at phase time `t` around (cx, cz); the rings spread out from the core during the warm-up. */
+export function vpOrb(i: number, t: number, cx: number, cz: number, br: number, out: { x: number; y: number; z: number }): number {
+  let k = i, ri = 0;
+  while (ri < 2 && k >= VP_RINGS[ri].n) { k -= VP_RINGS[ri].n; ri++; }
+  const R = VP_RINGS[ri], grow = Math.min(1, Math.max(0, (t - 0.3) / (VP_WARM - 0.3)));
+  const a = R.a0 + (k / R.n) * Math.PI * 2 + R.w * Math.max(0, t - 0.3), rr = br + R.r * (0.3 + 0.7 * grow);
+  out.x = cx + Math.cos(a) * rr; out.z = cz + Math.sin(a) * rr; out.y = 1.5 + 0.35 * Math.sin(t * 3 + i * 1.7);
+  return grow;
+}
