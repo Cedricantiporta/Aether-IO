@@ -68,7 +68,8 @@ const RAIN_DMG = 0.5, QUAKE_DMG = 1.0, CRUSH_DMG = 1.25;
 // Every boss AI calls `proxTick` once per frame (bosses.updateBoss), asks `closeDue` from its CHASE picker and calls `closeUsed` after.
 // ============================================================================
 const PROX_PAD = 5.5, PROX_FILL = 6, PROX_DRAIN = 3, PROX_MAX_RATE = 2.5, PROX_INT_P = 0.7;
-const prox = { p: new Float32Array(MAX_ENEMIES), t: new Float32Array(MAX_ENEMIES) };
+const PROX_MIN_GAP = 5;   // s between two forced close skills (a boss never chains them: the cycle's other skills come in between)
+const prox = { p: new Float32Array(MAX_ENEMIES), t: new Float32Array(MAX_ENEMIES), lt: new Float32Array(MAX_ENEMIES), pend: new Uint8Array(MAX_ENEMIES), chain: new Uint8Array(MAX_ENEMIES) };
 /** QA counters: close skills started while someone was near / while nobody was (must stay 0), interrupts, last pressure. */
 export const proxStats = { near: 0, far: 0, interrupts: 0, byName: {} as Record<string, number> };
 /** True when the hero, the co-op partner or a summon of the hero is within `e.radius + PROX_PAD` of the boss. */
@@ -81,30 +82,34 @@ export function bossNear(e: Enemy): boolean {
 /** Per-frame: fills the boss's pressure while a target is near, drains it otherwise; ticks the close-skill timer (faster under pressure). */
 export function proxTick(e: Enemy, dt: number): void {
   const i = e.id;
-  if (e.state === 'SPAWN') { prox.p[i] = 0; prox.t[i] = 2; return; }
+  if (e.state === 'SPAWN') { prox.p[i] = 0; prox.t[i] = 2; prox.lt[i] = -99; return; }
   const p = prox.p[i] + (bossNear(e) ? dt / PROX_FILL : -dt / PROX_DRAIN);
   prox.p[i] = p < 0 ? 0 : p > 1 ? 1 : p;
   if (prox.t[i] > 0) prox.t[i] -= dt * proxRate(e);
 }
+/** QA: the proximity meter of boss `e` (pressure, close-skill timer, last close skill time, breather gap, special). */
+export function proxDebug(e: Enemy): Record<string, number> { return { p: +prox.p[e.id].toFixed(2), t: +prox.t[e.id].toFixed(2), since: +(world.time - prox.lt[e.id]).toFixed(1), gap: S.id === e.id ? +S.gapT.toFixed(1) : -1, sp: e.spKind, ac: +e.attackCd.toFixed(2) }; }
 /** Pressure 0..1. */
 export function proxPressure(e: Enemy): number { return prox.p[e.id]; }
 /** How much faster close-skill cooldowns run right now (1 .. 2.5). */
 export function proxRate(e: Enemy): number { return 1 + (PROX_MAX_RATE - 1) * prox.p[e.id]; }
 /** True while the shared layer is not in its breather after a big attack (so a pressure interrupt may not stack on it). */
-function gapFree(e: Enemy): boolean { return S.id !== e.id || S.gapT <= 0; }
+function gapFree(e: Enemy): boolean { return S.id !== e.id || S.gapT <= 1.2; }   // (the last 1.2 s of a breather may be cut short, never a fresh one)
 /**
  * Call from the CHASE picker: a close skill is due now (someone is near, its timer is up, and either the boss's own cooldown ended or the
  * pressure is high enough to interrupt the breather). Never mid-wind-up / invulnerable phase / special (the picker only runs in CHASE).
  */
 export function closeDue(e: Enemy): boolean {
-  if (!bossNear(e) || prox.t[e.id] > 0) return false;
+  if (!bossNear(e) || prox.t[e.id] > 0 || prox.chain[e.id] === 1 || world.time - prox.lt[e.id] < PROX_MIN_GAP) return false;
   if (e.attackCd <= 0) return true;
   return prox.p[e.id] >= PROX_INT_P && e.spKind === 0 && !(bp.on && bp.id === e.id) && gapFree(e);
 }
-/** Call when a close skill starts: restarts its timer (base `cd` s; pressure shortens it up to 2.5x) and records QA stats. */
+/** Call whenever the boss starts ANY skill (after `closeUsed` for a close one): a forced close skill never follows another close skill directly. */
+export function proxBegin(e: Enemy): void { prox.chain[e.id] = prox.pend[e.id]; prox.pend[e.id] = 0; }
+/** Call when a close skill is picked: restarts its timer (base `cd` s; pressure shortens it up to 2.5x) and records QA stats. */
 export function closeUsed(e: Enemy, cd: number, name = ''): void {
   const int = e.attackCd > 0;
-  prox.t[e.id] = cd;
+  prox.t[e.id] = cd; prox.lt[e.id] = world.time; prox.pend[e.id] = 1;
   if (bossNear(e)) proxStats.near++; else proxStats.far++;
   if (int) proxStats.interrupts++;
   if (name) proxStats.byName[name] = (proxStats.byName[name] ?? 0) + 1;
@@ -117,7 +122,7 @@ const tv = new Vector3();
 const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, gapT: 0, healT: 0, healHp0: 0 };
 
 export function resetBossMech(): void {
-  prox.p.fill(0); prox.t.fill(0); S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
+  prox.p.fill(0); prox.t.fill(0); prox.lt.fill(-99); prox.pend.fill(0); prox.chain.fill(0); S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
   for (const s of strikes) s.on = false;
   RQ.n = 3; RQ.m = null;
 }
@@ -308,8 +313,8 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   // balance pass: ONE major attack at a time. The shared layer (crush / rain / quake) only starts while the boss itself is idle
   // (not winding up, not casting a special) and keeps a breather gap after it, during which the boss's own attacks also wait.
   const idle = e.state !== 'WINDUP' && e.state !== 'ATTACK' && e.spKind === 0 && S.gapT <= 0;
-  const pr = proxRate(e);   // (proximity pressure: the close skills, crush and quake, come up to 2.5x as often)
-  S.crushCd -= dt * pr; S.rainCd -= dt; S.quakeCd -= dt * pr;
+  const pr = proxRate(e);   // (proximity pressure: the quake ring, a close skill, comes up to 2.5x as often; crush keeps its pace so it cannot starve the boss's own picker)
+  S.crushCd -= dt; S.rainCd -= dt; S.quakeCd -= dt * pr;
   if (!idle) return false;
 
   // crush: heavy melee on the nearest unit (a summon if one is closer than the hero)

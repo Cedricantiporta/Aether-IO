@@ -27,7 +27,7 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
-import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed } from './bossMech';
+import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
 
@@ -157,11 +157,12 @@ function rockTel(z: Zone | null): void { if (z) { z.kb = KB.ROCK.kb; z.down = KB
 function beginGolemPattern(e: Enemy, ux: number, uz: number): void {
   // (proximity) the rock ring is Gorath's close skill: only with someone near (more often under pressure), never otherwise
   const near = bossNear(e);
-  if (closeDue(e)) { e.pattern = RING; closeUsed(e, 6.5, 'Rock Ring'); }
+  if (closeDue(e)) { e.pattern = RING; closeUsed(e, 22, 'Rock Ring'); }
   else {
     e.pattern = (e.pattern + 1) % 3;
-    if (e.pattern === RING) { if (near && Math.random() < 0.5) closeUsed(e, 6.5, 'Rock Ring'); else e.pattern = (e.pattern + 1) % 3; }
+    if (e.pattern === RING) { if (near) closeUsed(e, 22, 'Rock Ring'); else e.pattern = (e.pattern + 1) % 3; }
   }
+  proxBegin(e);
   e.patternT = 0;
   if (e.pattern === SLAM) {
     // one circle right under the player, the rest ring around them

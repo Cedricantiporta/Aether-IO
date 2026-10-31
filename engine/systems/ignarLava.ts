@@ -14,7 +14,7 @@ import { BT } from './bossFx';
 import { bp } from './bossPhaseState';
 import { mulberry32 } from '../mapgen';
 
-const LAVA_FIRST = 9, LAVA_EVERY = 13, LAVA_WARN = 2.4, LAVA_CAP = 0.65, PATCHES = 2, MAXQ = 12;
+const LAVA_FIRST = 9, LAVA_EVERY = 13, LAVA_WARN = 2.4, LAVA_CAP = 0.65, PATCHES = 3, MAXQ = 16;
 const plan: LDisc[] = [];
 const q = Array.from({ length: MAXQ }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0 }));
 export const ignarLava = { id: -1, t: 0, batches: 0, start: 0, cov: 0, log: [] as number[] };
@@ -46,7 +46,7 @@ export function tickIgnarLava(e: Enemy, dt: number): void {
   let pend = 0; for (let i = 0; i < MAXQ; i++) if (q[i].on) pend++;
   if (pend > 0) return;
   ignarLava.cov = lavaCoverage();
-  if (ignarLava.cov >= LAVA_CAP) return;
+  if (ignarLava.cov >= LAVA_CAP - 0.015) return;   // (a batch adds ~2-3%: this keeps the total at or under the cap)
   let n = 0;
   for (let k = 0; k < PATCHES; k++) {
     if (planLavaPatch(plan, rnd) === 0) continue;

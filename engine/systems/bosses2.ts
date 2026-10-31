@@ -27,7 +27,7 @@ import {
   BT, WAVE_THORN, WAVE_VOID, WAVE_FIRE, WAVE_FROST, WAVE_TIDE, PROP_GLOB, arena, breath, dive, inCone,
   spawnWave, spawnProp, spawnPortal, spawnEcho, clampToVoid, stat, endBossFx, firePatch, fireRoom, firePatchRaw, frostHit, burnHit,
 } from './bossFx';
-import { wardedBossId, bossNear, closeDue, closeUsed } from './bossMech';
+import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { tickIgnarLava, resetIgnarLava } from './ignarLava';
 import { bp } from './bossPhaseState';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
@@ -195,6 +195,7 @@ const ipwr = (e: Enemy): number => pwr(e) * (S.enraged ? 1.3 : 1);
 function beginAtk(e: Enemy, list: Atk[], id: number, ux: number, uz: number, dist: number): void {
   const a = list[id];
   e.pattern = id; e.patternT = 0;
+  proxBegin(e);
   enter(e, 'WINDUP');
   const b = world.boss;
   b.ability = a.name; b.abilityT = 2.6;
@@ -417,13 +418,13 @@ function treant(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   const cDue = closeDue(e);   // (proximity) Crushing Roots + Thorn Ring are his close skills: only with someone near, more often the longer they stay
   if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (cDue) { id = (S.cycle++ & 1) === 0 ? T_SLAM : T_THORN; closeUsed(e, 6, LISTS.BOSS_TREANT![id].name); }
+  if (cDue) { id = (S.cycle++ & 1) === 0 ? T_SLAM : T_THORN; closeUsed(e, 22, LISTS.BOSS_TREANT![id].name); }
   else if (S.wantBark && !S.bark) { S.wantBark = false; id = T_BARK; }
   else {
     id = TREANT_ORDER[S.cycle++ % TREANT_ORDER.length];
     if (id === T_BROOD && (S.bark || countAdds('BOSS_SAPLING') >= 5)) id = T_SEEDS;
     if (id === T_VINES && dist > 28) id = T_ROOTS;
-    if (id === T_SLAM || id === T_THORN) { if (bossNear(e)) closeUsed(e, 6, LISTS.BOSS_TREANT![id].name); else id = id === T_SLAM ? T_SWEEP : T_SEEDS; }
+    if (id === T_SLAM || id === T_THORN) { if (bossNear(e)) closeUsed(e, 22, LISTS.BOSS_TREANT![id].name); else id = id === T_SLAM ? T_SWEEP : T_SEEDS; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -569,10 +570,10 @@ function hydra(e: Enemy, dt: number, dist: number, ux: number, uz: number): void
   const cDue = closeDue(e);   // (proximity) Tidal Surge (the ring round the body) is the close skill
   if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (cDue) { id = H_SURGE; closeUsed(e, 7, list[id].name); }
+  if (cDue) { id = H_SURGE; closeUsed(e, 22, list[id].name); }
   else {
     id = HYDRA_ORDER[S.cycle++ % HYDRA_ORDER.length];
-    if (id === H_SURGE) { if (bossNear(e)) closeUsed(e, 7, list[id].name); else id = H_SPIT; }
+    if (id === H_SURGE) { if (bossNear(e)) closeUsed(e, 22, list[id].name); else id = H_SPIT; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -728,11 +729,11 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
   const cDue = closeDue(e);   // (proximity) the Glacial Ring (frost nova round him) is his close skill
   if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (cDue) { id = G_NOVA; closeUsed(e, 6, list[id].name); }
+  if (cDue) { id = G_NOVA; closeUsed(e, 22, list[id].name); }
   else if (S.wantBlizz && S.blizzT <= 0) { S.wantBlizz = false; id = G_BLIZZ; }
   else {
     id = WYRM_ORDER[S.cycle++ % WYRM_ORDER.length]; if (id === G_BLIZZ && S.blizzT > 0) id = G_BREATH; if (id === G_BROOD && countAdds('BOSS_WYRMLING') >= 7) id = G_HAIL;
-    if (id === G_NOVA) { if (bossNear(e)) closeUsed(e, 6, list[id].name); else id = G_HAIL; }
+    if (id === G_NOVA) { if (bossNear(e)) closeUsed(e, 22, list[id].name); else id = G_HAIL; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -963,12 +964,12 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   const cDue = closeDue(e);
   if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (cDue) { id = (S.cycle & 3) === 3 ? I_BURST : (S.cycle & 3) === 2 && !S.enraged ? I_GUARD : I_CLEAVE; S.cycle++; closeUsed(e, S.enraged ? 4.2 : 5.5, list[id].name); }
+  if (cDue) { id = (S.cycle & 3) === 3 ? I_BURST : (S.cycle & 3) === 2 && !S.enraged ? I_GUARD : I_CLEAVE; S.cycle++; closeUsed(e, S.enraged ? 14 : 20, list[id].name); }
   else {
     id = WARLORD_ORDER[S.cycle++ % WARLORD_ORDER.length];
     if (id === I_DASH && dist < 9) id = I_PILLARS;                                 // too close to rush: pillars instead
     if (id === I_KNIGHTS && countAdds('BOSS_DKNIGHT') >= KNIGHT_CAP) id = I_CRESCENT;   // knights capped
-    if (id === I_BURST || id === I_GUARD) { if (bossNear(e)) closeUsed(e, S.enraged ? 4.2 : 5.5, list[id].name); else id = id === I_BURST ? I_CRESCENT : I_WHEEL; }
+    if (id === I_BURST || id === I_GUARD) { if (bossNear(e)) closeUsed(e, S.enraged ? 14 : 20, list[id].name); else id = id === I_BURST ? I_CRESCENT : I_WHEEL; }
   }
   beginAtk(e, list, id, ux, uz, dist);
 }
@@ -1067,7 +1068,7 @@ function warmach(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
   const cDue = closeDue(e);   // (proximity) Seismic Stomp is the close skill: only with someone near, more often the longer they stay
   if (e.attackCd > 0 && !cDue) return;
   let id: number;
-  if (cDue) { id = M_STOMP; closeUsed(e, 6, list[id].name); }   // too close: stomp you away
+  if (cDue) { id = M_STOMP; closeUsed(e, 22, list[id].name); }   // too close: stomp you away
   else { id = WARMACH_ORDER[S.cycle++ % WARMACH_ORDER.length]; }
   beginAtk(e, list, id, ux, uz, dist);
 }

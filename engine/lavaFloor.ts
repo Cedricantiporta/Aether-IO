@@ -101,7 +101,7 @@ export function lavaCoverage(): number { lava.coverage = lava.on ? measure() : 0
 export function planLavaPatch(out: LDisc[], rnd: () => number): number {
   out.length = 0;
   if (!lava.on || lava.heavy) return 0;
-  const R = shape.baseR, rr = 3.4 + rnd() * 0.8;
+  const R = shape.baseR, rr = 4.6 + rnd() * 1.0;
   for (let t = 0; t < 60; t++) {
     const a = rnd() * 6.283, c = Math.cos(a), sn = Math.sin(a), d = (t < 30 ? 0.62 + rnd() * 0.33 : 0.2 + rnd() * 0.7) * shapeLimit(c, sn);
     const x = c * d, z = sn * d;
