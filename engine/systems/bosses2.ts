@@ -747,7 +747,7 @@ function wyrm(e: Enemy, dt: number, dist: number, ux: number, uz: number): void 
 // are FIREPATCH zones capped by bossFx.firePatch() so the arena never fills up.
 const I_WHEEL = 0, I_PILLARS = 1, I_KNIGHTS = 2, I_CLEAVE = 3, I_CRESCENT = 4, I_BURST = 5, I_GUARD = 6, I_DASH = 7;
 const WARLORD_ORDER = [I_CRESCENT, I_DASH, I_PILLARS, I_WHEEL, I_BURST, I_CRESCENT, I_KNIGHTS, I_DASH, I_PILLARS, I_GUARD, I_WHEEL];
-const DASH_SP = 40, CRESC_SP = 27, KNIGHT_CAP = 3;
+const DASH_SP = 26, CRESC_SP = 27, KNIGHT_CAP = 3;
 
 /** A fiery knight crescent from Ignar towards angle `a` (x, z = sin, cos). Burns on hit. */
 function crescent(e: Enemy, a: number, speed: number, life: number, radius: number, dmg: number): void {

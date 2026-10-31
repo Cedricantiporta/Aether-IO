@@ -415,7 +415,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
       return;
     }
     if (k === 2) {   // Shield Bash: charge along the telegraphed line, one hit + knockback
-      e.vel.set(S.dirX * 26, 0, S.dirZ * 26); requestYaw(Math.atan2(S.dirX, S.dirZ));
+      e.vel.set(S.dirX * 18, 0, S.dirZ * 18); requestYaw(Math.atan2(S.dirX, S.dirZ));
       if (!S.flag && playerIn(e.pos.x, e.pos.z, 2.6)) {
         S.flag = true;
         damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });   // shield bash connects: knockdown
@@ -439,7 +439,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
       return;
     }
   } else if (k === 1) {   // Rook roll
-    e.vel.set(S.dirX * 18, 0, S.dirZ * 18); requestYaw(Math.atan2(S.dirX, S.dirZ));
+    e.vel.set(S.dirX * 13, 0, S.dirZ * 13); requestYaw(Math.atan2(S.dirX, S.dirZ));
     return;
   }
   e.vel.set(0, 0, 0);

@@ -188,7 +188,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
         events.emit('trick', { pos: e.pos.clone(), kind: 'SMOKE', radius: 4 });
       }
       if (e.spStep === 2 && t >= 1.4) e.spStep = 3;
-      if (e.spStep === 3) e.vel.set(d.dirx * 30, 0, d.dirz * 30); // the dash-slash
+      if (e.spStep === 3) e.vel.set(d.dirx * 20, 0, d.dirz * 20); // the dash-slash (owner 2026-10-31: boss dashes were too fast, ~-35%)
       if (e.spStep === 3 && t >= 1.75) {
         e.spStep = 4;
         const z = spawnTelegraphCircle(p.pos.x, p.pos.z, 3, 0.7, power(e), 0x9ca3af);
@@ -229,7 +229,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       else {
         if (e.spStep === 0) { e.spStep = 1; const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z, l = Math.hypot(dx, dz) || 1; d.dirx = dx / l; d.dirz = dz / l; events.emit('trick', { pos: e.pos.clone(), kind: 'SHELL_SPIN', radius: 4 }); }
         e.state = 'ATTACK';
-        e.vel.set(d.dirx * 15, 0, d.dirz * 15);
+        e.vel.set(d.dirx * 11, 0, d.dirz * 11);
         e.facing += dt * 14;
       }
       if (t >= 3.8) { e.shellT = 0; e.state = 'CHASE'; e.stateT = 0; e.spKind = 0; }

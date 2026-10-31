@@ -119,10 +119,10 @@ export function closeUsed(e: Enemy, cd: number, name = ''): void {
 const MAX_STRIKES = 72, RAIN_LIVE_CAP = 60;   // rain waves never put more than 60 telegraphs up at once
 const strikes = Array.from({ length: MAX_STRIKES }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0, dmg: 0, minDmg: 0, cc: 'STUN' as PlayerDebuff, ccDur: 0, kd: 0, th: null as Mech | null, pi: 0 }));
 const tv = new Vector3();
-const S = { id: -1, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, gapT: 0, healT: 0, healHp0: 0 };
+const S = { id: -1, barrierUsed: false, barrierCd: 12, rainCd: 6, quakeCd: 5, healCd: 14, crushCd: 2, gapT: 0, healT: 0, healHp0: 0 };
 
 export function resetBossMech(): void {
-  prox.p.fill(0); prox.t.fill(0); prox.lt.fill(-99); prox.pend.fill(0); prox.chain.fill(0); S.id = -1; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
+  prox.p.fill(0); prox.t.fill(0); prox.lt.fill(-99); prox.pend.fill(0); prox.chain.fill(0); S.id = -1; S.barrierUsed = false; S.barrierCd = 12; S.rainCd = 6; S.quakeCd = 5; S.healCd = 14; S.crushCd = 2; S.gapT = 0; S.healT = 0; hooks.phaseReset();
   for (const s of strikes) s.on = false;
   RQ.n = 3; RQ.m = null;
 }
@@ -279,12 +279,11 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   S.gapT -= dt;
 
   // barrier: a periodic absorb shield (never in the Herald's final fight)
-  if (!world.boss.final) {
-    S.barrierCd -= dt;
-    if (S.barrierCd <= 0 && e.shield <= 0) {
-      const ph = Math.min(2, e.phase | 0);
-      S.barrierCd = BARRIER_CD[ph];
-      e.shield = e.maxHp * BARRIER_HP[ph];
+  // (owner 2026-10-31) the damageable barrier comes ONCE per fight, when the boss drops to 50% hp
+  if (!world.boss.final && !S.barrierUsed) {
+    if (e.hp <= e.maxHp * 0.5 && e.shield <= 0) {
+      S.barrierUsed = true;
+      e.shield = e.maxHp * 0.1;
       events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 2.5, color: 0x93c5fd });
       events.emit('floatText', { pos: e.pos, text: 'BARRIER', color: 0x93c5fd, scale: 1.1, dy: 5 });
     }
