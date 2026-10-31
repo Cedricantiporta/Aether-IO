@@ -367,7 +367,7 @@ export function spawnEnemy(
   // (owner 2026-10-26) the Endless Tower family opens after a first clear, so it is much harder: x1.6 HP / x1.4 damage, plus +15% / +10% per cleared Ascension
   const tAsc = towerMode() ? (() => { const pg = useGameStore.getState().progress; return pg.endings > 0 ? Math.max(0, pg.ascensionMax - 1) : 0; })() : 0;
   const towerHp = towerMode() ? 1.6 + 0.15 * tAsc : 1, towerDmg = towerMode() ? 1.4 + 0.1 * tAsc : 1;
-  const hpMul = towerHp * waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
+  const hpMul = towerHp * waveHpMult(wave) * mods.hp * (elite ? ELITE_HP : 1) * (boss ? 0.25 * 3.6 * BOSS_HP_X * mods.bossHp * WIND.bossHp : 1.4) * lvHp; // normal & elites +40%; bosses x0.25 (halved twice) then x3.6 (owner 2026-10-26: x1.8 -> x3.6 = twice the HP) (x Ascension boss hp)
   const dmgMul = towerDmg * waveDmgMult(wave) * mods.dmg * (elite ? 1.5 * 1.25 : boss ? BOSS_DMG : kind.startsWith('BOSS_') ? 1 : NORMAL_DMG) * lvDmg * ENEMY_DMG_MUL * (trial.on && boss ? TRIAL_DMG : 1);   // (Boss Trial: bosses hit 25% harder)
   // later biomes breed tougher monsters on top of the depth curve (owner): +12% HP and +10% damage per biome (2026-10-25: HP was +15%)
   const bi = Math.max(0, Math.min(7, (trial.on ? TRIAL_SCALE_BIOME : world.room.biome) | 0));
@@ -439,11 +439,13 @@ export function spawnEnemy(
   return e;
 }
 
+/** (owner 2026-10-31 "bosses way way more HP, x5 and up") every boss has 5x the HP it had; dark heroes (sized against their guardian) and the Slime King follow. */
+export const BOSS_HP_X = 5;
 /** (owner 2026-10-26) The HP `bossKind` would have in the room the freshly spawned ordinary enemy `e` stands in (same depth / level / tower / biome scaling):
  *  the dark heroes are sized against their biome's guardian with this. Call it right after spawnEnemy, before touching e.maxHp. */
 export function bossHpLike(e: Enemy, bossKind: EnemyKind): number {
   const mods = runMods(useGameStore.getState().difficulty);
-  return Math.round(e.maxHp * (ENEMY_DEFS[bossKind].hp * 0.25 * 3.6 * mods.bossHp * WIND.bossHp) / (ENEMY_DEFS[e.kind].hp * 1.4));
+  return Math.round(e.maxHp * (ENEMY_DEFS[bossKind].hp * 0.25 * 3.6 * BOSS_HP_X * mods.bossHp * WIND.bossHp) / (ENEMY_DEFS[e.kind].hp * 1.4));
 }
 /** Armour a boss of `bossKind` has at this wave (a dark hero's defence = the guardian's, not an elite's). */
 export function bossArmorLike(bossKind: EnemyKind, wave: number): number { return Math.round(armorFor(bossKind, wave, false) * BOSS_ARMOR_MUL); }

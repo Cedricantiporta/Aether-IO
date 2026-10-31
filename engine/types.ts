@@ -507,6 +507,8 @@ export interface BossHud {
   final: boolean; stage: number; shieldCd: number;
   /** absorb shield on the bar's boss (not the invincible ward), and its size when raised: the boss bar's shield row */
   shield: number; shieldMax: number;
+  /** how many stacked HP bars the boss bar shows (owner 2026-10-31: bosses have x5 HP, drawn as 5 differently coloured bars); 1 = a plain bar */
+  layers: number;
 }
 
 export interface RunStats {

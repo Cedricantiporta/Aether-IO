@@ -45,7 +45,7 @@ import { setupBiomeHazards, setupBossPlants } from './biomeHazards';
 import { setupRoomTraps, setupBossBallistas } from './roomTraps';
 import { setupLavaFloor } from '../lavaFloor';
 import { setupIceFloor } from '../iceFloor';
-import { spawnEnemy, spawnMiniBoss, isSpawnable, poofKind, resetCoopTargets } from './enemies';
+import { spawnEnemy, spawnMiniBoss, BOSS_HP_X, isSpawnable, poofKind, resetCoopTargets } from './enemies';
 import { halls } from '../roomHalls';
 import { maybeRiruru, resetRiruru } from './riruru';
 import { rollMerchantStock, clearMerchantStock } from './merchant';
@@ -778,9 +778,9 @@ function materialise(kind: EnemyKind, x: number, z: number, elite: boolean, tag:
     if (e && prebossKing) {   // the Slime King: half a Golem's hp at this depth, huge and slow, bursts into slimes when it pops
       // half of the Golem as it spawns in its own boss room (depth 15 = wave 10*(biome+1), boss hp rule of spawnEnemy)
       const m = runMods(useGameStore.getState().difficulty);
-      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5 * 1.5); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% twice (owner)
+      e.maxHp = Math.round(ENEMY_DEFS.BOSS_TREANT.hp * waveHpMult(10 * (biome + 1)) * m.hp * 0.25 * m.bossHp * 0.5 * 1.5 * 1.5 * BOSS_HP_X); e.hp = e.maxHp;   // half of the (halved) Elderroot, then +50% twice (owner)
       e.scale *= 1.6; e.radius *= 1.5; e.contactDamage *= 1.5; e.speed *= 0.85; e.elite = false;
-      world.boss.hp = e.hp; world.boss.maxHp = e.maxHp;
+      world.boss.hp = e.hp; world.boss.maxHp = e.maxHp; world.boss.layers = BOSS_HP_X;
       { const f = 100 / (100 + e.armor); e.armor = Math.round(100 / (1 - 1.5 * (1 - f)) - 100); }   // +50% damage reduction (owner)
       setSlimeKing(e.id); initSpecial(e);   // (owner: Belly Flop / Acid Flood / Acid Rain)
     }
@@ -805,7 +805,7 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   if (finalFight) { e.maxHp = Math.round(e.maxHp * 2.25); e.hp = e.maxHp; e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bosses2.ts FINAL_SPLIT; one bar, 2.25x)
   d.bossId = e.id;
   const hud = world.boss;
-  hud.active = true; hud.name = names.name; hud.title = names.title;
+  hud.active = true; hud.name = names.name; hud.title = names.title; hud.layers = BOSS_HP_X;   // (x5 HP drawn as 5 coloured bars)
   hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
   hud.final = finalFight && kind === 'BOSS_VOID'; hud.stage = 1; hud.shieldCd = 14;   // the Void Herald's finale: two forms in ONE fight (bosses2.ts)
   events.emit('bossSpawn', { name: names.name, title: names.title });
@@ -1128,7 +1128,7 @@ function handOffBoss(): boolean {
     const d = dd(), hud = world.boss;
     d.bossId = e.id;
     const nm = e.mini ? { name: miniName, title: miniTitle } : bossNameIn(e.kind as BossKind, biome);
-    hud.active = true; hud.name = nm.name; hud.title = nm.title; hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
+    hud.active = true; hud.name = nm.name; hud.title = nm.title; hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0; hud.layers = e.boss && !e.mini ? BOSS_HP_X : 1;
     return true;
   }
   return false;

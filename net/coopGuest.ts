@@ -270,7 +270,7 @@ function onBoss(d: unknown[]): void {
   const n = (i: number): number => (isNum(d[i]) ? (d[i] as number) : 0), s = (i: number): string => (typeof d[i] === 'string' ? (d[i] as string).slice(0, 60) : '');
   b.active = n(2) === 1; b.hp = n(3); b.maxHp = Math.max(1, n(4)); b.phase = n(5); b.stagger = n(6) / 100; b.staggered = n(7) === 1; b.ability = s(8); b.abilityT = n(9) / 10;
   b.name = s(10); b.title = s(11); b.interrupt = n(12) / 100; b.interruptOn = n(13) === 1; b.interruptLabel = s(14); b.shield = n(15); b.shieldMax = n(16); b.final = n(17) === 1; b.stage = n(18) || 1;
-  world.director.bossId = n(19);
+  world.director.bossId = n(19); b.layers = Math.max(1, Math.min(12, n(20) | 0)) || 1;
 }
 
 const hitPos = new Vector3(), hitOpts2: { pct?: number; pos?: Vector3; kind?: (typeof DMG_KINDS)[number]; slow?: number; dot?: boolean; src?: Enemy; kb?: number; down?: number; tr?: number; env?: boolean; noDotMul?: boolean; proj?: boolean; srcId?: number; crit?: boolean } = {};

@@ -175,7 +175,7 @@ export const world = {
       dark: 0, rare: new Int8Array(MAX_CRATES), flasks: Array.from({ length: 6 }, () => ({ on: false, x: 0, z: 0 })) },
     // click-to-walk: follow waypoints wp[0..n) (current = i, (x, z) = the waypoint being walked to), then do `act`
     go: { on: false, x: 0, z: 0, r: 1.5, t: 0, tmax: 10, tab: '' as string, act: 'shop' as 'shop' | 'castle' | 'church' | 'tavern' | 'cave' | 'leave' | 'npc' | 'tower' | 'down' | 'up' | 'none', npc: -1, wp: new Float32Array(64), n: 0, i: 0 } },   // spawnFx: arrival light pillar 1 -> 0
-  boss: { active: false, interrupt: 0, interruptOn: false, interruptLabel: '', stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0, shield: 0, shieldMax: 0 } as BossHud,
+  boss: { active: false, interrupt: 0, interruptOn: false, interruptLabel: '', stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0, shield: 0, shieldMax: 0, layers: 1 } as BossHud,
   /** Dark hero squad: a small hp bar over each hero's head (darkHero.ts fills hp, CameraRig the screen anchor, ui/hud/SquadBars draws them). */
   darkBars: [0, 1, 2, 3, 4, 5].map(() => ({ active: false, id: -1, name: '', hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
   /** The Void Herald's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
@@ -279,7 +279,7 @@ export function clearWorld(): void {
   world.itemPickupsVersion++;
   Object.assign(world.player, makePlayerRuntime(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
   world.village.sit.on = false; world.village.ride.on = false; world.village.ride.horse = -1; world.village.ride.dashT = 0; world.village.ride.dashCd = 0; world.village.ride.moveT = 0;
-  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1;
+  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1; world.boss.layers = 1;
   for (const w of world.walls) w.active = false;
   world.camera.trauma = 0;
   Object.assign(world.run, { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 });

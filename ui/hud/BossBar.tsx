@@ -2,6 +2,10 @@ import React, { useRef } from 'react';
 import { world } from '../../engine/world';
 import { useRaf } from '../hooks/useRaf';
 
+/** Layer colours of a boss's stacked HP bars, from the LAST bar (index 0, shown when the boss is nearly dead) up to the first one (owner 2026-10-31: bosses have x5 HP, drawn as 5 bars in different colours). */
+const LAYER_COL = ['#e0453b', '#f08a2c', '#f2cf3a', '#5cc85e', '#46a8ff', '#a27bff', '#ff7bd0'];
+const layerCol = (i: number): string => LAYER_COL[i % LAYER_COL.length];
+
 /** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail.
  *  `illusion` = index of a Void Herald illusion: the same bar (name, X/X, pips) over the decoy, to confuse the player. */
 export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
@@ -11,13 +15,13 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   const shRow = useRef<HTMLDivElement>(null), shFill = useRef<HTMLDivElement>(null);
   const name = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLDivElement>(null);
-  const val = useRef<HTMLSpanElement>(null);
+  const val = useRef<HTMLSpanElement>(null), lay = useRef<HTMLSpanElement>(null), track = useRef<HTMLDivElement>(null);
   const pips = useRef<(HTMLElement | null)[]>([]);
   const stag = useRef<HTMLDivElement>(null);
   const stagLbl = useRef<HTMLDivElement>(null);
   const abil = useRef<HTMLDivElement>(null);
   const intRow = useRef<HTMLDivElement>(null), intFill = useRef<HTMLDivElement>(null), intLbl = useRef<HTMLSpanElement>(null);
-  const st = useRef({ active: false, hp: '', trail: 1, trailS: '', name: '', title: '', val: -1, phase: -1, stag: '', staggered: false, abil: '', abilOn: false, int: '', intOn: false, intLbl: '' });
+  const st = useRef({ active: false, hp: '', trail: 1, trailS: '', name: '', title: '', val: -1, layer: -1, phase: -1, stag: '', staggered: false, abil: '', abilOn: false, int: '', intOn: false, intLbl: '' });
 
   const view = useRef({ ...world.boss });   // reused copy of the boss hud for an illusion's bar (no per-frame alloc)
   useRaf((dt) => {
@@ -51,13 +55,26 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
       if (shRow.current) shRow.current.style.visibility = fsh > 0 ? 'visible' : 'hidden';
       if (shFill.current && fsh > 0) shFill.current.style.width = `${fsh * 100}%`;
     }
-    const f = Math.max(0, Math.min(1, b.hp / Math.max(1, b.maxHp)));
+    // stacked bars (bosses): `layers` bars of equal size; the front one drains, the one behind it shows its own colour
+    const L = I ? 1 : Math.max(1, b.layers | 0), seg = Math.max(1, b.maxHp) / L;
+    const layer = L > 1 ? Math.max(1, Math.min(L, Math.ceil(b.hp / seg - 1e-6))) : 1;
+    const f = L > 1 ? Math.max(0, Math.min(1, (b.hp - (layer - 1) * seg) / seg)) : Math.max(0, Math.min(1, b.hp / Math.max(1, b.maxHp)));
+    const tot = Math.max(0, Math.min(1, b.hp / Math.max(1, b.maxHp)));
+    if (layer !== s.layer) {
+      s.layer = layer;
+      if (L > 1) {
+        if (hp.current) hp.current.style.background = layerCol(layer - 1);
+        if (track.current) { if (layer > 1) track.current.style.setProperty('background', layerCol(layer - 2), 'important'); else track.current.style.removeProperty('background'); }   // (index.css forces the track background with !important)
+        if (lay.current) { lay.current.textContent = `x${layer}`; lay.current.style.display = 'inline'; lay.current.style.color = layerCol(layer - 1); }
+      } else if (lay.current) lay.current.style.display = 'none';
+    }
     const fs = f.toFixed(4);
     if (hp.current && fs !== s.hp) { s.hp = fs; hp.current.style.width = `${f * 100}%`; }
-    // damage trail: waits, then drains toward real hp
-    if (s.trail > f) s.trail = Math.max(f, s.trail - dt * 0.18); else s.trail = f;
-    const ts = s.trail.toFixed(4);
-    if (trail.current && ts !== s.trailS) { s.trailS = ts; trail.current.style.width = `${s.trail * 100}%`; }
+    // damage trail: waits, then drains toward real hp (total fraction; mapped into the front bar)
+    if (s.trail > tot) s.trail = Math.max(tot, s.trail - dt * 0.18); else s.trail = tot;
+    const tl = L > 1 ? Math.max(0, Math.min(1, (s.trail * L - (layer - 1)))) : s.trail;
+    const ts = tl.toFixed(4);
+    if (trail.current && ts !== s.trailS) { s.trailS = ts; trail.current.style.width = `${tl * 100}%`; }
     if (name.current && b.name !== s.name) { s.name = b.name; name.current.textContent = b.name; }
     if (title.current && b.title !== s.title) { s.title = b.title; title.current.textContent = b.title; }
     const v = Math.ceil(b.hp);
@@ -98,10 +115,10 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
         <div ref={shRow} className="bb-shield" data-testid="boss-shield" style={{ visibility: 'hidden' }}>
           <div ref={shFill} className="bb-shield-fill" style={{ width: '0%' }} />
         </div>
-        <div className="bb-track">
+        <div ref={track} className="bb-track">
           <div ref={trail} className="bb-trail" style={{ width: '100%' }} />
           <div ref={hp} className="bb-fill" style={{ width: '100%' }} />
-          <div className="bb-val rpg-num"><span ref={val} /></div>
+          <div className="bb-val rpg-num"><span ref={lay} style={{ display: 'none', fontWeight: 800, marginRight: '.45rem' }} /><span ref={val} /></div>
         </div>
         {/* (owner: a slim bar, a bit bigger than a monster's, with a solid monster icon on the left) */}
         <svg className="bb-ic" viewBox="0 0 24 24" aria-hidden><path fill="currentColor" d="M12 2C6.9 2 3 5.7 3 10.4c0 2.7 1.3 5 3.4 6.5V20c0 1.1.9 2 2 2h1.1v-2.4h1.4V22h2.2v-2.4h1.4V22h1.1c1.1 0 2-.9 2-2v-3.1c2.1-1.5 3.4-3.8 3.4-6.5C21 5.7 17.1 2 12 2zm-3.6 11.2a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zm7.2 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2z" /></svg>
