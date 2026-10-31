@@ -99,7 +99,7 @@ export function sanitizeSnap(raw: unknown): HeroSnap | null {
 }
 
 const PLAN_STR = ['type', 'reward', 'obj', 'twist'] as const;
-const PLAN_BOOL = ['preboss', 'epilogue', 'dream', 'shortcut'] as const;
+const PLAN_BOOL = ['preboss', 'epilogue', 'dream', 'shortcut', 'final'] as const;
 /** The room plan crosses the wire as a plain object; keep only known fields of the right type. */
 export function sanitizePlan(raw: unknown): Record<string, unknown> | null {
   if (!raw || typeof raw !== 'object') return null;

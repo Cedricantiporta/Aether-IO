@@ -235,7 +235,7 @@ export const loopOf = (biome: number): number => Math.floor(biome / BIOMES.lengt
 
 export const TYPE_NAME: Record<RoomType, string> = {
   COMBAT: 'Skirmish', ELITE: 'Elite Hunt', MINIBOSS: 'Champion', FOUNTAIN: 'Fountain', MERCHANT: 'Merchant', TREASURE: 'Treasure', SHRINE: 'Shrine', CRYSTAL: 'Crystal Cavern', BOSS: 'Boss', CAMP: 'Camp',
-  DUEL: 'Champion Duel', GATEKEEPER: 'The Gatekeeper',
+  DUEL: 'Champion Duel', GATEKEEPER: 'The Gatekeeper', HALL: 'Hall of the Undying',
 };
 export const REWARD_NAME: Record<RewardKind, string> = {
   CARD: 'Upgrade', GOLD: 'Gold', SHARDS: 'Crystals', ITEM: 'Gear', HEAL: 'Vitality', GEMS: 'Gems', NONE: '',
@@ -247,12 +247,14 @@ export const shortcutPlan = (): RoomPlan => ({ type: 'BOSS', reward: 'NONE', sho
 /** Portal label: [title, subtitle, icon key, css colour]. Icons are mapped by ui/room (lucide). */
 export function portalLabel(plan: RoomPlan, biome: number): { title: string; sub: string; icon: string; color: string } {
   if (runInfo.mode === 'TOWER') return { title: 'Next floor', sub: '', icon: '', color: '#9fd0ff' };   // (owner 2026-10-26) the tower's way up is a plain portal: no reward icon / label
+  if (plan.final) return { title: 'The Void Throne', sub: 'The Void Herald', icon: 'boss', color: '#8a3dff' };   // the end of the Hall of the Undying
   if (plan.gate !== undefined) {   // the next room of a Gatekeeper trial
     const g = GATES[plan.gate];
     return { title: g.name, sub: `Trial room ${(plan.step ?? 0) + 1}/${g.steps.length}`, icon: plan.type === 'BOSS' ? 'boss' : 'shrine', color: g.color };
   }
   if (plan.shortcut) return { title: `Shortcut to ${bossNameIn(biomeOf(biome).boss, biome).name}`, sub: 'Skips to depth 15', icon: 'boss', color: SHORTCUT_COLOR };
   switch (plan.type) {
+    case 'HALL': return { title: 'The Hall of the Undying', sub: '', icon: 'boss', color: '#8a3dff' };
     case 'GATEKEEPER': return { title: 'The Gatekeeper', sub: `Gate Keys ${gateState.keys}/${GATE_KEYS_NEEDED}`, icon: 'shrine', color: '#c9a2ff' };
     case 'FOUNTAIN': return { title: 'Fountain', sub: '', icon: 'fountain', color: '#5fd6ff' };
     case 'MERCHANT': return { title: 'Merchant', sub: '', icon: 'merchant', color: '#f2c14e' };

@@ -45,6 +45,7 @@ import { ice, iceAt } from '../engine/iceFloor';
 import { labelMaterial } from './label';
 import type { QualityCfg } from './quality';
 import { SpecialRooms } from './SpecialRooms';
+import { DarkHall } from './DarkHall';
 import { CampGround, CampPieces, CampShards } from './CampPath';
 import { camp, campOn } from '../engine/campPaths';
 
@@ -928,12 +929,12 @@ function Portals() {
         }
         continue;
       }
-      const sc = p.big ? 2.1 : 1;
+      const sc = p.big ? 2.1 : p.plan.final ? 1.9 : 1;
       g.position.set(p.x, 0, p.z); g.scale.setScalar(sc);
-      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0) + (p.plan.shortcut ? 250 : 0);
+      const key = TYPE_I[p.plan.type] * 10 + REW_I[p.plan.reward] + (p.big ? 500 : 0) + (p.plan.shortcut ? 250 : 0) + (p.plan.final ? 3000 : 0);
       if (key !== last.current[i]) {
         last.current[i] = key;
-        cols[i].set(p.big ? '#f2c14e' : portalLabel(p.plan, world.room.biome).color);
+        cols[i].set(p.big ? '#f2c14e' : p.plan.final ? '#6a1fd6' : portalLabel(p.plan, world.room.biome).color);   // (the Hall's final portal: deep dark purple)
         runeMats[i].color.copy(cols[i]).multiplyScalar(2.0); vortexMats[i].uniforms.uColor.value.copy(cols[i]); sigilMats[i].color.copy(cols[i]); innerMats[i].color.copy(cols[i]);
       }
       // rise out of the ground (ease-out with a little settle), then the vortex ignites
@@ -1022,7 +1023,7 @@ function PortalGuides() {
       if (!po.active || r.fade >= 0.5) { gKey[i] = -2; continue; }
       const dx = po.x - p.x, dz = po.z - p.z, d = Math.hypot(dx, dz);
       if (d < 5) continue;
-      const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward] + (po.plan.shortcut ? 250 : 0);
+      const key = TYPE_I[po.plan.type] * 10 + REW_I[po.plan.reward] + (po.plan.shortcut ? 250 : 0) + (po.plan.final ? 3000 : 0);
       if (key !== keys.current[i]) { keys.current[i] = key; cols[i].set(portalLabel(po.plan, r.biome).color).offsetHSL(0, 0.3, 0.06).multiplyScalar(1.35); }   // vivid: more saturated + brighter (not tone-mapped)
       // route: straight when the way is open, else the cached walkable path (rebuilt only when the hero's nav cell or the portal changed)
       let np = 0;
@@ -1132,6 +1133,7 @@ export function Room({ q }: { q: QualityCfg }) {
       {!tower && <Suspense fallback={null}><Wanderer /><AllyActor /></Suspense>}
       <Finale />
       <SpecialRooms q={q} />
+      <DarkHall q={q} />
       <Portals />
       <PortalGuides />
       <SpawnMarkers />

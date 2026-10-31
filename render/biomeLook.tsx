@@ -111,6 +111,12 @@ function applyDream(): void {
   target.sun.set('#ffe2b0'); target.sunI = 2.0; target.sky.set(1, 0.96, 1); target.near = 34; target.far = 120;   // (owner: clear around the hero, the haze lives at the edges - see .dream-mist)
 }
 
+/** The Hall of the Undying: deep violet dusk, still readable (the purple braziers + the far portal carry the scene). */
+function applyHall(): void {
+  target.fog.set('#120a24'); target.hemiSky.set('#a68cf0'); target.hemiGround.set('#35205c'); target.hemiI = 0.78;
+  target.sun.set('#9a84e8'); target.sunI = 0.38; target.sky.set(0.03, 0.015, 0.08); target.near = 26; target.far = 96;
+}
+
 /** Points the look at a biome (index >= 0), back at the town (-1) or the crystal cave (-2; -3 lava floor, -4 poison floor). `snap` skips the ease (used at full black). */
 export function setLook(biome: number, snap = false, index = 0): void {
   townMode = false; runSky = false; runFx.fireflies = 0; target.dir.copy(DAY_DIR); dreamFx.inDream = false;
@@ -143,6 +149,7 @@ export function setLook(biome: number, snap = false, index = 0): void {
     applyRunPhase(biome, index);
     if (b.style === 'MARBLE' && shape.kind === 'HALLS') { target.hemiI *= 0.32; target.sunI *= 0.24; target.fog.multiplyScalar(0.35); target.sky.multiplyScalar(0.3); }
     else if (b.style === 'MARBLE') { target.hemiI *= 0.65; target.sunI *= 0.55; target.fog.multiplyScalar(0.6); target.sky.multiplyScalar(0.6); }   // (owner 2026-10-24: biome 2 darker everywhere)   // (owner) Marble Halls are moody indoors: the wall torches carry the light (render/HallsMarble.tsx)
+    if (world.room.plan?.type === 'HALL') applyHall();
     if (world.room.plan?.dream) applyDream();
   }
   if (snap) copy(look, target, 1);

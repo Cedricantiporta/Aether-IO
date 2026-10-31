@@ -520,7 +520,7 @@ function recWanted(): string {
   if (st === GameStatus.MENU) k = townHeld() ? '' : 'town';
   else if (runInfo.mode === 'TOWER' && st !== GameStatus.GAME_OVER) k = world.boss.active ? 'final' : 'boss';   // (owner) Endless Tower / Daily / Waves: boss-fight music throughout, the abyss theme for its bosses
   else if (world.boss.active) k = world.boss.final ? 'final' : 'boss';
-  else if (st !== GameStatus.GAME_OVER) k = 'b' + (world.room.biome % 7);
+  else if (st !== GameStatus.GAME_OVER) k = world.room.plan.type === 'HALL' ? 'b6' : 'b' + (world.room.biome % 7);   // (the Hall of the Undying: the Void's low theme, no fight music)
   if (k === 'final' && !RECORDED.final) k = 'boss';
   return k && RECORDED[k] ? k : '';
 }
@@ -673,7 +673,8 @@ function recTick(): string {
   const want = musicEnabled ? recWanted() : '';
   if (want) recTrack(want);
   for (const k in rec) {
-    const t = rec[k], target = k === want ? 1 : 0;
+    const t = rec[k], hall = k === want && k === 'b6' && world.room.plan.type === 'HALL', target = k === want ? (hall ? 0.55 : 1) : 0;   // (the Hall of the Undying: the Void theme low + slowed)
+    if (k === 'b6') t.el.playbackRate = hall ? 0.88 : 1;
     t.lvl += (target - t.lvl) * 0.05;
     if (Math.abs(t.lvl - target) < 0.005) t.lvl = target;
     t.g.gain.setTargetAtTime(t.lvl, ctx.currentTime, 0.1);

@@ -436,6 +436,7 @@ export interface DirectorState {
 // ------------------------------------------------------------------- rooms --
 export type RoomType = 'COMBAT' | 'ELITE' | 'MINIBOSS' | 'FOUNTAIN' | 'MERCHANT' | 'TREASURE' | 'SHRINE' | 'CRYSTAL' | 'BOSS' | 'CAMP'
   | 'DUEL'          // dark hero champion duel (ring arena, no other spawns)
+  | 'HALL'          // the Hall of the Undying: a long dark hall between the Dark Castle door and the final boss room (no monsters; engine/gates.ts hallPlan)
   | 'GATEKEEPER';   // the Void's end: the Gatekeeper's courtyard with 5 trial gates and the sealed Dark Castle   // CAMP: the quiet first room of every later biome (storage + training)   // CRYSTAL: harvest-only cavern (no enemies)
 export type RewardKind = 'CARD' | 'GOLD' | 'SHARDS' | 'ITEM' | 'HEAL' | 'GEMS' | 'NONE';
 /** Room objective (rolled onto some combat rooms, roomEvents.ts) and room twist (a modifier for the whole room). */
@@ -451,6 +452,8 @@ export interface RoomPlan {
   dream?: boolean;
   /** (owner) a completed biome's shortcut door: skips straight to the biome boss (depth 15). */
   shortcut?: boolean;
+  /** the dark purple portal at the end of the Hall of the Undying: leads to the Void Herald (director.finalFight). */
+  final?: boolean;
 }
 export type StationKind = 'NONE' | 'FOUNTAIN' | 'MERCHANT' | 'CHEST' | 'ALTAR';
 
