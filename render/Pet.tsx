@@ -359,6 +359,8 @@ export function PetModel({ id }: { id: string }) {
 
 /** `ghost`: the co-op partner's pet (net/coopMinions.ts writes world.ghostPet): same model + motion, driven by a local copy of the pose. */
 const GHOST_SRC = { pos: new Vector3(), facing: 0, attackT: 0, carry: '' as string, carryT: 0, sparkT: 0, stage: 1, stars: 0 };
+/** pets that stay at their full default size (the rest are drawn at 0.55x, like real pets) */
+const BIG_PETS = new Set(['pet_crystal', 'pet_leviathan', 'pet_turtle']);
 function PetActor({ id, def, ghost }: { id: string; def: PetDef; ghost?: boolean }) {
   const root = useRef<Group>(null!), model = useRef<Group>(null!), wL = useRef<Group>(null!), wR = useRef<Group>(null!);
   const legs = useRef<Group[]>([]);
@@ -388,7 +390,7 @@ function PetActor({ id, def, ghost }: { id: string; def: PetDef; ghost?: boolean
     s.phase += dt * (1 + clamp01(s.speed / 6) * 1.2) * animK;
     const moving = clamp01(s.speed / 4);
     const bob = Math.sin(s.phase * 3 + 1) * (0.12 + moving * 0.05);
-    const stg = pet.stage, gs = 0.55 * (PET_STAGE_SCALE[stg] ?? 1) * petSizeBonus(stg, pet.stars);   // (owner 2026-10-31: pets are small, like real pets: x0.55 of the old default; evolution stages still grow them)   // evolution: bigger body + aura (stage 2 gold, stage 3 violet)
+    const stg = pet.stage, gs = (BIG_PETS.has(id) ? 1 : 0.55) * (PET_STAGE_SCALE[stg] ?? 1) * petSizeBonus(stg, pet.stars);   // (owner 2026-10-31: pets are small, like real pets (x0.55), except the big ones (golem, leviathan, turtle) which keep their default size; evolution stages still grow them)   // evolution: bigger body + aura (stage 2 gold, stage 3 violet)
     let y = (def.hover * (0.6 + 0.4 * size) + (def.hover > 0.2 ? bob * size : 0)) * gs;
     let sq = 1;
     if (def.hop) { const h = Math.max(0, Math.sin(s.phase * 7 * (1 + moving * 0.5))) * (0.3 + moving * 0.3); y += h; sq = 1 + h * 0.25; }
