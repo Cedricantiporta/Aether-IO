@@ -87,7 +87,7 @@ function shove(dx: number, dz: number, dist: number): void {
   if (r > lim) { p.pos.x *= lim / r; p.pos.z *= lim / r; }
 }
 function effects(eff: number, x: number, z: number): void {
-  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning strikes = knockdown; first, so the stun below does not block it)
+  if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0.7);   // (stunning strikes = knockdown; first, so the stun below does not block it)
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
   if (eff & SLOW) applyPlayerDebuff('SLOW', 3, SLOW_BOSS);
 }

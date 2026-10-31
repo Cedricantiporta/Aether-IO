@@ -1102,7 +1102,7 @@ function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; re
       if (e.attackCd <= 0 && tdist < P.range + e.radius) {
         e.dir.set(tdx * inv, 0, tdz * inv);
         const fz = spawnTelegraphCircle(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach, P.r, P.windup, dmg, color);
-        if (fz) { if (e.kind === 'HAUNTED_ARMOR') { fz.kb = KB.SLAM.kb; fz.down = KB.SLAM.down; } else if (e.elite || e.mini) fz.kb = KB.PUSH.kb; }   // (owner) the haunted greatsword knocks down; elite / mini cleaves shove
+        if (fz) { if (e.kind === 'HAUNTED_ARMOR') { fz.kb = KB.SLAM.kb; fz.down = KB.SLAM.down; } else if (e.elite || e.mini) { fz.kb = KB.PUSH.kb; fz.down = 0.8; } }   // (owner) the haunted greatsword knocks down; elite / mini cleaves shove
         enter(e, 'WINDUP'); stop(e);
       }
   }
@@ -1500,9 +1500,9 @@ function contactHit(e: Enemy, locked: boolean): void {
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   if (curMin >= 0) { damageMinion(curMin, dmg); minionTraitHit(curMin, e.traits); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton (+ its on-hit effects)
   const grab = e.kind === 'ZOMBIE';
-  const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
+  const charge = (e.kind === 'BOAR' || e.kind === 'BRUTE' || e.kind === 'BONE_GOLEM' || e.kind === 'SHIELDBEARER') && e.state === 'ATTACK';   // heavy charges / bashes that connect (boar, brute / ogre, bone golem, shieldbearer)   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
   const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.2 ? KB.PUSH : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits shove now and then
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.1 ? KB.SLAM : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits now and then knock down (instead of a plain shove)
   if (charge) {
     world.player.slowT = Math.max(world.player.slowT, 0.6);
     if (world.player.downT > 0) events.emit('trick', { pos: e.pos, kind: 'BOAR_KNOCKDOWN', radius: 1.5 });

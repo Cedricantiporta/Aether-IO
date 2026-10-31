@@ -886,7 +886,7 @@ function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
   if (tr & TR.STUN && Math.random() < 0.3) applyPlayerDebuff('STUN', 0.8);
   if (!from) return;
   if (tr & TR.KNOCKDOWN && Math.random() < 0.35) knockHero(from.x, from.z, 3.4, 0.7);
-  else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
+  else if (tr & TR.KNOCK) { if (Math.random() < 0.5) knockHero(from.x, from.z, 3.4, 0.6, true); else knockHero(from.x, from.z, 3.2, 0, true); }   // Shover: half of the shoves are short knockdowns
 }
 
 export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number; /** MECHANIC-CHECK hit (Avalanche, Tidal Wave, Sandstorm, collapses): needs `pct`; dodge roll, dash / dodge i-frames and the Energy Shield do NOT stop it (only the safe spot does); no defence reduction; leaves 1 HP when the hero is above 50% max HP, can kill at or below it. Big red number + screen flash */ crit?: boolean }): void {

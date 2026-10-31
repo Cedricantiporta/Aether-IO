@@ -142,7 +142,8 @@ let S: St = SV[0];
 const tmp = new Vector3(), tmp2 = new Vector3(), dirV = new Vector3(), fxPos = new Vector3();
 
 /** Delayed effects shown by a telegraph (kind 0 strike circle, 1 fire ring wave). */
-const STUN = 1, SLOW = 2, BURN = 4, FREEZE = 8, POISON = 16, KNOCK = 32, BASH = 64, FEAR = 128;
+const STUN = 1, SLOW = 2, BURN = 4, FREEZE = 8, POISON = 16, KNOCK = 32, BASH = 64, FEAR = 128, DOWN = 256;   // DOWN: a short knockdown (DOWN_SEC) - the dark heroes' heavy skills knock down more than they shove
+const DOWN_SEC = 0.9;
 interface Pending { active: boolean; t: number; kind: number; x: number; z: number; r: number; dmg: number; eff: number; fx: string; dk: DamageKind }
 const pend: Pending[] = Array.from({ length: 24 }, () => ({ active: false, t: 0, kind: 0, x: 0, z: 0, r: 0, dmg: 0, eff: 0, fx: '', dk: 'PHYSICAL' as DamageKind }));
 /** Hostile copies of the hero's fields (zones.ts skips them; their effect on the hero is applied here). */
@@ -374,7 +375,8 @@ function slowPlayer(t: number): void {
 }
 function effects(eff: number, dmg: number, x: number, z: number): void {
   if (eff & KNOCK) knockHero(x, z, (eff & STUN) ? KB.SLAM.kb : KB.PUSH.kb, (eff & STUN) ? KB.SLAM.down : 0);   // (stunning slams = knockdown; first, so the stun below does not block it)
-  if (eff & BASH) { knockHero(x, z, KB.PUSH.kb, 0); if (applyPlayerDebuff('STUN', 1.0)) events.emit('floatText', { pos: world.player.pos, text: 'STUNNED', color: 0xe8b8ff, scale: 0.8, dy: 0.8 }); }   // shield bash: a push and a 1 s stun
+  if (eff & DOWN) knockHero(x, z, KB.SLAM.kb, DOWN_SEC);
+  if (eff & BASH) { knockHero(x, z, KB.SLAM.kb, DOWN_SEC); if (applyPlayerDebuff('STUN', 1.0)) events.emit('floatText', { pos: world.player.pos, text: 'STUNNED', color: 0xe8b8ff, scale: 0.8, dy: 0.8 }); }   // shield bash: a short knockdown and a 1 s stun
   if (eff & FEAR) { const p = world.player; if (p.downT <= 0 && p.knockImmuneT <= 0 && applyPlayerDebuff('STUN', 0.7)) events.emit('floatText', { pos: p.pos, text: 'TERRIFIED', color: 0xff8a6a, scale: 0.8, dy: 0.8 }); }   // warcry (never on top of a knockdown: anti-chain)
   if (eff & STUN) applyPlayerDebuff('STUN', 0.6);
   if (eff & FREEZE && Math.random() < 0.35) { if (freezePlayer(0.7)) events.emit('floatText', { pos: world.player.pos, text: 'FROZEN', color: 0x8fe4ff, scale: 0.8, dy: 0.8 }); }
@@ -465,7 +467,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
       const T = 2.0;
       mark(S.toX, S.toZ, 8, T, 0xff5a1a);
       hostileFx('BIG_METEOR', S.toX, S.toZ, T, T + 0.3, 8, P * 3, 0, 0xff7a1a);
-      strike(S.toX, S.toZ, 8, T, P * 3, STUN | BURN, '', C_FIRE, 'FIRE');
+      strike(S.toX, S.toZ, 8, T, P * 3, STUN | BURN | DOWN, '', C_FIRE, 'FIRE');   // the meteor knocks down
     }
   } else if (c === 'BARBARIAN') {
     if (k === 1) { S.wind = 0.6; S.act = 0.15; warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 22, 4.4, 0.6, C_BLOOD); }
@@ -499,7 +501,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
       }
     } else if (k === DASH) { S.wind = 0.55; S.len = Math.min(Math.max(d - 1.9, 3), 14); S.act = S.len / 26;   // (stops at the hero, never through it)
       warnLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, S.len, 2.4, 0.55, C_HOLY); }
-    else { S.wind = 0.9; S.act = 0.3; strike(e.pos.x, e.pos.z, 8, 0.9, P * 1.8, STUN, 'AVATAR', C_HOLY, 'MAGIC'); }
+    else { S.wind = 0.9; S.act = 0.3; strike(e.pos.x, e.pos.z, 8, 0.9, P * 1.8, STUN | DOWN, 'AVATAR', C_HOLY, 'MAGIC'); }   // the column of light knocks down
   } else {   // NECROMANCER
     if (k === 1) {
       S.wind = 1.0; S.act = 0.2; S.len = 3;
@@ -983,7 +985,7 @@ function hitPlayerShot(s: DarkShot, e: Enemy): void {
   const l = Math.hypot(s.vx, s.vz) || 1, dx = s.vx / l, dz = s.vz / l;
   switch (s.tag) {
     case SHOT_GALE: damagePlayer(s.dmg, { pos: e.pos, kind: 'PHYSICAL', proj: true }); applyPlayerDebuff('DEFDOWN', 4); push(dx, dz, 2.4); break;
-    case SHOT_LIGHT: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC', proj: true }); push(dx, dz, 3.4); break;   // Lightpiercer: the piercing arrow shoves the hero back
+    case SHOT_LIGHT: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC', proj: true }); knockHero(e.pos.x, e.pos.z, KB.SLAM.kb, DOWN_SEC); break;   // Lightpiercer: the piercing arrow knocks the hero down
     case SHOT_FIRE: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE', proj: true }); applyPlayerDebuff('BURN', 3, Math.max(2, s.dmg * 0.1)); events.emit('explosion', { pos: p.pos, radius: 2.4, color: 0xff6a3a }); break;
     case SHOT_XSLASH: damagePlayer(s.dmg, { pos: e.pos, kind: 'FIRE', proj: true }); applyPlayerDebuff('BURN', 2, Math.max(2, s.dmg * 0.08)); push(dx, dz, 2.4); break;
     case SHOT_HOLY: damagePlayer(s.dmg, { pos: e.pos, kind: 'MAGIC', proj: true }); push(dx, dz, 2.6); break;
@@ -1109,6 +1111,7 @@ function hostileFxOne(f: GroundFx): void {
       if (f.dmg > 0 && !(pass2.on ? S.spikeHitA : S.spikeHit) && playerIn(f.x, f.z, f.radius)) {
         if (pass2.on) S.spikeHitA = true; else S.spikeHit = true;   // one hit per fissure (and per hero)
         damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' });
+        if (f.aux >= 0.5) effects(DOWN, f.dmg, f.x, f.z);   // Earthsplitter's fissure knocks down (Ground Rupture's lanes only stun)
         if (f.aux > 0) applyPlayerDebuff('STUN', f.aux);
       }
       break;
