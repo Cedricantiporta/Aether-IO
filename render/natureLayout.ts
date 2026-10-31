@@ -16,11 +16,11 @@
 // ============================================================================
 import {
   TOWN_TREES, FENCES, LOT_FENCES, HOUSES, TOWN_SEATS, CHURCH, PARK_EAST, WELLS, SIGNPOSTS, STEP_PATHS, CARTS, HAYSTACK, TRAIL_ROCKS, FIELDS, FARM, SCARECROW,
-  STABLE, BREWER_HUT, TOWER, WINDMILL, townLift, LAKE, riverBank, RIVER, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA, PLANTERS, SHOP_LOOK, shopLocal,
+  STABLE, BREWER_HUT, TOWER, gloomK, WINDMILL, townLift, LAKE, riverBank, RIVER, type FieldSpec, WALL_TOWERS, SIDE_GATES, SIDE_GATE, GATE, GATE_TOWER, BRIDGE, MINE_BRIDGE, PLAZA, PLANTERS, SHOP_LOOK, shopLocal,
 } from '../engine/townData';
 import { SHOP_POSITIONS } from '../constants';
 import { V3_K, V3_BOX } from '../engine/kitV3Data';
-import { QT_PREFIX, QT_H, QT_R, QT_ROCKS, QT_COMMON, QT_PINE, N2, qtLod, qtPick } from '../engine/qtData';
+import { QT_PREFIX, QT_H, QT_R, QT_ROCKS, QT_COMMON, QT_PINE, QT_DEAD, QT_TWISTED, N2, qtLod, qtPick } from '../engine/qtData';
 import { hillAt } from '../engine/townHills';
 import { FILL, PIECES, QT_DECOR } from '../engine/townFill';
 import { PALMS, DOCK, ROWBOAT, ENTRY_SIGN, HEADLAND, SOUTH_ROCKS, BEACH } from '../engine/beachData';
@@ -389,10 +389,12 @@ function qtForest(q: QualityCfg, out: Sets): void {
         case 'palm_v3': pool = N2.palm; break;
         default: pool = QT_COMMON;
       }
+      const gk = gloomK(p.x, p.z), ghost = gk > 0.02 && hash2(p.x, p.z, 60) < Math.min(1, gk * 1.6);   // (owner 2026-10-31) the Haunted Hollow: the nearer the Endless Tower, the more trees are dead / twisted
+      if (ghost) pool = hash2(p.x, p.z, 61) < 0.7 ? QT_DEAD : QT_TWISTED;
       const node = qtPick(pool, hash2(p.x, p.z, 13)), lo = (low || dEdge > 0) && qtLod(node) !== node, name = QT_PREFIX + (lo ? qtLod(node) : node);
       const hh = piece === 'palm_v3' ? Math.min(8, Math.max(5.5, H0 * p.sy * 1.12 * 1.5)) : Math.min(9, Math.max(7, H0 * p.sy * 1.12 * 1.4 * 1.5)), k = hh / QT_H[node], w = k * 1.02 * (p.sx / p.sy);
       put(out, name, { x: p.x, y: p.y, z: p.z, ry: p.ry, sx: w, sy: k, sz: w });
-      if (!lo && outside && dEdge < -8 && piece !== 'palm_v3' && hash2(p.x, p.z, 14) < 0.7) {   // (owner) 2-4 pack bushes huddled round the trunk of the outskirts trees (walk-through; the trunk's own table collider is unchanged)
+      if (!lo && outside && dEdge < -8 && piece !== 'palm_v3' && gk < 0.3 && hash2(p.x, p.z, 14) < 0.7) {   // (owner) 2-4 pack bushes huddled round the trunk of the outskirts trees (walk-through; the trunk's own table collider is unchanged)
         const nb = 2 + Math.floor(hash2(p.x, p.z, 15) * 3), pool = ['Bush_Common', 'Bush_Common', 'Bush_Common_Flowers'];
         for (let i = 0; i < nb; i++) { const a = hash2(p.x, p.z, 16 + i) * TAU, d = 1.1 + hash2(p.x, p.z, 26 + i) * 0.9, sc = 0.7 + hash2(p.x, p.z, 36 + i) * 0.8; put(out, QT_PREFIX + qtPick(pool, hash2(p.x, p.z, 46 + i)), { x: p.x + Math.cos(a) * d, y: p.y, z: p.z + Math.sin(a) * d, ry: hash2(p.x, p.z, 56 + i) * TAU, sx: sc, sy: sc * 0.95, sz: sc }); }
       }

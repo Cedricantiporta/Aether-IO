@@ -114,6 +114,7 @@ export const REGION_STYLE: Record<string, RegionStyle> = {
   FARM: { color: '#8a6c3c', w: 0.7, grass: 0.2 },
   RUINS: { color: '#8c9068', w: 0.45, grass: 0.7 },
   GRAVEYARD: { color: '#3b4238', w: 0.8, grass: 0.3 },
+  GLOOM: { color: '#6a6078', w: 0.9, grass: 0.45 },   // (the Endless Tower's haunted hollow: dead grey-violet grass; bare dirt + cracks are added in Terrain.groundColor)
   CRYSTAL_GROVE: { color: '#6f62b4', w: 0.4, grass: 0.9 },
   CAMP: { color: '#9a7a4a', w: 0.6, grass: 0.35 },
   QUARRY: { color: '#8e8e8a', w: 0.8, grass: 0.1 },

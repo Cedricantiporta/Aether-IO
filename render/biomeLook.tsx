@@ -10,6 +10,7 @@ import { shape } from '../engine/roomShape';
 import { showcase } from '../engine/showcase';
 import { world } from '../engine/world';
 import { dreamFx, tickDreamFx } from '../engine/dreamFx';
+import { gloomK } from '../engine/townData';
 import type { MeshBasicMaterial } from 'three';
 
 interface Look { fog: Color; hemiSky: Color; hemiGround: Color; hemiI: number; sun: Color; sunI: number; sky: Vector3; near: number; far: number; dir: Vector3 }
@@ -42,6 +43,14 @@ export const townFx = { lamp: 0, stars: 0 };
 let townMode = false;
 const DAY_DIR = new Vector3(-0.55, 0.72, 0.42).normalize();
 const MOON_DIR = new Vector3(0.5, 0.62, -0.42).normalize();
+/** (owner 2026-10-31) 0..1 how deep the hero is inside the Endless Tower's Haunted Hollow (townData gloomK, eased): darkens + violet-tints the town light, sky and fog; thicker fog. */
+export const gloomFx = { k: 0 };
+const GL_FOG = new Color('#3d3156'), GL_HS = new Color('#a496d6'), GL_HG = new Color('#3a2c55'), GL_SUN = new Color('#cdbdff'), GL_HOR = new Color('#6a5486'), GL_MID = new Color('#3c3470'), GL_ZEN = new Color('#1d1a45');
+function applyGloom(k: number): void {
+  target.fog.lerp(GL_FOG, 0.55 * k); target.hemiSky.lerp(GL_HS, 0.45 * k); target.hemiGround.lerp(GL_HG, 0.5 * k); target.sun.lerp(GL_SUN, 0.35 * k);
+  target.hemiI *= 1 - 0.2 * k; target.sunI *= 1 - 0.34 * k;
+  townSky.hor.lerp(GL_HOR, 0.4 * k); townSky.mid.lerp(GL_MID, 0.35 * k); townSky.zen.lerp(GL_ZEN, 0.35 * k);
+}
 const sstep = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const townT = () => (world.village.area === 'TOWN' ? world.townTime : 0.25);
 
@@ -168,14 +177,18 @@ export function LookDriver() {
     tickDreamFx(dt);
     WATER_T.value = clock.elapsedTime; WATER_NIGHT.value = townFx.lamp;   // (the one per-frame write of the shared water look, render/waterFx.ts)
     if (dreamFx.haze > 0) lookDim.k = 1 + Math.sin(performance.now() * 0.0009) * 0.07 * dreamFx.haze; else if (lookDim.k !== 1 && !dreamFx.inDream && world.village.area !== 'CAVE') lookDim.k = 1;   // (the light breathes)
-    if (townMode) applyTown(townT());
-    else if (townSky.on && !runSky) { townSky.on = false; townSky.hor.setRGB(1, 0.93, 0.78); townSky.mid.setRGB(0.55, 0.8, 1); townSky.zen.setRGB(0.2, 0.5, 0.92); townFx.lamp = 0; townFx.stars = 0; }
+    if (townMode) {
+      applyTown(townT());
+      const p = world.player.pos; gloomFx.k += (gloomK(p.x, p.z) - gloomFx.k) * (1 - Math.exp(-3 * Math.min(dt, 0.1)));
+      if (gloomFx.k > 0.003) applyGloom(gloomFx.k);
+    } else if (gloomFx.k !== 0) gloomFx.k = 0;
+    if (!townMode && townSky.on && !runSky) { townSky.on = false; townSky.hor.setRGB(1, 0.93, 0.78); townSky.mid.setRGB(0.55, 0.8, 1); townSky.zen.setRGB(0.2, 0.5, 0.92); townFx.lamp = 0; townFx.stars = 0; }
     const gk = 1 + 0.8 * townFx.lamp;
     if (Math.abs(gk - glowK) > 0.004) { glowK = gk; for (let i = 0; i < glowMats.length; i++) glowMats[i].color.copy(glowBase[i]).multiplyScalar(gk); }
     copy(look, target, 1 - Math.exp(-4 * Math.min(dt, 0.1)));
     if (scene.background instanceof Color) scene.background.copy(look.fog);
     const f = scene.fog as Fog | null;
-    if (f) { f.color.copy(look.fog); f.near = look.near * FOG_K; f.far = look.far * FOG_K; }
+    if (f) { f.color.copy(look.fog); f.near = look.near * FOG_K * (1 - 0.3 * gloomFx.k); f.far = look.far * FOG_K * (1 - 0.18 * gloomFx.k); }
     // (perf) nothing past the fog's end is visible: the far plane follows it, so fully-fogged geometry is never drawn
     const cam = camera as PerspectiveCamera, wantFar = Math.max(80, look.far * FOG_K + 25);
     if (Math.abs(cam.far - wantFar) > 2) { cam.far = wantFar; cam.updateProjectionMatrix(); }

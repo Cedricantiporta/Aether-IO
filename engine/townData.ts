@@ -133,8 +133,14 @@ export const WHEEL_PIN = { x: FARM.x - 6.4, z: FARM.z - 7.6 };
 export const TOWER_PATH_Z = 113.6;   // the Brewer's lane: the short woodland path west from the road along this z (it no longer reaches the tower)
 /** (owner 2026-10-24) the Tower stands deeper in the forest, east of the Adventure Portal's clearing, at the end of its own dirt path that branches off the forest road to the RIGHT (east); door faces north
  *  onto that path's last stretch: door = where the hero stands to go in, `out` = where he reappears after a run. */
-export const TOWER = { x: 31, z: 168, r: 3.9, ry: Math.PI, door: { x: 31, z: 161.3 }, out: { x: 31, z: 158.7 } };   // nature_kit_v1 'endless_tower' (its front is local +z, turned by ry)
+export const TOWER = { x: 46, z: 232, r: 3.9, ry: Math.PI, door: { x: 46, z: 225.3 }, out: { x: 46, z: 222.7 } };   // nature_kit_v1 'endless_tower' (its front is local +z, turned by ry)
 export const TOWER_KNOLL = { r: 9, ramp: 8, h: 1.8 };
+/** (owner 2026-10-31) The Haunted Hollow round the Endless Tower: 0..1 gloom at (x, z), 1 within 14 m of the tower, fading smoothly to 0 at 40 m. Drives the darker ambient light (render/biomeLook),
+ *  how many trees are dead (render/natureLayout) and the wisps / mist (render/GloomTower). */
+export function gloomK(x: number, z: number): number {
+  const t = Math.min(1, Math.max(0, (Math.hypot(x - TOWER.x, z - TOWER.z) - 14) / 26));
+  return 1 - t * t * (3 - 2 * t);
+}
 /** Height of the Endless Tower's knoll at (x, z) (0 off it): the hero (townLift) and the ground mesh (render/terrainFn) both use it. */
 export function towerKnollAt(x: number, z: number): number {
   const td = Math.hypot(x - TOWER.x, z - TOWER.z);
@@ -156,7 +162,7 @@ export const ISLAND_BOXES: [number, number, number, number][] = [
   [-46, -10, 46, 60],   // the green in front of the gate (brewer's hut, the path to the beach), up to the river
   [-45, -10, 56, 132],  // the mainland across the river (farm, fields, windmill, the Adventure Portal)
   [-18, -10, 28, 168],   // (owner) the forest road south past the hamlets to the Adventure Portal's clearing
-  [0, 0, 52, 186],       // (owner 2026-10-24) deeper forest south-east of the portal clearing: the Endless Tower's own clearing at the end of its east branch
+  [0, 0, 62, 252],       // (owner 2026-10-31) the far south-east forest: the haunted Endless Tower stands at its very end (z 232), reached by a long winding dirt path off the forest road
   [-64, -10, 0, 166],   // (owner 2026-10-26) the south-west headland: fills the notch west of the forest road + the coast south of the lake (Boss Trials plaza, BOSS_PORTAL)
   BEACH_BOX,            // the lakeside beach outside the west wall (southern half only; engine/beachData.ts)
 ];
@@ -489,8 +495,8 @@ export const ROADS: RoadSpec[] = [
   { x1: 0, z1: 128, x2: 3.6, z2: 137, w: ROAD_W.main - 0.6 }, { x1: 3.6, z1: 137, x2: PORTAL.front.x, z2: PORTAL.front.z + 0.4, w: ROAD_W.main - 0.6 },   // (owner) bending into the forest to the Adventure Portal's clearing (the old tower spot)
   // (owner 2026-10-31) Lantern Lane: from the Adventure Plaza's west gate through the little village, then north-west to meet the Boss Trials path (-37.5, 130)
   { x1: -9.4, z1: 148.5, x2: -26.3, z2: 148.5, w: 3.4, dirt: true }, { x1: -26.3, z1: 148.5, x2: -27, z2: 140, w: 3.4, dirt: true }, { x1: -27, z1: 140, x2: -32, z2: 132.4, w: 3.4, dirt: true }, { x1: -32, z1: 132.4, x2: -37.5, z2: 130.4, w: 3.4, dirt: true },
-  // (owner 2026-10-24) the Endless Tower's own dirt path: branches off the forest road to the right (east) and winds deeper into the forest to the tower's door
-  { x1: 4.4, z1: 143.5, x2: 14, z2: 146.5, w: 2.8, dirt: true }, { x1: 14, z1: 146.5, x2: 23.5, z2: 150.5, w: 2.8, dirt: true }, { x1: 23.5, z1: 150.5, x2: 30, z2: 155.5, w: 2.8, dirt: true }, { x1: 30, z1: 155.5, x2: TOWER.door.x, z2: TOWER.door.z + 0.4, w: 2.8, dirt: true },
+  // (owner 2026-10-31) the Endless Tower's own LONG winding dirt path: leaves the forest road to the east at (2.6, 134.5), crosses the forest, bends south and back and ends at the haunted tower's door (46, 225.3)
+  { x1: 2.6, z1: 134.5, x2: 13, z2: 134, w: 2.8, dirt: true }, { x1: 13, z1: 134, x2: 24, z2: 138.5, w: 2.8, dirt: true }, { x1: 24, z1: 138.5, x2: 34, z2: 137, w: 2.8, dirt: true }, { x1: 34, z1: 137, x2: 45, z2: 142, w: 2.8, dirt: true }, { x1: 45, z1: 142, x2: 52, z2: 152, w: 2.8, dirt: true }, { x1: 52, z1: 152, x2: 53, z2: 163, w: 2.8, dirt: true }, { x1: 53, z1: 163, x2: 46, z2: 173, w: 2.8, dirt: true }, { x1: 46, z1: 173, x2: 37, z2: 183, w: 2.8, dirt: true }, { x1: 37, z1: 183, x2: 34, z2: 193, w: 2.8, dirt: true }, { x1: 34, z1: 193, x2: 40, z2: 202, w: 2.8, dirt: true }, { x1: 40, z1: 202, x2: 50, z2: 207, w: 2.8, dirt: true }, { x1: 50, z1: 207, x2: 48, z2: 216, w: 2.8, dirt: true }, { x1: 48, z1: 216, x2: TOWER.door.x, z2: TOWER.door.z + 0.4, w: 2.8, dirt: true },
   // meadow -> lakeside beach: west past the Elixir Brewer's hut and the hay cart, round the south-west corner tower to the boardwalk
   { x1: -2.5, z1: 52, x2: -19, z2: 52.2, w: 2.6, dirt: true }, { x1: -19, z1: 52.2, x2: -36, z2: 53, w: 2.6, dirt: true }, { x1: -36, z1: 53, x2: -46.5, z2: 47.2, w: 2.6, dirt: true },
   // the farm track: from the forest road behind the farm, east past the coop nests, up to the mine path (owner: connect it)

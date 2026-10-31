@@ -454,6 +454,95 @@ grove(Z(31, 176, 20, 8), 20, [PINES(4), OAKS(2), BUSHES(3, [0.6, 0.9]), ROCKS(1,
 grove(Z(46, 160, 7, 14), 10, [PINES(4), OAKS(2), BUSHES(2)], 407, 0.7, 2.4);
 grove(Z(24, 160, 9, 6), 8, [PINES(3), OAKS(2), BUSHES(2)], 408, 0.7, 2.4);
 carpet(Z(3, 138, 5, 12), 16, PIECES.flowers, [0.8, 1.1], 404);
+
+// ================================================================ THE HAUNTED HOLLOW (owner 2026-10-31): the Endless Tower's gloomy grounds, far in the south-east forest
+// Graves, broken pillars + fences, carts, bone / skull piles, boulders and a thick forest that turns dead near the tower (natureLayout swaps trees for dead ones by gloomK). Solid things get colliders (grave / pillar / cart /
+// intact fence), bones + wisps + mist are walk-through; everything keeps off the dirt path (blocked() sees ROADS as legs). Drawn by render/GloomTower.tsx (own merged geometry, instanced per kind).
+export interface GloomItem { x: number; z: number; ry: number; k: number; s: number }
+export const GLOOM = {
+  graves: [] as GloomItem[],     // k: 0 slab, 1 cross, 2 rounded, 3 broken slab, 4 obelisk
+  pillars: [] as GloomItem[],    // k: 0 tall broken column, 1 short stump, 2 fallen column
+  fences: [] as GloomItem[],     // one 2 m fence section: k 0 standing, 1 leaning / half collapsed (s = length scale)
+  carts: [] as GloomItem[],      // broken cart
+  bones: [] as GloomItem[],      // k: 0 bone pile, 1 skull pile
+  wisps: [] as [x: number, y: number, z: number, phase: number][],
+  mist: [] as [x: number, z: number, r: number][],
+};
+{
+  const T = TOWER, g = rng(9031), TAU2 = Math.PI * 2;
+  const grave = (x: number, z: number, ry: number, k: number, s = 1): boolean => {
+    if (!free(x, z, 0.85 * s, 0.35, 2.6)) return false;
+    GLOOM.graves.push({ x, z, ry, k, s }); claim(x, z, 0.85 * s); addSolid(x, z, 0.5 * s); return true;
+  };
+  // plots of graves: west of the tower's yard, east of it and a crescent behind it (the stones lean a little, a few are broken)
+  const plot = (cx: number, cz: number, cols: number, rows: number, sp: number, yaw: number): void => {
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+      if (g() < 0.14) continue;
+      const lx = (i - (cols - 1) / 2) * sp + (g() - 0.5) * 0.6, lz = (j - (rows - 1) / 2) * sp * 1.1 + (g() - 0.5) * 0.6;
+      const x = cx + lx * Math.cos(yaw) + lz * Math.sin(yaw), z = cz - lx * Math.sin(yaw) + lz * Math.cos(yaw);
+      const r = g(); grave(x, z, yaw + (g() - 0.5) * 0.3, r < 0.3 ? 0 : r < 0.5 ? 1 : r < 0.72 ? 2 : r < 0.92 ? 3 : 4, 0.9 + g() * 0.3);
+    }
+  };
+  plot(T.x - 15, T.z - 7, 4, 3, 2.7, 0.15); plot(T.x + 15, T.z - 5, 3, 3, 2.7, -0.2);
+  for (let i = 0; i < 9; i++) { const a = 2.55 + (i / 8) * 1.7, d = 12.5 + (i % 2) * 2.2; grave(T.x + Math.cos(a) * d, T.z + 3 + Math.sin(a) * d * 0.9 + 2, a + 1.57 + (g() - 0.5) * 0.3, [0, 2, 3, 1, 0, 3, 2, 4, 1][i], 1); }
+  for (let t = 0, n = 0; t < 120 && n < 9; t++) { const a = g() * TAU2, d = 9 + g() * 17; if (grave(T.x + Math.cos(a) * d, T.z - 6 + Math.sin(a) * d, g() * TAU2, Math.floor(g() * 4), 0.85 + g() * 0.3)) n++; }
+  // the ruined gateway on the path (z ~ 212): a tall broken column + a stump + a fallen column; scattered column stumps and ruin chunks (rocks) round the yard
+  const pillar = (x: number, z: number, ry: number, k: number, s = 1): void => {
+    const rad = k === 2 ? 0.7 : 0.85 * s;
+    if (!free(x, z, rad, 0.3, 2.6)) return;
+    GLOOM.pillars.push({ x, z, ry, k, s }); claim(x, z, rad); addSolid(x, z, k === 2 ? 0.55 : 0.6 * s);
+  };
+  { // the gateway pair straddles the path at the 4th-last waypoint (50, 207) -> (48, 216): columns 3.4 m either side of its centre line
+    const a = ROADS.filter((rd) => rd.dirt && rd.z1 >= 200 && rd.z1 < 215)[1], cx = (a.x1 + a.x2) / 2, cz = (a.z1 + a.z2) / 2, ang = Math.atan2(a.z2 - a.z1, a.x2 - a.x1), nx = -Math.sin(ang), nz = Math.cos(ang);
+    pillar(cx + nx * 3.5, cz + nz * 3.5, 0.4, 0, 1.1); pillar(cx - nx * 3.6, cz - nz * 3.6, 2.0, 1, 1); pillar(cx - nx * 5.6 + 1.2, cz - nz * 5.6 + 3.2, 0.9, 2, 1);
+  }
+  for (let t = 0, n = 0; t < 100 && n < 7; t++) { const a = g() * TAU2, d = 11 + g() * 15, x = T.x + Math.cos(a) * d, z = T.z - 3 + Math.sin(a) * d, k = g() < 0.5 ? 1 : g() < 0.5 ? 2 : 0, before = GLOOM.pillars.length; pillar(x, z, g() * TAU2, k, 0.85 + g() * 0.3); if (GLOOM.pillars.length > before) n++; }
+  grove(Z(T.x, T.z - 2, 27, 23), 13, [ROCKS(1, [0.9, 1.9])], 4411, 0.6, 2.6);   // ruin chunks + rocks
+  grove(Z(T.x + 2, T.z + 4, 25, 18), 5, [ROCKS(1, [2.1, 2.9])], 4412, 0.8, 2.6);   // a few big boulders
+  // broken fences: along the path's last three legs, 3.1 m either side, 2 m sections; ~35 % have collapsed (leaning, no collider), the rest are solid
+  for (const rd of ROADS.filter((q) => q.dirt && q.z1 >= 190)) {
+    const len = Math.hypot(rd.x2 - rd.x1, rd.z2 - rd.z1), ux = (rd.x2 - rd.x1) / len, uz = (rd.z2 - rd.z1) / len, ry = Math.atan2(-uz, ux), m = Math.floor(len / 2.1);
+    for (const side of [-1, 1]) for (let i = 0; i < m; i++) {
+      if (g() < 0.22) continue;
+      const t = (i + 0.5) * (len / m), x = rd.x1 + ux * t - uz * 3.2 * side, z = rd.z1 + uz * t + ux * 3.2 * side;
+      if (!free(x, z, 0.6, 0.05, 2.6)) continue;
+      const broken = g() < 0.35;
+      GLOOM.fences.push({ x, z, ry: ry + (broken ? (g() - 0.5) * 0.5 : 0), k: broken ? 1 : 0, s: len / m / 2.1 }); claim(x, z, 0.6);
+      if (!broken) for (const u of [-0.7, 0.2, 0.9]) addSolid(x + ux * u * (len / m / 2.1), z + uz * u * (len / m / 2.1), 0.3);
+    }
+  }
+  // a yard fence west of the tower and a stretch east of the east grave plot
+  for (const [x1, z1, x2, z2] of [[T.x - 11, T.z + 1, T.x - 11, T.z + 13], [T.x + 10, T.z + 4, T.x + 10, T.z + 15], [T.x - 24, T.z - 12, T.x - 24, T.z + 1]] as [number, number, number, number][]) {
+    const len = Math.hypot(x2 - x1, z2 - z1), m = Math.floor(len / 2.1), ry = Math.atan2(-(z2 - z1), x2 - x1);
+    for (let i = 0; i < m; i++) {
+      if (g() < 0.2) continue;
+      const t = (i + 0.5) / m, x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t;
+      if (!free(x, z, 0.6, 0.05, 2.6)) continue;
+      const broken = g() < 0.4; GLOOM.fences.push({ x, z, ry: ry + (broken ? (g() - 0.5) * 0.5 : 0), k: broken ? 1 : 0, s: len / m / 2.1 }); claim(x, z, 0.6);
+      if (!broken) for (const u of [-0.35, 0.5]) addSolid(x + (x2 - x1) * u / m, z + (z2 - z1) * u / m, 0.32);
+    }
+  }
+  // two broken carts + bone / skull piles (walk-through, never on the path)
+  for (let t = 0; t < 400 && GLOOM.carts.length < 2; t++) {
+    const a = g() * TAU2, d = 9 + g() * 13, x = T.x + Math.cos(a) * d, z = T.z - 4 + Math.sin(a) * d * 0.9;
+    if (GLOOM.carts.length === 1 && Math.hypot(x - GLOOM.carts[0].x, z - GLOOM.carts[0].z) < 14) continue;
+    if (free(x, z, 1.9, 0.4, 2.6)) { GLOOM.carts.push({ x, z, ry: g() * TAU2, k: 0, s: 1 }); claim(x, z, 1.9); addSolid(x, z, 1.2); }
+  }
+  for (let t = 0, n = 0; t < 400 && n < 15; t++) {
+    const a = g() * TAU2, d = 7 + g() * 21, x = T.x + Math.cos(a) * d, z = T.z - 4 + Math.sin(a) * d * 0.95;
+    if (!free(x, z, 0.8, 0.3, 2.6)) continue;
+    GLOOM.bones.push({ x, z, ry: g() * TAU2, k: n % 3 === 2 ? 1 : 0, s: 0.85 + g() * 0.4 }); claim(x, z, 0.8); n++;
+  }
+  // wisps (ghost lights) hovering over the graves and along the last stretch of the path; low mist patches (the layout only lists them, GloomTower draws them)
+  for (let i = 0; i < 24; i++) { const a = g() * TAU2, d = 4 + Math.sqrt(g()) * 24; GLOOM.wisps.push([T.x + Math.cos(a) * d, 0.7 + g() * 1.9, T.z - 3 + Math.sin(a) * d, g() * TAU2]); }
+  for (let i = 0; i < 14; i++) { const a = g() * TAU2, d = Math.sqrt(g()) * 24; GLOOM.mist.push([T.x + Math.cos(a) * d, T.z - 3 + Math.sin(a) * d * 0.9, 5 + g() * 5]); }
+  // the forest: thick along the whole way, it turns dead on its own near the tower (natureLayout.qtForest uses gloomK); no bushes inside the hollow
+  const FO = [PINES(4), OAKS(3), BUSHES(2, [0.6, 0.9]), ROCKS(1, [0.6, 1])], FD = [PINES(4), OAKS(3), ROCKS(1, [0.7, 1.2])];
+  grove(Z(30, 146, 22, 9), 22, FO, 4421, 0.7, 2.4); grove(Z(52, 170, 12, 16), 16, FO, 4422, 0.7, 2.4); grove(Z(22, 176, 18, 18), 24, FO, 4423, 0.7, 2.4);
+  grove(Z(46, 190, 16, 12), 18, FO, 4424, 0.7, 2.4); grove(Z(18, 204, 20, 18), 26, FO, 4425, 0.7, 2.4); grove(Z(30, 216, 18, 12), 16, FD, 4426, 0.7, 2.4);
+  grove(Z(12, 232, 14, 20), 18, FD, 4427, 0.7, 2.4); grove(Z(T.x, T.z + 13, 20, 8), 20, FD, 4428, 0.6, 2.4); grove(Z(T.x + 17, T.z - 2, 5, 16), 10, FD, 4429, 0.6, 2.4);
+  grove(Z(T.x - 20, T.z - 2, 5, 16), 10, FD, 4430, 0.6, 2.4); grove(Z(T.x, T.z - 22, 14, 4), 8, FD, 4431, 0.6, 2.4);
+}
 // ================================================================ OUTSIDE: THE OLD TOWER SITE (west, z 100..125): just forest now
 grove(Z(-62, 108, 22, 6), 14, [PINES(3), OAKS(2), BUSHES(3), ROCKS(1)], 501, 0.7, 2.4);
 grove(Z(-62, 118.6, 22, 3), 7, [PINES(3), OAKS(1), BUSHES(3)], 502, 0.7, 2.4);

@@ -10,7 +10,7 @@ import { hallsPush, hallsRayStop, hallsSdf } from './roomHalls';
 import { world, allocZone, ARENA_RADIUS, TOWN_CENTER, MAX_CRATES, SHRINE_POS, TRAINER_POS } from './world';
 import type { Obstacle, ObstacleKind, Crate, CrateKind } from './types';
 import { SHOP_POSITIONS } from '../constants';
-import { ISLAND_BOXES, FARM } from './townData';
+import { ISLAND_BOXES, FARM, TOWER } from './townData';
 import { CAVE_BAY } from './caveData';
 import { DECK_RECTS, onDeckRect } from './beachData';
 
@@ -47,7 +47,7 @@ export function pushOutOfColliders(p: { x: number; z: number }, pad: number): vo
   }
 }
 
-export type RegionKind = 'TOWN' | 'FARM' | 'RUINS' | 'GRAVEYARD' | 'CRYSTAL_GROVE' | 'CAMP' | 'QUARRY' | 'GROVE' | 'POND';
+export type RegionKind = 'TOWN' | 'FARM' | 'RUINS' | 'GRAVEYARD' | 'CRYSTAL_GROVE' | 'CAMP' | 'QUARRY' | 'GROVE' | 'POND' | 'GLOOM';
 export interface Region { name: string; kind: RegionKind; x: number; z: number; r: number }
 
 /** Pond: blocks walking (not shots). The render layer draws the water itself. */
@@ -61,6 +61,7 @@ export const CRATE_RESPAWN_TIME = 75;
 export const REGIONS: Region[] = [
   { name: 'Town', kind: 'TOWN', x: TOWN_CENTER.x, z: TOWN_CENTER.z, r: 32 },
   { name: 'Hollow Farm', kind: 'FARM', x: FARM.x, z: FARM.z, r: 10 },
+  { name: 'Haunted Hollow', kind: 'GLOOM', x: TOWER.x, z: TOWER.z - 2, r: 40 },   // (owner 2026-10-31) the Endless Tower's gloomy grounds: grey-violet dead grass, bare dirt, cracks (render/Terrain groundColor)
 ];
 
 /** Harvest nodes: only broken by hand (hold E), never by attacks. */
@@ -79,7 +80,7 @@ const CRATE_SPACE: Record<CrateKind, number> = {
 
 // ------------------------------------------------------------ collider grid --
 const CELL = 8;
-const HALF = Math.max(ARENA_RADIUS + 12, 200);   // (the town map reaches z ~190: the forest south of the portal clearing + the Endless Tower)
+const HALF = Math.max(ARENA_RADIUS + 12, 270);   // (the town map reaches z ~255: the forest south of the portal clearing + the far Endless Tower)
 const COLS = Math.ceil((HALF * 2) / CELL) + 1;
 let cells: Collider[][] = [];
 let colliders: Collider[] = [];

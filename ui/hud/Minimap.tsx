@@ -135,6 +135,10 @@ function bakeTown(): void {
     g.closePath(); g.fill();
     g.fillStyle = C.roadPaved; rr(g, -BRIDGE.hw, BRIDGE.z0, BRIDGE.hw * 2, BRIDGE.z1 - BRIDGE.z0, 1.2); g.fill();
     g.fillStyle = C.roadDirt; rr(g, MINE_BRIDGE.x - MINE_BRIDGE.hw, MINE_BRIDGE.z0, MINE_BRIDGE.hw * 2, MINE_BRIDGE.z1 - MINE_BRIDGE.z0, 0.8); g.fill();
+    // (owner 2026-10-31) the Endless Tower's haunted hollow: a soft grey-violet stain on the grass (clipped to the island)
+    g.save(); g.beginPath(); for (let i = 0; i < ISLE_N; i++) { if (i === 0) g.moveTo(pts[0], pts[1]); else g.lineTo(pts[i * 2], pts[i * 2 + 1]); } g.closePath(); g.clip();
+    { const gr = g.createRadialGradient(TOWER.x, TOWER.z - 2, 8, TOWER.x, TOWER.z - 2, 36); gr.addColorStop(0, 'rgba(92,72,120,.6)'); gr.addColorStop(1, 'rgba(92,72,120,0)'); g.fillStyle = gr; g.fillRect(TOWER.x - 38, TOWER.z - 40, 76, 76); }
+    g.restore();
     // fields
     for (const f of FIELDS) { g.fillStyle = f.crop === 'WHEAT' ? '#ecd77f' : f.crop === 'PUMPKIN' ? '#f3b868' : '#a8de78'; rr(g, f.x - f.hw, f.z - f.hd, f.hw * 2, f.hd * 2, 2); g.fill(); }
     // roads (dirt first, paved on top) + the plaza
