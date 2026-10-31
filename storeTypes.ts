@@ -215,7 +215,7 @@ export interface GameState {
   /** Boss Trials (bossTrials.ts): fight biome `boss` (0..6) alone at Void strength. Free until the boss is WON that local day (a death / abandon keeps the try); a won boss needs a Boss Trial Ticket (consumed here). False = refused (locked / no ticket). */
   startBossTrial: (boss: number) => boolean;
   /** The trial boss fell: rolls + banks its Legendary / Mythic piece (bag, else warehouse) and returns it. */
-  claimBossTrialLoot: (boss: number) => Item | null;
+  rollBossTrialLoot: (boss: number) => Item[];
   sailToIsles: () => boolean;         // the captain's 60 Aether Crystal ticket: an adventure run that opens in the Coral Isles   // start a run in this mode (sets engine runInfo, then startGame)
   setAscension: (lv: number) => void;
   completeEnding: () => void;                       // the Void Herald defeated: count the ending, unlock the next Ascension

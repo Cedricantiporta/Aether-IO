@@ -1,0 +1,63 @@
+/* Boss Trials popup + trial loot panel (owner 2026-10-31): Zelda / casual Nintendo look. No outlines or rings: cards are separated by soft fill tones, spacing and shadow. */
+.bt-shade { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(20, 10, 40, .55); }
+.bt-card {
+  width: min(35rem, calc(100vw - 1.5rem)); max-height: min(92vh, 44rem); display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #5b4585, #43316a); border-radius: .65rem; color: #f4ecff; line-height: 1.35;
+  box-shadow: 0 14px 34px rgba(10, 4, 30, .55), 0 3px 0 rgba(20, 8, 44, .5); overflow: hidden;
+}
+.bt-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem .9rem .75rem 1.1rem; background: rgba(255, 255, 255, .09); }
+.bt-head h2 { margin: 0; font-size: 1.15rem; font-weight: 800; color: #fff; letter-spacing: .01em; }
+.bt-x { flex: none; width: 2.1rem; height: 2.1rem; display: grid; place-items: center; border: 0; border-radius: .5rem; background: rgba(255, 255, 255, .16); color: #fff; cursor: pointer; }
+.bt-x:hover { background: rgba(255, 255, 255, .28); }
+.bt-body { flex: 1; min-height: 0; overflow-y: auto; padding: .9rem 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.bt-intro { display: flex; flex-direction: column; gap: .35rem; font-size: .8rem; color: #d9cdf0; }
+.bt-intro p { margin: 0; }
+.bt-intro b { color: #fff; }
+.bt-intro .mythic { color: #ff9be3; }
+.bt-list { display: flex; flex-direction: column; gap: .6rem; }
+.bt-row { border-radius: .6rem; background: rgba(255, 255, 255, .1); box-shadow: 0 2px 0 rgba(20, 8, 44, .35); overflow: hidden; }
+.bt-row.open { background: rgba(255, 255, 255, .16); }
+.bt-row.done { opacity: .8; }
+.bt-top { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .75rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.bt-ico { width: 2.4rem; height: 2.4rem; flex: none; display: grid; place-items: center; border-radius: .55rem; background: rgba(255, 255, 255, .14); overflow: hidden; }
+.bt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.bt-main b { color: #fff; font-size: .92rem; }
+.bt-main span { font-size: .72rem; color: #cbbde6; }
+.bt-main em { font-style: normal; font-size: .74rem; color: #ffe08a; }
+.bt-state { flex: none; font-size: .7rem; text-align: right; color: #cbbde6; }
+.bt-chev { flex: none; width: .6rem; height: .6rem; border-right: .18rem solid #cbbde6; border-bottom: .18rem solid #cbbde6; transform: rotate(45deg); transition: transform .15s; margin: 0 .25rem .2rem .1rem; border-radius: .05rem; }
+.bt-row.open .bt-chev { transform: rotate(-135deg); margin-bottom: 0; margin-top: .25rem; }
+.bt-drops { padding: 0 .75rem .75rem; display: flex; flex-direction: column; gap: .6rem; }
+.bt-odds { font-size: .74rem; color: #d9cdf0; background: rgba(0, 0, 0, .16); border-radius: .5rem; padding: .55rem .7rem; }
+.bt-odds b { color: #fff; }
+.bt-odds .mythic { color: #ff9be3; }
+.bt-items { display: flex; flex-direction: column; gap: .35rem; max-height: 13rem; overflow-y: auto; }
+.bt-it { display: flex; align-items: center; gap: .6rem; padding: .4rem .6rem; border-radius: .5rem; background: rgba(0, 0, 0, .18); }
+.bt-it .art { width: 1.9rem; height: 1.9rem; flex: none; display: grid; place-items: center; }
+.bt-it .nm { flex: 1; min-width: 0; font-size: .8rem; font-weight: 700; }
+.bt-tag { flex: none; font-size: .62rem; font-weight: 800; padding: .15rem .45rem; border-radius: .35rem; letter-spacing: .02em; }
+.bt-tag.LEGENDARY { background: rgba(255, 177, 59, .25); color: #ffcf7d; }
+.bt-tag.MYTHIC { background: rgba(255, 106, 213, .25); color: #ffa8e6; }
+.bt-empty { font-size: .76rem; color: #cbbde6; padding: .3rem .1rem; }
+.bt-btns { display: flex; gap: .6rem; flex-wrap: wrap; }
+.bt-btn { flex: 1; min-width: 7rem; padding: .6rem .9rem; border: 0; border-radius: .5rem; font: inherit; font-weight: 800; font-size: .86rem; color: #fff; cursor: pointer; background: rgba(255, 255, 255, .2); box-shadow: 0 3px 0 rgba(20, 8, 44, .4); transition: transform .08s, filter .12s; }
+.bt-btn:hover { filter: brightness(1.12); }
+.bt-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(20, 8, 44, .4); }
+.bt-btn.go { background: linear-gradient(180deg, #ffb13b, #f08a1c); color: #3b1f06; }
+.bt-btn.blue { background: linear-gradient(180deg, #5bb8ff, #3a8ae0); }
+.bt-btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+.bt-foot { flex: none; padding: .7rem 1.1rem; background: rgba(0, 0, 0, .18); display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; flex-wrap: wrap; font-size: .76rem; color: #e7dcf8; }
+.bt-foot span { font-size: .68rem; color: #bcaed6; }
+.bt-note { font-size: .76rem; color: #d9cdf0; background: rgba(0, 0, 0, .16); border-radius: .5rem; padding: .55rem .7rem; }
+.bt-note b { color: #fff; }
+
+/* loot panel after a win */
+.tl-wrap { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 150; }
+.tl-card { pointer-events: auto; width: min(24rem, calc(100vw - 1.5rem)); display: flex; flex-direction: column; gap: .75rem; padding: 1rem 1.1rem; border-radius: .65rem; background: linear-gradient(180deg, #5b4585, #43316a); color: #f4ecff; line-height: 1.35; box-shadow: 0 14px 34px rgba(10, 4, 30, .55), 0 3px 0 rgba(20, 8, 44, .5); }
+.tl-card h3 { margin: 0; font-size: 1.1rem; font-weight: 800; color: #fff; text-align: center; }
+.tl-card p { margin: 0; font-size: .8rem; color: #d9cdf0; text-align: center; }
+.tl-warn { color: #ffd0c8 !important; background: rgba(255, 90, 70, .22); border-radius: .5rem; padding: .5rem .7rem; font-weight: 700; }
+.tl-lost { color: #ffe9a8 !important; }
+.tl-corner { position: absolute; right: .75rem; bottom: 8.5rem; z-index: 140; pointer-events: auto; padding: .5rem .85rem; border: 0; border-radius: .5rem; font: inherit; font-weight: 800; font-size: .8rem; color: #fff; cursor: pointer; background: linear-gradient(180deg, #8a66c8, #6a47a8); box-shadow: 0 3px 0 rgba(20, 8, 44, .45), 0 6px 14px rgba(10, 4, 30, .4); }
+.tl-corner small { display: block; font-size: .64rem; font-weight: 600; opacity: .85; }
+.compact .bt-main b { font-size: 1rem; } .compact .bt-main span, .compact .bt-main em, .compact .bt-intro, .compact .bt-state { font-size: .82rem; }

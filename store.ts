@@ -16,7 +16,7 @@ import { FUSE_COUNT, FUSE_CHANCE, nextTier, nextItemTier, randomPetOf } from './
 import { questXp, xpNeed, growBase, unlockLevel, skillCost, freshClass, sanitizeClassProg, MAX_LEVEL, SP_PER_LEVEL, START_SP, spGainAt, spTotalAt, DASH_UNLOCK_LV, type ClassProg, autoLearnActives } from './classLevels';
 let runStartLevel = 1;
 import { TECH, ROMAN, FREE_REFRESHES, techLv, sanitizeTech, type TechId, type TechLevels } from './tech';
-import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, TRIAL_BONUS_ITEM, rollTrialRarity, rollTrialPlus, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
+import { TRIAL_BOSSES, TICKET_NAME, TRIAL_PERFECT_LUCK, TRIAL_BONUS_ITEM, rollTrialRarity, rollTrialPlus, trialPool, armTrial, disarmTrial, trialDayKey, fought as trialFought } from './bossTrials';
 import { runInfo, hardMul, phaseOfTime, shipState, shipDeckChosen, type RunMode } from './engine/runMods';
 import { armDaily, disarmDaily, dailyFor, dailyReward, dayKey, prevDay, sanitizeDaily } from './dailyChallenge';
 import { armWaves, disarmWaves, waveMilestone, WAVE_MILESTONES } from './endlessWaves';
@@ -1358,27 +1358,25 @@ export const useGameStore = create<GameState>()((set, get) => {
       get().startGame();
       return true;
     },
-    claimBossTrialLoot: (boss) => {
-      const s = get(), row = TRIAL_BOSSES[boss]; if (!row) return null;
-      const slotType = { boots: 'BOOTS', gloves: 'GLOVES', armor: 'ARMOR', helmet: 'HELMET', accessory: 'ACCESSORY', weapon: 'WEAPON', pet: 'PET' }[row.slot];
-      const mk = (r: Rarity): Item[] => (row.slot === 'pet' ? PETS_POOL.filter((i) => i.rarity === r) : ITEMS_POOL.filter((i) => i.type === slotType && !i.retired && i.id !== PICKAXE_ID && i.rarity === r && canUseClass(i, s.hero)));
+    // (owner 2026-10-31) The win no longer banks anything: this ROLLS the drops (1 item + 50% a 2nd, one slot) and sets the daily lock; trialRun spawns them as ground pickups.
+    rollBossTrialLoot: (boss) => {
+      const s = get(), row = TRIAL_BOSSES[boss]; if (!row) return [];
+      const mk = (r: Rarity): Item[] => trialPool(row.slot, r, s.hero);
       const roll = (): Item | null => {
         const first = rollTrialRarity();
         let pool = mk(first); if (!pool.length) pool = mk(first === 'MYTHIC' ? 'LEGENDARY' : 'MYTHIC');
         if (!pool.length) return null;
         let it = instantiate(pool[Math.floor(Math.random() * pool.length)], undefined, TRIAL_PERFECT_LUCK);   // bonus lines: Perfect (yellow) 5x as often
         if (isGear(it)) for (let k = rollTrialPlus(); k > 0; k--) it = plusOne(it);
-        if (!get().addItemToInventory(it)) set({ warehouse: [...get().warehouse, it] });   // bag full: to the warehouse
-        notify(`Boss Trial reward: ${it.name}${it.level > 1 ? ` +${it.level - 1}` : ''}!`, it.rarity === 'MYTHIC' ? '#ff6ad5' : '#ffb13b', 'BOSS');
         return it;
       };
-      const it = roll(); if (!it) return null;
-      const extra = Math.random() < TRIAL_BONUS_ITEM ? roll() : null;   // (owner 2026-10-26) a win = 1 item + a 50% chance of a 2nd one of the boss's slot
-      feedReward({ items: extra ? [it, extra] : [it] });
-      // the daily lock applies only now: loot received (a death / abandon never used the try)
+      const out: Item[] = [];
+      const it = roll(); if (it) out.push(it);
+      if (it && Math.random() < TRIAL_BONUS_ITEM) { const extra = roll(); if (extra) out.push(extra); }
+      // the daily lock applies on the WIN (a death / abandon never used the try)
       const p = get().progress;
       set({ progress: { ...p, trialDay: { ...(p.trialDay ?? {}), [String(boss)]: trialDayKey() } } });
-      return it;
+      return out;
     },
     // ---- Endless Waves (endlessWaves.ts): one arena, wave after wave until death
     startWaves: () => {
