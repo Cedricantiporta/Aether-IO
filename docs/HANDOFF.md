@@ -830,7 +830,7 @@ screens, max-level question: class level cap is 50) have been removed.
 - **Dialogue**: speaker lines `Name:: text` (`You::` = the hero); short hero replies ride on the button.
 - **Boss wards / barriers**: `bossMech.ts` (`WARD_AT` 0.5, `BARRIER_CD`), per-boss ward kinds (crystals, sporecaps,
   hellhounds, spare hydra heads, frost shell, power cores, void phase, cultists).
-- **Necromancer summons**: per-source caps in `minions.ts`; when the last summon falls (in a room, hero alive) one skeleton warrior rises beside the hero for 5 s (`SRC_LAST` = 7; 6 is the run ally, once per wipe: it does not count as a summon, so it does not re-trigger or hold Raise Dead's cooldown); Raise Dead army of up to 5 (3 warriors + 2 random archer/mage),
+- **Necromancer summons**: per-source caps in `minions.ts`; when the last summon falls (in a room, hero alive) one skeleton warrior rises beside the hero for 5 s (`SRC_LAST` = 7; 6 is the run ally, once per wipe: it does not count as a summon, so it does not re-trigger or hold Raise Dead's cooldown); Raise Dead army of up to 5 (3 warriors + 2 random archer/mage), **(owner 2026-10-31) Raise Dead's cooldown is held only while a skeleton WARRIOR of it stands; once all warriors are dead it ticks and can be recast even if archers / mages live, and that recast raises only the missing amount (level cap - alive, min 1), all warriors (`minions.raiseArmy`, `pickRaiseKind(meleeOnly)`, abilities.ts q);**
   Bone Ward shields summons, golem ult.
   **Bone Golem ult (owner 2026-10-25)**: 50% bigger (render scale 2.85, body `mr` 1.95, reach 4.8), 20% faster attacks, its slam hits an area (`GOLEM_HIT_R` 3.4 around the target + shockwave), lasts 26 s (`GOLEM_LIFE` in abilities.ts). Every 4-6 s, if an enemy is 6-16 m away, it lobs a boulder (`golemRockAI` / `updateRocks` in minions.ts: METEOR_SHADOW telegraph 0.9 s, then 1.5x m.dmg area + short stun). When its timer ends or it is slain it explodes (`golemExplode`: 2.5x m.dmg in 6 m + BURN) and leaves a FIRE zone (aux 1 = real burn) for 5 s.
 - **Debug mode** (Settings > Debug, `ui/screens/DebugTab.tsx`, `engine/debug.ts`): collapsible sections (open state saved in
@@ -853,6 +853,8 @@ Method: a Playwright harness (not in the repo) drives `updateGame(1/30)` with a 
 - Economy: XP Lv 1 -> 10 takes ~40 min; Lv 50 estimated 15-20 h.
 Absolute numbers in those passes predate the HP/damage doubling, the item-tier changes and the card rework; treat only
 relative findings as valid. QA gotcha: restart Vite after every engine edit or the page imports a second module copy.
+
+- **Golemite wall trick (owner 2026-10-31, `tricks.ts`)**: TRICK.WALL is either straight (old) or a **C**: centred on the hero at cast, 10 crystal segments (r 0.9) on a ring of R 3.2 covering 240 deg, the 120 deg opening faces the caster (clear gap ~3.7 m), same 4 s life, same telegraph (circle, 0.72 s). C chance by `heroRange` (`wallCChance`): < 12 (Knight, Barbarian) 30%, else (Archer, Wizard, Necro) 70%. Segments touching static colliders / the arena edge / a portal (5 m) are skipped (only widens the opening). Walls are host-side colliders (not mirrored to the guest, as before).
 
 ### QA (headless)
 - Tailwind CDN is blocked in the container: route it to the npm package `tailwindcss-cdn@3.4.10` (`3.4.3/tailwindcss.js`).
