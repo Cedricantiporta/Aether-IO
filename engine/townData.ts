@@ -565,7 +565,7 @@ export const ENTERABLE_HOUSES: { name: string; x: number; z: number; door: { x: 
 });
 
 /** Fence runs [x1, z1, x2, z2]. Every run gets colliders (see TOWN_COLLIDERS). */
-export const FENCES: [number, number, number, number][] = [
+const HAND_FENCES: [number, number, number, number][] = [
   // (owner 2026-10-31) Lantern Lane's yards: the back fence of the two south houses, a gate-less stub beside the well, the back fence behind the market stalls
   [-23.2, 159.8, -9.8, 159.8], [-23.2, 159.8, -23.2, 157.4], [-24.0, 136.6, -15.2, 136.6], [-15.2, 136.6, -15.2, 138.8],
   // (the avenue's fences made way for the market stalls; houses get their yard fences from YARD_FENCES below)
@@ -591,6 +591,43 @@ export const FENCES: [number, number, number, number][] = [
   // the extra crop fields (each open on the road side)
   ...(() => { const f: [number, number, number, number][] = []; for (const F of FIELDS) { const x0 = F.x - F.hw, x1 = F.x + F.hw, z0 = F.z - F.hd, z1 = F.z + F.hd, roadX = F.x > 0 ? x0 : x1; f.push([x0, z0, x1, z0], [x0, z1, x1, z1], [roadX === x0 ? x1 : x0, z0, roadX === x0 ? x1 : x0, z1]); if (F.x < 0) f.push([roadX, z0, roadX, z1]); else f.push([roadX, z0, roadX, F.z - 1.4], [roadX, F.z + 1.4, roadX, z1]); } return f; })(),   // (west fields: closed, no way in from the road)
 ];
+
+/** (owner 2026-10-31 "fences on dirt pathways, at least on the farm sides") Low wooden fences beside the farm-side dirt tracks.
+ *  Same `fence_wood` runs as every other fence (render/natureLayout, colliders in TOWN_COLLIDERS), generated as ~3.4 m pieces
+ *  along each track's two sides: every 5th-6th piece is left out (a gate), a hashed ~15% more are missing (broken fence),
+ *  every bend / junction / door / quest spot gets an explicit gap, and nothing is placed on top of an existing fence, well or house. */
+const PATH_FENCES: [number, number, number, number][] = (() => {
+  type Trk = { pts: [number, number][]; w: number; sides: (-1 | 1)[]; gaps: [number, number, number][] };
+  const TRACKS: Trk[] = [
+    // the farm track (forest road -> east past the coop pen -> up to the mine path); the pen's own fence covers its south side x 29-44
+    { pts: [[2.4, 110.6], [24, 111.2], [43, 111], [48.5, 100.5]], w: 2.6, sides: [-1, 1], gaps: [[2.4, 110.6, 5.0], [35.8, 108.4, 3.2], [35.8, 113.8, 3.4], [48.5, 100.5, 4.2]] },
+    // the mine path's first stretch along the farm's east side (a gap at the junction and by the herb node)
+    { pts: [[48.5, 100.5], [54, 91], [58, 79]], w: 2.6, sides: [-1, 1], gaps: [[48.5, 100.5, 4.2], [55.2, 81, 3.6], [54, 91, 2.2]] },
+    // the Endless Tower's lane right after it leaves the forest road (the nests / hens' grass further on stay open)
+    { pts: [[2.6, 134.5], [13, 134], [24, 138.5]], w: 2.8, sides: [-1, 1], gaps: [[2.6, 134.5, 5.0], [24, 138.5, 3.0]] },
+  ];
+  const hh = (a: number, b: number): number => { const v = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return v - Math.floor(v); };
+  const sd = (px: number, pz: number, a: number, b: number, c: number, d: number): number => { const dx = c - a, dz = d - b, L = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((px - a) * dx + (pz - b) * dz) / L)); return Math.hypot(px - a - dx * t, pz - b - dz * t); };
+  const out: [number, number, number, number][] = [];
+  // (the farmhouse yard's west side, running back from the track's north fence)
+  out.push([27, 108.4, 27, 105], [27, 105, 27, 101.8]);
+  const PIECE = 3.4;
+  for (const T of TRACKS) for (const side of T.sides) for (let k = 0; k + 1 < T.pts.length; k++) {
+    const [ax, az] = T.pts[k], [bx, bz] = T.pts[k + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L;
+    const d = T.w / 2 + 1.35, nx = -uz * side * d, nz = ux * side * d, t0 = 1.4, n = Math.floor((L - 2 * t0) / PIECE);
+    for (let i = 0; i < n; i++) {
+      const s0 = t0 + i * PIECE, s1 = s0 + PIECE, x1 = ax + ux * s0 + nx, z1 = az + uz * s0 + nz, x2 = ax + ux * s1 + nx, z2 = az + uz * s1 + nz, mx = (x1 + x2) / 2, mz = (z1 + z2) / 2;
+      if (i % 6 === 5 || hh(mx, mz) < 0.15) continue;   // (a gate every sixth piece, a few broken sections)
+      if (T.gaps.some(([gx, gz, gr]) => Math.hypot(mx - gx, mz - gz) < gr || Math.hypot(x1 - gx, z1 - gz) < gr * 0.7 || Math.hypot(x2 - gx, z2 - gz) < gr * 0.7)) continue;
+      if (WELLS.some(([wx, wz]) => Math.hypot(mx - wx, mz - wz) < 3.2)) continue;
+      if (HOUSES.some((h) => Math.hypot(mx - h.x, mz - h.z) < 6)) continue;
+      if (HAND_FENCES.some((f) => sd(mx, mz, f[0], f[1], f[2], f[3]) < 1.9 || sd(x1, z1, f[0], f[1], f[2], f[3]) < 1.4 || sd(x2, z2, f[0], f[1], f[2], f[3]) < 1.4)) continue;
+      out.push([x1, z1, x2, z2]);
+    }
+  }
+  return out;
+})();
+export const FENCES: [number, number, number, number][] = [...HAND_FENCES, ...PATH_FENCES];
 
 /** Signposts pointing at the gate (south): one beside the spawn plaza, one half way down the road. */
 /** Gate signposts were removed at the owner's request (a ground arrow points to the gate instead). */
