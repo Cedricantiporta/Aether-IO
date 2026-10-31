@@ -15,9 +15,10 @@ import {
 } from '../engine/systems/bossFx';
 import { GameStatus } from '../types';
 import { useGameStore } from '../store';
-import { CELL, FX } from './fx';
+import { CELL, FX, pushHalo } from './fx';
 import { GB, TAU, clamp, commitInst, liveRange, setInst } from './util';
 import { inView } from './view';
+import { CrystalSet } from './BossCrystals';
 
 const MAXW = 12, MAXP = 160, MAXPORT = 8, MAXECHO = 4;
 const _c = new Color();
@@ -84,7 +85,7 @@ export function BossFx() {
     // props
     const litM = (hex: number, em = 0) => new MeshStandardMaterial({ color: hex, flatShading: true, roughness: 0.85, emissive: em, emissiveIntensity: em ? 0.6 : 0 });
     const root = dyn(new InstancedMesh(new ConeGeometry(0.5, 1, 6).translate(0, 0.5, 0), litM(0x6b4423), MAXP)); root.castShadow = false;
-    const ice = dyn(new InstancedMesh(new ConeGeometry(0.5, 1, 5).translate(0, 0.5, 0), new MeshStandardMaterial({ color: 0xbfe8ff, flatShading: true, roughness: 0.15, metalness: 0.1, emissive: 0x2a8ac0, emissiveIntensity: 0.7 }), MAXP));
+    const iceSet = new CrystalSet(MAXP * 3, 3); group.add(iceSet.group);   // ice spike lanes: a faceted crystal cluster (main + 2 satellites) per spike
     const thorn = dyn(new InstancedMesh(new ConeGeometry(0.4, 1, 4).translate(0, 0.5, 0), litM(0x4f7a1e), MAXP));
     const pillar = dyn(new InstancedMesh(new CylinderGeometry(1, 0.8, 1, 12, 1, true).translate(0, 0.5, 0), new MeshBasicMaterial({ color: new Color(2.2, 0.9, 0.2), transparent: true, opacity: 0.75, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }), MAXP), 3);
     const core = dyn(new InstancedMesh(new CylinderGeometry(0.55, 0.45, 1, 10, 1, true).translate(0, 0.5, 0), new MeshBasicMaterial({ color: new Color(2.4, 2.0, 0.9), transparent: true, opacity: 0.9, blending: AdditiveBlending, depthWrite: false, toneMapped: false, side: DoubleSide }), MAXP), 3);
@@ -106,7 +107,7 @@ export function BossFx() {
     const vg = new PlaneGeometry(1, 1); vg.rotateX(-Math.PI / 2);
     const veilMat = new ShaderMaterial({ vertexShader: VEIL_VS, fragmentShader: VEIL_FS, uniforms: { uTime: { value: 0 }, uR: { value: 0.5 } }, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const veil = new Mesh(vg, veilMat); veil.frustumCulled = false; veil.renderOrder = 2; veil.visible = false; group.add(veil);
-    return { group, rings, iW, iC, ringMat, root, ice, thorn, pillar, core, glob, portalRing, portalIn, portalDisc, echo, veil, veilMat };
+    return { group, rings, iW, iC, ringMat, root, iceSet, thorn, pillar, core, glob, portalRing, portalIn, portalDisc, echo, veil, veilMat };
   }, []);
 
   useFrame(({ clock }, dtRaw) => {
@@ -153,7 +154,14 @@ export function BossFx() {
         if (e <= 0.01) continue;
         switch (p.kind) {
           case PROP_ROOT: setInst(sys.root, nR++, p.x, 0, p.z, p.rot, p.r * 1.3, p.h * e, p.r * 1.3, 0.12, -0.1); break;
-          case PROP_ICE: setInst(sys.ice, nI++, p.x, 0, p.z, p.rot, p.r * 1.2, p.h * e, p.r * 1.2, 0.08, 0.05); break;
+          case PROP_ICE: {
+            const w = p.r * 2.2, ov = 1 + 0.12 * Math.sin(Math.min(1, grow) * 3.14);
+            sys.iceSet.set(nI++, p.x, 0, p.z, p.rot, w, p.h * e * ov, w, 0.06, 0.04, 0.55, 0.85, 1);
+            sys.iceSet.set(nI++, p.x + Math.cos(p.rot) * p.r * 0.9, 0, p.z + Math.sin(p.rot) * p.r * 0.9, p.rot + 1, w * 0.6, p.h * e * 0.62, w * 0.6, 0.3, -0.2, 0.4, 0.8, 1);
+            sys.iceSet.set(nI++, p.x - Math.cos(p.rot + 0.7) * p.r * 0.8, 0, p.z - Math.sin(p.rot + 0.7) * p.r * 0.8, p.rot + 2, w * 0.5, p.h * e * 0.45, w * 0.5, -0.28, 0.25, 0.7, 0.95, 1);
+            if (nI < 60) pushHalo(p.x, p.h * e * 0.95, p.z, 1.3, 1.2, 2.0, 2.6, 0.5 * (0.6 + 0.4 * Math.sin(t * 12 + p.rot)), CELL.STAR);
+            break;
+          }
           case PROP_THORN: setInst(sys.thorn, nT++, p.x, 0, p.z, p.rot, p.r * 1.4, p.h * e, p.r * 1.4); break;
           default: { // pillar of fire
             const fl = 1 + 0.12 * Math.sin(t * 30 + p.rot);
@@ -164,7 +172,7 @@ export function BossFx() {
         }
       }
       const set = commitInst;
-      set(sys.root, nR); set(sys.ice, nI); set(sys.thorn, nT); set(sys.pillar, nP); set(sys.core, nC); set(sys.glob, nG);
+      set(sys.root, nR); sys.iceSet.commit(nI); set(sys.thorn, nT); set(sys.pillar, nP); set(sys.core, nC); set(sys.glob, nG);
     }
 
     // ---- portals
@@ -216,13 +224,15 @@ export function BossFx() {
     // ---- frost breath + blizzard + chill particles
     if (dt > 0) {
       if (breath.active) {
-        const n = Math.ceil(dt * 80);
+        const n = Math.ceil(dt * 70 * Math.max(0.4, FX.scale));
         const baseA = Math.atan2(breath.dx, breath.dz);
         for (let k = 0; k < n; k++) {
           const d = rnd() * breath.range, a = baseA + (rnd() * 2 - 1) * breath.half * (0.3 + 0.7 * d / breath.range);
-          const sx = Math.sin(a), cz = Math.cos(a);
-          FX.add.emit(breath.x + sx * d * 0.3, 1.2 + rnd() * 1.5, breath.z + cz * d * 0.3, sx * (12 + rnd() * 6), (rnd() - 0.5) * 1.5, cz * (12 + rnd() * 6), 0.5 + rnd() * 0.3, 0.5, 1.9, 0.7, 1.5, 1.9, 0.5, CELL.SMOKE, 0, 0.4, rnd() * 6, 1);
-          if (rnd() < 0.35) FX.add.emit(breath.x + sx * d * 0.5, 1.5, breath.z + cz * d * 0.5, sx * 14, 0, cz * 14, 0.45, 0.28, 0.05, 1.4, 2.0, 2.4, 0.9, CELL.STAR, 0, 0.3, rnd() * 3, 3);
+          const sx = Math.sin(a), cz = Math.cos(a), sp = 13 + rnd() * 7;
+          // luminous blue-white stream from the jaw (additive mist) widening along the cone
+          FX.add.emit(breath.x + sx * 1.5, 2.3 - rnd() * 1.2, breath.z + cz * 1.5, sx * sp, (rnd() - 0.6) * 2, cz * sp, 0.45 + rnd() * 0.3, 0.7, 2.4 + d * 0.12, 0.55, 1.25, 1.9, 0.5, CELL.SMOKE, 0, 0.4, rnd() * 6, 1);
+          if (rnd() < 0.5) FX.add.emit(breath.x + sx * d * 0.5, 0.6 + rnd() * 2.2, breath.z + cz * d * 0.5, sx * 6, 0.5, cz * 6, 0.5, 0.3 + d * 0.01, 0.05, 1.8, 2.4, 2.6, 0.95, CELL.STAR, 0, 0.3, rnd() * 3, 4);
+          if (rnd() < 0.25) FX.norm.emit(breath.x + sx * d, 0.3, breath.z + cz * d, sx * 1.5, 0.9, cz * 1.5, 1.0, 1.2, 2.6, 0.85, 0.95, 1, 0.35, CELL.SMOKE, -0.2, 1.2, rnd() * 6, 0.4);   // white ground mist at the base
         }
       }
       if (arena.blizzard && rnd() < 0.9) {

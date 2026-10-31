@@ -7,6 +7,7 @@ import { abilityState } from '../engine/systems/abilities';
 import { tether, prism } from '../engine/systems/bossSpecials';
 import { CELL, DECALS, FX, bolt, chunks, dustPuff, flashStar, glowPuff, pushHalo, ringBurst, smokePuff, sparks, splat, gate } from './fx';
 import { TAU, commitInst } from './util';
+import { shardBurst } from './BossCrystals';
 
 const rnd = Math.random;
 let tetherAcc = 0;
@@ -26,7 +27,7 @@ export function TrickFx() {
         case 'PIN': sparks(p.x, 1.1, p.z, 10, 0xfacc15, 8, 0.2, 0.3, 2); break;
         case 'PIN_HIT': ringBurst(p.x, 0.3, p.z, 0xfacc15, 0.4, 3.2, 0.5, 1.8); dustPuff(p.x, p.z, 4, 0.8, 0xc8a050, 1.4); break;
         case 'CURSE': ringBurst(p.x, 0.25, p.z, 0xa855f7, 0.5, r * 1.2, 0.6, 1.8); for (let i = 0; i < 14; i++) FX.add.emit(p.x + (rnd() - 0.5) * r, 0.2, p.z + (rnd() - 0.5) * r, 0, 4 + rnd() * 3, 0, 0.8, 0.3, 0.05, 1.8, 0.4, 2.2, 0.9, CELL.STREAK, 0, 0, 0, 0, 0.1); break;
-        case 'STOMP': dustPuff(p.x, p.z, 10, 1.6, 0xcdbd98, r * 0.8); chunks(p.x, 0.5, p.z, 12, 0x7a6a58, 0x4a4036, r, 0.3); DECALS.add(p.x, p.z, r * 1.1, r * 1.1, 3.5, 0.05, 0.04, 0.03, 0.4, CELL.CRACK); break;
+        case 'STOMP': shardBurst(p.x, 0.5, p.z, 10, 0x9a8a74, 0x5a4c3c, r * 1.1, 0.32, 1); dustPuff(p.x, p.z, 10, 1.6, 0xcdbd98, r * 0.8); chunks(p.x, 0.5, p.z, 12, 0x7a6a58, 0x4a4036, r, 0.3); DECALS.add(p.x, p.z, r * 1.1, r * 1.1, 3.5, 0.05, 0.04, 0.03, 0.4, CELL.CRACK); break;
         case 'PLAGUE': smokePuff(p.x, 0.6, p.z, 14, 0x7aa83a, 3, 1.4, 1.5, r * 0.6, 0.5); splat(p.x, p.z, r * 2, 0x6aa84f, 5, 0.6); break;
         case 'TERROR': flashStar(p.x, 1.4, p.z, 0xbdeaff, r * 1.2, 0.35); ringBurst(p.x, 1.2, p.z, 0x7dd3fc, 1, r * 1.2, 0.6, 2); break;
         case 'WALL': flashStar(p.x, 1.5, p.z, 0xf0abfc, 10, 0.35); chunks(p.x, 0.5, p.z, 22, 0xe879f9, 0x7e22ce, 9, 0.35); sparks(p.x, 1.5, p.z, 24, 0xf5d0fe, 12, 0.22, 0.5, 2); break;
@@ -38,10 +39,10 @@ export function TrickFx() {
         case 'BOMBER_PATCH': splat(p.x, p.z, r * 1.8, 0x2a1a10, 5, 0.6); break;
         case 'ACID': splat(p.x, p.z, r * 2.2, 0x9be32a, 6, 0.8); smokePuff(p.x, 0.5, p.z, 8, 0xa8e03a, 2, 1, 1.4, r * 0.5, 0.4); break;
         // boss cataclysm impacts (bossMech.ts rain, ~40 per cast: keep each one light)
-        case 'RAIN_ROCK': dustPuff(p.x, p.z, 5, 1.4, 0xb8a888, r * 0.6); chunks(p.x, 0.5, p.z, 7, 0x8a7a68, 0x4a4036, r * 0.8, 0.3); ringBurst(p.x, 0.3, p.z, 0xb0a090, 0.5, r, 0.4, 1.6); DECALS.add(p.x, p.z, r * 0.9, r * 0.9, 3, 0.05, 0.04, 0.03, 0.35, CELL.CRACK); break;
-        case 'RAIN_THORN': dustPuff(p.x, p.z, 4, 1.0, 0x6a8a3a, r * 0.5); chunks(p.x, 0.5, p.z, 7, 0x6b4423, 0x3a2410, r * 0.7, 0.26); sparks(p.x, 0.8, p.z, 8, 0x9be32a, 7, 0.22, 0.4, 2); ringBurst(p.x, 0.3, p.z, 0x84cc16, 0.5, r, 0.4, 1.6); break;
+        case 'RAIN_ROCK': shardBurst(p.x, 0.5, p.z, 9, 0x9a8a74, 0x5a4c3c, r * 1.4, 0.34, 1); dustPuff(p.x, p.z, 5, 1.4, 0xb8a888, r * 0.6); chunks(p.x, 0.5, p.z, 7, 0x8a7a68, 0x4a4036, r * 0.8, 0.3); ringBurst(p.x, 0.3, p.z, 0xb0a090, 0.5, r, 0.4, 1.6); DECALS.add(p.x, p.z, r * 0.9, r * 0.9, 3, 0.05, 0.04, 0.03, 0.35, CELL.CRACK); break;
+        case 'RAIN_THORN': shardBurst(p.x, 0.5, p.z, 8, 0x6b8f2a, 0x4a3018, r, 0.28, 1); dustPuff(p.x, p.z, 4, 1.0, 0x6a8a3a, r * 0.5); chunks(p.x, 0.5, p.z, 7, 0x6b4423, 0x3a2410, r * 0.7, 0.26); sparks(p.x, 0.8, p.z, 8, 0x9be32a, 7, 0.22, 0.4, 2); ringBurst(p.x, 0.3, p.z, 0x84cc16, 0.5, r, 0.4, 1.6); break;
         case 'RAIN_GEYSER': sparks(p.x, 0.6, p.z, 14, 0xbfe8ff, 9, 0.24, 0.5, 2.4, 0, 1, 0, 0.6); glowPuff(p.x, 1.2, p.z, 0x3fa8ff, r * 1.2, 0.35, 1.6, 0.7); ringBurst(p.x, 0.3, p.z, 0x7dd3fc, 0.5, r, 0.45, 1.8); break;
-        case 'RAIN_ICE': sparks(p.x, 0.8, p.z, 12, 0xe0f4ff, 8, 0.22, 0.45, 2); chunks(p.x, 0.6, p.z, 6, 0xbfe8ff, 0x3f86b8, r * 0.8, 0.26); ringBurst(p.x, 0.3, p.z, 0xbfe8ff, 0.5, r, 0.45, 1.8); break;
+        case 'RAIN_ICE': shardBurst(p.x, 0.7, p.z, 8, 0xdff6ff, 0x7fd0f5, r * 1.2, 0.3, 0); sparks(p.x, 0.8, p.z, 12, 0xe0f4ff, 8, 0.22, 0.45, 2); chunks(p.x, 0.6, p.z, 6, 0xbfe8ff, 0x3f86b8, r * 0.8, 0.26); ringBurst(p.x, 0.3, p.z, 0xbfe8ff, 0.5, r, 0.45, 1.8); break;
         case 'RAIN_FIRE': glowPuff(p.x, 1, p.z, 0xff7a1a, r * 1.8, 0.4, 1.8, 0.8); sparks(p.x, 0.8, p.z, 10, 0xff9a30, 9, 0.26, 0.45, 2.2); ringBurst(p.x, 0.3, p.z, 0xff5a1a, 0.5, r, 0.4, 1.8); break;
         case 'RAIN_SAND': dustPuff(p.x, p.z, 8, 1.8, 0xe0c070, r * 0.7); sparks(p.x, 0.7, p.z, 8, 0xf5e0a0, 8, 0.22, 0.4, 2); ringBurst(p.x, 0.3, p.z, 0xe0c070, 0.5, r, 0.4, 1.6); break;
         case 'RAIN_VOID': flashStar(p.x, 1.2, p.z, 0xd8b4fe, r * 0.9, 0.3); sparks(p.x, 0.8, p.z, 10, 0xa060ff, 8, 0.24, 0.45, 2); ringBurst(p.x, 0.3, p.z, 0xa060ff, 0.5, r, 0.45, 1.8); break;
@@ -60,23 +61,23 @@ export function TrickFx() {
         case 'ROOTS': dustPuff(p.x, p.z, 8, 1.4, 0x8a6a3a, Math.min(8, r)); chunks(p.x, 0.5, p.z, 10, 0x6b4423, 0x3a2410, 6, 0.28); sparks(p.x, 0.8, p.z, 8, 0x9be32a, 6, 0.2, 0.4, 2); break;
         case 'THORN_POP': sparks(p.x, 0.6, p.z, 14, 0x84cc16, 7, 0.22, 0.4, 2); dustPuff(p.x, p.z, 4, 1.0, 0x5a7a2a, 2); break;
         case 'FUSE': sparks(p.x, 1, p.z, 12, 0xbef264, 6, 0.22, 0.5, 2); glowPuff(p.x, 1.2, p.z, 0x84cc16, 3, 0.4, 1.6, 0.8); break;
-        case 'BARK_BREAK': chunks(p.x, 2.5, p.z, 28, 0x9aa0aa, 0x5b3a1e, 11, 0.4); ringBurst(p.x, 0.4, p.z, 0xffd23a, 1, 9, 0.6, 2); break;
+        case 'BARK_BREAK': shardBurst(p.x, 2.5, p.z, 16, 0x8a5a2a, 0x5b3a1e, 10, 0.4, 1); chunks(p.x, 2.5, p.z, 28, 0x9aa0aa, 0x5b3a1e, 11, 0.4); ringBurst(p.x, 0.4, p.z, 0xffd23a, 1, 9, 0.6, 2); break;
         case 'SPIT_CAST': sparks(p.x, 2, p.z, 10, 0x9be32a, 6, 0.24, 0.4, 2); break;
         case 'SUBMERGE': dustPuff(p.x, p.z, 10, 2, 0x4c6a3a, 6); ringBurst(p.x, 0.3, p.z, 0x6b8f5a, 1, 8, 0.6, 1.8); break;
         case 'SURFACE': dustPuff(p.x, p.z, 12, 2.4, 0x4c6a3a, r * 0.8); chunks(p.x, 0.6, p.z, 16, 0x4c8a3a, 0x2a4a2a, r, 0.34); break;
         case 'TAIL_SWEEP': dustPuff(p.x, p.z, 10, 1.6, 0xb8a888, r * 0.6); sparks(p.x, 1, p.z, 10, 0xffffff, 8, 0.2, 0.3, 2); break;
         case 'BREATH': flashStar(p.x, 2.4, p.z, 0xbfe8ff, 6, 0.3); break;
-        case 'ICE_SPIKES': sparks(p.x, 1, p.z, 18, 0xbfe8ff, 9, 0.24, 0.45, 2); ringBurst(p.x, 0.3, p.z, 0x7dd3fc, 1, 6, 0.5, 1.8); break;
+        case 'ICE_SPIKES': shardBurst(p.x, 0.8, p.z, 8, 0xdff6ff, 0x7fd0f5, 8, 0.28, 0); sparks(p.x, 1, p.z, 18, 0xbfe8ff, 9, 0.24, 0.45, 2); ringBurst(p.x, 0.3, p.z, 0x7dd3fc, 1, 6, 0.5, 1.8); break;
         case 'TAKEOFF': dustPuff(p.x, p.z, 10, 2.2, 0xdff3ff, 6); ringBurst(p.x, 0.4, p.z, 0xbfe8ff, 1, 10, 0.6, 1.8); break;
-        case 'DIVE_CRASH': chunks(p.x, 0.8, p.z, 26, 0xbfe8ff, 0x3f86b8, r * 1.3, 0.4); dustPuff(p.x, p.z, 14, 2.4, 0xdff3ff, r); ringBurst(p.x, 0.3, p.z, 0xbfe8ff, 1, r * 1.8, 0.6, 2); break;
-        case 'HAIL': sparks(p.x, 0.8, p.z, 10, 0xdff3ff, 7, 0.2, 0.35, 2); break;
+        case 'DIVE_CRASH': shardBurst(p.x, 0.8, p.z, 22, 0xdff6ff, 0x5fb4e8, r * 1.4, 0.42, 0); chunks(p.x, 0.8, p.z, 26, 0xbfe8ff, 0x3f86b8, r * 1.3, 0.4); dustPuff(p.x, p.z, 14, 2.4, 0xdff3ff, r); ringBurst(p.x, 0.3, p.z, 0xbfe8ff, 1, r * 1.8, 0.6, 2); break;
+        case 'HAIL': shardBurst(p.x, 0.6, p.z, 5, 0xdff6ff, 0x9fe0ff, 6, 0.22, 0); ringBurst(p.x, 0.2, p.z, 0xcff1ff, 0.3, 2.2, 0.4, 1.8); sparks(p.x, 0.8, p.z, 10, 0xdff3ff, 7, 0.2, 0.35, 2); break;
         case 'CHILL': sparks(p.x, 1.4, p.z, 8, 0xbfe8ff, 5, 0.18, 0.4, 2); break;
-        case 'FREEZE': flashStar(p.x, 1.4, p.z, 0xbfe8ff, 5, 0.35); ringBurst(p.x, 0.5, p.z, 0x7dd3fc, 1, 6, 0.6, 2); sparks(p.x, 1.4, p.z, 22, 0xe0f4ff, 9, 0.22, 0.6, 2); break;
+        case 'FREEZE': shardBurst(p.x, 1.0, p.z, 14, 0xdff6ff, 0x7fd0f5, 7, 0.26, 0); flashStar(p.x, 1.4, p.z, 0xbfe8ff, 5, 0.35); ringBurst(p.x, 0.5, p.z, 0x7dd3fc, 1, 6, 0.6, 2); sparks(p.x, 1.4, p.z, 22, 0xe0f4ff, 9, 0.22, 0.6, 2); break;
         case 'PILLAR': sparks(p.x, 1, p.z, 22, 0xff9a30, 10, 0.26, 0.5, 2.2); ringBurst(p.x, 0.3, p.z, 0xff5a1a, 1, r * 1.8, 0.5, 2); glowPuff(p.x, 1.5, p.z, 0xff7a1a, r * 2.2, 0.4, 1.8, 0.8); break;
         case 'RIFT': ringBurst(p.x, 0.4, p.z, 0xc084fc, 1, 9, 0.6, 2); glowPuff(p.x, 2, p.z, 0xa855f7, 5, 0.4, 1.8, 0.8); break;
         case 'PORTAL_SHOT': sparks(p.x, 2.3, p.z, 10, 0xd8b4fe, 7, 0.22, 0.4, 2); break;
         case 'GRAVITY_PUSH': ringBurst(p.x, 0.4, p.z, 0xc084fc, 2, 22, 0.7, 2); flashStar(p.x, 2.5, p.z, 0xe9d5ff, 9, 0.35); break;
-        case 'ECHO_SLAM': dustPuff(p.x, p.z, 10, 1.8, 0xa8a29e, r * 0.7); chunks(p.x, 0.6, p.z, 12, 0x9ca3af, 0x57534e, 7, 0.3); break;
+        case 'ECHO_SLAM': shardBurst(p.x, 0.6, p.z, 8, 0x9ca3af, 0x57534e, 7, 0.3, 1); dustPuff(p.x, p.z, 10, 1.8, 0xa8a29e, r * 0.7); chunks(p.x, 0.6, p.z, 12, 0x9ca3af, 0x57534e, 7, 0.3); break;
         case 'ECHO_FIRE': flashStar(p.x, 2, p.z, 0xe9d5ff, 4, 0.3); break;
         case 'SHELL_BOUNCE': sparks(p.x, 1, p.z, 14, 0xffffff, 10, 0.2, 0.3, 2.4); break;
         default:
