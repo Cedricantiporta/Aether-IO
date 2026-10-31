@@ -645,7 +645,7 @@ export function dropTable(e: Enemy, luck: number, px: number, pz: number, specia
     const n = Math.random() < (special ? 0.45 : 0.15) ? 2 : 1;
     for (let i = 0; i < n; i++) {
       const r = Math.random();
-      if (r < 0.5) { const it = st.rollItemDrop(); dropGear(rollDropPlus(it && RARITY_RANK[it.rarity] > RARITY_RANK.EPIC ? st.rollItemDrop('EPIC') : it, special ? 1 : 0), px, pz); }
+      if (r < 0.5) dropGear(rollDropPlus(st.rollItemDrop(undefined, { biome, elite: true }), special ? 1 : 0), px, pz);   // biome table, up to Legendary High (biomeLoot.ts)
       else if (r < 0.7) { if (Math.random() < 0.5) dropCore(px, pz, 0.03 + 0.01 * biome); }
       else dropLoot(Math.random() < 0.5 ? 'ELITE' : CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
     }
@@ -654,7 +654,7 @@ export function dropTable(e: Enemy, luck: number, px: number, pz: number, specia
   if (Math.random() >= 0.08 * Math.max(1, luck * 0.5)) return;
   const r = Math.random();
   if (r < 0.1) { if (Math.random() < 0.5) dropCore(px, pz, 0); }
-  else if (r < 0.7) { if (Math.random() < 1 / 6) { const it = st.rollItemDrop(); dropGear(it && RARITY_RANK[it.rarity] > RARITY_RANK.RARE ? st.rollItemDrop('RARE') : it, px, pz); } else dropLoot(e.kind, luck, px, pz, true); }
+  else if (r < 0.7) { if (Math.random() < 1 / 6) { dropGear(st.rollItemDrop(undefined, { biome, elite: false }), px, pz); } else dropLoot(e.kind, luck, px, pz, true); }   // gear: biome table, up to Legendary Low
   else dropLoot(CRAFT_TABLES[Math.floor(Math.random() * 2)], luck, px, pz, true);
 }
 

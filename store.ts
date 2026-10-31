@@ -30,6 +30,7 @@ import {
   MATERIAL_COMBINE_COST, MATERIAL_DOWNGRADE_YIELD, SHARD_FUSE_COST, MULTISHOT_CAP, RANK_REQ, itemReq,
 } from './constants';
 import { rollAffixes, affixFx, affixCP } from './affixes';
+import { rollBiomeRarity, dropGradeFor, clampKillRarity } from './biomeLoot';
 import { rollGrade, migrateGear, legacyLowToMid, GRADE_DROP_ODDS } from './grade';
 import { charmFx, charmOf } from './accessoryCharms';
 import { accumulateSets } from './itemSets';
@@ -2070,7 +2071,7 @@ export const useGameStore = create<GameState>()((set, get) => {
       return { success: true, msg: 'Upgrade Successful!', newItem: result };
     },
 
-    rollItemDrop: (rarityOverride) => {
+    rollItemDrop: (rarityOverride, ctx) => {
       const hero = get().hero;
       const notPet = ITEMS_POOL.filter((i) => i.type !== 'PET' && !i.retired);
       // (owner) 85% gear for the active class, 15% other classes' gear (shared warehouse / alts); universal pieces always fit
@@ -2079,21 +2080,41 @@ export const useGameStore = create<GameState>()((set, get) => {
       let pool: Item[];
       // Set pieces: elites / bosses / chests (rarity override) and a small chance on plain drops.
       const lvNow = get().level, dropLv = lvNow + 8;   // (owner) drops may be one tier above what the hero can equip yet (Uncommon from Lv 1)
+      if (rarityOverride && ctx) rarityOverride = clampKillRarity(rarityOverride);   // kill drops (biomeLoot.ts): never Mythic
       if (rarityOverride) rarityOverride = capRarity(rarityOverride, dropLv);   // (owner: tiers unlock at Lv 6 / 12 / 18 / 24 / 30)
       if (rarityOverride === 'COMMON') rarityOverride = 'UNCOMMON';   // (owner) treasures / rewards / bosses (every override roll) are never Common
-      const setRarity: Rarity | null = rarityOverride ?? (Math.random() < 0.05 ? capRarity('RARE', dropLv) : null);
+      // Kill drops (ctx): the gear tier comes from the biome table (biomeLoot.ts); the 5% potion / 8% core slices of a plain roll stay.
+      let biomeTier: Rarity | null = null;
+      if (ctx && !rarityOverride) {
+        const kind = Math.random();
+        if (kind > 0.95) pool = notPet.filter((i) => i.type === 'POTION');
+        else if (kind > 0.87) pool = notPet.filter((i) => i.id === 'upgrade_core');
+        else {
+          biomeTier = capRarity(rollBiomeRarity(ctx), dropLv);
+          if (biomeTier === 'COMMON' && Math.random() < 0.7) return null;   // no Common spam
+        }
+        if (!biomeTier) {
+          if (pool!.length === 0) return null;
+          return instantiate(pool![Math.floor(Math.random() * pool!.length)]);
+        }
+      }
+      const gradeForce: import('./types').ItemGrade | undefined = ctx ? dropGradeFor(biomeTier ?? rarityOverride ?? 'COMMON', ctx.elite) : undefined;
+      const setRarity: Rarity | null = rarityOverride ?? (biomeTier ? ((biomeTier === 'RARE' || biomeTier === 'EPIC' || biomeTier === 'LEGENDARY') && Math.random() < 0.1 ? biomeTier : null) : (Math.random() < 0.05 ? capRarity('RARE', dropLv) : null));
       const setChance: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 0, RARE: 0.2, EPIC: 0.28, LEGENDARY: 0.35, MYTHIC: 0.5 };
       if (setRarity && Math.random() < setChance[setRarity] * (rarityOverride ? 1 : 0.5)) {
         const sets = notPet.filter((i) => i.setName && i.rarity === setRarity && usable(i)
           );
         if (sets.length) {
-          const it = instantiate(sets[Math.floor(Math.random() * sets.length)]);
+          const it = instantiate(sets[Math.floor(Math.random() * sets.length)], gradeForce);
           const roll = Math.random();
           applyPlus(it, roll > 0.95 ? 3 : roll > 0.85 ? 2 : roll > 0.60 ? 1 : 0);
           return it;
         }
       }
-      if (rarityOverride) {
+      if (biomeTier) {
+        pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i) && i.rarity === biomeTier);
+        if (pool.length === 0) return null;
+      } else if (rarityOverride) {
         pool = notPet.filter((i) => i.rarity === rarityOverride && isGear(i) && !i.setName && usable(i));
         if (pool.length === 0) pool = notPet.filter((i) => isGear(i) && !i.setName && usable(i));
       } else {
@@ -2115,7 +2136,7 @@ export const useGameStore = create<GameState>()((set, get) => {
         weighted.push(p, p);
         if (p.type === 'WEAPON' && canUseClass(p, hero)) weighted.push(p);
       }
-      const item = instantiate(weighted[Math.floor(Math.random() * weighted.length)]);
+      const item = instantiate(weighted[Math.floor(Math.random() * weighted.length)], gradeForce);
       if (isGear(item)) {
         const roll = Math.random();
         applyPlus(item, roll > 0.95 ? 3 : roll > 0.85 ? 2 : roll > 0.60 ? 1 : 0);

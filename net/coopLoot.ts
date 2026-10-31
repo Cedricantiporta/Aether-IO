@@ -38,7 +38,7 @@ coopRoom.fwdDrop = (kind, x, z, value, item) => {
   else if (kind === 'MANA') v = (value / Math.max(1, s.maxMana)) * 1000;
   if (kind === 'ITEM') {
     if (!item || item.type === 'PET') return;
-    w = [item.type, item.name, item.rarity, item.quantity ?? 1];
+    w = [item.type, item.name, item.rarity, item.quantity ?? 1, item.grade ?? 'MID'];
   }
   lootStats.sent++;
   io.send([MSG.DROP, io.rv(), k, Math.round(x * 10), Math.round(z * 10), Math.round(v * 100) / 100, w]);
@@ -54,7 +54,10 @@ const pos = new Vector3();
 function myItem(w: unknown): Item | null {
   if (!Array.isArray(w) || typeof w[0] !== 'string' || typeof w[1] !== 'string' || typeof w[2] !== 'string' || !RARITIES.includes(w[2])) return null;
   const type = w[0], name = w[1].slice(0, 40), rarity = w[2] as Rarity, qty = isNum(w[3]) ? Math.max(1, Math.min(99, Math.round(w[3]))) : 1;
-  if (GEAR.has(type)) { lootStats.itemsRolled++; return useGameStore.getState().rollItemDrop(rarity); }   // his own roll: his class, his level
+  if (GEAR.has(type)) { lootStats.itemsRolled++; // same biome; the host's Legendary LOW (plain monster) stays capped at Low for him too
+    const lowLeg = rarity === 'LEGENDARY' && w[4] === 'LOW';
+    return useGameStore.getState().rollItemDrop(rarity, rarity === 'MYTHIC' ? undefined : { biome: Math.max(0, world.room.biome | 0), elite: !lowLeg });
+  }   // his own roll: his class, his level
   if (type === 'LOOT') { const def = LOOT.find((l) => l.name === name); return def ? lootItem(def, qty) : null; }
   const tpl = ITEMS_POOL.find((i) => i.name === name && i.type === type);
   return tpl ? makeItemById(tpl.id, qty)[0] ?? null : null;

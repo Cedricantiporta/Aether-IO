@@ -1,4 +1,5 @@
 import { GOLD_SCALE } from '../../constants';
+import { biomeGoldMul } from '../../biomeLoot';
 // ============================================================================
 // Pickups: XP / gold / gems / health orbs and item drops.
 // Pop out with a bounce, magnetise towards the player, collect on contact.
@@ -16,6 +17,8 @@ import { canUseClass } from '../../itemClass';
 import { useGameStore, calculateItemCP, RANK_REQ, itemReq, RARITY_COLOR, goldFindMul, potionKind, potionCapMsg, potionCount, POTION_CAP } from '../../store';
 /** (owner) gold coins picked up from the ground are worth 70% less (kills, crates, bosses, rewards). */
 const GOLD_LOOT_MUL = 0.3;
+/** (owner 2026-10-31) the deeper the biome the bigger the coins (biomeLoot.BIOME_GOLD_MUL); Adventure runs only (the Endless Waves gold stays flat). */
+const goldBiomeMul = (): number => (runInfo.mode === 'ADVENTURE' && world.room.active ? biomeGoldMul(world.room.biome) : 1);
 import { healPlayer, grantKillXp } from './combat';
 import { coopRoom } from '../../net/coopRoom';
 
@@ -100,7 +103,7 @@ export function collectAllPickups(): void {
 /** Co-op: gold earned from a partner's kill (the same coin value the host's pickup would pay, with this player's own gold-find). */
 export function grantGoldCoin(value: number): void {
   const st = useGameStore.getState();
-  const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU')));
+  const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU') * goldBiomeMul()));
   st.addGold(g); world.run.goldEarned += g;
   events.emit('floatText', { pos: world.player.pos, text: `+${g} G`, color: 0xffd24a, scale: 0.8, dy: 2.0 });
 }
@@ -110,7 +113,7 @@ function grant(kind: PickupKind, value: number, item?: Item): void {
   const st = useGameStore.getState();
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU'))); st.addGold(g); world.run.goldEarned += g; break; }
+    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU') * goldBiomeMul())); st.addGold(g); world.run.goldEarned += g; break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); break;
@@ -292,7 +295,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
 
   switch (kind) {
     case 'XP': st.addExperience(value); world.run.xpEarned += value; break;
-    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU'))); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
+    case 'GOLD': { const g = Math.max(1, Math.round(value * GOLD_SCALE * GOLD_LOOT_MUL * (goldFindMul(st.heroRank) + st.stats.goldFind) * hardMul(st.status === 'MENU') * goldBiomeMul())); st.addGold(g); world.run.goldEarned += g; feedCoin('gold', g); break; }
     case 'SHARD': giveShard(value, st); break;
     case 'CRYSTAL': st.addCrystals(value); break;
     case 'GEM': st.addGems(value); feedCoin('gems', value); break;

@@ -281,7 +281,7 @@ export interface GameState {
   drinkElixir: (item: Item) => boolean;            // bag: drink an elixir (town: queued for the next run; in a run: active at once)
   buyInventorySlots: () => boolean;
   upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
-  rollItemDrop: (rarityOverride?: Rarity) => Item | null; // engine asks store for a loot roll
+  rollItemDrop: (rarityOverride?: Rarity, ctx?: import('./biomeLoot').DropCtx) => Item | null; // engine asks store for a loot roll
   summon: (count: 1 | 10, altar?: 'GEM' | 'SHARD') => Item[]; // gacha: GEM altar (10 / 90 gems, better odds) or SHARD altar (10 / 90 Aether Crystals); pets+gear
 
   // talents (permanent, per class; 1 point per Hero Rank + 1 per 5 ranks)
