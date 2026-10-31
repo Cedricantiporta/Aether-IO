@@ -124,6 +124,7 @@ export function BossPhaseFx() {
     const kind = bp.kind;
     if (bp.on || bp.floor > 0.01) {
       if (kind === 'AVALANCHE') { fa = bp.floor; mode = 0; }
+      else if (kind === 'VOIDPULL') { fa = bp.floor * 0.8; mode = 0; }   // Event Horizon: the darkening void floor, safe sigils cut out of it
       else if (bp.on && kind === 'TIDAL' && (bp.count >= 0 || bp.wave < 2)) { fa = 0.75; mode = 1; }
       else if (bp.on && kind === 'SAND') { fa = bp.windOn ? 1 : 0.4; mode = 1; }
     }
@@ -138,6 +139,7 @@ export function BossPhaseFx() {
       const sandShift = kind === 'SAND' && bp.shiftT > 0;
       U.uD.value[0] = sandShift ? bp.nx : bp.wx; U.uD.value[1] = sandShift ? bp.nz : bp.wz;
       if (kind === 'AVALANCHE') { U.uC.value.setRGB(1, 0.12, 0.09); U.uFC.value.setRGB(0.85, 0.96, 1); }
+      else if (kind === 'VOIDPULL') { U.uC.value.setRGB(0.42, 0.05, 0.7); U.uFC.value.setRGB(0.75, 0.55, 1); }
       else if (kind === 'TIDAL') { U.uC.value.setRGB(0.25, 0.65, 1); U.uFC.value.setRGB(0.5, 0.85, 1); }
       else { U.uC.value.setRGB(0.95, 0.72, 0.38); U.uFC.value.setRGB(1, 0.85, 0.5); }
       for (let i = 0; i < 4; i++) { const q = bp.props[i], v = U.uP.value[i]; v.set(q.x, q.z, q.r, q.on && vis ? 1 : 0); }
@@ -160,8 +162,8 @@ export function BossPhaseFx() {
         } else if (kind === 'SAND') {
           const h = 3.4 * rise; setInst(S.slabs, ns++, q.x, h * 0.5, q.z, i * 1.7, q.r * 1.9, h, q.r * 1.0);
           setInst(S.pillars, np++, q.x + Math.cos(i * 1.7) * q.r * 1.6, 0.9 * rise, q.z - Math.sin(i * 1.7) * q.r * 1.6, 0, 1, 1.8 * rise, 1);
-        } else if (kind === 'AVALANCHE') {
-          // glowing light beams over the safe circles
+        } else if (kind === 'AVALANCHE' || kind === 'VOIDPULL') {
+          // glowing light beams over the safe circles (Event Horizon: the sigils)
           setInst(S.beams, nb++, q.x, 16, q.z, 0, 1.1, 32, 1.1);
         } else if (kind === 'SPORES') {
           const sw = 0.55 + q.h * 0.95, hot = q.h;
@@ -173,8 +175,8 @@ export function BossPhaseFx() {
           _c.setRGB(0.3 + hot * 1.2, 0.7 - hot * 0.3, 0.1); S.discs.setColorAt(ndisc, _c);
           setInst(S.discs, ndisc++, q.x, 0.09, q.z, 0, q.r * 2.1 * Math.max(0.12, hot), 1, q.r * 2.1 * Math.max(0.12, hot));
         }
-        if (kind === 'AVALANCHE') {
-          _c.setRGB(0.6, 1.5, 1.8); S.rings.setColorAt(nring, _c);
+        if (kind === 'AVALANCHE' || kind === 'VOIDPULL') {
+          if (kind === 'VOIDPULL') _c.setRGB(1.6, 0.8, 2.6); else _c.setRGB(0.6, 1.5, 1.8); S.rings.setColorAt(nring, _c);
           setInst(S.rings, nring++, q.x, 0.12, q.z, 0, q.r * 1.02, 1, q.r * 1.02);
           pushHalo(q.x, 2.5, q.z, 4.5, 0.4, 1.0, 1.4, 0.3 * live, CELL.GLOW);
         }
@@ -199,31 +201,7 @@ export function BossPhaseFx() {
         if (dtE >= 0 && dtE < 0.35) pushHalo(bp.tx[i], 1.0, bp.tz[i], 4, 2, 1, 0.2, 0.3 * (1 - dtE / 0.35), CELL.GLOW);
       }
     }
-    // ---- Void Maelstrom: contracting pull rings on the floor, the core danger ring and the spinning black-hole orbs
-    let norb = 0;
-    if (vis && kind === 'VOIDPULL' && e0) {
-      const warm = bp.on ? Math.min(1, bp.t / (VP_WARM * 0.5)) : live, cx = e0.pos.x, cz = e0.pos.z;
-      const coreR = e0.radius + VP_CORE_R * 0.7;
-      for (let k = 0; k < 4; k++) {   // rings sliding in toward him: the direction of the pull
-        const f = ((t * 0.55 + k / 4) % 1), rr = 24 * (1 - f) + coreR;
-        _c.setRGB(0.3 + 0.35 * f, 0.1, 0.7 + 0.4 * f); S.rings.setColorAt(nring, _c);
-        setInst(S.rings, nring++, cx, 0.1, cz, 0, rr, 1, rr);
-      }
-      _c.setRGB(2.4, 0.4, 0.7 + 0.6 * Math.sin(t * 8)); S.rings.setColorAt(nring, _c);   // the crush zone
-      setInst(S.rings, nring++, cx, 0.12, cz, 0, coreR, 1, coreR);
-      _c.setRGB(0.55, 0.08, 0.3); S.discs.setColorAt(ndisc, _c);
-      setInst(S.discs, ndisc++, cx, 0.09, cz, 0, coreR, 1, coreR);
-      pushHalo(cx, 2.5, cz, 14 * warm, 0.8, 0.25, 1.9, 0.4 * live * warm, CELL.GLOW);
-      for (let i = 0; i < VP_ORBS && norb < VP_ORBS; i++) {
-        vpOrb(i, bp.t, cx, cz, e0.radius, _o);
-        const s0 = VP_ORB_R * (bp.on ? Math.min(1, bp.t / 0.7) : live);
-        setInst(S.orbCore, norb, _o.x, _o.y, _o.z, 0, s0, s0, s0);
-        setInst(S.orbRing, norb, _o.x, _o.y, _o.z, t * 3 + i, s0 * 1.0, s0 * 1.0, s0 * 1.0, Math.PI / 2 - 0.45, 0);   // accretion disc: nearly flat
-        setInst(S.orbRing2, norb, _o.x, _o.y, _o.z, -t * 4 + i, s0, s0, s0, Math.PI / 2 + 0.5, 0);
-        pushHalo(_o.x, _o.y, _o.z, 3.2 * s0, 0.8, 0.3, 2.0, 0.55 * live, CELL.GLOW);
-        norb++;
-      }
-    }
+    const norb = 0;   // (the Maelstrom's spinning orbs are gone: the Event Horizon's seeker orbs are ordinary enemy projectiles)
     commitInst(S.orbCore, norb); commitInst(S.orbRing, norb); commitInst(S.orbRing2, norb);
     commitInst(S.rocks, nr); commitInst(S.rocksTop, nr); commitInst(S.pillars, np); commitInst(S.slabs, ns); commitInst(S.beams, nb);
     commitInst(S.pods, npod); commitInst(S.rings, nring); commitInst(S.discs, ndisc); commitInst(S.tiles, nt);

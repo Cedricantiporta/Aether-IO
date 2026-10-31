@@ -209,7 +209,7 @@ export function BossFx() {
       if (arena.shrink) {
         const half = arena.r + 160; // the quad reaches 160 units past the ring
         v.position.set(arena.cx, 0.13, arena.cz); v.scale.set(half * 2, 1, half * 2);
-        sys.veilMat.uniforms.uTime.value = t; sys.veilMat.uniforms.uR.value = arena.r / half;
+        sys.veilMat.uniforms.uTime.value = t; sys.veilMat.uniforms.uR.value = (arena.hard && arena.safeR > 0 ? arena.safeR : arena.r) / half;   // (the Herald: the veil + glowing rim start at the SAFE radius, the burning void)
       }
     }
 

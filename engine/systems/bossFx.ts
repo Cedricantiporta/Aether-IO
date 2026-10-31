@@ -21,6 +21,7 @@ import { forEachHero, nearestHero, randomHero, isAlly, shoveHero } from '../hero
 export const BT = {
   VISUAL: 30, ROOT: 31, SPIT: 32, SWEEP: 33, BREATH: 34, SPIKES: 35, DIVE: 36, PILLAR: 37, SURFACE: 38,
   CORE: 39, ECHO_SLAM: 40, HAIL: 41, THORN: 42, SHELL: 43, LASH: 44, FBURST: 45,
+  VCONE: 46, VLANE: 47, VCOLLAPSE: 48,   // Void Herald: cone (slam + rot), lane (rot), rift collapse (slam + rot + silence)
 } as const;
 
 // ------------------------------------------------------------------ pools --
@@ -46,7 +47,7 @@ export const breath = { active: false, x: 0, z: 0, dx: 0, dz: 1, range: 20, half
 /** Player chill meter: 4 stacks freeze. */
 export const chill = { stacks: 0, t: 0, immuneT: 0 };
 /** Arena modifiers. Void: circular arena that shrinks; Glacius: blizzard slow. */
-export const arena = { hard: false, shrink: false, cx: 0, cz: 0, r: 60, minR: 22, rate: 0.9, edgeT: 0, blizzard: false, blizzardK: 0, hailT: 0 };
+export const arena = { safeR: 0, safe0: 0, voidT: 0, graceT: 0, hard: false, shrink: false, cx: 0, cz: 0, r: 60, minR: 22, rate: 0.9, edgeT: 0, blizzard: false, blizzardK: 0, hailT: 0 };
 
 /** QA counters. */
 export const bossStats: Record<string, number> = {};
@@ -139,7 +140,7 @@ export function addChill(n: number): void {
 }
 
 /** QA counters for the strong slow / freeze rolls (Glacius) and the burns (Ignar / Colossus). */
-export const ccStats = { slow: 0, freeze: 0, burn: 0 };
+export const ccStats = { slow: 0, freeze: 0, burn: 0, rot: 0, silence: 0, down: 0 };
 /**
  * Glacius' frost hit (owner 2026-10-31): the strong boss slow (SLOW_BOSS 60%, `slowDur` s, resFrost shortens it) plus a `chance` of a short
  * FREEZE (1.2 s, resFrost / resCC shorten it). Anti-chain: no freeze while the 4 s freeze grace (chill.immuneT) runs or the hero is already
@@ -159,6 +160,91 @@ export function frostHit(slowDur: number, chance: number, freezeDur = 1.2): void
 /** Ignar / Colossus burn (owner 2026-10-31): 3.6 s, refreshes while standing in / being hit by fire (the strongest dps wins). */
 export const BURN_DUR = 3.6;
 export function burnHit(dps: number): void { if (applyPlayerDebuff('BURN', BURN_DUR, Math.max(2, dps))) ccStats.burn++; }
+
+/**
+ * VOID ROT (Void Herald, owner 2026-10-31): the Herald's counterpart of Ignar's burn. Every rot hit adds a stack (max ROT_MAX, they fall off after ROT_KEEP s
+ * without a new hit); the ticking poison dps is `dmg * ROT_DPS * stacks` for 4.5 s (resPoison shortens it) and the hero is slowed 25% per stack-pair.
+ * `dmg` = the flat hit that carried it (post BOSS_SKILL_MUL), so it scales with the same bossDmgScale as the hit itself.
+ */
+export const rot = { stacks: 0, t: 0, ref: 40 };   // ref = the Herald's reference hit (raw pwr), refreshed each frame by bosses2.herald
+export const ROT_MAX = 4, ROT_KEEP = 7, ROT_DPS = 0.0065;   // poison ticks skip defence and are x4 (HERO_DOT_MUL): one stack of a 10% hit costs ~4% max hp over 4.5 s
+export function voidRotHit(dmg: number, n = 1): void {
+  const p = world.player;
+  if (!p.alive || p.invulnT > 0) return;
+  rot.stacks = Math.min(ROT_MAX, (rot.t > 0 ? rot.stacks : 0) + n); rot.t = ROT_KEEP;
+  if (applyPlayerDebuff('POISON', 4.5, Math.max(2, (dmg > 0 ? dmg : rot.ref) * ROT_DPS * rot.stacks))) ccStats.rot++;
+  if (rot.stacks >= 2) applyPlayerDebuff('SLOW', 1.4, 0.18 * (rot.stacks >> 1));
+  events.emit('floatText', { pos: p.pos, text: `VOID ROT x${rot.stacks}`, color: 0xc084fc, scale: 0.8, dy: 1.1 });
+}
+// ------------------------------------------------------------------ continuous ramp zones (owner 2026-10-31) --
+/**
+ * CONTINUOUS damage zones (Void Herald: collapsing Void Pool, rotating Void Beam). After a `warn` s telegraph (a ground ring / thin beam that fills),
+ * the zone is live for `life` s and ticks every RAMP_TICK s on every hero inside: a share of MAX HP (`pct`, ticking `dot` so dash i-frames do not
+ * hide the tick) x a multiplier that grows 1 -> RAMP_MUL over RAMP_RISE s of STAYING inside (leaving decays it twice as fast), plus Void Rot every second.
+ * A full stay costs roughly 60-100% of max HP (the pct path never kills a hero above 25%); leaving early costs little. The visible hazard is a pinned
+ * telegraph zone (host-synced like every telegraph): a circle that shrinks over its last second, or a thin solid rotating beam.
+ */
+export interface Ramp { on: boolean; beam: boolean; x: number; z: number; r: number; ang: number; w: number; len: number; t: number; warn: number; life: number; pct: number; color: number; tick: number; stay: number[]; rotT: number[]; zone: Zone | null }
+export const RAMP_TICK = 0.35, RAMP_MUL = 3, RAMP_RISE = 3;
+export const ramps: Ramp[] = Array.from({ length: 6 }, () => ({ on: false, beam: false, x: 0, z: 0, r: 5, ang: 0, w: 0, len: 40, t: 0, warn: 0.9, life: 5, pct: 0.02, color: 0xa855f7, tick: 0, stay: [0, 0], rotT: [0, 0], zone: null }));
+export const rampStats = { ticks: 0, maxMul: 0 };
+export function spawnRamp(beam: boolean, x: number, z: number, r: number, warn: number, life: number, pct: number, color: number, ang = 0, w = 0, len = 40): void {
+  for (let i = 0; i < ramps.length; i++) {
+    const q = ramps[i];
+    if (q.on) continue;
+    q.on = true; q.beam = beam; q.x = x; q.z = z; q.r = r; q.ang = ang; q.w = w; q.len = len; q.t = 0; q.warn = warn; q.life = life; q.pct = pct; q.color = color; q.tick = 0;
+    q.stay[0] = q.stay[1] = 0; q.rotT[0] = q.rotT[1] = 0;
+    const zn = beam ? spawnTelegraphLine(x, z, Math.sin(ang), Math.cos(ang), len, r, 1, color) : spawnTelegraphCircle(x, z, r, 1, 0, color);
+    if (zn) { zn.trick = BT.VISUAL; zn.damage = 0; zn.maxLife = 10; zn.life = 9.7; }   // (maxLife 10: the fill is 1 - life / maxLife and life is re-pinned every frame, always > dt so the zone never expires by itself)
+    q.zone = zn;
+    return;
+  }
+}
+function tickRamps(dt: number): void {
+  for (let i = 0; i < ramps.length; i++) {
+    const q = ramps[i];
+    if (!q.on) continue;
+    q.t += dt;
+    const zn = q.zone, live = q.t >= q.warn;
+    if (!zn || !zn.active || q.t >= q.warn + q.life) { if (zn && zn.active) zn.active = false; q.on = false; q.zone = null; continue; }
+    if (q.beam && live) q.ang += q.w * dt;
+    if (q.beam) { zn.dir.set(Math.sin(q.ang), 0, Math.cos(q.ang)); }
+    // look: fills during the warning, solid + pulsing while live, the circle shrinks over its last second (the visible timer)
+    zn.maxLife = 10;
+    zn.life = live ? 0.5 + 0.2 * Math.sin(q.t * 9) : Math.max(0.6, 10 * (1 - 0.95 * (q.t / q.warn)));
+    if (!q.beam) { const left = q.warn + q.life - q.t; zn.radius = q.r * (left < 1 ? 0.55 + 0.45 * left : 1); }
+    if (!live) continue;
+    q.tick -= dt;
+    const doTick = q.tick <= 0;
+    if (doTick) q.tick = RAMP_TICK;
+    const lr = q.beam ? zn.radius * 0.5 + 0.7 : (zn.radius + 0.4), blen = q.beam ? zn.length : 0;   // (the telegraph's own scaled size = what the player sees)
+    const dxd = Math.sin(q.ang), dzd = Math.cos(q.ang);
+    forEachHero((h) => {
+      const k = isAlly(h) ? 1 : 0;
+      let inside = false;
+      if (h.alive) {
+        const rx = h.pos.x - q.x, rz = h.pos.z - q.z;
+        if (q.beam) { const along = rx * dxd + rz * dzd, perp = Math.abs(rx * dzd - rz * dxd); inside = along > -1.5 && along < blen && perp < lr && h.air < 0.5; }
+        else inside = rx * rx + rz * rz < lr * lr;
+      }
+      if (inside) q.stay[k] = Math.min(RAMP_RISE, q.stay[k] + dt); else q.stay[k] = Math.max(0, q.stay[k] - dt * 2);
+      if (!inside || !doTick) return;
+      const mul = 1 + (RAMP_MUL - 1) * (q.stay[k] / RAMP_RISE);
+      rampStats.ticks++; if (mul > rampStats.maxMul) rampStats.maxMul = mul;
+      damagePlayer(1, { pct: q.pct * mul, pos: tv.set(q.x, 0, q.z), kind: 'MAGIC', dot: true, noDotMul: true });
+      q.rotT[k] += RAMP_TICK;
+      if (q.rotT[k] >= 1) { q.rotT[k] = 0; voidRotHit(rot.ref * 0.6); }
+      if (q.beam) applyPlayerDebuff('SLOW', 0.5, 0.3);
+    });
+  }
+}
+
+/** A heavy Herald slam: knockdown (the normal anti-chain rules apply) + rot. */
+function voidSlam(z: Zone, dmg: number, kind: 'slam' | 'hit'): void {
+  damagePlayer(dmg, { pos: z.pos, kind: 'MAGIC', ...(kind === 'slam' ? KB.SLAM : KB.PUSH) });
+  if (kind === 'slam') ccStats.down++;
+  voidRotHit(dmg);
+}
 
 export function inCone(px: number, pz: number, ox: number, oz: number, dx: number, dz: number, range: number, half: number): boolean {
   const rx = px - ox, rz = pz - oz, d = Math.hypot(rx, rz);
@@ -287,6 +373,28 @@ export function resolveBossZone(z: Zone): void {
       spawnProp(PROP_THORN, z.pos.x, z.pos.z, 0, 0.7, z.radius * 0.5, 2.4);
       events.emit('trick', { pos: z.pos.clone(), kind: 'THORN_POP', radius: z.radius });
       break;
+    case BT.VCONE:   // Void Nova cone: a heavy slam inside the cone
+      if (inCone(p.pos.x, p.pos.z, z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux) && p.alive) voidSlam(z, pw, 'slam');
+      events.emit('trick', { pos: z.pos.clone(), kind: 'ECHO_SLAM', radius: 6 });
+      events.emit('shake', { amount: 0.3 });
+      break;
+    case BT.VLANE: {   // mirrored void lanes / rift lances: a lane hit + rot
+      const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
+      if (p.alive && p.air < 0.5 && along > -1 && along < z.length + 1 && perp < z.radius * 0.5 + 0.6) voidSlam(z, pw, z.aux > 0.5 ? 'slam' : 'hit');
+      for (let d = 3; d < z.length; d += 5) events.emit('explosion', { pos: tv.set(z.pos.x + z.dir.x * d, 0.5, z.pos.z + z.dir.z * d).clone(), radius: 1.6, color: formColor(0xa855f7) });
+      events.emit('shake', { amount: 0.15 });
+      break;
+    }
+    case BT.VCOLLAPSE:   // Rift Collapse: the void implodes on the marked ring: slam + rot, and the signature SILENCE when it is the big (aux > 0.5) final one
+      if (inside) {
+        damagePlayer(pw, { pos: z.pos, kind: 'MAGIC', ...KB.SLAM }); ccStats.down++;   // (knockHero BEFORE any stun: a stun would block the knockdown)
+        voidRotHit(pw);
+        if (z.aux > 0.5 && applyPlayerDebuff('SILENCE', 2.2)) ccStats.silence++;
+      }
+      events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 1.4, color: formColor(0xa855f7) });
+      events.emit('explosion', { pos: z.pos.clone(), radius: z.radius * 0.8, color: formColor(0x7c3aed) });
+      events.emit('shake', { amount: 0.35 });
+      break;
     default: break; // VISUAL
   }
 }
@@ -316,13 +424,15 @@ export function updateBossFx(dt: number): void {
       if (Math.abs(d - w.r) < w.thick * 0.5 + 0.55 && h.air < 0.5) {
         if (ally) w.hitA = true; else w.hit = true;
         damagePlayer(w.dmg * BOSS_SKILL_MUL, { pos: tv.set(w.x, 0, w.z), kind: w.kind === WAVE_VOID ? 'MAGIC' : w.kind === WAVE_FIRE ? 'FIRE' : w.kind === WAVE_FROST ? 'ICE' : 'PHYSICAL', ...(w.kind === WAVE_VOID || w.kind === WAVE_TIDE ? KB.SLAM : KB.PUSH) });   // (owner) the gravity push and the tidal surge knock down
-        if (w.kind === WAVE_VOID) applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS);
+        if (w.kind === WAVE_VOID) { applyPlayerDebuff('SLOW', 1.0 * 1.5, SLOW_BOSS); voidRotHit(w.dmg * BOSS_SKILL_MUL); ccStats.down++; }
         if (w.kind === WAVE_THORN) applyPlayerDebuff('BLEED', 3, w.dmg * 0.12);
         if (w.kind === WAVE_FROST) { addChill(1); frostHit(3, 0.22); }
         if (w.kind === WAVE_TIDE) applyPlayerDebuff('SLOW', 1.6 * 1.5, SLOW_BOSS);
       }
     });
   }
+
+  tickRamps(dt);
 
   // ---- eruption props are visual only
   for (let i = 0; i < props.length; i++) {
@@ -343,12 +453,12 @@ export function updateBossFx(dt: number): void {
     if (!tgt.alive) continue;
     q.shotT -= dt;
     if (q.shotT <= 0) {
-      q.shotT = 0.85; q.shots--;
+      q.shotT = 0.6; q.shots--;
       const dx = tgt.pos.x - q.x, dz = tgt.pos.z - q.z, base = Math.atan2(dx, dz);
       for (let k = -1; k <= 1; k++) {
         orbDir.set(Math.sin(base + k * 0.2), 0, Math.cos(base + k * 0.2));
         tv.set(q.x, 1.4, q.z);
-        fireEnemyProjectile(tv, orbDir, 'BOSS_ORB', 11.5, q.dmg, { life: 3.2, radius: 0.5 });
+        fireEnemyProjectile(tv, orbDir, 'BOSS_ORB', 13, q.dmg, { life: 3.2, radius: 0.7, debuff: 7, dark: true });
       }
       events.emit('trick', { pos: tv.set(q.x, 0, q.z).clone(), kind: 'PORTAL_SHOT', radius: 1.5 });
       stat('PortalVolley');
@@ -365,7 +475,7 @@ export function updateBossFx(dt: number): void {
       switch (q.kind) {
         case 1: {
           const eh = nearestHero(q.x, q.z).pos, dx = eh.x - q.x, dz = eh.z - q.z, base = Math.atan2(dx, dz);
-          for (let k = -3; k <= 3; k++) { orbDir.set(Math.sin(base + k * 0.2), 0, Math.cos(base + k * 0.2)); tv.set(q.x, 1.4, q.z); fireEnemyProjectile(tv, orbDir, 'BOSS_ORB', 12, q.dmg * 0.8, { life: 3.2, radius: 0.5 }); }
+          for (let k = -3; k <= 3; k++) { orbDir.set(Math.sin(base + k * 0.2), 0, Math.cos(base + k * 0.2)); tv.set(q.x, 1.4, q.z); fireEnemyProjectile(tv, orbDir, 'BOSS_ORB', 13, q.dmg * 0.8, { life: 3.2, radius: 0.7, debuff: 7, dark: true }); }
           break;
         }
         case 2: spawnWave(q.x, q.z, 12, 20, 1.5, q.dmg, WAVE_THORN, 0x84cc16); break;
@@ -391,6 +501,7 @@ export function updateBossFx(dt: number): void {
     }
     if (breath.t >= breath.dur) breath.active = false;
   }
+  if (rot.t > 0) { rot.t -= dt; if (rot.t <= 0) rot.stacks = 0; }
   if (chill.immuneT > 0) chill.immuneT -= dt;
   if (chill.stacks > 0) { chill.t += dt; if (chill.t > 3) { chill.t = 0; chill.stacks--; } }
 
@@ -404,6 +515,22 @@ export function updateBossFx(dt: number): void {
       if (isAlly(h)) shoveHero(h, -dx / d * back, -dz / d * back); else { h.pos.x -= dx / d * back; h.pos.z -= dz / d * back; }
       arenaStat.pushes++;
       if (!isAlly(h) && world.time - lastVoidText > 1.5) { lastVoidText = world.time; events.emit('floatText', { pos: h.pos, text: 'THE VOID', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
+    });
+  }
+  // ---- the Herald's void rim (owner 2026-10-31): beyond `safeR` the void burns: VOID_PCT of max hp per tick (~10% / s) + Void Rot; the hard wall further out stays
+  if (arena.shrink && arena.hard && arena.safeR > 0) {
+    if (arena.graceT > 0) arena.graceT -= dt;
+    arena.voidT -= dt;
+    const tickNow = arena.voidT <= 0;
+    if (tickNow) arena.voidT = VOID_TICK;
+    forEachHero((h) => {
+      if (!h.alive || arena.graceT > 0) return;
+      const d2 = (h.pos.x - arena.cx) ** 2 + (h.pos.z - arena.cz) ** 2;
+      if (d2 <= arena.safeR * arena.safeR || !tickNow) return;
+      voidRimStat.ticks++;
+      damagePlayer(1, { pct: VOID_PCT, pos: tv.set(arena.cx, 0, arena.cz), kind: 'MAGIC', dot: true, noDotMul: true });
+      if ((voidRimStat.ticks & 3) === 0) voidRotHit(rot.ref * 0.6);
+      if (!isAlly(h) && world.time - lastVoidText > 1.2) { lastVoidText = world.time; events.emit('floatText', { pos: h.pos, text: 'THE VOID BURNS', color: 0xc084fc, scale: 0.9, dy: 0.9 }); }
     });
   }
   // ---- Void shrinking arena
@@ -438,6 +565,9 @@ export function updateBossFx(dt: number): void {
   } else arena.blizzardK = Math.max(0, arena.blizzardK - dt);
 }
 let lastVoidText = -9;
+/** The Herald's void rim: 2.5% max hp per 0.25 s = 10% per second outside the safe radius. */
+export const VOID_TICK = 0.25, VOID_PCT = 0.025;
+export const voidRimStat = { ticks: 0 };
 /** QA: how many times the void wall pushed a hero back. */
 export const arenaStat = { pushes: 0 };
 
@@ -447,7 +577,7 @@ export function arenaSlow(): number { return arena.blizzard ? 0.6 : 1; }   // Gl
 /** Keeps `v` inside the Void arena (bosses use it). */
 export function clampToVoid(v: Vector3, margin: number): void {
   if (!arena.shrink) return;
-  const dx = v.x - arena.cx, dz = v.z - arena.cz, d = Math.hypot(dx, dz), lim = Math.max(4, arena.r - margin);
+  const dx = v.x - arena.cx, dz = v.z - arena.cz, d = Math.hypot(dx, dz), lim = Math.max(4, (arena.hard && arena.safeR > 0 ? arena.safeR : arena.r) - margin);   // (the Herald's void rim: nothing spawns in the damaging void)
   if (d > lim) { v.x = arena.cx + (dx / d) * lim; v.z = arena.cz + (dz / d) * lim; }
 }
 export function mapLimit(x: number, z: number, margin: number): number { return edgeLimit(x, z, margin); }
@@ -458,8 +588,10 @@ export function endBossFx(): void {
   for (const q of props) q.active = false;
   for (const q of portals) q.active = false;
   for (const q of echoes) q.active = false;
+  rot.stacks = 0; rot.t = 0;
+  for (const q of ramps) { q.on = false; q.zone = null; }
   breath.active = false; chill.stacks = 0; chill.t = 0; chill.immuneT = 0;
-  arena.shrink = false; arena.hard = false; arena.blizzard = false; arena.blizzardK = 0; arena.hailT = 1.5; arena.r = 60; arena.edgeT = 0;
+  arena.shrink = false; arena.hard = false; arena.safeR = 0; arena.safe0 = 0; arena.blizzard = false; arena.blizzardK = 0; arena.hailT = 1.5; arena.r = 60; arena.edgeT = 0;
   dive.landed = false;
   // pending boss telegraphs must not fire after their caster is gone
   const zs = world.zones;

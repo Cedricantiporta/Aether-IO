@@ -196,8 +196,9 @@ export interface EnemyProjectile {
   damage: number;
   radius: number;
   homing: number;        // rad/s
+  accel?: number; vmax?: number;   // speed ramp (u/s^2 up to vmax)
   slow?: number;         // applies slow to player on hit (0..1)
-  debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel)
+  debuff: number;        // 0 none, 1 ROOT (pinning arrow), 2 BURN (flame wheel), 7 VOID ROT
   traits?: number;       // the shooter's TR.* bits (its on-hit debuffs ride on the projectile)
   trail?: number;        // > 0: leaves a burning ground patch every `trail` seconds (the Void Herald's fireballs)
   trailT?: number;

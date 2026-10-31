@@ -16,6 +16,7 @@ import { isStationary, isSwarm } from '../enemyDefs';
 import { damagePlayer, damageEnemy, applyPlayerDebuff, freezePlayer, applyStatus, addShake, type StatusEffect, type DamageOpts } from './combat';
 import { updateRoomTraps, trapMods, obPull } from './roomTraps';
 import { Vector3 } from 'three';
+import { voidRotHit } from './bossFx';
 import { iceAt, ice, ICE_MOB_LERP } from '../iceFloor';
 import { forEachHero, heroNear, randomHero, asHero, shoveHero } from '../heroes';
 import { coopRoom } from '../../net/coopRoom';
@@ -311,7 +312,7 @@ function tickBiomeHazards(dt: number): void {
       if (r.vis) continue;   // (picture only)
       if (r.follow > 0 && alive && r.age > BH_FORM) {   // a summoned hole drifts after the hero, slower than walking
         const fx = px - r.x, fz = pz - r.z, fd = Math.hypot(fx, fz);
-        if (fd > 1.2) { r.x += fx / fd * r.follow * dt; r.z += fz / fd * r.follow * dt; }
+        if (fd > 1.2) { const sp = r.follow * (1 + 0.45 * Math.min(1, (r.age - BH_FORM) / 5)) * dt; r.x += fx / fd * sp; r.z += fz / fd * sp; }   // (owner 2026-10-31: the Herald's holes ramp 11 -> 16 u/s, were a flat 5)
       }
       const live = r.k >= 1 || (r.life !== Infinity && r.age > BH_FORM && r.k > 0);   // (still forming = harmless)
       if (alive && live) {
@@ -320,7 +321,7 @@ function tickBiomeHazards(dt: number): void {
           const s = (RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d / RIFT_PULL_R)) * r.k;
           dX += dx / d * s; dZ += dz / d * s;
           inRift = true;
-          if (plRiftCd <= 0 && pl.dashT <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true }); }   // 4% max HP / 0.5 s while caught (not flagged dot: that would x4, HERO_DOT_MUL)
+          if (plRiftCd <= 0 && pl.dashT <= 0) { plRiftCd = RIFT_TICK; tmp.set(r.x, 0, r.z); damagePlayer(maxHp() * RIFT_HERO * (r.follow > 0 ? 1.8 : 1) / DMG_INFLATE, { pos: tmp, kind: 'MAGIC', env: true }); if (r.follow > 0 && d < RIFT_CORE_R + 1.4) voidRotHit(0); }   // 4% max HP / 0.5 s while caught (the Herald's chasing holes 7.2% + Void Rot at the core) (not flagged dot: that would x4, HERO_DOT_MUL)
         }
       }
       const al = coopRoom.ally;

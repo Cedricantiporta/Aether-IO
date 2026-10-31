@@ -19,7 +19,7 @@ import type { RoomPlan } from './types';
 import type { CaveLayout } from './caveData';
 
 export interface LDisc { x: number; z: number; r: number }
-export const EMBER_BIOME = 5, CELL = 0.5;
+export const EMBER_BIOME = 5, CELL = 0.5, BOSS_LAVA_START = 0.1;
 export const lava = {
   on: false, heavy: false, ver: 0, coverage: 0,
   /** bumps whenever `addLavaDisc` grows the floor (Ignar's creeping lava): render/Room.tsx re-rasterises the ground mask */
@@ -49,7 +49,7 @@ function floorOk(x: number, z: number, r: number): boolean {
   return insideShape(x, z, r + 1.6);
 }
 
-/** `bossLava`: Ignar's arena (BOSS room) gets ~40% lava; normal Ember COMBAT / ELITE rooms aim for 35-50%. */
+/** `bossLava`: Ignar's arena (BOSS room) starts at ~10% lava (rim only); normal Ember COMBAT / ELITE rooms aim for 35-50%. */
 export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, bossLava = false): void {
   lava.on = false; lava.heavy = false; lava.discs = []; lava.ver++; lava.coverage = 0; lava.growVer = 0;
   lavaDbg.why = 'biome';
@@ -81,10 +81,10 @@ export function setupLavaFloor(biome: number, plan: RoomPlan, seed: number, boss
     for (let i = 0; i < rt.nVine; i++) keep(rt.vine[i].x, rt.vine[i].z, rt.vine[i].r + 1);
     for (let i = 0; i < rt.nPool; i++) keep(rt.pool[i].x, rt.pool[i].z, rt.pool[i].r + 1);
     if (feat.pChest.on) keep(feat.pChest.x, feat.pChest.z, 4);
-    genStreams(discs, rnd, halls, wet);
-    fillTo(discs, rnd, halls, wet, bossRoom ? 0.4 : 0.36 + rnd() * 0.14);
+    if (bossRoom) rimPools(discs, rnd, BOSS_LAVA_START);   // (owner 2026-10-31: Ignar's arena STARTS at ~10% lava hugging the rim; ignarLava.ts grows it)
+    else { genStreams(discs, rnd, halls, wet); fillTo(discs, rnd, halls, wet, 0.36 + rnd() * 0.14); }
     lavaDbg.why = 'few:' + discs.length;
-    if (discs.length < 12) return;
+    if (discs.length < (bossRoom ? 6 : 12)) return;
   }
   lava.discs = discs; lava.heavy = heavy; lava.on = true;
   buildGrid(discs, heavy);
@@ -200,6 +200,19 @@ function measure(): number {
     tot++; if (g[j * n + i] === 1) c++;
   }
   return tot ? c / tot : 0;
+}
+/** Ignar's start floor: pools hugging the arena rim only (golden-angle spread round the wall) until `target` of the floor is lava. */
+function rimPools(out: LDisc[], rnd: () => number, target: number): void {
+  buildGrid(out, false);
+  let cov = 0, a = rnd() * 6.283;
+  for (let s = 0; s < 120 && cov < target; s++) {
+    a += 2.399 + (rnd() - 0.5) * 0.3;
+    const c = Math.cos(a), sn = Math.sin(a), d = shapeLimit(c, sn) * (0.84 + rnd() * 0.08), rad = 2.6 + rnd() * 1.4;
+    const n0 = out.length;
+    pool(out, rnd, c * d, sn * d, rad, false, false);
+    if (out.length === n0) continue;
+    buildGrid(out, false); cov = measure();
+  }
 }
 /** Keeps laying winding streams (wider, longer) with pool blobs at their ends from random bare spots until `target` of the floor is lava. */
 function fillTo(out: LDisc[], rnd: () => number, halls: boolean, wet: boolean, target: number): void {

@@ -19,6 +19,7 @@ import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { spawnTelegraphCircle, spawnTelegraphLine, fireEnemyProjectile, spawnEnemy } from './enemies';
 import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 import { mfx, spawnRune } from './voidFx';
+import { clampToVoid } from './bossFx';
 import { bp } from './bossPhaseState';
 import { KB } from './combat';
 
@@ -405,7 +406,7 @@ function ringTeleport(real: Enemy): void {
   const p = world.player.pos, base = Math.random() * 6.283;
   for (let i = 0; i < n; i++) {
     const o = ringA[i], a = base + (i / n) * 6.283;
-    tv.set(p.x + Math.sin(a) * 12, 0, p.z + Math.cos(a) * 12); clampArena(tv, 4);
+    tv.set(p.x + Math.sin(a) * 12, 0, p.z + Math.cos(a) * 12); clampArena(tv, 4); clampToVoid(tv, 3);
     spawnRune(o.pos.x, o.pos.z); spawnRune(tv.x, tv.z);   // departure + arrival circles
     o.pos.set(tv.x, 0, tv.z);
     events.emit('spawn', { pos: o.pos, kind: o.kind, elite: false });
@@ -420,18 +421,18 @@ function updateIllusion(e: Enemy, dt: number): void {
   // keep a casting distance, strafing around the hero
   const sp = e.speed * 0.8, side = (e.id & 1) ? 1 : -1;
   const mx = dist < 9 ? -ux : dist > 15 ? ux : uz * side * 0.5, mz = dist < 9 ? -uz : dist > 15 ? uz : -ux * side * 0.5;
-  e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3);
+  e.pos.x += mx * sp * dt; e.pos.z += mz * sp * dt; clampArena(e.pos, 3); clampToVoid(e.pos, 3);
   e.attackCd -= dt;
   if (e.attackCd <= 0) {
     if (mfx.major) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // his basic volleys hold while the Herald runs a major skill
-    e.attackCd = (s2 ? 3.0 : 3.8) + Math.random() * 1.0;   // (4 copies: each one fires a little less often)
+    e.attackCd = (s2 ? 2.4 : 3.1) + Math.random() * 0.8;   // (4 copies: each one fires a little less often)
     const spd = s2 ? 12 : 9.5, r = s2 ? 0.7 : 0.5;
     if ((e.pattern++ & 1) === 0) {   // fan of 5 orbs at the hero
       const b = Math.atan2(ux, uz);
-      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.24), 0, Math.cos(b + i * 0.24)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd + 3, e.projectileDamage * 0.7, { life: 4, radius: r * 1.4, dark: true }); }
+      for (let i = -2; i <= 2; i++) { tv.set(Math.sin(b + i * 0.24), 0, Math.cos(b + i * 0.24)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd + 3, e.projectileDamage * 0.7, { life: 4, radius: r * 1.4, dark: true, debuff: 7 }); }
     } else {   // ring of orbs
       const m = s2 ? 12 : 9, b = Math.random() * 6.283;
-      for (let i = 0; i < m; i++) { const a = b + (i / m) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd, e.projectileDamage * 0.55, { life: 5, radius: r * 1.4, dark: true }); }
+      for (let i = 0; i < m; i++) { const a = b + (i / m) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a)); fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', spd, e.projectileDamage * 0.55, { life: 5, radius: r * 1.4, dark: true, debuff: 7 }); }
     }
   }
   if (e.stateT > e.trickT) popDecoy(e);

@@ -9,7 +9,7 @@
 //   Hydra    TIDAL       a wave from one side: hide behind a raised rock (line-of-sight cover) or take 90% max hp (critical) + knockback
 //   Ignar    LAVA        the floor is tiles; 4 sweeps (random directions) erupt half the floor each so EVERY tile erupts twice: keep moving
 //   Colossus SAND        a sandstorm from one direction, shifting once: hide behind a pillar / wreck or take ticking damage
-//   Void H.  VOIDPULL    a universal pull (like the Gravity Obelisk) drags you to him while black-hole orbs spin round him: fight the pull, thread the orbs
+//   Void H.  VOIDPULL    EVENT HORIZON: the floor turns to void, stand on a glowing sigil (they go dark one by one before each collapse) and dodge the seeker orbs
 // Human mini bosses (Varn / Sable / Rook) have their own small versions in humanBosses.ts.
 // State is `bp` (bossPhaseState.ts); render/BossPhaseFx.tsx + ui/hud/BossPhaseHud.tsx draw it. No allocations per frame.
 // ============================================================================
@@ -22,12 +22,13 @@ import { damagePlayer, applyPlayerDebuff, knockHero, playerTrickImmune, SLOW_BOS
 import { damageMinion } from './minions';
 import { spawnEnemy, onEnemyDeath, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { bossStrike, bossPwr } from './bossMech';
-import { BT } from './bossFx';
+import { BT, voidRotHit, arena } from './bossFx';
+import { S } from './bosses2';
 import { spawnHostileZone } from './tricks';
 import { isSlimeKing } from './bossSpecials';
 import { mfx } from './voidFx';
 import { hooks } from './hooks';
-import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, VP_WARM, VP_END, VP_CORE_R, VP_ORB_R, VP_ORBS, vpOrb, type PhaseKind } from './bossPhaseState';
+import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, SEEKER, type PhaseKind } from './bossPhaseState';
 import { useGameStore } from '../../store';
 import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly, shoveHero } from '../heroes';
 
@@ -44,7 +45,7 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
   TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },
   LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Every tile erupts twice - keep moving to one that is not flashing!', color: 0xff7a1a },
   SAND: { name: 'SANDSTORM', sub: 'Hide behind a pillar, out of the wind!', color: 0xe0b060 },
-  VOIDPULL: { name: 'VOID MAELSTROM', sub: 'You cannot dash out of the pull - fight it and dodge the black orbs!', color: 0xa060ff },
+  VOIDPULL: { name: 'EVENT HORIZON', sub: 'The void floor collapses: stand on a glowing sigil - and dodge the seeker orbs!', color: 0xa060ff },
 };
 
 const tv = new Vector3();
@@ -549,57 +550,90 @@ function tickLava(e: Enemy, dt: number): void {
   if (bp.t >= LAVA_END) end(e);
 }
 
-/** Void Maelstrom: the Obelisk's pull (0.9x walk speed far away, 1.06x close; a dash resists 80%) on every hero + fast black-hole orbs spinning round the Herald. */
-const VP_ORB_PCT = 0.12, VP_ORB_CD = 0.9, VP_CORE_TICK = 0.4, VP_CORE_PCT = 0.05, VP_RANGE = 32;
-const vpO = { x: 0, y: 0, z: 0 };
+/**
+ * Void Herald EVENT HORIZON (owner 2026-10-31; replaces the universal-pull Void Maelstrom): the arena floor turns to void and 4 glowing SIGILS (safe
+ * islands, `bp.props` 0..3, mirrored to the co-op guest) stay lit. Outside a sigil the void ticks (3% max hp / 0.5 s + Void Rot) and every EH_PULSES time
+ * the void COLLAPSES: a sigil goes dark EH_WARN s before (floor flash + banner), then anyone off the remaining sigils takes 26% max hp, a knockdown and
+ * Void Rot. Pulses leave 4 -> 3 -> 2 sigils. Meanwhile SEEKER ORBS (enemy projectiles, host sim, guest sees them through the projectile sync) chase you:
+ * wave size `EH_ORB_WAVES` = 4 the first time the phase runs, 8 the second time / in the final form; 7 -> 16 u/s, 2.4 rad/s turn, 1.0 radius, void rot on touch.
+ */
+export const EH_ORB_WAVES = [4, 8];
+export const EH_END = 9.0, EH_PULSES = [3.6, 6.0, 8.0], EH_WARN = 1.0, EH_SIG_R = 3.5, EH_ORB_T = 1.8, EH_VOID_PCT = 0.03, EH_PULSE_PCT = 0.26;
+const ehD = { x: 0, z: 0 };
+function ehSafe(x: number, z: number): boolean {
+  for (let i = 0; i < 4; i++) { const q = bp.props[i]; if (q.on && (q.x - x) ** 2 + (q.z - z) ** 2 < (q.r + 0.15) ** 2) return true; }
+  return false;
+}
 function tickVoidPull(e: Enemy, dt: number): void {
-  const t = bp.t, cx = e.pos.x, cz = e.pos.z;
-  bp.count = Math.max(0, VP_END - t); bp.countMax = VP_END;
-  if (G.stage === 0) { G.stage = 1; events.emit('shockwave', { pos: e.pos.clone(), radius: 30, color: 0xa060ff }); events.emit('shake', { amount: 0.4 }); }
-  G.hitCd -= dt; G.hitCdA -= dt; G.tick -= dt; G.tickA -= dt;
-  const pullOn = t >= VP_WARM * 0.5 && t < VP_END - 0.4;
-  const ramp = Math.min(1, Math.max(0, (t - VP_WARM * 0.5) / 1.0)) * (t > VP_END - 1.4 ? Math.max(0, (VP_END - 0.4 - t) / 1.0) : 1);
-  const walk = Math.max(6, useGameStore.getState().stats.moveSpeed * 0.8);
-  const coreR = e.radius + VP_CORE_R * 0.7;   // (the hero is held against his body by the pull: that is the crush zone)
-  forEachHero((p) => {
-    if (!p.alive) return;
-    const ally = isAlly(p), dx = cx - p.pos.x, dz = cz - p.pos.z, d = Math.hypot(dx, dz) || 1e-3;
-    if (pullOn && d > 0.8) {
-      const s = walk * (0.9 + 0.16 * (1 - Math.min(1, d / VP_RANGE))) * ramp * (p.dashT > 0 ? 0.2 : 1) * dt;
-      if (ally) shoveHero(p, dx / d * s, dz / d * s);
-      else { p.pos.x += dx / d * s; p.pos.z += dz / d * s; }
+  const t = bp.t;
+  G.hitCd -= dt; G.tick -= dt; G.tickA -= dt;
+  if (G.stage === 0) {   // set-up: the sigils on a ring round the arena centre
+    G.stage = 1; G.legs = 0; G.hit = false; G.rootT = 0;
+    const R = arena.safeR > 0 ? Math.max(6, arena.safeR * 0.6) : Math.min(15, Math.max(9, rimAt(0, 4) * 0.55)), base = Math.random() * 6.283;
+    for (let i = 0; i < 4; i++) { const a = base + (i / 4) * 6.283, q = bp.props[i]; q.x = Math.cos(a) * R; q.z = Math.sin(a) * R; q.r = EH_SIG_R; q.h = 0; q.on = true; }
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 30, color: 0xa060ff }); events.emit('shake', { amount: 0.4 });
+  }
+  bp.floor = Math.min(1, t / 1.2) * (t > EH_END - 0.7 ? Math.max(0, (EH_END - t) / 0.7) : 1);
+  const pi = G.legs, PT = pi < EH_PULSES.length ? EH_PULSES[pi] : EH_END;
+  bp.count = Math.max(0, PT - t); bp.countMax = 2.6;
+  // the seeker orbs
+  if (!G.hit && t >= EH_ORB_T) {
+    G.hit = true;
+    const wave = Math.min(EH_ORB_WAVES.length - 1, Math.max(dbOf(bp.id).n, S.vform === 2 ? 1 : 0)), n = EH_ORB_WAVES[wave], base = Math.random() * 6.283;
+    for (let i = 0; i < n; i++) {
+      const a = base + (i / n) * 6.283; tv.set(Math.sin(a), 0, Math.cos(a));
+      fireEnemyProjectile(e.pos, tv, 'BOSS_ORB', SEEKER.v0, bossPwr(e) * 1.4, { homing: SEEKER.turn, accel: SEEKER.acc, vmax: SEEKER.vmax, life: 5.6, radius: 1.0, debuff: 7, dark: true });
     }
-    if (t < 0.7 || t >= VP_END - 0.4) return;
-    // the orbs: touch = a share of max hp, a short per-hero cooldown
-    if ((ally ? G.hitCdA : G.hitCd) <= 0) {
-      for (let i = 0; i < VP_ORBS; i++) {
-        vpOrb(i, t, cx, cz, e.radius, vpO);
-        const ox = p.pos.x - vpO.x, oz = p.pos.z - vpO.z, rr = VP_ORB_R + 0.55;
-        if (ox * ox + oz * oz < rr * rr) {
-          if (ally) G.hitCdA = VP_ORB_CD; else G.hitCd = VP_ORB_CD;
-          bpStat.orbHits++;
-          hitHero(VP_ORB_PCT, 'MAGIC', vpO.x, vpO.z, 3.0, 0);
-          events.emit('explosion', { pos: tv.set(vpO.x, 1, vpO.z).clone(), radius: 1.6, color: 0xa060ff });
-          break;
-        }
-      }
+    bpStat.orbs += n;
+    events.emit('shockwave', { pos: e.pos.clone(), radius: 16, color: 0xc084fc });
+  }
+  // a sigil goes dark EH_WARN s before each collapse (never the one a hero stands on)
+  if (pi < EH_PULSES.length && G.stage === 1 && t >= PT - EH_WARN) {
+    G.stage = 2;
+    let pick1 = -1, bestScore = -1;
+    for (let i = 0; i < 4; i++) {
+      const q = bp.props[i]; if (!q.on) continue;
+      let near = 1e9; forEachHero((p) => { if (p.alive) near = Math.min(near, Math.hypot(p.pos.x - q.x, p.pos.z - q.z)); });
+      const score = near + Math.random() * 6;   // farther from every hero = more likely to go
+      if (score > bestScore) { bestScore = score; pick1 = i; }
     }
-    // the core: a fair, telegraphed crush (grows toward the middle; the pull itself is the warning)
-    if (d < coreR && p.dashT <= 0 && (ally ? G.tickA : G.tick) <= 0) {
-      if (ally) G.tickA = VP_CORE_TICK; else G.tick = VP_CORE_TICK;
-      bpStat.coreHits++;
-      hitHero(VP_CORE_PCT * (0.6 + 0.4 * (1 - d / coreR)), 'MAGIC', cx, cz, 0, 0);
-      applyPlayerDebuff('SLOW', 0.5, SLOW_BOSS);
-    }
-  });
-  if (t >= VP_END) {
-    e.attackCd = Math.max(e.attackCd, 3.2);   // a short stagger: he does nothing for a moment after the maelstrom
+    if (pick1 >= 0) { bp.props[pick1].on = false; ehD.x = bp.props[pick1].x; ehD.z = bp.props[pick1].z; }
+    bp.flash = 0.7;
+    events.emit('shockwave', { pos: tv.set(ehD.x, 0, ehD.z).clone(), radius: 10, color: 0xff3a6a });
+  }
+  // the collapse
+  if (pi < EH_PULSES.length && G.stage === 2 && t >= PT) {
+    G.stage = 1; G.legs++;
+    bp.flash = 1;
+    events.emit('shake', { amount: 0.5 });
+    forEachHero((p) => {
+      if (!p.alive || ehSafe(p.pos.x, p.pos.z)) return;
+      bpStat.pulseHits++;
+      hitHero(EH_PULSE_PCT, 'MAGIC', e.pos.x, e.pos.z, 4.5, 1.0);   // knockdown BEFORE anything that could stun
+      voidRotHit(bossPwr(e) * 1.2);
+    });
+  }
+  // the void floor ticks outside the sigils
+  if (t >= 1.5 && t < EH_END - 0.5) {
+    forEachHero((p) => {
+      if (!p.alive || ehSafe(p.pos.x, p.pos.z)) return;
+      const ally = isAlly(p);
+      if ((ally ? G.tickA : G.tick) > 0) return;
+      if (ally) G.tickA = 0.5; else G.tick = 0.5;
+      bpStat.voidTicks++;
+      tv.set(e.pos.x, 0, e.pos.z);
+      damagePlayer(1, { pct: EH_VOID_PCT, pos: tv, kind: 'MAGIC', dot: true, noDotMul: true });
+      if ((bpStat.voidTicks & 3) === 0) voidRotHit(bossPwr(e) * 0.8);
+    });
+  }
+  if (t >= EH_END) {
+    e.attackCd = Math.max(e.attackCd, 1.6);
     events.emit('shockwave', { pos: e.pos.clone(), radius: 22, color: 0xe9d5ff });
     end(e);
   }
 }
 /** QA counters (headless tests). */
-const bpStat = { orbHits: 0, coreHits: 0 };
+const bpStat = { orbHits: 0, coreHits: 0, orbs: 0, pulseHits: 0, voidTicks: 0 };
 
 // ----------------------------------------------------------------- per frame ----
 /** Global tick (enemies.updateEnemies, every frame). */

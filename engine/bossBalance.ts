@@ -22,10 +22,10 @@ export function bossLvArmor(level: number, trial: boolean): number {
 }
 /** Damage multiplier for a boss whose reference skill hit is `raw` (pre-mitigation, already x DMG_INFLATE-free) against a hero with `maxHp`;
  *  `mit` = the hero's overall mitigation factor on a flat hit (inflate x defence x reduction), see enemies.bossDmgScale. */
-export function bossHitScale(raw: number, mit: number, maxHp: number, trial: boolean): number {
+export function bossHitScale(raw: number, mit: number, maxHp: number, trial: boolean, min = HIT_MIN, exp = HIT_EXP): number {
   const share = (raw * mit) / Math.max(1, maxHp);
-  const k = Math.pow((trial ? HIT_TARGET_TRIAL : HIT_TARGET) / Math.max(1e-6, share), HIT_EXP);
-  return Math.max(HIT_MIN, Math.min(HIT_MAX, k));
+  const k = Math.pow((trial ? HIT_TARGET_TRIAL : HIT_TARGET) / Math.max(1e-6, share), exp);
+  return Math.max(min, Math.min(HIT_MAX, k));   // (the Void Herald passes min 0.05 and exponent 1 (exact share): its kit was hitting a defended hero for 35%+ per orb, so it may be SOFTENED to the target share)
 }
 /** Boss Trials: share-of-max-HP boss hits (`pct`, the Herald / phase kits) land this much harder (they bypass defence, so the flat-hit scale above cannot reach them). Mechanic checks (`crit`) are untouched. */
 export const TRIAL_PCT_MUL = 1.5;
