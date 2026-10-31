@@ -19,7 +19,7 @@ import { bp, phaseImmune } from './bossPhaseState';
 import type { BossKind } from '../enemyDefs';
 import { damagePlayer, applyPlayerDebuff, SLOW_BOSS, KB, type PlayerDebuff } from './combat';
 import { damageMinion, nearestMinion } from './minions';
-import { spawnEnemy, spawnTelegraphCircle, onEnemyDeath } from './enemies';
+import { spawnEnemy, spawnTelegraphCircle, onEnemyDeath, markSafe } from './enemies';
 import { spawnHostileZone } from './tricks';
 import { firePatch } from './bossFx';
 import { useGameStore } from '../../store';
@@ -303,7 +303,7 @@ export function updateBossMech(e: Enemy, dt: number): boolean {
   S.healCd -= dt;
   if (m.heal && !world.boss.final && S.healCd <= 0 && hpF < 0.7 && e.state !== 'WINDUP' && e.state !== 'ATTACK') {   // (never while warded: it could not be interrupted then; never for the final Herald)
     S.healCd = HEAL_CD; S.healT = HEAL_T; S.healHp0 = e.hp;
-    spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2, HEAL_T, 0, 0x4ade80);
+    markSafe(spawnTelegraphCircle(e.pos.x, e.pos.z, e.radius + 2, HEAL_T, 0, 0x4ade80));   // (a heal ring, not a danger zone: stays green)
     events.emit('floatText', { pos: e.pos, text: 'HEALING...', color: 0x4ade80, scale: 1.2, dy: 5 });
     notify('The boss is healing! Hit it hard to interrupt!', '#4ade80');
     return true;

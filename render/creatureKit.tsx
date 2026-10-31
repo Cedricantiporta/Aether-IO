@@ -15,7 +15,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { BASE } from './models';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
-import { MELEE_WINDUP, meleeT, strikeT } from '../engine/systems/enemies';
+import { MELEE_WINDUP, meleeT, strikeT, windK } from '../engine/systems/enemies';
 import type { Enemy, EnemyKind } from '../engine/types';
 import type { ModelDef, Part } from './enemyModels';
 import { MONSTER_KIT, type Arch, type CreatureCfg } from './creatureMap';
@@ -221,7 +221,7 @@ export function kitModelDef(kind: EnemyKind, cfg: CreatureCfg, piece: KitPiece):
       c.ph = t * gait;
       const mt = meleeT[e.id];
       c.wu = alive && mt > 0 ? 1 - mt / MELEE_WINDUP : 0; c.st = alive ? strikeT[e.id] : 0;
-      c.wind = e.state === 'WINDUP' ? clamp01(e.stateT / 0.6) : e.state === 'ATTACK' ? 1 : 0; c.atk = e.state === 'ATTACK' ? 1 : 0;
+      c.wind = e.state === 'WINDUP' ? windK(e, 0.6) : e.state === 'ATTACK' ? 1 : 0; c.atk = e.state === 'ATTACK' ? 1 : 0;
       P.sc *= inv;   // the kit is authored at ENEMY_DEFS.scale already: Enemies hands in e.scale (= def scale x size multipliers)
       bodyArgs(cfg.arch, cfg, c, _ba);
       P.body(_ba[0], _ba[1], _ba[2], _ba[3], _ba[4]);

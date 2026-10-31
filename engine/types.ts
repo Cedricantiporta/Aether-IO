@@ -257,6 +257,10 @@ export interface Zone {
   down: number;          // TELEGRAPH_CIRCLE: hero knockdown seconds on hit (0 none) - heavy rock / slam strikes
   /** co-op guest: a mirror of the host's zone (drawn and aged only; the host resolves its effect) */
   ghost?: boolean;
+  /** telegraph rules: a short bright impact flash left behind when a hostile warning resolves (visual only, never damages) */
+  flash?: boolean;
+  /** a friendly / informational circle on a TELEGRAPH_* kind (heal ring, safe spot): keeps its own colour instead of the danger red */
+  safe?: boolean;
 }
 
 // ------------------------------------------------------------- ground fx --

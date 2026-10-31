@@ -250,7 +250,7 @@ export function allocZone(): Zone | null {
   const z = grab(world.zones, 'z');
   if (!z) return null;
   z.tickT = 0; z.maxPull = 0; z.length = 0; z.dir.set(0, 0, 1); z.hostile = false;
-  z.ghost = false; z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0; z.kb = 0; z.down = 0;
+  z.ghost = false; z.permanent = false; z.period = 0; z.activeFor = 0; z.trick = 0; z.aux = 0; z.kb = 0; z.down = 0; z.flash = false; z.safe = false;
   return z;
 }
 

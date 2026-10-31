@@ -42,9 +42,12 @@ void main(){
     float fill = smoothstep(prog + 0.015, prog - 0.015, r) * disc;
     float hatch = 0.5 + 0.5 * sin((q.x + q.y) * PAD * 16.0 - uTime * 2.0);
     float front = smoothstep(0.035, 0.0, abs(r - prog)) * step(0.02, prog);
-    float a = disc * (0.13 + hatch * 0.05) + fill * 0.38 + edge * (0.7 + 0.3 * sin(uTime * 12.0)) + front * 0.5;
-    vec3 cA = vP.w > 0.5 ? vC : vec3(1.0, 0.14, 0.08); vec3 cB = vP.w > 0.5 ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.5, 0.25);
+    float a = (disc * (0.13 + hatch * 0.05) + fill * 0.38 + edge * (0.7 + 0.3 * sin(uTime * 12.0)) + front * 0.5) * (0.72 + 0.28 * prog);   // red warning: alpha only ramps UP while it charges
+    bool own = vP.w > 1.5 && vP.w < 2.5;
+    vec3 cA = own ? vC : vec3(1.0, 0.23, 0.16); vec3 cB = own ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.42, 0.35);
     col = vec4(mix(cA, cB, fill * 0.6 + front) * (1.0 + edge * 0.6), a);
+    if (vP.w > 0.5 && vP.w < 1.5) col.rgb = mix(col.rgb, vC, 0.3 * (edge + front));   // boss theme: only a thin accent on the rim
+    if (vP.w > 2.5) col = vec4(mix(vec3(1.0, 0.92, 0.88), vec3(1.0, 0.3, 0.22), prog), disc * (1.0 - prog) * 0.92);   // impact flash
   } else if (type < 1.5) {
     float across = abs(q.x) * PAD; float along = q.y * 0.5 + 0.5;
     float inside = step(across, 1.0) * step(0.0, along) * step(along, 1.0);
@@ -52,9 +55,12 @@ void main(){
     float fill = inside * smoothstep(prog + 0.01, prog - 0.01, along);
     float chev = step(fract(along * vS.y / 1.8 + abs(q.x) * PAD * 0.7 - uTime * 1.6), 0.35);
     float front = inside * smoothstep(0.03, 0.0, abs(along - prog));
-    float a = inside * (0.12 + chev * 0.1) + fill * 0.34 + border * 0.7 + front * 0.6;
-    vec3 cA = vP.w > 0.5 ? vC : vec3(1.0, 0.14, 0.08); vec3 cB = vP.w > 0.5 ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.55, 0.3);
+    float a = (inside * (0.12 + chev * 0.1) + fill * 0.34 + border * 0.7 + front * 0.6) * (0.72 + 0.28 * prog);
+    bool own = vP.w > 1.5 && vP.w < 2.5;
+    vec3 cA = own ? vC : vec3(1.0, 0.23, 0.16); vec3 cB = own ? mix(vC, vec3(1.0), 0.45) : vec3(1.0, 0.42, 0.35);
     col = vec4(mix(cA, cB, fill * 0.5 + front) * (1.0 + border * 0.6), a);
+    if (vP.w > 0.5 && vP.w < 1.5) col.rgb = mix(col.rgb, vC, 0.3 * (border + front));
+    if (vP.w > 2.5) col = vec4(mix(vec3(1.0, 0.92, 0.88), vec3(1.0, 0.3, 0.22), prog), inside * (1.0 - prog) * 0.92);
   } else if (type < 2.5 || (type > 8.5 && type < 9.5)) {
     float wild = step(8.5, type);
     float n = fbm(q * 3.2 * PAD + vec2(0.0, -uTime * 1.6));
@@ -77,8 +83,12 @@ void main(){
     float fill = inside * smoothstep(prog + 0.01, prog - 0.01, r);
     float front = inside * smoothstep(0.03, 0.0, abs(r - prog)) * step(0.02, prog);
     float hatch = 0.5 + 0.5 * sin(r * PAD * 40.0 - uTime * 4.0 + a * 6.0);
-    float al = inside * (0.12 + hatch * 0.06) + fill * 0.34 + (side + rim) * 0.7 + front * 0.6;
-    col = vec4(mix(vC, mix(vC, vec3(1.0), 0.5), fill * 0.5 + front) * (1.0 + (side + rim) * 0.6), al);
+    float al = (inside * (0.12 + hatch * 0.06) + fill * 0.34 + (side + rim) * 0.7 + front * 0.6) * (0.72 + 0.28 * prog);
+    bool own = vP.w > 1.5 && vP.w < 2.5;
+    vec3 cR = own ? vC : vec3(1.0, 0.23, 0.16);
+    col = vec4(mix(cR, mix(cR, vec3(1.0), 0.4), fill * 0.5 + front) * (1.0 + (side + rim) * 0.6), al);
+    if (vP.w > 0.5 && vP.w < 1.5) col.rgb = mix(col.rgb, vC, 0.3 * (side + rim + front));
+    if (vP.w > 2.5) col = vec4(mix(vec3(1.0, 0.92, 0.88), vec3(1.0, 0.3, 0.22), prog), inside * (1.0 - prog) * 0.92);
   } else if (type > 9.5) {
     // hostile trick patches (vP.w = style): 0 goo, 1 caltrops, 2 acid, 3 plague cloud, 4 smoke
     float st = vP.w;
@@ -243,7 +253,7 @@ export function Zones() {
       if (z.kind === 'TELEGRAPH_CONE') yaw = Math.atan2(z.dir.x, z.dir.z);
       o.position.set(x, y, zz); o.rotation.set(0, yaw, 0); o.scale.set(sx, 1, sz); o.updateMatrix();
       mesh.setMatrixAt(n, o.matrix);
-      P[n * 4] = type; P[n * 4 + 1] = prog; P[n * 4 + 2] = aux; P[n * 4 + 3] = type === 10 ? (PATCH_STYLE[z.kind] ?? 0) : z.trick > 0 ? 1 : 0;
+      P[n * 4] = type; P[n * 4 + 1] = prog; P[n * 4 + 2] = aux; P[n * 4 + 3] = type === 10 ? (PATCH_STYLE[z.kind] ?? 0) : z.flash ? 3 : (type === 0 || type === 1 || type === 11) ? (z.hostile && !z.safe ? 1 : z.trick > 0 || z.safe ? 2 : 0) : 0;
       _col.setHex(hex || 0xffffff);
       C[n * 3] = _col.r; C[n * 3 + 1] = _col.g; C[n * 3 + 2] = _col.b;
       n++;

@@ -323,7 +323,19 @@ function lineHit(z: Zone): void {
 }
 function resolveZone(z: Zone): void { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); }
 
+/** Telegraph rules (owner): the warning stays red until the strike; on impact it leaves a short bright flash (a visual-only ghost copy) and is gone. */
+const IMPACT_FLASH = 0.12;
+function impactFlash(z: Zone): void {
+  if (z.safe || z.flash || z.ghost || (z.kind !== 'TELEGRAPH_CIRCLE' && z.kind !== 'TELEGRAPH_LINE' && z.kind !== 'TELEGRAPH_CONE')) return;
+  const f = allocZone();
+  if (!f) return;
+  f.active = true; f.kind = z.kind; f.hostile = false; f.ghost = true; f.flash = true;
+  f.pos.copy(z.pos); f.dir.copy(z.dir); f.radius = z.radius; f.length = z.length; f.color = z.color;
+  f.aux = z.kind === 'TELEGRAPH_CONE' ? z.aux : 0; f.life = f.maxLife = IMPACT_FLASH;
+}
+
 function expire(z: Zone): void {
+  impactFlash(z);   // (the flash copy is spawned first: resolving may re-use this slot's neighbours, never this zone)
   const ally = coopRoom.ally;   // co-op host: the partner's stand-in (damagePlayer forwards the blow to his screen)
   if (z.trick > 0) {
     // signature tricks / boss telegraphs spawn props and patches as they resolve, so they run once, on the hero nearest to the strike
