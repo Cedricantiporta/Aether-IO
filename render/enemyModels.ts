@@ -24,9 +24,13 @@ export class Poser {
   private base = new Matrix4(); private local = new Matrix4(); private out = new Matrix4();
   private q = new Quaternion(); private qb = new Quaternion(); private eul = new Euler(); private p = new Vector3(); private s = new Vector3();
   bx = 0; by = 0; bz = 0; yaw = 0; sc = 1; fx = 1; fy = 1; yOff = 0;
+  /** DOWN topple 0..1 (set by Enemies before begin): the body falls onto its back (pitch -86 deg) and lies flat; 1 = fully down */
+  down = 0;
   begin(x: number, y: number, z: number, yaw: number, scale: number, fx = 1, fy = 1, yOff = 0) { this.bx = x; this.by = y; this.bz = z; this.yaw = yaw; this.sc = scale; this.fx = fx; this.fy = fy; this.yOff = yOff; this.glow = 1; this.fade = 1; this.body(0, 0, 0, 1, 1); }
   /** adjust whole-body transform: dy offset, pitch (lean fwd +), roll, horizontal and vertical squash */
   body(dy: number, pitch: number, roll: number, sxz: number, sy: number) {
+    const dn = this.down;
+    if (dn > 0) { pitch = pitch * (1 - dn) - 1.5 * dn; roll *= 1 - dn; dy = dy * (1 - dn) + 0.36 * dn; sxz = sxz * (1 - dn) + dn; sy = sy * (1 - dn) + dn; }   // (lying: no squash / bounce, lifted by half its thickness)
     this.eul.set(pitch, this.yaw, roll, 'YXZ');
     this.qb.setFromEuler(this.eul);
     this.p.set(this.bx, this.by + this.yOff + dy * this.sc * this.fy, this.bz);

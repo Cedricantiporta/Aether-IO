@@ -35,7 +35,7 @@ export function towerCrystals(boss: boolean, mini: boolean, elite: boolean, dept
   return Math.random() < 0.015 ? 1 : 0;
 }
 import { dailyMods } from '../../dailyChallenge';
-import { GOLD_DROPPERS, isBossAdd } from '../enemyDefs';
+import { GOLD_DROPPERS, isBossAdd, isStationary } from '../enemyDefs';
 import { spawnPickup, dropCrystals } from './pickups';
 import { waves } from '../../endlessWaves';
 import { onEnemyDeath, crabArmor, shieldBlock, bossAlive, SHIELD_BACKSTAB_MULT, WINDED_DMG_MULT } from './enemies';
@@ -63,6 +63,8 @@ export interface DamageOpts {
   /** Launch distance (units): big knockback. With `slam` damage if the enemy hits an obstacle / crystal wall. */
   launch?: number;
   slam?: number;
+  /** KNOCKDOWN seconds (hero skills): monsters + dark heroes fall, lie helpless, then get up and resist a re-down for a while. Bosses / mini-bosses ignore it. */
+  down?: number;
   /** Applies ARMOR BREAK (-25% armor, 6 s) before the hit lands. */
   armorBreak?: boolean;
   /** Skip the back-attack bonus (slam damage etc.). */
@@ -93,7 +95,7 @@ let thornT = -1;
 const thornOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PET' };
 
 /** Counters for QA / run stats of the combat-depth systems. */
-export const combatStats = { backstabs: 0, slams: 0, staggers: 0, xpFromKills: 0, armorBreaks: 0, debuffs: {} as Record<string, number> };
+export const combatStats = { backstabs: 0, slams: 0, staggers: 0, downs: 0, xpFromKills: 0, armorBreaks: 0, debuffs: {} as Record<string, number> };
 export const BACKSTAB_DOT = -0.5;   // rear arc: attacker within 60 deg of straight behind (120 deg total)
 export const BACKSTAB_MULT = 1.5;   // (owner) x1.5 on any hit from behind, every enemy incl. bosses
 const ARMOR_BREAK_FACTOR = 0.75;
@@ -126,6 +128,29 @@ export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam
   const v = Math.min(150, dist * 9.5 * resist);
   e.knock.x = (dx / l) * v; e.knock.z = (dz / l) * v;
   e.slamDmg = Math.max(e.slamDmg, slam); e.slamT = 0.9;
+}
+
+// ---- DOWN (owner): hero skills knock monsters and dark heroes to the ground (never bosses / mini-bosses): no move / attack while lying,
+// a short get-up, then DOWN_RESIST seconds in which they cannot be downed again (anti-chain). Elites lie half as long.
+export const DOWN_RESIST = 2.0, DOWN_RESIST_DARK = 4.0, DOWN_DARK_MAX = 1.0, DOWN_GETUP = 0.4, DOWN_FALL = 0.18;
+/** Can this monster be knocked down right now? (not a boss / mini-boss; the dark hero is the one mini that can) */
+export function canDown(e: Enemy): boolean {
+  return e.active && e.state !== 'DYING' && e.state !== 'SPAWN' && !e.boss && (!e.mini || e.kind === 'DARK_HERO') && !e.decoy && e.downT <= 0 && e.downResT <= 0 && e.freezeT <= 0 && !isStationary(e.kind);
+}
+/** Knocks `e` down for `sec` seconds (elites half, the dark hero capped at DOWN_DARK_MAX). Returns true when it fell. */
+export function downEnemy(e: Enemy, sec: number): boolean {
+  if (coopRoom.guest || !(sec > 0) || !canDown(e)) return false;
+  const dark = e.kind === 'DARK_HERO';
+  if (dark) sec = Math.min(sec, DOWN_DARK_MAX); else if (e.elite) sec *= 0.5;
+  if (sec < 0.3) return false;
+  e.downT = e.downMax = sec;
+  e.downResT = sec + (dark ? DOWN_RESIST_DARK : DOWN_RESIST);
+  e.stunT = 0; e.fearT = 0; e.vel.set(0, 0, 0);
+  if (!dark && (e.state === 'WINDUP' || e.state === 'ATTACK')) { e.state = 'RECOVER'; e.stateT = 0; }   // the interrupted swing is lost (the dark hero cancels its own: darkHero.tickDarkHero)
+  e.trickT = 0; e.bigT = 0; e.comboN = 0;
+  combatStats.downs++;
+  events.emit('floatText', { pos: e.pos, text: 'DOWN', color: 0xffd27a, scale: 0.8, dy: 1.6 });
+  return true;
 }
 
 /** Called by the enemy system when a launched enemy collides with an obstacle / crystal wall. */
@@ -514,6 +539,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
 
   // Player knockback / launches only trigger on half of the hits (designer: 50% less knockback chance).
   const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE : true;
+  if (o.down && !o.dot) downEnemy(e, o.down);   // (a skill that knocks down: always, not a 50% roll)
   if (o.launch && o.knockDir) { if (knockRoll) launchEnemy(e, o.knockDir.x, o.knockDir.z, o.launch, o.slam ?? 0); }
   else if (knockRoll && o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
     const k = Math.min(KNOCK_MAX, o.knockback * KNOCK_SCALE) * (e.elite ? 0.5 : 1) * (e.mini ? 0.5 : 1);
@@ -863,7 +889,7 @@ function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
   if (tr & TR.STUN && Math.random() < 0.3) applyPlayerDebuff('STUN', 0.8);
   if (!from) return;
   if (tr & TR.KNOCKDOWN && Math.random() < 0.35) knockHero(from.x, from.z, 3.4, 0.7);
-  else if (tr & TR.KNOCK) knockHero(from.x, from.z, 3.2, 0, true);
+  else if (tr & TR.KNOCK) { if (Math.random() < 0.5) knockHero(from.x, from.z, 3.4, 0.6, true); else knockHero(from.x, from.z, 3.2, 0, true); }   // Shover: half of the shoves are short knockdowns
 }
 
 export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number; /** MECHANIC-CHECK hit (Avalanche, Tidal Wave, Sandstorm, collapses): needs `pct`; dodge roll, dash / dodge i-frames and the Energy Shield do NOT stop it (only the safe spot does); no defence reduction; leaves 1 HP when the hero is above 50% max HP, can kill at or below it. Big red number + screen flash */ crit?: boolean }): void {

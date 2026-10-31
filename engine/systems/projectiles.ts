@@ -28,6 +28,7 @@ export interface ProjSpec {
   radius?: number;
   aoe?: number;
   knockback?: number;
+  down?: number;   // knockdown seconds on monsters / dark heroes (never bosses / mini-bosses)
   effect?: Projectile['effect'];
   bounces?: number;
   homing?: number;
@@ -81,6 +82,7 @@ export function spawnProjectile(
   if (spec.radius !== undefined) p.radius = spec.radius;
   p.aoeRadius = spec.aoe ?? 0;
   p.knockback = spec.knockback ?? 0;
+  p.down = spec.down ?? 0;
   p.effect = spec.effect;
   p.bounces = spec.bounces ?? 0;
   p.homing = spec.homing ?? 0;
@@ -494,6 +496,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   hitOpts.crit = crit;
   hitOpts.knockDir = knockTmp;
   hitOpts.knockback = p.knockback;
+  hitOpts.down = p.down;
   hitOpts.source = petShot ? 'PET' : 'PLAYER';
   hitOpts.basic = !petShot && BASIC_KINDS.has(p.kind);
   if (p.kind === 'BURNING_ARROW' && p.state === 2) fanPatch(p, e.pos.x, e.pos.z);

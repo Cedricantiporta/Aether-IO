@@ -402,7 +402,7 @@ export function spawnEnemy(
   // (owner 2026-10-26) The Void breeds corrupted monsters: 2x damage, 1.3x bigger (the shots turn black-purple in render)
   e.corrupt = !boss && !opts?.fixed && !isStationary(kind) && world.room.active && ((world.room.biome | 0) % BIOMES.length) === VOID_BIOME && Math.random() < CORRUPT_CHANCE;
   if (e.corrupt) { e.contactDamage *= 2; e.projectileDamage *= 2; e.scale *= 1.3; e.radius *= 1.3; }
-  e.mini = false;
+  e.mini = false; e.downT = e.downMax = e.downResT = 0;
   e.traits = (boss ? 0 : rollTraits(kind, bi, wave, elite)) | innateHinder(kind, elite, boss);   // (owner) more monsters roll traits, deeper = more, elites most (enemyTraits.ts)
   e.dodgeCd = 1 + Math.random() * 2.5;
   e.staggerMax = boss ? 100 : 0;
@@ -1104,7 +1104,7 @@ function frontStrike(e: Enemy, P: { range: number; windup: number; r: number; re
       if (e.attackCd <= 0 && tdist < P.range + e.radius) {
         e.dir.set(tdx * inv, 0, tdz * inv);
         const fz = spawnTelegraphCircle(e.pos.x + e.dir.x * reach, e.pos.z + e.dir.z * reach, P.r, P.windup, dmg, color);
-        if (fz) { if (e.kind === 'HAUNTED_ARMOR') { fz.kb = KB.SLAM.kb; fz.down = KB.SLAM.down; } else if (e.elite || e.mini) fz.kb = KB.PUSH.kb; }   // (owner) the haunted greatsword knocks down; elite / mini cleaves shove
+        if (fz) { if (e.kind === 'HAUNTED_ARMOR') { fz.kb = KB.SLAM.kb; fz.down = KB.SLAM.down; } else if (e.elite || e.mini) { fz.kb = KB.PUSH.kb; fz.down = 0.8; } }   // (owner) the haunted greatsword knocks down; elite / mini cleaves shove
         enter(e, 'WINDUP'); stop(e);
       }
   }
@@ -1502,9 +1502,9 @@ function contactHit(e: Enemy, locked: boolean): void {
   contactCd[e.id] = e.state === 'ATTACK' ? CONTACT_CD : MELEE_CD;
   if (curMin >= 0) { damageMinion(curMin, dmg); minionTraitHit(curMin, e.traits); if (e.kind === 'BAT') enter(e, 'RECOVER'); return; }   // hit the skeleton (+ its on-hit effects)
   const grab = e.kind === 'ZOMBIE';
-  const charge = e.kind === 'BOAR' && e.state === 'ATTACK';   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
+  const charge = (e.kind === 'BOAR' || e.kind === 'BRUTE' || e.kind === 'BONE_GOLEM' || e.kind === 'SHIELDBEARER') && e.state === 'ATTACK';   // heavy charges / bashes that connect (boar, brute / ogre, bone golem, shieldbearer)   // a boar charge that connects knocks the hero down; ordinary hits only flinch the hero when the attacker is big
   const big = e.boss || e.mini || e.elite || e.radius >= 1.6;
-  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.2 ? KB.PUSH : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits shove now and then
+  damagePlayer(dmg, { pos: e.pos, kind: 'PHYSICAL', slow: grab ? 0.5 : undefined, src: e, ...(charge ? KB.SLAM : e.elite && !e.boss && Math.random() < 0.1 ? KB.SLAM : big ? KB.FLINCH : null) });   // (owner) elites' ordinary hits now and then knock down (instead of a plain shove)
   if (e.kind === 'BOSS_WYRMLING') frostHit(2.4, 0.2);   // (owner 2026-10-31) baby drake bites slow + may freeze
   if (charge) {
     world.player.slowT = Math.max(world.player.slowT, 0.6);
@@ -1594,6 +1594,8 @@ function updateEnemy(e: Enemy): void {
   if (e.boss || e.mini) tickInterrupt(e, dt);
   if (e.freezeT > 0) e.freezeT -= dt;
   if (e.stunT > 0) e.stunT -= dt;
+  if (e.downResT > 0) e.downResT -= dt;   // DOWN: lying time, then the anti-chain resistance (combat.downEnemy)
+  if (e.downT > 0) { e.downT -= dt; e.vel.set(0, 0, 0); if (e.downT <= 0) e.downT = 0; }
   if (e.traits & TR.CC_RESIST) { if (e.freezeT > 0) e.freezeT -= dt * 1.5; if (e.stunT > 0) e.stunT -= dt * 1.5; if (e.fearT > 0) e.fearT -= dt * 1.5; }   // Steadfast: CC wears off ~2.5x sooner
   if (e.fearT > 0) {   // terrified: frozen in place; when it wears off, slowed 30% for a while
     e.fearT -= dt;
@@ -1615,7 +1617,7 @@ function updateEnemy(e: Enemy): void {
   if (contactCd[e.id] > 0) contactCd[e.id] -= dt;
 
   // ---- AI
-  const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0;
+  const locked = e.freezeT > 0 || e.stunT > 0 || e.staggerT > 0 || e.downT > 0;
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz);
   if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)

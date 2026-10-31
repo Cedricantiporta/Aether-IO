@@ -27,7 +27,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s.',
       per: (lv) => `Blast ${pct(2.4 * lvMul(lv))} dmg · radius ${f1(4.2 + 0.3 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },
     { slot: 's3', icon: 'LIGHT_ARROW', name: 'Lightpiercer', mana: 24, cd: 8,
-      desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Hold the key to keep charging it (up to 1.5s): up to x2.5 damage and twice the size.',
+      desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Hold the key to keep charging it (up to 1.5s): up to x2.5 damage and twice the size. A full charge knocks enemies down (not bosses).',
       per: (lv) => `Damage ${pct(5 * lvMul(lv))} (full charge ${pct(12.5 * lvMul(lv))}) · pierces all` },
     { slot: 's4', icon: 'FROST_FIELD', name: 'Frost Field', mana: 26, cd: 11,
       desc: 'Throw 3 frost traps in a spread. Each bursts into ice crystals and a large slowing field with a small chance to freeze enemies solid; the centre is briefly frozen.',
@@ -35,7 +35,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ],
   WIZARD: [
     { slot: 'q', icon: 'SINGULARITY', name: 'Singularity', mana: 34, cd: 12,
-      desc: 'A black hole traps enemies: heavy slow deepening toward the core, a gentle pull and constant damage to everything caught inside. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed).',
+      desc: 'A black hole traps enemies: heavy slow deepening toward the core, a gentle pull and constant damage to everything caught inside. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed). When it collapses it knocks enemies down (not bosses).',
       per: (lv) => `${pct(6.5 * lvMul(lv))} dmg over its life · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
     { slot: 'e', icon: 'BLINK_NOVA', name: 'Blink Nova', mana: 0, cd: 0,
       desc: 'Teleport to the aim point. A small frost nova at both the origin and the destination may freeze nearby enemies.',
@@ -55,7 +55,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Spin for 1.2s (hold the key to keep spinning, up to 4s), barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
       per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
-      desc: 'Slam the ground in front of you: a short fissure erupts in stone spikes. Launches enemies far (wall-slam bonus) and breaks armor.',
+      desc: 'Slam the ground in front of you: a short fissure erupts in stone spikes. Launches enemies far (wall-slam bonus), knocks them down (not bosses) and breaks armor.',
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
   ],
   NECROMANCER: [
@@ -80,7 +80,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage.',
       per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
-      desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage and stuns. More rays per level (max 12).',
+      desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage, stuns and knocks enemies down (not bosses). More rays per level (max 12).',
       per: (lv) => `${Math.min(12, 5 + lv)} rays · ${pct(1.5 * lvMul(lv))} dmg each · radius ${f1(4 + 0.2 * (lv - 1))} · stun ${f1(0.8 + 0.1 * lv)}s` },
   ],
 };
@@ -98,12 +98,12 @@ export const isDashKey = (hero: HeroClass, key: string): boolean => key === dash
 
 export const SHOULDER_CHARGE: AbilityDef = {
   slot: 'e', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 0, cd: 0,
-  desc: 'Leap to the target (tap: forward) and slam down: stuns nearby enemies and grants a short Rage (faster attacks). Invulnerable while airborne.',
+  desc: 'Leap to the target (tap: forward) and slam down: stuns and knocks down nearby enemies (not bosses) and grants a short Rage (faster attacks). Invulnerable while airborne.',
   per: (lv) => `Slam ${pct(1.05 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s`,
 };
 export const HOLY_CHARGE: AbilityDef = {
   slot: 'e', icon: 'HOLY_CHARGE', name: 'Holy Charge', mana: 0, cd: 0,
-  desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside.',
+  desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside and down (not bosses).',
   per: (lv) => `${pct(0.9 * lvMul(lv))} dmg · length ${f1(11 + 0.5 * (lv - 1))}`,
 };
 /** Ordered active definitions (keys 1, 2, 3). */
@@ -116,19 +116,19 @@ export function dashDef(hero: HeroClass): AbilityDef {
 
 export const ULTS: Record<HeroClass, AbilityDef> = {
   ARCHER: { slot: 'ult', icon: 'STORM_ARROWS', name: 'Storm of a Thousand Arrows', mana: 0, cd: 0,
-    desc: 'Aim a large circle (radius 14): time slows and for 2.7s arrows rain inside it. A final volley ends it. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'Aim a large circle (radius 14): time slows and for 2.7s arrows rain inside it. A final volley ends it and knocks enemies down (not bosses). Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `${Math.round(54 * (1 + 0.1 * (lv - 1)))} arrows/s · ${pct(2.4 * 0.49 * lvMul(lv))} dmg each · final volley ${pct(25 * 0.49 * lvMul(lv))}` },
   WIZARD: { slot: 'ult', icon: 'METEOR_CATA', name: 'Meteor Cataclysm', mana: 0, cd: 0,
-    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns and ignites everything, two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns, ignites and knocks everything down (not bosses), two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Impact ${pct(50 * 0.7 * lvMul(lv))} dmg (center) · 2 fire rings ${pct(3 * 0.7 * lvMul(lv))} each · lava ${pct(2.2 * 0.7 * lvMul(lv))}` },
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
-    desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage and every skill 40% bigger. Every step quakes the ground; the finale slams a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage and every skill 40% bigger. Every step quakes the ground; the finale slam knocks enemies down (not bosses) and raises a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
   NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Bone Golem', mana: 0, cd: 0,
-    desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning and battering everything in the crater, then fights for you for 26s. It is 50% bigger, swings 20% faster with a shockwave that hits everything around the target, and every 4-6s lobs a boulder at enemies 6-16m away. When its time runs out (or it falls) it EXPLODES, setting enemies ablaze and leaving a burning patch on the ground. Its 90s cooldown starts once the golem is gone; it also needs a full charge bar.',
+    desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning, knocking down (not bosses) and battering everything in the crater, then fights for you for 26s. It is 50% bigger, swings 20% faster with a shockwave that hits everything around the target, and every 4-6s lobs a boulder at enemies 6-16m away. When its time runs out (or it falls) it EXPLODES, knocking enemies down, setting them ablaze and leaving a burning patch on the ground. Its 90s cooldown starts once the golem is gone; it also needs a full charge bar.',
     per: (lv) => `Impact ${pct(8 * lvMul(lv) * 0.7)} dmg · golem ${pct(3 * lvMul(lv) * 0.8)} per hit (area) · boulder ${pct(3 * lvMul(lv) * 0.8 * 1.5)} · explosion ${pct(3 * lvMul(lv) * 0.8 * 2.5)} + burn · 26s` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
-    desc: 'A column of light crashes down around you (damage + stun), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A column of light crashes down around you (damage, stun and knockdown; not bosses), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
     per: (lv) => `Burst ${pct(14 * lvMul(lv) * 0.7)} dmg · wave ${pct(2 * lvMul(lv))} per swing` },
 };
 

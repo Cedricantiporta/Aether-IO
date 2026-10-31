@@ -18,7 +18,7 @@ import { useGameStore } from '../store';
 import { GameStatus } from '../types';
 import {
   MSG, HIT_STRIDE, DMG_KINDS, STATUS_TYPES, DEBUFF_TYPES, ENEMY_STATES, ROOM_PHASES, EP_KINDS, isNum,
-  HF_DOT, HF_ENV, HF_NODOT, HF_PROJ, HF_CRIT, DF_CRIT, DF_DOT, DF_BASIC, DF_ABREAK, DF_FROST, DF_NOBACK, DF_PLAYER, DF_KNOCK, DF_LAUNCH,
+  HF_DOT, HF_ENV, HF_NODOT, HF_PROJ, HF_CRIT, DF_CRIT, DF_DOT, DF_BASIC, DF_ABREAK, DF_FROST, DF_NOBACK, DF_PLAYER, DF_KNOCK, DF_LAUNCH, DF_DOWN,
 } from './protocol';
 import { b64ToU16, EV_G2H, EV_H2G, encodeEvent, decodeEvent } from './coopWire';
 import { packGhosts, applyGhosts, ghostReset } from './coopGhosts';
@@ -77,6 +77,7 @@ coopRoom.sendHit = (e: Enemy, amount: number, o: DamageOpts, knockRoll: boolean,
     kx = o.knockDir.x; kz = o.knockDir.z;
     if (o.launch) { fl |= DF_LAUNCH; launch = o.launch; slam = o.slam ?? 0; } else if (o.knockback) { fl |= DF_KNOCK; kb = o.knockback; }
   }
+  if (o.down && o.down > 0) fl |= DF_DOWN | (Math.min(31, Math.round(o.down * 10)) << 10);   // (a knockdown skill: the host downs it, the snapshot flag shows it back)
   guestStats.claims++;
   hq.push(e.id, Math.round(amount * 10), DK[o.kind] ?? 0, fl, Math.round((o.fromX ?? fx) * 10), Math.round((o.fromZ ?? fz) * 10), Math.round(kx * 100), Math.round(kz * 100), Math.round(kb * 100), Math.round(launch * 100), Math.round(slam * 10));
 };
@@ -183,6 +184,8 @@ function onSnap(d: unknown[]): void {
     e.state = st;
     e.phase = (w0 >> 12) & 3;
     if ((w0 >> 14) & 1) e.hitFlash = Math.max(e.hitFlash, 0.8);
+    if ((w0 >> 15) & 1) { e.downResT = 1; if (e.downT <= 0) { e.downMax = e.downT = 1.4; } }   // DOWN (host's snapshot bit 15): lie until it clears (downResT = the "still down" flag on a guest)
+    else { e.downResT = 0; if (e.downT > 0.4) e.downT = 0.4; }   // ...then the short get-up (combat.DOWN_GETUP)
     e.hp = (IN[o + 5] / 65535) * e.maxHp;
     e.vel.set(((IN[o + 6] & 255) - 128) / 2, 0, ((IN[o + 6] >> 8) - 128) / 2);
     const w7 = IN[o + 7], sb = w7 >> 6;
@@ -360,6 +363,7 @@ coopRoom.mirror = (dt: number): void => {
     e.pos.x = X0[i] + (X1[i] - X0[i]) * u; e.pos.z = Z0[i] + (Z1[i] - Z0[i]) * u; e.pos.y = Y0[i] + (Y1[i] - Y0[i]) * u;
     e.facing = F0[i] + wrapPi(F1[i] - F0[i]) * u;
     e.animT += dt;
+    if (e.downT > 0) e.downT = Math.max(e.downResT > 0 ? 0.45 : 0, e.downT - dt);
     if (e.state === 'DYING') { e.deathT += dt; e.stateT += dt; } else e.stateT += dt;
     if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt * 6.5);
   }

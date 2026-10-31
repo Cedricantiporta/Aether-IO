@@ -33,7 +33,7 @@ function makeEnemy(id: number): Enemy {
     contactDamage: 0, projectileDamage: 0, xp: 0, gold: 0,
     state: 'SPAWN', stateT: 0, attackCd: 0, animT: 0, hitFlash: 0, deathT: 0,
     burnT: 0, burnDps: 0, poisonT: 0, poisonDps: 0, freezeT: 0, stunT: 0, fearT: 0, slowT: 0, slowFactor: 0, waterT: 0,
-    armor: 0, armorBreakT: 0, burnStacks: 0, burnStackCd: 0, mini: false, stagger: 0, staggerMax: 0, staggerT: 0, staggerCd: 0,
+    armor: 0, armorBreakT: 0, burnStacks: 0, burnStackCd: 0, mini: false, stagger: 0, staggerMax: 0, staggerT: 0, staggerCd: 0, downT: 0, downMax: 0, downResT: 0,
     trickCd: 0, trickT: 0, trickKind: 0, bigCd: 0, bigT: 0, bigRec: 0, bigDash: 0, bigKind: 0, slamDmg: 0, slamT: 0, chillStacks: 0, chillT: 0, frostT: 0, spKind: 0, spT: 0, spStep: 0, spCd: 0, decoy: false, bossAdd: false, hideT: 0, shellT: 0,
     winT: 0, winCd: 0, winPhase: 0, winBusy: false,
     phase: 0, pattern: 0, patternT: 0, angle: 0, pullCount: 0,
@@ -44,7 +44,7 @@ function makeEnemy(id: number): Enemy {
 function makeProjectile(id: number): Projectile {
   return {
     id, active: false, kind: 'ARROW', pos: v(), vel: v(), life: 0, maxLife: 1,
-    damage: 0, radius: 0.5, aoeRadius: 0, pierce: 1, bounces: 0, knockback: 0,
+    damage: 0, radius: 0.5, aoeRadius: 0, pierce: 1, bounces: 0, knockback: 0, down: 0,
     effect: undefined, hitIds: [], state: 0, spin: 0, homing: 0, trailT: 0, procLv: 0, tint: 0, emp: false,
   };
 }

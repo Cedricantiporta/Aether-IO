@@ -128,6 +128,7 @@ function pullTick(z: Zone, dt: number): void {
  *  and gentle at the core; big monsters resist the pull. Bosses / mini-bosses: 40% slow, never pulled. Anything entering while it lives is caught. */
 const HOLE_TICK = 0.35;
 const holeDot: DamageOpts = { kind: 'MAGIC', source: 'PLAYER' };
+const holeCollapse: DamageOpts = { kind: 'MAGIC', source: 'PLAYER', down: 1.4 };   // the Singularity's collapse knocks everything inside down
 function holeTick(z: Zone, dt: number): void {
   const R = z.radius;
   // constant damage to everything inside while it pulls (z.damage = the total over its life)
@@ -339,7 +340,8 @@ function expire(z: Zone): void {
     z.active = false; return;
   }
   switch (z.kind) {
-    case 'BLACKHOLE':   // no collapse explosion any more (it deals its damage while pulling): just fades out
+    case 'BLACKHOLE':   // when it ends the singularity collapses: a small blast that knocks everything caught inside down (the damage is dealt while pulling)
+      if (!z.hostile && !z.ghost) damageEnemiesInRadius(z.pos.x, z.pos.z, z.radius * 0.85, Math.max(1, z.damage * 0.12), holeCollapse);
       events.emit('shockwave', { pos: z.pos.clone(), radius: z.radius * 0.6, color: 0x6d28d9 });
       break;
     case 'TELEGRAPH_CIRCLE': {

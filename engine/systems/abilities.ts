@@ -80,11 +80,17 @@ const lastCd: Record<string, number> = {};
 
 const physOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const physKnock: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 1.2 };
-const spikeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', launch: 10, slam: 0, armorBreak: true };
+const spikeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', launch: 10, slam: 0, armorBreak: true, down: 1.3 };   // Earthsplitter: launches AND knocks down
+// DOWN skills (owner: the heavy / impact ones knock monsters + dark heroes down; bosses / mini-bosses only get the usual knockback / stagger)
+const leapOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 1.2, down: 1.4 };       // Barbarian Bloodrage Leap slam
+const ultDownOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 1.2, down: 1.8 };    // Titan's Wrath finale slam, Divine Avatar column
+const golemDropOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 1.2, down: 1.8 };  // Bone Golem crash
+const meteorOpts: DamageOpts = { kind: 'FIRE', source: 'PLAYER', knockback: 0.8, down: 1.8 };         // Meteor Cataclysm impact
+const volleyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', down: 1.2 };                     // Storm of a Thousand Arrows final volley
 const whirlOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true };
 const elecBreak: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', armorBreak: true };
-const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9 };
-const holyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true, knockback: 0.6 };
+const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9, down: 1.2 };   // Knight Holy Charge: knocks aside AND down
+const holyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true, knockback: 0.6, down: 1.0 };   // Judgment rays: stun + knock down
 const aimTmp = new Vector3();
 const wardTmp = new Vector3();
 const frostOpts: DamageOpts = { kind: 'ICE', source: 'PLAYER', frost: true };
@@ -781,7 +787,7 @@ function releaseUlt(): void {
     const dur = 8 + (st.stats.avatarBonus || 0);
     p.ultT = dur; p.avatarT = dur; p.invulnT = Math.max(p.invulnT, 0.8);
     stunSt.duration = 1.5;
-    damageEnemiesInRadius(p.pos.x, p.pos.z, 12, b * 14, physKnock, stunSt);
+    damageEnemiesInRadius(p.pos.x, p.pos.z, 12, b * 14, ultDownOpts, stunSt);
     p.levelUpFx = 1;   // the golden pillar
     a.tintRgb = [0.14, 0.11, 0.03]; a.tintTarget = 0;
     events.emit('ultImpact', { pos: p.pos.clone(), name: 'DIVINE_AVATAR', radius: 12 });
@@ -876,7 +882,7 @@ function updateUlt(dt: number): void {
         for (let i = 0; i < n; i++) {
           const ang = Math.random() * 6.283, d = Math.sqrt(Math.random()) * 14;
           const fall = 0.4 + (d / 14) * 0.5 + Math.random() * 0.1;
-          mkFx('RAIN_ARROW', a.ultX + Math.cos(ang) * d, a.ultZ + Math.sin(ang) * d, fall, fall + 0.3, 3.4, b * 25 / 6 * 0.7, 0, 0xfff0b0);
+          mkFx('RAIN_ARROW', a.ultX + Math.cos(ang) * d, a.ultZ + Math.sin(ang) * d, fall, fall + 0.3, 3.4, b * 25 / 6 * 0.7, 2, 0xfff0b0);
         }
         events.emit('ultImpact', { pos: new Vector3(a.ultX, 0, a.ultZ), name: 'FINAL_VOLLEY', radius: 14 });
         addShake(0.6); fovKick(0.6);
@@ -938,7 +944,7 @@ function finalSlam(b: number): void {
   const px = p.pos.x, pz = p.pos.z;
   p.titanT = 0;
   stunSt.duration = 2;
-  damageEnemiesInRadius(px, pz, 18, b * 12, physKnock, stunSt);
+  damageEnemiesInRadius(px, pz, 18, b * 12, ultDownOpts, stunSt);
   // a big ring of spikes (radius ~12), not screen-wide
   for (let i = 0; i < 44; i++) {
     const ang = (i / 44) * 6.283 + Math.random() * 0.1, d = 7 + Math.random() * 5;
@@ -972,7 +978,8 @@ function bigMeteorImpact(f: GroundFx): void {
       const inv = 1 / (d || 1);
       e.knock.x += dx * inv * k; e.knock.z += dz * inv * k;
     }
-    damageEnemy(e, f.dmg * fall, fireOpts);
+    meteorOpts.down = fall > 0.8 ? 1.8 : 1.2;   // the centre lies longer
+    damageEnemy(e, f.dmg * fall, meteorOpts);
   }
   { const cz = mkZone('FIRE', px, pz, 9, 2.5, f.dmg * 0.035, 0xff5a1a); if (cz) cz.aux = 1; } // molten crater, burns 2.5 s
   mkZone('SHOCKWAVE', px, pz, 30, 0.9, 0, 0xff8a40);
@@ -991,7 +998,7 @@ function resolveFx(f: GroundFx): void {
   const pos = new Vector3(f.x, 0, f.z);
   switch (f.kind) {
     case 'RAIN_ARROW':
-      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physOpts);
+      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, f.aux === 2 ? volleyOpts : physOpts);   // aux 2 = the final volley: knocks down
       events.emit('fxImpact', { pos, kind: 'RAIN_ARROW', radius: f.radius });
       break;
     case 'METEOR':
@@ -1035,7 +1042,7 @@ function resolveFx(f: GroundFx): void {
     case 'GOLEM_DROP':
       // the golem lands: stun + knock everything in the crater, then it stands up and fights for 26 s
       stunSt.duration = 1.2;
-      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, physKnock, stunSt);
+      damageEnemiesInRadius(f.x, f.z, f.radius, f.dmg, golemDropOpts, stunSt);
       spawnMinion(MINION_GOLEM, f.x, f.z, f.aux, GOLEM_LIFE, 2, true);
       events.emit('explosion', { pos, radius: f.radius * 0.6, color: 0x6a3aa8 });
       events.emit('shockwave', { pos, radius: f.radius * 1.8, color: 0xc8a8ff });
@@ -1102,7 +1109,7 @@ export function updateAbilities(dt: number): void {
     } else { a.lpHold = false; a.lpT -= dt; }
     if (a.lpT <= 0) {
       const k = a.lpCharge / LP_CHARGE;   // 0..1: up to x2.5 damage and x2 size
-      spawnProjectile('PIERCING_ARROW', p.pos.x + a.lpDx, p.pos.z + a.lpDz, a.lpDx, a.lpDz, 75, a.lpDmg * (1 + 1.5 * k), { life: 1.1, pierce: Infinity, radius: 2.4 * (1 + k), knockback: 0.15 + 0.5 * k, y: 1.3 });
+      spawnProjectile('PIERCING_ARROW', p.pos.x + a.lpDx, p.pos.z + a.lpDz, a.lpDx, a.lpDz, 75, a.lpDmg * (1 + 1.5 * k), { life: 1.1, pierce: Infinity, radius: 2.4 * (1 + k), knockback: 0.15 + 0.5 * k, down: k >= 0.99 ? 1.4 : 0, y: 1.3 });   // a FULL charge knocks down
       addShake(0.2 + 0.3 * k); p.anim.attackT = 1;
       a.lpCharge = 0;
     }
@@ -1125,7 +1132,8 @@ export function updateAbilities(dt: number): void {
       const lv = a.leapLv;
       const R = ((a.leapDash ? 7 : 9) + 0.5 * (lv - 1)) * titanScale();
       stunSt.duration = a.leapDash ? 0.6 : 1;
-      damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.leapDmg, physKnock, stunSt);
+      leapOpts.down = a.leapDash ? 1.2 : 1.4;
+      damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.leapDmg, leapOpts, stunSt);
       p.rageT = Math.max(p.rageT, (a.leapDash ? 1.5 + 0.5 * lv : 3 + lv) + st.stats.rageBonus);
       a.leapDash = false;
       events.emit('shockwave', { pos: p.pos.clone(), radius: R, color: 0xff5a3a });
