@@ -228,17 +228,24 @@ function raiseCWall(z: Zone): void {
   for (let k = 0; k < C_WALL_SEGS; k++) {
     const a = start + k / (C_WALL_SEGS - 1) * C_WALL_ARC;
     const x = z.pos.x + Math.sin(a) * C_WALL_R, zz = z.pos.z + Math.cos(a) * C_WALL_R;
+    segOk[k] = 0;
     if (x * x + zz * zz > edgeLimit(x, zz, 1.5) ** 2) continue;
     let ok = true;
     for (const pt of world.room.portals) if (pt.active && (pt.x - x) ** 2 + (pt.z - zz) ** 2 < 25) { ok = false; break; }
     if (!ok) continue;
     const cs = queryColliders(x, zz, C_WALL_SEG_R + 2, colTmp);
     for (let i = 0; i < cs.length; i++) { const c = cs[i]; if ((c.x - x) ** 2 + (c.z - zz) ** 2 < (c.r + C_WALL_SEG_R * 0.8) ** 2) { ok = false; break; } }
-    if (ok) raiseWallAt(x, zz, C_WALL_SEG_R, WALL_LIFE, false);
+    segOk[k] = ok ? 1 : 0;
+  }
+  // (placed after all checks so the C's own segments never block each other)
+  for (let k = 0; k < C_WALL_SEGS; k++) {
+    if (!segOk[k]) continue;
+    const a = start + k / (C_WALL_SEGS - 1) * C_WALL_ARC;
+    raiseWallAt(z.pos.x + Math.sin(a) * C_WALL_R, z.pos.z + Math.cos(a) * C_WALL_R, C_WALL_SEG_R, WALL_LIFE, false);
   }
   events.emit('shake', { amount: 0.25 });
 }
-const colTmp: Collider[] = [];
+const colTmp: Collider[] = [], segOk = new Uint8Array(C_WALL_SEGS);
 function raiseWall(z: Zone): void {
   if (z.kind === 'TELEGRAPH_CIRCLE') { raiseCWall(z); return; }
   const len = z.length, n = Math.max(3, Math.round(len / 1.5));
