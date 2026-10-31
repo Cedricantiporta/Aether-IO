@@ -7,11 +7,14 @@ import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import {
   AdditiveBlending, CanvasTexture, CircleGeometry, Color, CylinderGeometry, DoubleSide, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial,
-  Object3D, PlaneGeometry, RingGeometry, SRGBColorSpace,
+  Euler, Matrix4, Object3D, PlaneGeometry, Quaternion, RingGeometry, SRGBColorSpace, Vector3,
 } from 'three';
+import { thinArrowGeo } from './arrowGeo';
+import { events } from '../engine/events';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Flame, Lock, Unlock, Skull } from '../ui/components/GoldIcons';
 import { world } from '../engine/world';
+import { useGameStore } from '../store';
 import { runInfo } from '../engine/runMods';
 import { GATES, GATE_KEYS_NEEDED, gateState, gatePos, CASTLE_DOOR, KEEPER_POS } from '../engine/gates';
 import { PLAZA_COLS, PLAZA_COL_R, MOAT_R, MOAT_HW, DUEL_BRAZIERS } from '../engine/arenaRooms';
@@ -199,6 +202,75 @@ function CastleLabel() {
   );
 }
 
+// ------------------------------------------- "the Dark Castle is open" cue ---
+// Persists while gateState.keys >= GATE_KEYS_NEEDED: a pillar of light + rising rings on the castle door, a golden beam + halo on the
+// Gatekeeper statue, a scrolling ">>>>" chevron trail from the hero to the door. One-shot on the moment it opens (and on arriving with it open):
+// a "THE GATE IS OPEN!" float text + notice, bell, camera nudge. All meshes are made once; per frame only opacity / matrices change.
+const CUE_N = 26, CUE_STEP = 1.5;
+const _cm = new Matrix4(), _cq = new Quaternion(), _ce = new Euler(), _cp = new Vector3(), _cs = new Vector3(1, 1, 1);
+function HubOpenCue({ doorZ }: { doorZ: number }) {
+  const res = useMemo(() => {
+    const pillarG = new CylinderGeometry(1.5, 2.3, 44, 24, 1, true).translate(0, 22, 0);
+    const pillar = new Mesh(pillarG, glowM(1.7, 1.45, 0.5, 0.0)); pillar.renderOrder = 5;
+    const core = new Mesh(new CylinderGeometry(0.5, 0.8, 44, 16, 1, true).translate(0, 22, 0), glowM(2.2, 2.0, 1.2, 0.0)); core.renderOrder = 5;
+    const ringG = new RingGeometry(1.7, 2.2, 36).rotateX(-Math.PI / 2);
+    const rings = [0, 1, 2].map(() => { const m = new Mesh(ringG, glowM(2.0, 1.7, 0.6, 0.0)); m.renderOrder = 5; return m; });
+    const kBeam = new Mesh(new CylinderGeometry(0.45, 0.9, 30, 16, 1, true).translate(0, 15, 0), glowM(0.9, 1.6, 2.0, 0.0)); kBeam.renderOrder = 5;
+    const kHalo = new Mesh(new RingGeometry(1.2, 1.7, 32).rotateX(-Math.PI / 2), glowM(1.4, 2.0, 2.2, 0.0)); kHalo.renderOrder = 5;
+    const chev = new InstancedMesh(thinArrowGeo(0.7, 0.7, 0, 0.3), new MeshBasicMaterial({ color: new Color(2.2, 1.8, 0.5), transparent: true, opacity: 0.95, toneMapped: false, depthWrite: false, side: DoubleSide }), CUE_N);
+    chev.frustumCulled = false; chev.renderOrder = 6; chev.visible = false;
+    return { pillar, core, rings, kBeam, kHalo, chev };
+  }, []);
+  const prev = useRef(false), armed = useRef(0);
+  useFrame(({ clock }, dt) => {
+    const t = clock.elapsedTime, open = gateState.keys >= GATE_KEYS_NEEDED;
+    if (open && !prev.current) armed.current = 0.9;   // the cue fires just after the room appears (or the key lands)
+    prev.current = open;
+    if (armed.current > 0) {
+      armed.current -= dt;
+      if (armed.current <= 0) {
+        events.emit('portalsOpen', {}); events.emit('shake', { amount: 0.4 });
+        events.emit('floatText', { pos: world.player.pos, text: 'THE GATE IS OPEN!', color: 0xffe27a, scale: 1.7, dy: 3.2 });
+        useGameStore.getState().addNotification('THE GATE IS OPEN! Follow the golden arrows to the Dark Castle.', '#ffe27a', 'SYSTEM');
+      }
+    }
+    const v = open && world.room.fade < 0.5;
+    for (const m of [res.pillar, res.core, res.kBeam, res.kHalo, ...res.rings]) m.visible = v;
+    res.chev.visible = v;
+    if (!v) return;
+    const pulse = 0.5 + Math.sin(t * 3) * 0.5;
+    (res.pillar.material as MeshBasicMaterial).opacity = 0.22 + pulse * 0.1;
+    (res.core.material as MeshBasicMaterial).opacity = 0.5 + pulse * 0.2;
+    (res.kBeam.material as MeshBasicMaterial).opacity = 0.2 + pulse * 0.1;
+    (res.kHalo.material as MeshBasicMaterial).opacity = 0.5 + pulse * 0.3;
+    res.kHalo.scale.setScalar(1 + pulse * 0.15);
+    for (let i = 0; i < 3; i++) {
+      const f = (t * 0.45 + i / 3) % 1, m = res.rings[i];
+      m.position.y = 0.1 + f * 8; m.scale.setScalar(1 + f * 0.9); (m.material as MeshBasicMaterial).opacity = (1 - f) * 0.75;
+    }
+    // chevron trail, hero -> door, scrolling toward the door
+    const p = world.player.pos, dx = 0 - p.x, dz = doorZ - p.z, d = Math.hypot(dx, dz);
+    let n = 0;
+    if (d > 6) {
+      _ce.set(0, Math.atan2(dx, dz), 0); _cq.setFromEuler(_ce);
+      const scroll = (t * 2.2) % CUE_STEP;
+      for (let u = 2 + scroll; u < d - 3 && n < CUE_N; u += CUE_STEP, n++) {
+        const f = Math.min(1, n / 3 + 0.4);
+        _cp.set(p.x + (dx / d) * u, 0.3, p.z + (dz / d) * u); _cs.set(f, 1, f); _cm.compose(_cp, _cq, _cs);
+        res.chev.setMatrixAt(n, _cm);
+      }
+    }
+    res.chev.count = n; res.chev.visible = n > 0; res.chev.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <>
+      <group position={[0, 0, doorZ]}><primitive object={res.pillar} /><primitive object={res.core} />{res.rings.map((r, i) => <primitive key={i} object={r} />)}</group>
+      <group position={[KEEPER_POS[0], 0, KEEPER_POS[1]]}><primitive object={res.kBeam} /><group position={[0, 0.08, 0]}><primitive object={res.kHalo} /></group></group>
+      <primitive object={res.chev} />
+    </>
+  );
+}
+
 function GatekeeperHub({ R, q }: { R: number; q: QualityCfg }) {
   const res = useMemo(() => {
     const fg = new CircleGeometry(R + 5, 80); fg.rotateX(-Math.PI / 2);
@@ -280,6 +352,7 @@ function GatekeeperHub({ R, q }: { R: number; q: QualityCfg }) {
       {res.grounds.map((p, i) => <primitive key={'g' + i} object={p} />)}
       {GATES.map((_, i) => { const yaw = gatePos(i, gp); return <group key={'l' + i} position={[gp[0], 0, gp[1]]} rotation={[0, yaw, 0]}><GateLabel i={i} /></group>; })}
       <group position={[0, 0, res.z0 + 2]}><CastleLabel /></group>
+      <HubOpenCue doorZ={res.z0 + 3} />
       {q.lights && <pointLight position={[0, 5, CASTLE_DOOR[1] + 2]} color="#b070ff" intensity={25} distance={22} decay={1.5} />}
       {q.lights && <pointLight position={[KEEPER_POS[0] + 1.25, 6.4, KEEPER_POS[1] + 1]} color="#ffc060" intensity={14} distance={14} decay={1.6} />}
     </>

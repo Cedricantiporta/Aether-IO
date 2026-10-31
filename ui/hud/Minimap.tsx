@@ -19,6 +19,7 @@ import {
 } from '../../engine/townData';
 import { animals, npcs } from '../../engine/systems/npcs';
 import { npcMarkers } from '../../engine/systems/npcQuestLogic';
+import { GATE_KEYS_NEEDED, gateState, CASTLE_DOOR as HUB_CASTLE_DOOR } from '../../engine/gates';
 import { HALL, CASTLE_DOOR, CASTLE_EXT, CASTLE_ROOMS, DOORS, GAP_W } from '../../engine/castleData';
 import { CAVE_DOOR } from '../../engine/caveData';
 import { TAVERN_DOOR } from '../../engine/tavernData';
@@ -332,6 +333,7 @@ export const Minimap: React.FC = () => {
       const r = world.room;
       if (r.station.kind !== 'NONE') { disc(ctx, sx(r.station.x), sy(r.station.z), 4.2 * u, '#5fd6ff'); disc(ctx, sx(r.station.x), sy(r.station.z), 1.8 * u, '#fff'); }
       for (let i = 0; i < r.portals.length; i++) { const po = r.portals[i]; if (po.active) gate(ctx, sx(po.x), sy(po.z), 6 * u, portalLabel(po.plan, r.biome).color); }
+      if (r.plan.type === 'GATEKEEPER' && gateState.keys >= GATE_KEYS_NEEDED) { const pu = 1.3 + Math.sin(performance.now() / 220) * 0.25; gate(ctx, sx(HUB_CASTLE_DOOR[0]), sy(HUB_CASTLE_DOOR[1]), 8 * u * pu, '#ffe27a'); }   // the open Dark Castle door pulses gold
     }
     // ---- horses (town), NPCs (cream dots; "!" bubble on quest givers)
     if (town) for (let i = 0; i < animals.length; i++) { if (ANIMALS[i].kind !== 'HORSE' || animals[i].ridden) continue; disc(ctx, sx(animals[i].x), sy(animals[i].z), 2.6 * u, '#d9a066'); }
