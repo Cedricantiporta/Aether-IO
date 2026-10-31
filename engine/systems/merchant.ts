@@ -10,7 +10,7 @@ import type { Item, ItemGrade, Rarity } from '../../types';
 import { useGameStore, plusOne, makeItemById, potionKind, potionCount, potionCapMsg, POTION_CAP, SHOP_PRICE_OVERRIDE } from '../../store';
 import { biomeGoldMul } from '../../biomeLoot';
 import { shardItem } from '../../shards';
-import { buyMul } from '../../constants';
+import { buyMul, GOLD_SCALE } from '../../constants';
 
 export interface MerchantEntry { item: Item; price: number; oldPrice: number; left: number; sale: boolean }
 
@@ -61,6 +61,10 @@ function pickTier(w: Partial<Record<GearTier, number>>): GearTier {
   return 'RARE';
 }
 
+/** Grand potion base price: the potion shop's steep override (3000 was set before the x10 economy, so it is scaled by GOLD_SCALE here); the merchant markup comes on top. */
+/** (the bought potion keeps its own sell price, so no fuse / sell gold loop) */
+const grandMarkup = (id: string, g: Item): number => MARKUP * Math.max(1, ((SHOP_PRICE_OVERRIDE[id] ?? 0) * GOLD_SCALE) / g.price);
+
 function rollStock(depth: number, reseed: (n: number) => void): void {
   const st = useGameStore.getState();
   const biome = Math.max(0, Math.min(6, world.room.biome | 0));
@@ -80,9 +84,9 @@ function rollStock(depth: number, reseed: (n: number) => void): void {
   if (nSmall) { add(makeItemById(`potion_${kS}`, 1)[0], nSmall); if (biome <= 1 && Math.random() < 0.5) add(makeItemById(`potion_${other(kS)}`, 1)[0], nSmall); }
   if (nBig) { add(makeItemById(`potion_${kB}_big`, 1)[0], nBig); if (biome >= 3) add(makeItemById(`potion_${other(kB)}_big`, 1)[0], nBig); }
   if (nGrand) {
-    const g = makeItemById(`potion_${kG}_grand`, 1)[0];
-    if (g) { add({ ...g, price: SHOP_PRICE_OVERRIDE[g.id] ?? g.price }, nGrand); }
-    if (biome >= 6) { const g2 = makeItemById(`potion_${other(kG)}_grand`, 1)[0]; if (g2) add({ ...g2, price: SHOP_PRICE_OVERRIDE[g2.id] ?? g2.price }, nGrand - 1); }
+    const gid = `potion_${kG}_grand`, g = makeItemById(gid, 1)[0];
+    if (g) { add(g, nGrand, grandMarkup(gid, g)); }
+    if (biome >= 6) { const gid2 = `potion_${other(kG)}_grand`, g2 = makeItemById(gid2, 1)[0]; if (g2) add(g2, nGrand - 1, grandMarkup(gid2, g2)); }
   }
   const gearAt = (i: number, tiers: Partial<Record<GearTier, number>>): void => {
     reseed(10 + i);   // (each gear slot has its own stream: a class with a different pool size does not shift the others)
