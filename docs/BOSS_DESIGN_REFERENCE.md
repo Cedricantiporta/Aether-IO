@@ -151,33 +151,40 @@ For each boss: 5-8 skills, pattern # from section 2, how it looks in our engine,
 
 ### Gorath (Golem, Marble Halls)
 Aim: fixed; turns slowly (1 rad/s) between attacks, locked during windup. Arena already has 4 ballistas.
+Status 2026-10-31: IMPLEMENTED in `engine/systems/bossKitGorath.ts` (+ shared `bossKit.ts`, `render/BossKitFx.tsx`); the numbers below are the measured share of max HP for the test hero (def 330 / 7419 HP).
 
-| Skill | Pattern | In our engine | Feel |
-|---|---|---|---|
-| Rock Ring (exists) | 1 + 3 | slam ring, gap toward the hero's side (NEW arc mask) | 12% |
-| Boulder Roll | 4 | line telegraph, locked, rolls across; hitting a pillar stuns it 2 s | 25% |
-| Pillar-hide Beam | 24 | eye beam, pillars absorb it, pillars break | 30% |
-| Delayed Fist Drop | 2 | circle fills 1.4 s, hold, drop | 28% |
-| Debris Grid | 16 | two sets of crossing lanes | 12% |
-| Ballista bait (exists) | 25 | boss telegraphs the lane, hero positions so the bolts hit the boss's own shield | tune |
-| Summon crumble-imps | 31 | adds | - |
+| Skill | Pattern | In our engine | Feel | Status |
+|---|---|---|---|---|
+| Rock Ring (exists) | 1 + 3 | slam ring, gap toward the hero's side (arc mask, green safe wedge shown) | 12% | DONE: 18-26 rocks, gap 48 / 40 / 34 deg locked at windup start, 0.9 s, 1 ring (2 from phase 1), ~7% per rock + 3 s knockdown |
+| Boulder Roll | 4 | line telegraph, locked, rolls across; hitting a pillar stuns it 2 s | 25% | DONE: 8.8 m wide red lane, 1.05 s windup, 1.3 s roll at 15-19 u/s, 25% + knockdown; ramming a statue = crash (2.4 s stagger) |
+| Pillar-hide Beam | 24 | eye beam, pillars absorb it, pillars break | 30% | DONE as Stone Gaze: 3.6 m lane, 1.3 s, 28-32%, the first statue on the lane stops it and shatters (LOS test) |
+| Delayed Fist Drop | 2 | circle fills 1.4 s, hold, drop | 28% | DONE: red circle r 6.2 on the hero's spot, first fill 1.15 s (fake-out, no damage), then a second 0.55 s fill, 26 / 28 / 30% + knockdown |
+| Debris Grid | 16 | two sets of crossing lanes | 12% | DONE: 5 lanes (4.4 m, 10 m apart, one on the hero) then 5 crossing lanes 1.0 / 0.95 s, 12% each |
+| Boulder Throw (new) | 26 | ground-marked boulders | 12% | DONE: 3 (4 from phase 1) marks 0.65 s apart, each on the hero's spot when placed, 1.0 s warning, 12% each |
+| Ballista bait (exists) | 25 | boss telegraphs the lane, hero positions so the bolts hit the boss's own shield | tune | not done (ballistas unchanged) |
+| Summon crumble-imps | 31 | adds | - | not done (flagged: no cheap add yet) |
+| Ground Slam DASH ring, Fissure Cross (dodgeMechs) | 1 / 16 | kept as they were | 30% / 13% | kept (one dodge attack every 6.5-9 s) |
 
 **Signature:** *Living Statue Phase* at 50%: Gorath is invulnerable; four marble statues come alive and fire lines at the boss's shield node; hero must bait the golem's beam into the statues (pattern 36). 3 statues broken = boss stunned 4 s.
+Status: IMPLEMENTED as a RECURRING TRIAL instead of an invulnerable phase (the 70 / 35% Boulder Pinball phase already owns the `bp` single owner and is kept): every ~24 s (first at ~10 s, only where no phase is about to start) 3 statues rise on the hero's side (colliders; Gorath takes 15% less while they stand), then up to 3-4 Stone Gazes + a final Boulder Roll are locked on the hero; the hero must stand behind a statue at windup start. 3 broken = STUNNED 5.5 s (stagger +25% and kit x1.6). Leftover statues crumble. Statues are `trick` events (`KIT_STATUE`) so a co-op guest builds the same colliders / props. Four statues became three (the arena has no room for more hide spots).
 
 ### Elderroot (Treant, Greenwood; rooted)
 Aim: picks a root target at windup start. Rooted so no charges.
+Status 2026-10-31: IMPLEMENTED in `engine/systems/bossKitTreant.ts` (the AI moved out of bosses2.ts `treant()`; extra Elderroots of Endless Waves keep the old one).
 
-| Skill | Pattern | Engine | Feel |
-|---|---|---|---|
-| Root Lanes (exists) | 16 | existing lanes, add a second perpendicular set at <60% | 12% |
-| Branch Sweep (exists) | 9 / 7 | 5 lanes in sequence; at <60% reverse once | 14% |
-| Crushing Roots (exists) | 1 | slam ring + thorn ring; thorn ring gets a gap (3) | 25% |
-| Seed Pods | 30 | pods grow 2 s then burst into poison puddle; hit the pod first to defuse it | 10% |
-| Spore Bloom | 23 | the six boss plants stay; at <50% their pulse offsets, making a wave you must read | tune |
-| Vine Snare Tether | 27 | NEW: vine tether pulls the hero 4 m toward the trunk if not broken by dashing | 0 + pull |
-| Brood (exists) | 31 | saplings | - |
+| Skill | Pattern | Engine | Feel | Status |
+|---|---|---|---|---|
+| Root Lanes (exists) | 16 | existing lanes, add a second perpendicular set at <60% | 12% | DONE: 3-4 lanes locked on the hero, from phase 1 a crossing set at +-90 deg 0.85 s later; 11.8% |
+| Branch Sweep (exists) | 9 / 7 | 5 lanes in sequence; at <60% reverse once | 14% | DONE: from phase 1 four lashes sweep back; 13.9% per lash |
+| Crushing Roots (exists) | 1 | slam ring + thorn ring; thorn ring gets a gap (3) | 25% | DONE: slam 25%, then thorn arrows (8% each) with a gap toward the hero's side (green wedge) |
+| Seed Pods | 30 | pods grow 2 s then burst into poison puddle; hit the pod first to defuse | 10% | PARTLY: Seed Bombs (marks around / on the hero, burst into a poison pool), 10% direct; the "defuse the pod" part is not built |
+| Spore Bloom | 23 | the six boss plants stay; at <50% their pulse offsets | tune | not done (plants unchanged, `biomeHazards`) |
+| Vine Snare Tether | 27 | NEW: vine tether pulls the hero 4 m toward the trunk if not broken by dashing | 0 + pull | not done as a tether: Grasping Vines (cone drag + root, 9.5%) kept |
+| Brood (exists) | 31 | saplings | - | kept |
+| Thorn Burst DASH ring, Poison Snake, Spore Rush (dodgeMechs) | 1 / 21 / 30 | kept as they were | 30% / - / 15% | kept |
 
 **Signature:** *Bark Armour*: Ironbark (exists) is dropped only when the hero lures root lanes through the trunk's glowing knots (hit knot = armour crack); three cracks = 4 s stagger. Weak-point style (pattern 35/36).
+Status: IMPLEMENTED (recurring, every ~22 s where no phase is about to start): Ironbark puts the bark up (net x0.5 damage, plates on the model) and three amber knots + floor lines show where to stand; every armoured skill is a Root Lance (a 3.4 m lane locked on the hero at windup start, 22%); a lance whose bearing is within 0.3 rad of a knot cracks it; 3 cracks = STUNNED 5.5 s (the bark shatters). 20 s at most; the old route (filling the stagger bar) still breaks the bark. Knots are `trick` events (`KIT_KNOT`).
 
 ### Tide Hydra (Coral; rooted body, 5 heads)
 Direct Hades Lernaean Bone Hydra homage.

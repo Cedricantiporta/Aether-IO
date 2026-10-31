@@ -20,6 +20,10 @@ export const hooks = {
   phaseMul: (_e: Enemy): number => 1,
   /** A boss / mini-boss just became staggered (stagger bar filled). */
   onStagger: (_e: Enemy) => {},
+  /** Damage multiplier of the boss kits (bossKit.ts): Gorath's marble armour while his statues stand, the +damage window after a signature stun. */
+  kitMul: (_e: Enemy): number => 1,
+  /** Room change / run end / boss died: drop the boss kit's pending strikes, statues and knots (bossKit.ts; called by bossMech.resetBossMech). */
+  kitReset: (): void => {},
   /** Damage multiplier applied to a boss (bark armor, hydra heads shielding the body...). Returns 1 for everything else. */
   damageMul: (_e: Enemy): number => 1,
   /** Damage multiplier for a dark hero champion (Dark Knight shield block = 0). Set by darkHero.ts. */

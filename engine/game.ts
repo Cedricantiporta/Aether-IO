@@ -38,6 +38,7 @@ import { updateCombo, resetCombo } from './systems/combo';
 import { resetSpecials } from './systems/bossSpecials';
 import { updateBossFx, resetBossFx } from './systems/bossFx';
 import { updateDodge } from './systems/dodgeMechs';
+import { updateBossKit } from './systems/bossKit';
 import { resetBosses2 } from './systems/bosses2';
 import { tickUltWindup } from './systems/abilities';
 import { showcase, tickShowcase } from './showcase';
@@ -258,6 +259,7 @@ export function updateGame(rawDt: number): void {
   updateZones(dt);
   updateBossFx(dt);
   updateDodge(dt);   // dodge mechanics: i-frame rings, beams, delayed strikes (host only)
+  updateBossKit(dt);   // Gorath / Elderroot kits: delayed strikes, statues, bark knots (host only)
   updatePets(dt);
   updatePickups(dt);
   updateCrates(dt);
