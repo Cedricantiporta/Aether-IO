@@ -434,6 +434,71 @@ Object.assign(ICONS, {
   </Art>,
 });
 
+
+// ------------------------------------------------ extended kit (keys 4 / 5; engine/systems/heroExtra.ts) --
+Object.assign(ICONS, {
+  EXPLOSIVE_TRAP: (k: string) => <Art k={k} c="#ff9a3a">
+    <circle cx="32" cy="38" r="16" fill="#2a1a10" stroke={S} strokeWidth="1.6" />
+    <path d="M16 38 L48 38 M32 22 L32 54 M21 27 L43 49 M43 27 L21 49" stroke="#ffb04a" strokeWidth="2.4" strokeLinecap="round" />
+    <circle cx="32" cy="38" r="6" fill={u(k, 'fire')} stroke={S} strokeWidth="1.2" />
+    <path d="M32 6 L36 16 L46 12 L40 22 L50 26 L38 28 L32 20 L26 28 L14 26 L24 22 L18 12 L28 16Z" fill={u(k, 'fire')} stroke={S} strokeWidth="1" strokeLinejoin="round" opacity=".9" />
+  </Art>,
+  VAULT_SHOT: (k: string) => <Art k={k} c="#8ac060">
+    <path d="M10 50 C16 26 34 20 50 30" stroke="#c8f0a0" strokeWidth="3" strokeLinecap="round" fill="none" strokeDasharray="5 4" />
+    <path d="M50 30 L42 22 M50 30 L40 36" stroke="#e6ffc8" strokeWidth="3" strokeLinecap="round" />
+    <path d="M18 14 L34 10 M18 22 L38 20 M18 30 L36 30" stroke={u(k, 'steel')} strokeWidth="3" strokeLinecap="round" />
+    <path d="M34 10 L40 10 L36 14Z M38 20 L44 20 L40 24Z M36 30 L42 30 L38 34Z" fill="#f4f7fb" stroke={S} strokeWidth=".8" />
+  </Art>,
+  CHAIN_LIGHTNING: (k: string) => <Art k={k} c="#7ab0ff">
+    <path d="M8 14 L24 26 L18 30 L34 44 L28 46 L50 58" stroke="#bfe0ff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path d="M8 14 L24 26 L18 30 L34 44 L28 46 L50 58" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <circle cx="24" cy="26" r="5" fill="#cfe4ff" opacity=".9" /><circle cx="34" cy="44" r="5" fill="#cfe4ff" opacity=".9" /><circle cx="52" cy="14" r="6" fill="#cfe4ff" opacity=".7" />
+    <path d="M24 26 L52 14" stroke="#9cc4ff" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="3 3" />
+  </Art>,
+  FROST_BARRIER: (k: string) => <Art k={k} c="#7fd6ff">
+    <path d="M32 6 L54 14 V32 C54 46 44 54 32 58 C20 54 10 46 10 32 V14Z" fill={u(k, 'ice')} stroke={S} strokeWidth="1.6" strokeLinejoin="round" opacity=".92" />
+    <path d="M32 14 V50 M18 24 L46 40 M46 24 L18 40" stroke="#f2fdff" strokeWidth="2.2" strokeLinecap="round" opacity=".85" />
+    <circle cx="32" cy="32" r="22" fill="none" stroke="#bfefff" strokeWidth="1.4" strokeDasharray="4 4" opacity=".7" />
+  </Art>,
+  ANCIENT_SPEAR: (k: string) => <Art k={k} c="#e0a060">
+    <path d="M8 56 L48 16" stroke={u(k, 'wood')} strokeWidth="4.5" strokeLinecap="round" />
+    <path d="M44 8 L58 6 L56 20 L52 16 L46 12Z" fill={u(k, 'steel')} stroke={S} strokeWidth="1.2" strokeLinejoin="round" />
+    <path d="M10 28 C18 30 24 36 26 44 M6 40 C14 42 18 46 20 52" stroke="#ffd9a0" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity=".75" />
+  </Art>,
+  REND: (k: string) => <Art k={k} c="#e83a2e">
+    <path d="M10 14 C22 22 30 34 34 52" stroke={u(k, 'red')} strokeWidth="6" strokeLinecap="round" fill="none" />
+    <path d="M24 10 C34 20 40 32 44 50" stroke={u(k, 'red')} strokeWidth="6" strokeLinecap="round" fill="none" />
+    <path d="M38 8 C46 18 50 30 54 46" stroke={u(k, 'red')} strokeWidth="5" strokeLinecap="round" fill="none" />
+    <path d="M10 14 C22 22 30 34 34 52 M24 10 C34 20 40 32 44 50" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" fill="none" opacity=".6" />
+    <circle cx="46" cy="54" r="2.4" fill="#e83a2e" /><circle cx="22" cy="54" r="1.8" fill="#e83a2e" />
+  </Art>,
+  CORPSE_BURST: (k: string) => <Art k={k} c="#7fe05a">
+    <circle cx="32" cy="36" r="20" fill={u(k, 'green')} opacity=".55" filter={u(k, 'glow')} />
+    <ellipse cx="32" cy="30" rx="12" ry="11" fill="#e8e4d0" stroke={S} strokeWidth="1.4" />
+    <rect x="25" y="38" width="14" height="8" rx="2" fill="#e8e4d0" stroke={S} strokeWidth="1.2" />
+    <circle cx="27" cy="29" r="3.4" fill="#1a2a10" /><circle cx="37" cy="29" r="3.4" fill="#1a2a10" />
+    <path d="M32 8 L34 16 M12 18 L19 22 M52 18 L45 22 M8 40 L17 38 M56 40 L47 38" stroke="#b8ff8a" strokeWidth="2.6" strokeLinecap="round" />
+  </Art>,
+  SOUL_SIPHON: (k: string) => <Art k={k} c="#a15cf0">
+    <path d="M10 14 C18 28 26 24 32 36 M54 14 C46 28 38 24 32 36" stroke="#d8b8ff" strokeWidth="3" strokeLinecap="round" fill="none" strokeDasharray="5 3" />
+    <path d="M32 36 C28 44 36 46 32 56" stroke="#9affb0" strokeWidth="3.4" strokeLinecap="round" fill="none" />
+    <circle cx="32" cy="48" r="9" fill={u(k, 'purp')} stroke={S} strokeWidth="1.4" />
+    <path d="M32 56 C26 56 26 62 32 62 C38 62 38 56 32 56Z" fill="#6fe08a" opacity=".8" />
+    <circle cx="10" cy="14" r="4.5" fill="#6a3aa8" stroke={S} strokeWidth="1" /><circle cx="54" cy="14" r="4.5" fill="#6a3aa8" stroke={S} strokeWidth="1" />
+  </Art>,
+  AEGIS_THROW: (k: string) => <Art k={k} c="#ffd24a">
+    <path d="M30 10 L50 17 V32 C50 44 42 51 30 55 C18 51 10 44 10 32 V17Z" fill={u(k, 'gold')} stroke={S} strokeWidth="1.8" strokeLinejoin="round" />
+    <path d="M30 18 V48 M16 28 H44" stroke="#fff3b0" strokeWidth="3" strokeLinecap="round" />
+    <path d="M44 8 C54 12 58 22 56 32 M52 4 C62 10 64 24 62 36" stroke="#ffe9a0" strokeWidth="2" strokeLinecap="round" fill="none" opacity=".7" />
+  </Art>,
+  BLESSED_HAMMERS: (k: string) => <Art k={k} c="#ffe08a">
+    <path d="M32 32 C32 24 42 24 42 32 C42 44 24 46 22 32 C20 16 44 12 50 30" stroke="#fff3b0" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity=".8" />
+    <rect x="14" y="14" width="18" height="11" rx="2" fill={u(k, 'gold')} stroke={S} strokeWidth="1.4" transform="rotate(-35 23 19)" />
+    <rect x="22" y="22" width="4" height="22" rx="1.5" fill={u(k, 'wood')} stroke={S} strokeWidth="1" transform="rotate(-35 23 19)" />
+    <rect x="40" y="38" width="14" height="9" rx="2" fill={u(k, 'gold')} stroke={S} strokeWidth="1.2" transform="rotate(40 47 42)" />
+  </Art>,
+});
+
 export const SKILL_KEYS = Object.keys(ICONS);
 
 /** Painted icon filling its parent. `id` is an ability / skill / potion key. */

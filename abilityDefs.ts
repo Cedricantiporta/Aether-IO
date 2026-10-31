@@ -1,7 +1,7 @@
 // Shared (engine + UI) definition of the active kit: Q, E, 3, 4 and the ultimate (R).
 import type { HeroClass } from './types';
 
-export type ActiveSlot = 'q' | 'e' | 's3' | 's4';
+export type ActiveSlot = 'q' | 'e' | 's3' | 's4' | 's5' | 's6';
 export interface AbilityDef {
   slot: ActiveSlot | 'ult';
   icon: string;         // PaintedIcon / SkillIcon id
@@ -32,6 +32,13 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's4', icon: 'FROST_FIELD', name: 'Frost Field', mana: 26, cd: 11,
       desc: 'Throw 3 frost traps in a spread. Each bursts into ice crystals and a large slowing field with a small chance to freeze enemies solid; the centre is briefly frozen.',
       per: (lv) => `Burst ${pct(3 * lvMul(lv))} dmg · field radius ${f1(7.5 + 0.5 * (lv - 1))} · slow ${pct(Math.min(0.9, (0.5 + 0.04 * lv) * 1.5))}` },
+    // ---- keys 4 / 5 (class Lv 12 / 18): the extended kit. Sources noted per skill; all scale with skill level 1-5 (engine/systems/heroExtra.ts).
+    { slot: 's5', icon: 'EXPLOSIVE_TRAP', name: 'Explosive Trap', mana: 20, cd: 12,   // Diablo 3 Demon Hunter: Spike Trap / Explosive Trap
+      desc: 'Plant a trap at the aim point. It arms in half a second, then blows up when an enemy walks close (or after 8s), knocking enemies down (not bosses). Level 3 and 5 plant an extra trap beside it; level 3 and up also set the blast ablaze.',
+      per: (lv) => `${1 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0)} trap(s) · ${pct(4.2 * lvMul(lv))} dmg each · radius ${f1(6 + 0.4 * (lv - 1))}` },
+    { slot: 's6', icon: 'VAULT_SHOT', name: 'Vault Shot', mana: 18, cd: 8,   // Diablo 3 Demon Hunter: Vault + Risk of Rain 2 Huntress: Blink backstep
+      desc: 'Backflip away from the aim point with a moment of invulnerability, loosing a fan of slowing arrows as you land. More arrows at higher levels.',
+      per: (lv) => `${[3, 3, 5, 5, 7][Math.min(5, Math.max(1, lv)) - 1]} arrows · ${pct(1.5 * lvMul(lv))} dmg each · i-frames ${f1(0.35 + 0.05 * lv)}s` },
   ],
   WIZARD: [
     { slot: 'q', icon: 'SINGULARITY', name: 'Singularity', mana: 34, cd: 12,
@@ -46,6 +53,12 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's4', icon: 'FIREBALLS', name: 'Fireballs', mana: 30, cd: 9,
       desc: 'Hurl huge, slow fireballs (1, then 2 at Lv 3 and 3 at Lv 5). They roll through every enemy in their path, scorching each one with a splash and leaving a trail of fire: enemies keep burning for as long as they stand in it.',
       per: (lv) => `${lv >= 5 ? 3 : lv >= 3 ? 2 : 1} x ${pct(2.2 * lvMul(lv))} dmg per enemy · splash ${f1(2.4 + 0.12 * (lv - 1))} · piercing · burn 3s` },
+    { slot: 's5', icon: 'CHAIN_LIGHTNING', name: 'Chain Lightning', mana: 22, cd: 7,   // Diablo 3 Wizard / Sorcerer + Hades Zeus: Lightning Strike
+      desc: 'Hurl a bolt at the nearest enemy that arcs from monster to monster, shocking each one. Each jump loses a little power.',
+      per: (lv) => `${3 + lv} targets · ${pct(3 * lvMul(lv))} dmg (-8% per jump) · jump range 10` },
+    { slot: 's6', icon: 'FROST_BARRIER', name: 'Frost Barrier', mana: 26, cd: 16,   // World of Warcraft Mage: Ice Barrier + Frost Nova
+      desc: 'Wrap yourself in a frost shield that soaks damage for 8s, and burst a frost nova that slows nearby enemies and freezes the ones right next to you.',
+      per: (lv) => `Shield ${Math.round((0.2 + 0.03 * (lv - 1)) * 100)}% max HP · nova ${pct(1.8 * lvMul(lv))} dmg · radius ${f1(8 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.1 * (lv - 1))}s` },
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5.75,   // (owner: +15%, was 5)
@@ -57,6 +70,12 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
       desc: 'Slam the ground in front of you: a short fissure erupts in stone spikes. Launches enemies far (wall-slam bonus), knocks them down (not bosses) and breaks armor.',
       per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
+    { slot: 's5', icon: 'ANCIENT_SPEAR', name: 'Ancient Spear', mana: 20, cd: 8,   // Diablo 3 Barbarian: Ancient Spear (impale + yank) / Hades Spear: Flurry-throw
+      desc: 'Hurl a spear down the lane: it skewers enemies and yanks them in to your feet, knocking them down (not bosses; they are only hit). Skewers more enemies every two levels.',
+      per: (lv) => `${1 + Math.ceil(lv / 2)} enemies · ${pct(3.6 * lvMul(lv))} dmg each · range ${f1(22 + 1 * (lv - 1))}` },
+    { slot: 's6', icon: 'REND', name: 'Rend', mana: 20, cd: 10,   // Diablo 3 Barbarian: Rend / Blood Rage life tap
+      desc: 'Two quick bloody slashes around you; the first heals you for each enemy it hits (up to 5) and breaks armor, and you fall into a short Rage.',
+      per: (lv) => `2 x ${pct(1.7 * lvMul(lv))} dmg · radius ${f1(8 + 0.4 * (lv - 1))} · heal ${f1(1.5 + 0.3 * (lv - 1))}% HP per enemy (max 5) · Rage ${f1(1.5 + 0.5 * lv)}s` },
   ],
   NECROMANCER: [
     { slot: 'q', icon: 'RAISE_DEAD', name: 'Raise Dead', mana: 26, cd: 11,   // (owner: 11 s; was 16.2)
@@ -71,6 +90,12 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
       per: (lv) => `${pct(0.6 * lvMul(lv))} dmg per tick · radius ${f1(6.5 + 0.3 * (lv - 1))} · ${f1(5 + 0.3 * lv)}s · risen last 8s (max 5)` },
+    { slot: 's5', icon: 'CORPSE_BURST', name: 'Corpse Explosion', mana: 24, cd: 7,   // Diablo 3 / 4 Necromancer: Corpse Explosion (also Diablo 2)
+      desc: 'Blow up the corpses of fallen monsters (they lie around for 8s) near the aim point: each one bursts in a poisonous blast. Needs corpses.',
+      per: (lv) => `${2 + lv} corpses · ${pct(3.2 * lvMul(lv))} dmg each · radius ${f1(4.5 + 0.2 * (lv - 1))} + poison` },
+    { slot: 's6', icon: 'SOUL_SIPHON', name: 'Soul Siphon', mana: 24, cd: 10,   // World of Warcraft Warlock: Drain Life / Diablo 4 Necromancer: Blood Surge
+      desc: 'Tear the life from the nearest enemies: they take damage and rot, and you heal for each one drained.',
+      per: (lv) => `${2 + lv} enemies · ${pct(1.8 * lvMul(lv))} dmg + poison · heal ${f1(1.5 + 0.4 * (lv - 1))}% HP each` },
   ],
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
@@ -82,14 +107,20 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
       desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage, stuns and knocks enemies down (not bosses). More rays per level (max 12).',
       per: (lv) => `${Math.min(12, 5 + lv)} rays · ${pct(1.5 * lvMul(lv))} dmg each · radius ${f1(4 + 0.2 * (lv - 1))} · stun ${f1(0.8 + 0.1 * lv)}s` },
+    { slot: 's5', icon: 'AEGIS_THROW', name: 'Aegis Throw', mana: 22, cd: 8,   // WoW Paladin: Avenger's Shield + Hades Shield of Chaos (shield throw that ricochets)
+      desc: 'Hurl your shield: it ricochets from enemy to enemy, stunning each and healing you a little per hit. With only one enemy it comes back for a second hit.',
+      per: (lv) => `${3 + lv} ricochets · ${pct(2.4 * lvMul(lv))} dmg each · stun ${f1(0.4 + 0.1 * lv)}s` },
+    { slot: 's6', icon: 'BLESSED_HAMMERS', name: 'Blessed Hammers', mana: 28, cd: 9,   // Diablo 2 Hammerdin / Diablo 3 Crusader: Blessed Hammer
+      desc: 'Holy hammers spiral outward around you, smashing everything they sweep over. More hammers and a longer spiral at higher levels.',
+      per: (lv) => `${2 + lv} hammers · ${pct(1.8 * lvMul(lv))} dmg per hit · lasts ${f1(2.2 + 0.15 * lv)}s` },
   ],
 };
 
-/** Active slot bound to keys 1, 2, 3 (per class). Archer/Wizard keep their old E in the dash; the Barbarian keeps Whirlwind on 2. */
+/** Active slot bound to keys 1-5 (per class; 4 and 5 are the extended kit, unlocked at class Lv 12 / 18). Archer/Wizard keep their old E in the dash; the Barbarian keeps Whirlwind on 2. */
 export const ACTIVE_ORDER: Record<HeroClass, ActiveSlot[]> = {
-  ARCHER: ['q', 's3', 's4'], WIZARD: ['s4', 's3', 'q'], BARBARIAN: ['q', 'e', 's3'], KNIGHT: ['q', 'e', 's3'], NECROMANCER: ['q', 's3', 's4'],
+  ARCHER: ['q', 's3', 's4', 's5', 's6'], WIZARD: ['s4', 's3', 'q', 's5', 's6'], BARBARIAN: ['q', 'e', 's3', 's5', 's6'], KNIGHT: ['q', 'e', 's3', 's5', 's6'], NECROMANCER: ['q', 's3', 's4', 's5', 's6'],
 };
-export const ACTIVE_KEYS = ['Digit1', 'Digit2', 'Digit3'] as const;
+export const ACTIVE_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5'] as const;
 /** Slot whose definition IS the class dash (Space). Barbarian has a dedicated shoulder charge (skill level key `dash`). */
 export const DASH_SLOT: Record<HeroClass, ActiveSlot | null> = { ARCHER: 'e', WIZARD: 'e', BARBARIAN: null, KNIGHT: null, NECROMANCER: 'e' };
 /** Skill-level key of the class dash. */

@@ -27,6 +27,7 @@ import { hitStop, slowMo, fovKick } from '../game';
 /** Raise Dead skeletons per cast by skill level 1..5 (army: random kinds, at least one warrior, archer and mage). */
 const RAISE_N = [2, 3, 4, 5, 5];   // (owner: starts with 2 skeletons)
 import { hooks } from './hooks';
+import { castExtra, updateExtras, resetExtras, corpseCount } from './heroExtra';
 
 /** State for render/UI of multi-frame abilities. */
 /** Every class dash deals 70% less damage (user tuning: dashes are for movement). */
@@ -110,12 +111,12 @@ export function resetAbilities(): void {
   const a = abilityState;
   a.tint = a.tintTarget = 0; a.flash = 0; a.ultKind = 0; a.ultPhase = 0; a.ultT = 0; a.ultAcc = 0; a.ultCd = 0;
   a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.judgeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
-  lastNoMana = -10;
+  lastNoMana = -10; resetExtras();
   for (const k in lastCd) lastCd[k] = -10;
   gcdUntil = 0;   // world.time restarts at 0 each run: a lock stamped in town would block every skill for minutes
 }
 
-export function notifyCooldown(slot: 'q' | 'e' | 's3' | 's4' | 'dash' | 'r'): void {
+export function notifyCooldown(slot: 'q' | 'e' | 's3' | 's4' | 's5' | 's6' | 'dash' | 'r'): void {
   const last = lastCd[slot] ?? -10;
   if (world.time - last < 1) return;
   lastCd[slot] = world.time;
@@ -150,6 +151,7 @@ function gate(slot: ActiveSlot): boolean {
   if (!world.room.active && world.village.area === 'CAVE') { noSkillsInMine(); return false; }   // (owner: no skills in the mine)
   if (p.cd[slot] > 0) { notifyCooldown(slot); return false; }
   if (st.hero === 'NECROMANCER' && slot === 's3' && !anyMinion()) { st.addNotification('No summons to ward', 'red', 'WARNING'); return false; }   // (owner) Bone Ward needs summons
+  if (st.hero === 'NECROMANCER' && slot === 's5' && corpseCount() === 0) { st.addNotification('No corpses to explode', 'red', 'WARNING'); return false; }   // Corpse Explosion needs corpses
   if (abilityState.leapT > 0) return false;
   if (gcdUntil > world.time + GCD) gcdUntil = 0;   // (stale stamp from before a world.time reset)
   if (world.time < gcdUntil) return false;   // global skill lock: one skill at a time
@@ -229,7 +231,7 @@ function slotHeld(slot: string): boolean {
 /** Army of the Dead: the golem meteor (fall time, impact radius) and how long the golem stands. */
 const GOLEM_DROP_T = 0.9, GOLEM_DROP_R = 5.5, GOLEM_LIFE = 26;   // (owner 2026-10-25: +30%)
 
-function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff, launch = false): GroundFx | null {
+export function mkFx(kind: GroundFxKind, x: number, z: number, delay: number, life: number, radius: number, dmg: number, aux = 0, color = 0xffffff, launch = false): GroundFx | null {
   const f = allocFx();
   if (!f) return null;
   f.launch = launch;
@@ -351,6 +353,7 @@ export function autoCast(): void {
     if ((st.skillLevels[s] ?? 0) <= 0 || p.cd[s] > 0 || p.mana < st.getManaCost(s)) continue;
     if (st.settings.autoOff?.includes(s)) continue;   // (owner) this skill's AUTO pill is off
     if (st.hero === 'NECROMANCER' && s === 's3' && !anyMinion()) continue;
+    if (st.hero === 'NECROMANCER' && s === 's5' && corpseCount() === 0) continue;
     castActive(i); return;
   }
   // (owner) the ultimate is never auto-cast: the player fires it
@@ -402,6 +405,12 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   const dx = dir.x, dz = dir.z;
   const stats = st.stats;
   const b = base(lv) * (dash ? 0.8 : 1);
+
+  if (slot === 's5' || slot === 's6') {   // extended kit (keys 4 / 5): engine/systems/heroExtra.ts
+    aimPoint(slot === 's5' && hero === 'ARCHER' ? 14 : 26, 3, tgt);
+    announce(castExtra(slot, lv, hero, b, dx, dz, tgt.x, tgt.z));
+    return;
+  }
 
   if (hero === 'ARCHER') {
     if (slot === 'q') {
@@ -1098,6 +1107,7 @@ export function updateAbilities(dt: number): void {
 
   updateDashMods(dt, a.leapT > 0);
   stepFx(dt);
+  updateExtras(dt);
   updateChains(dt);
   updateUlt(dt);
   if (a.castLockT > 0) a.castLockT -= dt;

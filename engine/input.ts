@@ -198,12 +198,12 @@ export function installInput(): () => void {
 
   // ---- (owner) controller support (standard-mapping gamepads via the Gamepad API): left stick = move (like the touch
   // joystick), right stick = camera, buttons press the keyboard keys so every hotkey / skill / dialogue path just works.
+  //   L3 skill 4 · R3 skill 5 (extended kit; V resets the camera)
   //   A dash · B interact (E) · X skill 1 · Y skill 2 · RB skill 3 · RT ultimate · LB HP potion · LT MP potion
   //   Back bag · Start menu (Esc) · D-pad up quests · down character · left accept offer (F) · right achievements
   const PAD: [number, string, string][] = [
-    [0, 'Space', ' '], [1, 'KeyE', 'e'], [2, 'Digit1', '1'], [3, 'Digit2', '2'], [5, 'Digit3', '3'], [7, 'KeyR', 'r'],
+    [0, 'Space', ' '], [1, 'KeyE', 'e'], [2, 'Digit1', '1'], [3, 'Digit2', '2'], [5, 'Digit3', '3'], [7, 'KeyR', 'r'], [10, 'Digit4', '4'], [11, 'Digit5', '5'],
     [4, 'KeyZ', 'z'], [6, 'KeyX', 'x'], [8, 'KeyI', 'i'], [9, 'Escape', 'Escape'], [12, 'KeyJ', 'j'], [13, 'KeyC', 'c'], [14, 'KeyF', 'f'], [15, 'KeyO', 'o'],
-    [11, 'KeyV', 'v'],   // R3: reset camera
   ];
   const padDown = new Set<string>();
   const padPrev: boolean[] = [];

@@ -31,7 +31,7 @@ export const aimState = {
 };
 
 export const SKILL_KEYS: readonly (readonly [string, string])[] = [
-  ['Digit1', 's1'], ['Digit2', 's2'], ['Digit3', 's3'], ['Space', 'dash'], ['KeyR', 'ult'],
+  ['Digit1', 's1'], ['Digit2', 's2'], ['Digit3', 's3'], ['Digit4', 's4'], ['Digit5', 's5'], ['Space', 'dash'], ['KeyR', 'ult'],
 ];
 const held: Record<string, boolean> = {};
 const pressAt: Record<string, number> = {};   // performance.now() when each key / touch button went down
@@ -60,9 +60,11 @@ export function resetAim(): void {
 export function cancelAim(): void { aimState.active = false; aimState.cancelZone = false; }
 export const isAiming = (): boolean => aimState.active;
 
+/** 's1'..'s5' -> 0..4 (-1 for dash / ult). */
+function skillIdx(id: string): number { return id.length === 2 && id[0] === 's' && id[1] >= '1' && id[1] <= '5' ? id.charCodeAt(1) - 49 : -1; }
 function slotOf(id: string): ActiveSlot | null {
   const hero = useGameStore.getState().hero;
-  const i = id === 's1' ? 0 : id === 's2' ? 1 : id === 's3' ? 2 : -1;
+  const i = skillIdx(id);
   return i >= 0 ? ACTIVE_ORDER[hero][i] : null;
 }
 
@@ -82,7 +84,9 @@ function aimable(id: string): boolean {
   if (id === 'dash') return true;
   // Self-centred skills cast instantly (no drag/aim): Storm Orbs, Whirlwind, Titan's Wrath.
   const slot = id === 'ult' ? 'ult' : slotOf(id);
-  if (hero === 'WIZARD' && slot === 's3') return false;
+  if (hero === 'WIZARD' && (slot === 's3' || slot === 's6')) return false;
+  if ((hero === 'KNIGHT' && (slot === 's5' || slot === 's6')) || (hero === 'BARBARIAN' && slot === 's6') || (hero === 'NECROMANCER' && slot === 's6')) return false;   // self-centred / auto-targeted extended-kit skills
+  if (hero === 'WIZARD' && slot === 's5') return false;
   if ((hero === 'BARBARIAN' || hero === 'KNIGHT') && (slot === 'e' || slot === 'ult')) return false;
   return true;
 }
@@ -112,6 +116,15 @@ function shapeFor(id: string, cx: number, cz: number): void {
   };
   const ring = (radius: number) => { A.shape = Shape.RING; A.x = p.pos.x; A.z = p.pos.z; A.radius = radius; A.targetX = cx; A.targetZ = cz; };
   const slot = id === 'ult' ? 'ult' : id === 'dash' ? 'e' : slotOf(id);
+  if (slot === 's5' || slot === 's6') {   // extended kit (engine/systems/heroExtra.ts)
+    if (hero === 'ARCHER') { if (slot === 's5') circle(14, 3, 6 + 0.4 * (lv.s5 - 1)); else { A.shape = Shape.ARROW; A.len = 8; A.width = 2.2; A.x = p.pos.x - ux * 8; A.z = p.pos.z - uz * 8; A.targetX = cx; A.targetZ = cz; } }
+    else if (hero === 'BARBARIAN') { if (slot === 's5') line(22 + (lv.s5 - 1), 3.4); else ring(8 + 0.4 * (lv.s6 - 1)); }
+    else if (hero === 'NECROMANCER') { if (slot === 's5') circle(26, 3, 4.5 + 0.2 * (lv.s5 - 1)); else ring(16); }
+    else if (hero === 'WIZARD') { if (slot === 's6') ring(8 + 0.4 * (lv.s6 - 1)); else ring(10); }
+    else ring(slot === 's6' ? 12 : 11);
+    A.castable = isCastable(id);
+    return;
+  }
   if (hero === 'ARCHER') {
     if (id === 'dash') { A.shape = Shape.ARROW; A.len = 6; A.width = 2.2; A.x = p.pos.x + ux * 6; A.z = p.pos.z + uz * 6; A.targetX = cx; A.targetZ = cz; }
     else if (slot === 'q') line(38, 6 * (1 + S.galeWidth) * (1 + 0.1 * (lv.q - 1)));
@@ -176,7 +189,7 @@ function fire(id: string, how: 'AIM' | 'CURSOR' | 'AUTO' | 'FACING', ax = 0, az 
   }
   if (id === 'dash') tryDash(auto || how === 'AUTO');
   else if (id === 'ult') castUlt();
-  else castActive(id === 's1' ? 0 : id === 's2' ? 1 : 2);
+  else castActive(skillIdx(id));
   aimOverride.on = false;
 }
 
@@ -266,7 +279,7 @@ export function updateSkillInput(): void {
 // ------------------------------------------------------------ auto skills --
 // Setting `autoSkills`: casts 1/2/3 (and the ult) by itself at the auto-target. Dash always stays manual.
 // Skills fire one at a time (short gap) only when enemies are in reach; the ult waits for a boss or a crowd.
-const AUTO_IDS = ['s1', 's2', 's3'] as const;
+const AUTO_IDS = ['s1', 's2', 's3', 's4', 's5'] as const;
 const autoState = { next: 0, i: 0 };
 const nearOut: number[] = [];
 function countNear(r: number): number {

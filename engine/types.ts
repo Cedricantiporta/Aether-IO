@@ -381,8 +381,8 @@ export interface PlayerRuntime {
   // debuffs applied by monster signature tricks (seconds remaining)
   stunT: number; rootT: number; silenceT: number; defDownT: number; blindT: number;
   burnT: number; burnDps: number; poisonT: number; poisonDps: number; bleedT: number; bleedDps: number; dotAcc: number;
-  cd: { q: number; e: number; s3: number; s4: number };
-  cdMax: { q: number; e: number; s3: number; s4: number };
+  cd: { q: number; e: number; s3: number; s4: number; s5: number; s6: number };
+  cdMax: { q: number; e: number; s3: number; s4: number; s5: number; s6: number };
   ult: number;           // ultimate charge 0..100
   ultT: number;          // seconds the ultimate effect is still running (0 = idle)
   cryT: number;          // barbarian Battle Cry: +30% damage

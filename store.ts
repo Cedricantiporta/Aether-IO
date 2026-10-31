@@ -109,7 +109,7 @@ const INITIAL_STATS: PlayerStats = {
 
 const INITIAL_SKILLS: SkillLevels = {
   orbital: 0, thunder: 0, regen: 0, magnet: 1, dash: 1, weapon: 1, barrier: 1, storm: 0, warcry: 0, inspire: 0, pierceShot: 0, consecrate: 0, smite: 0, radiant: 0, graveCall: 0, soulHarvest: 0, boneArmor: 0,
-  q: 1, e: 1, s3: 1, s4: 1, ult: 1, burning: 0, freezing: 0, freezeSpell: 0, stamp: 0,
+  q: 1, e: 1, s3: 1, s4: 1, s5: 1, s6: 1, ult: 1, burning: 0, freezing: 0, freezeSpell: 0, stamp: 0,
 };
 
 const INITIAL_GAME_STATS: GameStatistics = {
@@ -531,6 +531,7 @@ interface Profile {
   al1?: boolean;      // one-time: auto loot defaults (Uncommon+ gear, every material)
   ch1?: boolean;      // one-time (owner 2026-10-26): 'Auto: chase enemies' on by default
   sp2?: boolean;
+  sp4?: boolean;     // one-time: extra skill points per level (20s +1, 30s +1, 40s +2) for the two extended-kit skills per class
   sp3?: boolean;     // one-time: skill points per level rise with the level (classLevels.spGainAt)      // one-time: 2 skill points per level - older saves get the extra point for every level already gained
   mus1?: boolean;     // one-time: background music 20% quieter (owner)
   zoom2?: boolean;    // one-time: zoom unlocked by default (base 1.0)
@@ -568,6 +569,17 @@ const spMigrate3 = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<Her
   if (done) return cp;
   const out = { ...cp };
   for (const h of Object.keys(out) as HeroClass[]) out[h] = { ...out[h], sp: out[h].sp + Math.max(0, spTotalAt(out[h].lv) - (START_SP + SP_PER_LEVEL * Math.max(0, out[h].lv - 1))) };
+  return out;
+};
+/** One-time (2026-10-31): spGainAt rose in the 20s / 30s / 40s to pay for the extended kit (keys 4 / 5); older saves get the difference for levels already gained. */
+const spMigrate4 = (cp: Record<HeroClass, ClassProg>, done: boolean): Record<HeroClass, ClassProg> => {
+  if (done) return cp;
+  const out = { ...cp };
+  for (const h of Object.keys(out) as HeroClass[]) {
+    let extra = 0;
+    for (let L = 20; L <= out[h].lv; L++) extra += spGainAt(L) - (L < 30 ? 5 : L < 40 ? 6 : 7);
+    out[h] = { ...out[h], sp: out[h].sp + extra };
+  }
   return out;
 };
 /** (owner 2026-10-25) talent points dropped from 4 to 3.3 per level: a class that has more spent than its level gives gets a free reset. */
@@ -642,7 +654,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               equipment: migrateEquipment(p.gold10 ? { ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}), pet: p.equipment?.pet ? petRetier(p.equipment.pet) : null } : Object.fromEntries(Object.entries({ ...EMPTY_EQUIPMENT, ...(p.equipment ?? {}) }).map(([k, v]) => [k, v ? { ...(v as Item), price: Math.round(((v as Item).price || 0) * GOLD_SCALE) } : v])) as unknown as Equipment, !p.grade3),
               materials: { ...emptyMaterials(), ...(p.materials ?? {}) },   // (pet tiers re-synced below: petRetier)
               maxInventorySlots: Math.max(INVENTORY_LIMIT, num(p.maxInventorySlots, INVENTORY_LIMIT)),
-              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix).map((i) => (p.grade3 ? i : legacyLowToMid(i))) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3),
+              warehouse: Array.isArray(p.warehouse) ? p.warehouse.slice(0, WAREHOUSE_LIMIT + 25 * techLv(sanitizeTech(p.tech), 'warehouse')).map(oldPickaxeFix).map((i) => (p.grade3 ? i : legacyLowToMid(i))) : [], warehouseGold: Math.max(0, num(p.warehouseGold, 0)), progress: sanitizeProgress(p.progress), tech: sanitizeTech(p.tech, num(p.progress?.caveLantern, 0)), summonPity: sanitizePity(p.summonPity), story: sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false), classProg: spMigrate4(spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3), !!p.sp4),
               npcQuests: sanitizeNpcQuests(p.npcQuests),
               unlocks: sanitizeUnlocks(p.unlocks, sanitizeStory(p.story, sanitizeProgress(p.progress).endings, false).step, (id) => !!sanitizeNpcQuests(p.npcQuests).q[id]),   // (old saves: everything already reached stays open)
               dashMods: sanitizeDashMods(p.dashMods),
@@ -653,7 +665,7 @@ const loadProfile = (): { profile: Profile; gift: boolean } => {
               hero: p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : f.hero,
               difficulty: p.settings?.hardMode && sanitizeProgress(p.progress).endings > 0 ? 'HARD' : 'NORMAL',   // (Hard mode: Settings toggle, locked until the first ending)
               attrs: sanitizeAttrs(p.attrs),
-              talents: talentFit(sanitizeTalents(p.talents), spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3)),
+              talents: talentFit(sanitizeTalents(p.talents), spMigrate4(spMigrate3(spMigrate(sanitizeClassProg(p.classProg, INITIAL_SKILLS, num(p.heroRank, 1)), !!p.sp2), !!p.sp3), !!p.sp4)),
               starterGiven: { ...f.starterGiven, ...(p.starterGiven ?? {}), [p.hero === 'WIZARD' || p.hero === 'BARBARIAN' || p.hero === 'KNIGHT' || p.hero === 'NECROMANCER' ? p.hero : 'ARCHER']: true },
               discovered: sanitizeDiscovered(p.discovered), petSeen: sanitizePetSeen(p.petSeen), petClaimed: sanitizePetClaimed(p.petClaimed), petReg: sanitizePetReg(p.petReg), chestsOpened: Array.isArray(p.chestsOpened) ? p.chestsOpened.filter((x: unknown) => typeof x === 'string').slice(0, 64) : [],
               codexClaimed: Array.isArray(p.codexClaimed) ? p.codexClaimed.filter((x) => typeof x === 'string') : [],
@@ -707,7 +719,7 @@ const writeProfile = (s: GameState): void => {
       v: PROFILE_VERSION, gold: s.gold, gems: s.gems, crystals: s.crystals, inventory: s.inventory, equipment: s.equipment, materials: s.materials,
       maxInventorySlots: s.maxInventorySlots, warehouse: s.warehouse, warehouseGold: s.warehouseGold, progress: s.progress, tech: s.tech, summonPity: s.summonPity, story: s.story, classProg: s.classProg, npcQuests: s.npcQuests, unlocks: s.unlocks, dashMods: s.dashMods, questSeen: s.questSeen ?? undefined, heroRank: s.heroRank, rankXp: s.rankXp,
       gameStats: s.gameStats, settings: s.settings, welcomeGiftClaimed: s.welcomeGiftClaimed, hero: s.hero, difficulty: s.difficulty,
-      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, petClaimed: s.petClaimed, petReg: s.petReg, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, sp3: true, al1: true, ch1: true, gold10: true,
+      talents: s.talents, attrs: s.attrs, starterGiven: s.starterGiven, discovered: s.discovered, codexClaimed: s.codexClaimed, petSeen: s.petSeen, petClaimed: s.petClaimed, petReg: s.petReg, chestsOpened: s.chestsOpened, meta: s.meta, elixirs: s.elixirsNext, grade3: true, gems1k: true, zoom1: true, zoom2: true, mus1: true, sp2: true, sp3: true, sp4: true, al1: true, ch1: true, gold10: true,
     };
     p.warehouse = []; p.warehouseGold = 0;   // (lives in the shared warehouse)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
@@ -1284,7 +1296,7 @@ export const useGameStore = create<GameState>()((set, get) => {
     getManaCost: (skill) => {
       const s = get();
       if (skill === 'e' && s.hero !== 'BARBARIAN') return 0; // class dash is free (charges)
-      const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? Math.ceil((15 + s.skillLevels.freezeSpell * 2) * 0.5) : 0;   // passives cost half mana
+      const cost = skill === 'q' || skill === 'e' || skill === 's3' || skill === 's4' || skill === 's5' || skill === 's6' ? abilityMana(s.hero, skill, s.skillLevels[skill]) : skill === 'freezeSpell' ? Math.ceil((15 + s.skillLevels.freezeSpell * 2) * 0.5) : 0;   // passives cost half mana
       const total = cost > 0 ? Math.ceil(cost * (CLASS_MANA_MUL[s.hero] ?? 1) * (skill === 'freezeSpell' ? 0.65 : 0.75)) : 0;   // per-class mana cost multiplier (balance pass 2); (owner) skills -25%, passives -35%
       const cut = Math.min(0.8, (s.stats.manaCostCut || 0) + runCards.manaCut);   // (+ the Mana Thrift run card)
       return cut > 0 ? Math.ceil(total * (1 - cut)) : total;
