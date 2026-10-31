@@ -12,6 +12,7 @@ import { useGameStore } from '../../store';
 import { damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, type DamageOpts, type StatusEffect } from './combat';
 import { spawnProjectile } from './projectiles';
 import { mkFx } from './abilities';
+import { hitRoomTraps, damageTrap, nearestTrap, trapAim, trapCount, trapAt, trapDist } from './roomTraps';
 import type { Enemy } from '../types';
 
 const J_AEGIS = 1, J_CHAIN = 2, J_HAMMER = 3, J_TRAP = 4, J_REND = 5, J_BLAST = 6;
@@ -77,6 +78,16 @@ function nextTarget(x: number, z: number, range: number, hit: number[]): Enemy |
   }
   return best;
 }
+/** (owner 2026-10-31: auto attack / skills must include stationaries) the single-target skills also strike a siege weapon / tower / statue:
+ *  the targeted one (trapAim) if it is within `r` of (x,z), else the nearest one. Returns it (already hit) or null. */
+function strikeTrap(x: number, z: number, r: number, dmg: number): boolean {
+  let tr = trapAim.obj && !trapAim.obj.dead && trapDist(trapAim.obj, x, z) <= r ? trapAim.obj : null;
+  if (!tr) tr = nearestTrap(x, z, r);
+  if (!tr) return false;
+  if (damageTrap(tr, dmg)) { v1.set(tr.x, 1.4, tr.z); events.emit('shieldBlock', { pos: v1, radius: 2.4, gold: true }); return true; }
+  return false;
+}
+let hamTrapT = -9;   // Blessed Hammers: one stationary hit per 0.35 s (the hammers tick every 0.05 s)
 const heroHp = (): number => useGameStore.getState().stats.maxHealth;
 
 const aegisOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.5 };
@@ -113,7 +124,7 @@ export function castExtra(slot: 's5' | 's6', lv: number, hero: string, b: number
         j.x = p.pos.x; j.z = p.pos.z; j.dmg = b * 2.4; j.lv = lv; j.n = 3 + lv; j.t = 0.05; j.r = 24;   // r: first-hop reach
         const first = nextTarget(tx, tz, 9, j.hit) ?? nextTarget(p.pos.x, p.pos.z, 24, j.hit);
         if (first) j.hit.push(-first.id - 1);   // negative marker: the opening target (picked in the first step)
-        else { j.on = false; v1.set(tx, 1, tz); events.emit('shieldBlock', { pos: v1, radius: 3, gold: true }); }
+        else { j.on = false; if (!strikeTrap(tx, tz, 9, b * 2.4) && !strikeTrap(p.pos.x, p.pos.z, 24, b * 2.4)) { v1.set(tx, 1, tz); events.emit('shieldBlock', { pos: v1, radius: 3, gold: true }); } }
       }
       p.anim.attackT = 1; addShake(0.1);
       return 'AEGIS_THROW';
@@ -170,7 +181,7 @@ export function castExtra(slot: 's5' | 's6', lv: number, hero: string, b: number
       if (j) {
         j.x = p.pos.x; j.z = p.pos.z; j.dmg = b * 3; j.n = 3 + lv; j.t = 0.02; j.r = 10; j.lv = lv;
         const first = nextTarget(tx, tz, 10, j.hit) ?? nextTarget(p.pos.x, p.pos.z, 22, j.hit);
-        if (first) j.hit.push(-first.id - 1); else j.on = false;
+        if (first) j.hit.push(-first.id - 1); else { j.on = false; strikeTrap(tx, tz, 10, j.dmg); }   // no monster: the bolt strikes a stationary
       }
       p.anim.castT = 1;
       return 'STORM_ORBS';
@@ -217,6 +228,7 @@ export function castExtra(slot: 's5' | 's6', lv: number, hero: string, b: number
   const cnt = nearestN(p.pos.x, p.pos.z, 16, n);
   siphonPoison.value = b * 0.3;
   let drained = 0;
+  strikeTrap(p.pos.x, p.pos.z, 16, b * 1.8);
   for (let i = 0; i < cnt; i++) {
     const e = world.enemies[nIds[i]];
     applyStatus(e, siphonPoison);
@@ -245,6 +257,12 @@ function castSpear(lv: number, b: number, dx: number, dz: number): string {
     let k = sortAl.length;
     sortAl.push(al); sortIds.push(e.id);
     while (k > 0 && sortAl[k] < sortAl[k - 1]) { const ta = sortAl[k]; sortAl[k] = sortAl[k - 1]; sortAl[k - 1] = ta; const ti = sortIds[k]; sortIds[k] = sortIds[k - 1]; sortIds[k - 1] = ti; k--; }
+  }
+  for (let i = 0, nt = trapCount(); i < nt; i++) {   // the lane also skewers stationaries
+    const o = trapAt(i);
+    if (o.dead) continue;
+    const ex = o.x - p.pos.x, ez = o.z - p.pos.z, al = ex * dx + ez * dz, pe = Math.abs(ex * dz - ez * dx);
+    if (al > -o.rad && al < L + o.rad && pe <= W + o.rad) damageTrap(o, b * 3.6);
   }
   const n = Math.min(N, sortIds.length);
   for (let i = 0; i < n; i++) {
@@ -290,6 +308,7 @@ export function updateExtras(dt: number): void {
         let e: Enemy | null = null;
         if (j.hit.length === 1 && j.hit[0] < 0) { e = world.enemies[-j.hit[0] - 1]; j.hit[0] = e.id; if (!e.active || e.state === 'DYING') e = null; }
         else e = nextTarget(j.x, j.z, chain ? j.r : 11, j.hit);
+        if (!e && j.hit.length > 0 && strikeTrap(j.x, j.z, chain ? j.r : 11, j.dmg * 0.8)) { j.on = false; break; }   // no monster left: the last hop hits a stationary
         if (!e) {
           if (!chain && j.flag === 0 && j.hit.length > 0) {   // a lone target: the shield flies back for one more hit
             j.flag = 1;
@@ -328,6 +347,7 @@ export function updateExtras(dt: number): void {
           const a = base + (i * 6.2832) / j.n;
           const hx = p.pos.x + Math.cos(a) * rad, hz = p.pos.z + Math.sin(a) * rad;
           if (show) { v1.set(hx, 0.8, hz); events.emit('fxImpact', { pos: v1, kind: 'RAIN_ARROW', radius: 1.7 }); }
+          if (world.time - hamTrapT >= 0.35 && hitRoomTraps(hx, hz, 2.0, j.dmg)) hamTrapT = world.time;
           const ids = world.enemyGrid.query(hx, hz, 5, gridOut);
           for (let q = 0; q < ids.length; q++) {
             const e = world.enemies[ids[q]];
@@ -372,6 +392,7 @@ export function updateExtras(dt: number): void {
             if (ex * ex + ez * ez < rr * rr) go = true;
           }
         }
+        if (!go && nearestTrap(j.x, j.z, 2.8)) go = true;   // a stationary next to the planted trap sets it off too
         if (!go) break;
         j.on = false;
         trapBurn.value = j.lv >= 3 ? j.dmg * 0.04 : 0;

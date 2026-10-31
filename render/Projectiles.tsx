@@ -559,7 +559,7 @@ export function Projectiles() {
         case 'BALLISTA':
           place(ims, i, x, y, z, Math.atan2(vx, vz), -Math.atan2(vy, hs), t * 10, 1.5);
           pushHalo(x, y, z, 3.0, 2.3, 2.3, 2.5, 0.55, CELL.GLOW);
-          if (emit) FX.add.emit(x - vx * 0.02, y, z - vz * 0.02, 0, 0, 0, 0.3, 0.45, 0.05, 2.1, 2.1, 2.3, 0.7, CELL.STREAK, 0, 0, 0, 0, 0);
+          if (emit) { for (let q = 0; q < 3; q++) FX.add.emit(x - vx * (0.02 + dt * q * 0.34), y, z - vz * (0.02 + dt * q * 0.34), 0, 0, 0, 0.3, 0.45, 0.05, 2.1, 2.1, 2.3, 0.7, CELL.STREAK, 0, 0, 0, 0, 0); }   // (50 u/s: three trail puffs per frame, spread back along the path, so the streak has no gaps)
           break;
         case 'ROCK':
           place(ims, i, x, y, z, t * 3 + n, t * 2.2, t * 1.7, 1.3 * Math.max(1, p.radius / 0.8));   // (Gorath's ring boulders are bigger)

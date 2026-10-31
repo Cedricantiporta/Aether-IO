@@ -2188,9 +2188,13 @@ export function updateEnemyProjectiles(dt: number): void {
 
     // player hit (dashing / i-frames let projectiles pass through)
     if (player.alive && player.invulnT <= 0 && p.damage > 0) {
-      const dx = p.pos.x - ppx;
-      const dz = p.pos.z - ppz;
+      let dx = p.pos.x - ppx;
+      let dz = p.pos.z - ppz;
       const r = p.radius + 0.7;
+      if (p.kind === 'BALLISTA') {   // fast bolt (50 u/s): test the swept segment of this frame so a low frame rate cannot tunnel through the hero
+        const sx = p.vel.x * dt, sz = p.vel.z * dt, l2 = sx * sx + sz * sz;
+        if (l2 > 1e-6) { const u = Math.max(0, Math.min(1, ((ppx - (p.pos.x - sx)) * sx + (ppz - (p.pos.z - sz)) * sz) / l2)); dx = p.pos.x - sx * (1 - u) - ppx; dz = p.pos.z - sz * (1 - u) - ppz; }
+      }
       if (dx * dx + dz * dz < r * r) {
         p.active = false;
         shotHitsHero(p);

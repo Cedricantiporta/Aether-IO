@@ -44,7 +44,7 @@ import { Vector3 } from 'three';
 
 export const TRAP = { SIEGE: 0, TOWER: 1, BAR: 2, JET: 3, VINE: 4, POOL: 5, BARREL: 6, STATUE: 7, LASER: 8 } as const;
 const NKIND = 9;   // (kinds that roll by weight; the Void's shrine / obelisk are placed by their own rule in setupRoomTraps)
-const BALLISTA_WIND = 1.35, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0;
+const BALLISTA_WIND = 1.8, CATAPULT_WIND = 2.0, TOWER_WIND = 1.25, FLIGHT = 1.0;
 
 export const rt = {
   on: false, ver: 0,
@@ -129,6 +129,22 @@ export function nearestTrap(x: number, z: number, maxR: number, skip?: readonly 
     if (o.dead || (skip && skip.indexOf(o) !== -1)) continue;
     const d = trapDist(o, x, z);
     if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+/** Is this piece winding up / shooting / breathing right now (siege, tower, statue, laser state > 0)? Shrines / obelisks never are. */
+export const trapBusy = (o: TrapObj): boolean => ((o as unknown as { state?: number }).state ?? 0) > 0;
+/** Like nearestTrap, but a piece that is attacking right now (trapBusy) counts `busyBonus` m nearer: the auto-aim tie-break that deals with whoever is shooting at the hero. */
+export function nearestTrapPri(x: number, z: number, maxR: number, busyBonus: number): TrapObj | null {
+  if (!rt.on || !world.room.active) return null;
+  let best: TrapObj | null = null, bd = 1e9;
+  for (let i = 0, n = trapCount(); i < n; i++) {
+    const o = trapAt(i);
+    if (o.dead) continue;
+    const d = trapDist(o, x, z);
+    if (d >= maxR) continue;
+    const sc = d - (trapBusy(o) ? busyBonus : 0);
+    if (sc < bd) { bd = sc; best = o; }
   }
   return best;
 }
@@ -228,6 +244,8 @@ let near: [number, number, number] | null = null;
 let siegeLong = false;
 /** HALLS: when < 99, spot() only accepts floor within this many m of the wall (statues / edge siege weapons hug the walls). */
 let wallD = 99;
+/** (owner 2026-10-31: 'make ballista arrows faster') bolt speed u/s (was 31; ~1.6x). Range stays 62.5 m (105 m in Marble Halls): life = range / speed. */
+const BALLISTA_SPEED = 50;
 const SIEGE_RANGE = 42, SIEGE_RANGE_LONG = 95;
 /** A free floor spot for a disc of `rad` between rimMin..rimMax (fractions of the room radius; turrets hug the rim). */
 function spot(rad: number, pad = 0.6, rimMin = 0, rimMax = 0.9, awayFromStart = 0): boolean {
@@ -597,15 +615,15 @@ function trapsTick(dt: number): void {
       if (s.kind === 0) {   // ballista: tracks you, locks the lane at 45%, fires at the end
         if (!s.locked) {
           s.yaw += wrapPi(Math.atan2(px - s.x, pz - s.z) - s.yaw) * Math.min(1, dt * 7);
-          if (s.t >= W * 0.45) {
+          if (s.t >= W * 0.4) {   // lane locked 0.72 s in, so the orange warning shows for 1.08 s before the bolt
             s.locked = true; s.lx = Math.sin(s.yaw); s.lz = Math.cos(s.yaw);
-            const zn = spawnTelegraphLine(s.x + s.lx * 1.5, s.z + s.lz * 1.5, s.lx, s.lz, siegeLong ? 90 : 48, 1.4, W * 0.55, 0xffa040);
+            const zn = spawnTelegraphLine(s.x + s.lx * 1.5, s.z + s.lz * 1.5, s.lx, s.lz, siegeLong ? 90 : 48, 1.4, W * 0.6, 0xffa040);
             if (zn) zn.trick = BT.VISUAL;
           }
         }
         if (s.t >= W) {
           tmp.set(s.x + s.lx * 1.8, 1.3, s.z + s.lz * 1.8); tmpD.set(s.lx, 0, s.lz);
-          fireEnemyProjectile(tmp, tmpD, 'BALLISTA', 31, dmgOf(0.1), { life: siegeLong ? 3.4 : 2.0, radius: 0.55 });
+          fireEnemyProjectile(tmp, tmpD, 'BALLISTA', BALLISTA_SPEED, dmgOf(0.1), { life: siegeLong ? 105 / BALLISTA_SPEED : 62.5 / BALLISTA_SPEED, radius: 0.55 });
           events.emit('shake', { amount: 0.12 });
           s.state = 2; s.t = 0;
         }
