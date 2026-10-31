@@ -211,7 +211,12 @@ const chillMob: StatusEffect = { type: 'SLOW', duration: 1.6, value: 0.55 };
 const maxHp = () => useGameStore.getState().stats.maxHealth;
 /** Hazard strength by depth (index through the whole run: biome * 15 + room): +1.1% per room, capped. */
 let scale = 1;
-const dmgOf = (pct: number): number => maxHp() * pct * scale / DMG_INFLATE;
+/** (owner 2026-10-31: 'these catapults deal 80 dmg out of my 8k HP') the hazards' share-of-max-HP hits are boosted to undo most of the hero's defence / damage reduction
+ *  (the hit lands near `pct` of max HP after mitigation; defence still helps a little: exponent 0.85, boost capped x8). */
+const dmgOf = (pct: number): number => {
+  const st = useGameStore.getState(), mit = (100 / (100 + st.stats.defense)) * (1 - Math.min(0.6, st.stats.dmgReduce));
+  return maxHp() * pct * scale / DMG_INFLATE * Math.min(8, Math.pow(1 / Math.max(0.05, mit), 0.85));
+};
 
 // ------------------------------------------------------------------ placement --
 const kx: number[] = [], kz: number[] = [], kr: number[] = [];
