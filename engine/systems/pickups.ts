@@ -288,6 +288,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
   const kind = o.kind;
   const value = o.value;
   let rarity: Rarity | undefined;
+  let grade: string | undefined;
   let name: string | undefined;
 
   switch (kind) {
@@ -301,7 +302,7 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
     case 'ITEM': {
       const item = o.item;
       if (!item || !st.addItemToInventory(item)) { o.magnet = false; return; }
-      rarity = item.rarity;
+      rarity = item.rarity; grade = item.grade;
       name = item.type === 'LOOT' ? item.name : undefined;
       notifyLoot(item);
       world.itemPickupsVersion++;
@@ -310,5 +311,5 @@ function collect(o: (typeof world.pickups)[number], st: ReturnType<typeof useGam
   }
   o.active = false;
   o.item = null;
-  events.emit('pickup', { pos: o.pos, kind, value, rarity, name });
+  events.emit('pickup', { pos: o.pos, kind, value, rarity, name, grade });
 }

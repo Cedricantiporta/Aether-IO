@@ -202,7 +202,7 @@ function sfxExplosion(pos: Vector3, radius: number): void {
 
 let xpCombo = 0;
 let xpLast = -10;
-function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefined): void {
+function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefined, grade?: string): void {
   if (!ctx) return;
   const now = ctx.currentTime;
   switch (kind) {
@@ -230,6 +230,8 @@ function sfxPickup(kind: GameEvents['pickup']['kind'], rarity: string | undefine
       tone(660, 1320, 0.25, 0.08, { delay: 0.08 });
       break;
     case 'ITEM': {
+      // (owner 2026-10-31) the item pickup chime only for the good stuff: Legendary, Mythic or a HIGH-grade Epic
+      if (rarity !== 'LEGENDARY' && rarity !== 'MYTHIC' && !(rarity === 'EPIC' && grade === 'HIGH')) return;
       if (!gate(G.ITEM)) return;
       const n = rarity === 'MYTHIC' ? 5 : rarity === 'LEGENDARY' ? 4 : rarity === 'EPIC' ? 3 : rarity === 'RARE' ? 2 : 1;
       const chord = [0, 4, 7, 12, 16];
@@ -849,7 +851,7 @@ export function initAudio(): () => void {
   offs.push(events.on('purchase', safe(() => { playSample('buy', 0.8); })));
   offs.push(events.on('summonCast', safe(() => { playSample('summon', 0.85); })));
   offs.push(events.on('lootDrop', safe((p) => { if (p.rarity === 'EPIC' || p.rarity === 'LEGENDARY' || p.rarity === 'MYTHIC') playSample('epic', 0.8); })));
-  offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity))));
+  offs.push(events.on('pickup', safe((p) => sfxPickup(p.kind, p.rarity, p.grade))));
   offs.push(events.on('crateBreak', safe(() => sfxCrate())));
   offs.push(events.on('levelUp', safe(() => sfxLevelUp())));
   offs.push(events.on('questComplete', safe(() => sfxQuestComplete())));
