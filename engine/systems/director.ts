@@ -22,7 +22,7 @@ import { liveStep } from '../../questUnlocks';
 import { ENEMY_DEFS, BOSS_NAMES, MINI_BOSSES, waveBudget, waveHpMult, isSwarm, isRootedBoss, rootedHome, OPTIONAL_KINDS, type BossKind } from '../enemyDefs';
 const rootTmp = { x: 0, z: 0 };
 import { feat, MAX_FIXED } from '../roomFeatures';
-import { useGameStore, makeItemById, DMG_INFLATE } from '../../store';
+import { useGameStore, makeItemById } from '../../store';
 import { damagePlayer } from './combat';
 import { GameStatus } from '../../types';
 import { runMods, runInfo, veteran, shipState } from '../runMods';
@@ -1469,11 +1469,12 @@ function interactHub(node: number): void {
 
 // ------------------------------------------------------------ frame ---------
 // ---- (owner 2026-10-25) stage timer: every run stage has a time limit (no soaking a room to drink potions / regen). Hidden until the
-// last STAGE_SHOW seconds (ui/hud/StageTimer shows it then); at 0 the hero takes stageTick() damage every second until he leaves. Danger rooms only.
+// last STAGE_SHOW seconds (ui/hud/StageTimer shows it then); at 0 the hero takes a growing % of max HP every second until he leaves. Danger rooms only.
 export const stageClock = { on: false, left: 0, max: 0, tick: 0 };
 const STAGE_SHOW = 30;
-/** (owner) time-up damage per second: 5 in the first biome, +5 per biome after */
-const stageTick = (): number => 5 + 5 * Math.max(0, world.room.biome);
+/** (owner 2026-10-31) time-up damage per second = a SHARE OF THE HERO'S MAX HP (2.5% in the first biome, +1% per biome after), and it grows the longer
+ *  the hero stays past the limit (+4% of the base per second overtime, up to 6x), so soaking a room can never be sustained by regen / potions. */
+const stageTickPct = (overtime: number): number => (0.025 + 0.01 * Math.max(0, world.room.biome)) * Math.min(6, 1 + 0.04 * overtime);
 function resetStageClock(): void {
   const t = plan.type, sc = stageClock;
   const danger = t === 'COMBAT' || t === 'ELITE' || t === 'MINIBOSS' || t === 'DUEL' || t === 'BOSS' || t === 'TREASURE';   // (owner: not in safe rooms: fountain, merchant, camp, shrine ...)
@@ -1489,7 +1490,7 @@ function tickStageClock(dt: number): void {
   sc.left -= dt;
   if (sc.left > 0) return;
   sc.tick -= dt;
-  if (sc.tick <= 0) { sc.tick = 1; damagePlayer(stageTick() / DMG_INFLATE, {}); }
+  if (sc.tick <= 0) { sc.tick = 1; damagePlayer(0, { pct: stageTickPct(-sc.left) }); }
 }
 
 export function updateDirector(dt: number): void {
