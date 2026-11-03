@@ -28,7 +28,7 @@ import { onPull, pullStep } from './coopPull';
 import { hazOnMessage, hazStep } from './coopHaz';
 import { minTick } from './coopMinions';
 import { rate } from './coopRate';
-import { bf, BEAT_T } from '../engine/systems/bossForms';
+import { bf, BEAT_T, lk, KING_NAME } from '../engine/systems/bossForms';
 
 export interface GuestIO { send(m: unknown[]): void; rv(): number; connected(): boolean }
 let io: GuestIO | null = null;
@@ -275,6 +275,7 @@ function onBoss(d: unknown[]): void {
   b.active = n(2) === 1; b.hp = n(3); b.maxHp = Math.max(1, n(4)); b.phase = n(5); b.stagger = n(6) / 100; b.staggered = n(7) === 1; b.ability = s(8); b.abilityT = n(9) / 10;
   b.name = s(10); b.title = s(11); b.interrupt = n(12) / 100; b.interruptOn = n(13) === 1; b.interruptLabel = s(14); b.shield = n(15); b.shieldMax = n(16); b.final = n(17) === 1; b.stage = n(18) || 1;
   world.director.bossId = n(19); b.layers = Math.max(1, Math.min(12, n(20) | 0)) || 1;
+  { const kb = world.director.bossId; if (kb >= 0 && b.name.startsWith(KING_NAME)) { lk.id = kb; lk.on = true; } else if (lk.id === kb) lk.id = -1; }   // the secret Lich King (found by name; the guest has no roll of his own)
   const bi = world.director.bossId;   // (form switch, bossForms.ts: form index + beat seconds*100; absent from older hosts = form 0)
   if (bi >= 0 && bi < bf.form.length) { bf.form[bi] = n(21) === 1 ? 1 : 0; bf.beat[bi] = Math.max(0, Math.min(BEAT_T, n(22) / 100)); }
 }

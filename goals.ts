@@ -17,7 +17,7 @@ export interface MetaState {
   daily: GoalInst[]; weekly: GoalInst[];
   dailyBonus: boolean; weeklyBonus: boolean;       // bonus chest claimed
   stats: Record<StatKey, number>;                  // lifetime counters
-  bossBiomes: number[];                            // biome indices (0..5) whose boss was beaten
+  bossBiomes: number[];                            // biome indices (0..6) whose boss was beaten; 7 = the secret Lich King
   unlocked: string[]; claimed: string[];           // achievement ids
   title: string | null;                            // equipped title (an achievement id)
 }
@@ -123,7 +123,7 @@ export function sanitizeMeta(m: unknown, now: Date = new Date()): MetaState {
   for (const k of STAT_KEYS) st[k] = nn(o.stats?.[k]);
   const out: MetaState = {
     ...f, stats: st,
-    bossBiomes: Array.isArray(o.bossBiomes) ? o.bossBiomes.filter((x) => typeof x === 'number' && x >= 0 && x < 7) : [],
+    bossBiomes: Array.isArray(o.bossBiomes) ? o.bossBiomes.filter((x) => typeof x === 'number' && x >= 0 && x < 8) : [],
     unlocked: strs(o.unlocked), claimed: strs(o.claimed), title: typeof o.title === 'string' ? o.title : null,
   };
   const d = goals(o.daily), w = goals(o.weekly);

@@ -7,7 +7,7 @@ import { useGameStore, instantiate, makeItemById } from '../../store';
 import { Button, Toggle } from '../components/Button';
 import { useUiStore } from '../uiStore';
 import { debug, setDebug } from '../../engine/debug';
-import { debugJump, debugHerald, debugHumanBoss, debugDarkHero, debugTowerHuman } from '../../engine/systems/director';
+import { debugJump, debugHerald, debugLich, debugHumanBoss, debugDarkHero, debugTowerHuman } from '../../engine/systems/director';
 import { HUMAN_KINDS, HUMAN_INFO } from '../../engine/systems/humanBosses';
 import { DARK_CLASSES, DARK_NAMES } from '../../engine/systems/darkHero';
 import { ally, debugAlly } from '../../engine/systems/ally';
@@ -277,6 +277,7 @@ export const DebugTab: React.FC = () => {
       </Line>
       <Line label="Special fights" hint="Herald: the Void throne room (the final fight). Riruru: a Greenwood room; the blue slime hops in once you clear it.">
         {B('Void Herald (final)', () => fight(() => debugHerald()), 'dbg-herald')}
+        {B('Lich King (secret final)', () => fight(() => debugLich()), 'dbg-lich')}
         {B('Riruru', () => fight(() => { riruru.force = true; debugJump(0, 1, 'COMBAT'); useGameStore.getState().addNotification('Debug: clear this room and Riruru appears.', '#6cc4ff', 'SYSTEM'); }), 'dbg-riruru')}
       </Line>
       <Line label="Humanoid mini boss" hint="A champion room of the biome and room chosen above.">

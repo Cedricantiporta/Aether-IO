@@ -4,7 +4,7 @@ import { useRaf } from '../hooks/useRaf';
 
 /** Layer colours of a boss's stacked HP bars, from the LAST bar (index 0, shown when the boss is nearly dead) up to the first one (owner 2026-10-31: bosses have x5 HP, drawn as 5 bars in different colours). */
 const LAYER_COL = ['#e0453b', '#f08a2c', '#f2cf3a', '#5cc85e', '#46a8ff', '#a27bff', '#ff7bd0'];
-const layerCol = (i: number): string => LAYER_COL[i % LAYER_COL.length];
+export const layerCol = (i: number): string => LAYER_COL[i % LAYER_COL.length];
 
 /** Ornate wide boss bar with skull ends, phase pips and a delayed white damage trail.
  *  `illusion` = index of a Void Herald illusion: the same bar (name, X/X, pips) over the decoy, to confuse the player. */
@@ -105,7 +105,7 @@ export const BossBar: React.FC<{ illusion?: number }> = ({ illusion }) => {
   });
 
   return (
-    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: illusion === undefined ? 'min(26rem, 72vw)' : '10.5rem', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} data-testid={illusion === undefined ? 'boss-bar' : 'boss-bar-illusion'} className={`bb-slim${illusion === undefined ? ' bb-top' : ''}`}>
+    <div ref={root} style={{ display: 'none', position: 'absolute', left: 0, top: 0, width: illusion === undefined ? 'min(26rem, 72vw)' : '10.5rem', zIndex: 4, pointerEvents: 'none', willChange: 'transform' }} id={illusion === undefined ? 'boss-bar-main' : undefined} data-testid={illusion === undefined ? 'boss-bar' : 'boss-bar-illusion'} className={`bb-slim${illusion === undefined ? ' bb-top' : ''}`}>
       <div ref={abil} data-testid="boss-ability" className="text-center rpg-title" style={{ opacity: 0, transition: 'opacity .15s, transform .15s', fontSize: '1.15rem', letterSpacing: '.18em', color: '#ffe27a', textShadow: '0 0 12px #ff8a00, 0 2px 0 #000', marginBottom: '.2rem', height: '1.4rem' }} />
       <div className="bb-name text-center leading-none">
         <span ref={name} className="bb-n" /><span ref={title} className="bb-t" />

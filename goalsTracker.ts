@@ -86,6 +86,7 @@ events.on('playerHit', () => { hitThisRoom = true; });
 events.on('roomEnter', () => { hitThisRoom = false; });
 events.on('runStart', () => { hitThisRoom = false; });
 events.on('waveClear', () => { add('rooms'); if (!hitThisRoom) add('flawless'); flush(); });
+events.on('secretBoss', (e) => { bufBiomes.push(e.id); flush(); });   // the Lich King (id 7) slain: secret achievement
 events.on('biomeClear', (e) => { bufBiomes.push(e.biome % BIOMES.length); flush(); });
 events.on('runEnd', flush);
 events.on('hub', (e) => {

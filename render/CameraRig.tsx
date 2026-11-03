@@ -156,6 +156,15 @@ export function CameraRig() {
         I.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; I.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
       }
       for (; n < 4; n++) world.illusionBars[n].active = false;
+      // multi-boss: head anchor of every boss slot (floating bars; bossList.ts), also while a dead boss's bar fades
+      for (let k = 0; k < world.bosses.length; k++) {
+        const Q = world.bosses[k];
+        const m = Q.id >= 0 && (Q.active || Q.fade > 0) ? world.enemies[Q.id] : null;
+        if (!m || !m.active) { Q.onScreen = false; continue; }
+        _d.set(m.pos.x, bossTop(m), m.pos.z).project(cam);
+        Q.onScreen = _d.z < 1 && Math.abs(_d.x) < 1.15 && Math.abs(_d.y) < 1.15;
+        Q.sx = (_d.x * 0.5 + 0.5) * window.innerWidth; Q.sy = (-_d.y * 0.5 + 0.5) * window.innerHeight;
+      }
       // dark hero squad: a small bar over each hero's head
       for (let k = 0; k < world.darkBars.length; k++) {
         const D = world.darkBars[k];

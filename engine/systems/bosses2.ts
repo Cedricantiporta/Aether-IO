@@ -30,7 +30,7 @@ import {
 import { wardedBossId, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { tickIgnarLava, resetIgnarLava } from './ignarLava';
 import { bp, SEEKER } from './bossPhaseState';
-import { initBossForm } from './bossForms';
+import { initBossForm, isKing, kingHooks } from './bossForms';
 import { headsReset, hydraExposeMul, spareHeadAI, headsPhaseOn } from './bossKitHydra';
 import { warmReset, warmDamageMul, warmTick, ventDue, ventBegin, ventFire, ventAim, ventTick, ventEnd, addHeat, missileVolley, wallBegin, wallFire, WX, VENT_T, VENT_WIND } from './bossKitColossus';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
@@ -100,12 +100,12 @@ export function resetBosses2(): void {
 }
 
 // ------------------------------------------------------------------ helpers ---
-function stand(e: Enemy): void { e.vel.set(0, 0, 0); }
-function drive(e: Enemy, ux: number, uz: number, sp: number): void { e.vel.set(ux * sp, 0, uz * sp); }
+export function stand(e: Enemy): void { e.vel.set(0, 0, 0); }
+export function drive(e: Enemy, ux: number, uz: number, sp: number): void { e.vel.set(ux * sp, 0, uz * sp); }
 export function pwr(e: Enemy): number { return Math.max(e.projectileDamage, e.contactDamage * 0.8, 8) * BOSS_SKILL_MUL; }
 
 /** Ranged-ish positioning: back off inside `near`, close in beyond `far`, otherwise circle the player. */
-function keepRange(e: Enemy, ux: number, uz: number, dist: number, near: number, far: number, sp: number, strafe: number): void {
+export function keepRange(e: Enemy, ux: number, uz: number, dist: number, near: number, far: number, sp: number, strafe: number): void {
   if (dist < near) drive(e, -ux, -uz, sp * 1.2);
   else if (dist > far) drive(e, ux, uz, sp);
   else { const s = (e.id & 1) === 0 ? 1 : -1; drive(e, uz * s, -ux * s, sp * strafe); }
@@ -122,12 +122,12 @@ export function circle(x: number, z: number, r: number, life: number, trick: num
   if (zn) { zn.trick = trick; zn.damage = dmg; }
   return zn;
 }
-function lane(e: Enemy, dx: number, dz: number, len: number, width: number, life: number, trick: number, dmg: number, color: number): Zone | null {
+export function lane(e: Enemy, dx: number, dz: number, len: number, width: number, life: number, trick: number, dmg: number, color: number): Zone | null {
   const zn = spawnTelegraphLine(e.pos.x, e.pos.z, dx, dz, len, width, life, color);
   if (zn) { zn.trick = trick; zn.damage = dmg; }
   return zn;
 }
-function cone(e: Enemy, dx: number, dz: number, range: number, half: number, life: number, trick: number, dmg: number, color: number): Zone | null {
+export function cone(e: Enemy, dx: number, dz: number, range: number, half: number, life: number, trick: number, dmg: number, color: number): Zone | null {
   return spawnTelegraphCone(e.pos.x, e.pos.z, dx, dz, range, half, life, color, trick, dmg);
 }
 /** Fan index -> angle offset: 0, -1, +1, -2, +2 ... so any count is centred on the aim. */
@@ -152,7 +152,7 @@ export function poofAdd(a: Enemy): void {
   events.emit('enemyDeath', { pos: a.pos, kind: a.kind, elite: false, boss: false, scale: a.scale, poof: true });
 }
 /** Spawns a boss add (capped). `hpMul` trims its wave-scaled hp; the add skips most of its rise animation. */
-function spawnAdd(kind: EnemyKind, x: number, z: number, hpMul: number, speedMul: number, cap: number): Enemy | null {
+export function spawnAdd(kind: EnemyKind, x: number, z: number, hpMul: number, speedMul: number, cap: number): Enemy | null {
   if (countAdds(kind) >= cap) return null;
   tv.set(x, 0, z); clampArena(tv, 3); clampToVoid(tv, 2);
   const a = spawnEnemy(kind, tv);
@@ -229,6 +229,7 @@ function runAtk(e: Enemy, list: Atk[], dt: number, ux: number, uz: number, dist:
 
 // A stagger interrupts whatever the boss is doing (and breaks Elderroot's bark armor).
 hooks.onStagger = (e: Enemy): void => {
+  if (isKing(e)) { if (kingHooks.stagger) kingHooks.stagger(e); return; }   // the Lich King's own kit (bossKitLich.ts)
   if (e.id !== S.id || !isBoss2(e.kind)) return;
   const list = LISTS[e.kind];
   const a = list ? list[e.pattern] : undefined;
@@ -241,6 +242,7 @@ hooks.onStagger = (e: Enemy): void => {
 // Incoming damage: Elderroot's bark armor, Mire Hydra's heads shielding the body.
 const HYDRA_MUL = [0.45, 0.6, 0.8, 1.0, 1.25, 1.5];   // by severed heads (0..5)
 hooks.damageMul = (e: Enemy, fx?: number, fz?: number): number => {
+  if (isKing(e)) return kingHooks.mul ? kingHooks.mul(e) : 1;   // immune while his phylactery tether holds
   if (e.id !== S.id) return 1;
   if (e.kind === 'BOSS_TREANT') return S.bark ? 0.3 : 1;
   if (e.kind === 'BOSS_HYDRA') { const x = hydraExposeMul(); return x > 1 ? x : HYDRA_MUL[S.headsDead]; }   // 'Heads of the Hydra' window: x1.5 and the front heads no longer shield the body (bossKitHydra.ts)
@@ -1256,7 +1258,7 @@ const HERALD_F2 = [V_STORM, V_NOVA, V_ORBS, V_LANES, V_POOL, V_COLLAPSE, V_SPIRA
 
 /** The void stage: a fixed ring (the room outline minus a margin) the heroes cannot leave; outside it is the dark swirling void (render/BossFx veil). */
 const SAFE_FRAC = 0.72, SAFE_CREEP = 0.10;   // safe radius = 72% of the old arena; it creeps in up to 10% over the fight (with the boss's HP lost; pauses by itself in the invulnerable phases)
-function voidStage(e: Enemy): void {
+export function voidStage(e: Enemy): void {
   let r = 1e9;
   for (let k = 0; k < 24; k++) { const a = (k / 24) * 6.2832; r = Math.min(r, edgeLimit(Math.cos(a) * 10, Math.sin(a) * 10, 0)); }
   arena.shrink = true; arena.hard = true; arena.cx = 0; arena.cz = 0; arena.r = Math.max(24, r - 3); arena.minR = arena.r; arena.rate = 0; arena.edgeT = 0;

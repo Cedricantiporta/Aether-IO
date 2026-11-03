@@ -113,7 +113,7 @@ export const CodexDialog: React.FC = () => {
           </div>
         ) : tab === 'MONSTERS' ? (
           <div className="grid grid-cols-2 gap-2" data-testid="codex-monsters">
-            {CODEX_MONSTERS.map((m) => {
+            {CODEX_MONSTERS.filter((m) => !m.secret || dMon.has(m.key)).map((m) => {
               const ok = dMon.has(m.key);
               return (
                 <div key={m.key} className="rpg-frame flex items-center gap-2 p-2" data-discovered={ok}>

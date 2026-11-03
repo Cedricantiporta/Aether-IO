@@ -11,6 +11,7 @@ import { useGameStore } from '../store';
 import { CELL, FX, dustPuff, embers, smokePuff } from './fx';
 import { GB, TAU, clamp, damp, lerp, noisify } from './util';
 import { ENEMY_DEFS } from '../engine/enemyDefs';
+import { bf, isKing, BEAT_T, SWAP_T } from '../engine/systems/bossForms';
 import { makeBossMats, useBossRig } from './bossKit';
 import { facetGeo } from './facetRock';
 
@@ -254,11 +255,16 @@ export function Lich() {
     const dt = st === GameStatus.PAUSED ? 0 : Math.min(dtRaw, 0.05);
     const s = S.current, t = e.animT, k = e.state;
     let armLT = 0.25, armRT = 0.25, glT = 1.1 + e.phase * 0.5, alphaT = 1, pitchT = 0, runeT = 0, orbSpeed = 1.4 + e.phase * 0.6, orbR = 1.7;
-    if (k === 'WINDUP') {
+    const kg = isKing(e), kf2 = kg && bf.form[e.id] === 1, kBeat = kg ? bf.beat[e.id] : 0;
+    if (kg) {   // the Lich King: arms up in every wind-up, thrown wide in the attack; his patterns are not the crypt Lich's (no blink fade)
+      if (k === 'WINDUP') { const w = clamp(e.stateT / 0.7, 0, 1); armLT = -2.3 * w; armRT = -2.2 * w; glT += 2 * w; orbSpeed += 3 * w; orbR = 1.7 - 0.5 * w; runeT = w * 0.6; }
+      else if (k === 'ATTACK') { armLT = -1.6; armRT = -1.9 + sin(t * 8) * 0.2; glT += 1.8; orbSpeed += 2.4; pitchT = -0.08; }
+      if (kBeat > 0 && !kf2) { glT = 3.5; alphaT = 0.55 + 0.25 * sin(t * 30); }   // form 1 crumbles
+    } else if (k === 'WINDUP') {
       const w = e.pattern === 3 ? clamp(e.stateT / 1.0, 0, 1) : clamp(e.stateT / 0.6, 0, 1);
       if (e.pattern === 2) { alphaT = clamp(1 - e.stateT / 0.5, 0, 1); glT += 1.5; }
       else { armLT = -2.3 * w; armRT = -2.2 * w; glT += 2 * w; orbSpeed += 3 * w; orbR = 1.7 - 0.5 * w; if (e.pattern === 3) runeT = w; }
-    } else if (k === 'ATTACK') {
+    } else if (k === 'ATTACK' && !kg) {
       if (e.pattern === 2) { alphaT = clamp(e.stateT / 0.4, 0, 1); glT += 1; }
       else if (e.pattern === 0) { armLT = -1.4; armRT = -1.9 + sin(t * 8) * 0.2; glT += 1.8; orbSpeed += 2.2; pitchT = -0.1; }
       else if (e.pattern === 1) { armLT = -1.55; armRT = -1.55; glT += 1.6; pitchT = 0.12; }
@@ -266,19 +272,24 @@ export function Lich() {
     }
     if (e.state === 'DYING') { const d = clamp(e.deathT / 0.6, 0, 1); alphaT = 1 - d; glT = 3; }
     if (e.state === 'SPAWN') { const sp = clamp(e.stateT / 1.6, 0, 1); alphaT = sp; glT = 3 - sp * 2; }
-    s.armL = damp(s.armL, armLT, 12, dt); s.armR = damp(s.armR, armRT, 12, dt); s.gl = damp(s.gl, glT, 8, dt); s.alpha = e.pattern === 2 && (k === 'WINDUP' || k === 'ATTACK') ? alphaT : damp(s.alpha, alphaT, 14, dt); s.pitch = damp(s.pitch, pitchT, 8, dt); s.runeK = damp(s.runeK, runeT, 6, dt);
+    s.armL = damp(s.armL, armLT, 12, dt); s.armR = damp(s.armR, armRT, 12, dt); s.gl = damp(s.gl, glT, 8, dt); s.alpha = !kg && e.pattern === 2 && (k === 'WINDUP' || k === 'ATTACK') ? alphaT : damp(s.alpha, alphaT, 14, dt); s.pitch = damp(s.pitch, pitchT, 8, dt); s.runeK = damp(s.runeK, runeT, 6, dt);
     const T = clock.elapsedTime;
     const hover = 1.35 + sin(T * 1.8) * 0.18;
     const sc = e.scale * 0.65;   // authored ~3 tall
     root.position.set(e.pos.x, e.pos.y, e.pos.z);
     root.rotation.y = e.facing;
-    root.scale.setScalar(sc);
+    const rise = kBeat > 0 && kf2 ? 0.6 + 0.4 * (1 - kBeat / (BEAT_T - SWAP_T)) : 1;   // (form 2 rises out of the beat)
+    root.scale.setScalar(sc * rise);
     body.current.position.y = hover;
     body.current.rotation.x = s.pitch + 0.08 + Math.min(0.25, Math.hypot(e.vel.x, e.vel.z) * 0.03);
     body.current.rotation.z = sin(T * 1.3) * 0.04;
     aL.current.rotation.x = s.armL; aR.current.rotation.x = s.armR;
     aL.current.rotation.z = -0.3; aR.current.rotation.z = 0.3;   // sleeves swing OUT (the robe is wide)
-    mats.glow.color.setScalar(1.2 + s.gl * 1.0 + 0.3 * sin(T * 6));
+    const gk = 1.2 + s.gl * 1.0 + 0.3 * sin(T * 6);
+    if (kg) {   // bone-white / dark violet -> green-teal soulfire (bossForms.ts FORMS.BOSS_LICH)
+      if (kf2) { mats.glow.color.setRGB(gk * 0.45, gk * 1.35, gk * 1.0); mats.lit.color.setRGB(0.6, 1.25, 1.05); mats.lit.emissive.setHex(0x1affa0); mats.lit.emissiveIntensity = 0.35; mats.aura.color.setRGB(0.4, 2.1, 1.5); }
+      else { mats.glow.color.setRGB(gk, gk * 0.95, gk * 0.85); mats.lit.color.setRGB(1.35, 1.25, 1.35); mats.lit.emissive.setHex(0x2a1850); mats.lit.emissiveIntensity = 0.3; mats.aura.color.setRGB(1.2, 0.9, 2.0); }
+    } else { mats.glow.color.setScalar(gk); mats.lit.color.setRGB(1, 1, 1); mats.lit.emissiveIntensity = 0; mats.aura.color.setRGB(1.4, 0.4, 2.2); }
     mats.lit.opacity = s.alpha; mats.glow.opacity = s.alpha; mats.lit.depthWrite = s.alpha > 0.95;
     mats.aura.opacity = 0.35 * s.alpha;
     root.visible = s.alpha > 0.01;

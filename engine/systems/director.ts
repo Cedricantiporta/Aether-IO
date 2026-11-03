@@ -14,6 +14,8 @@ import { resetBossMech } from './bossMech';
 // world.director.wave = depthWave(biome, room). Pure engine code; the render layer reads world.room.
 // ============================================================================
 import { debug } from '../debug';
+import { lk, lichRoll, LK_CHANCE, KING_NAME, KING_TITLE } from './bossForms';
+import { initKing } from './bossKitLich';
 import { Vector3 } from 'three';
 import { world, ROOM_MAX_ALIVE } from '../world';
 import { events } from '../events';
@@ -173,7 +175,7 @@ const biomeDone = (b: number): boolean => !!useGameStore.getState().progress.bio
 export const bossKeyState = { has: false };
 const BOSS_KEY_DROPS = false;
 // final fight (after the Void boss) and endless tower state
-let finalFight = false, endingDone = false;
+let finalFight = false, endingDone = false, forceLich: boolean | null = null;   // forceLich: debug override of the Lich King roll (true = him, false = the Herald, null = roll)
 /** A boss kind to spawn next in this room instead of the biome boss (currently unused - Ignar no longer has a second form); '' = the biome boss. */
 let nextBossKind: EnemyKind | '' = '';
 /** Elderroot guards Greenwood, Gorath the Marble Halls. */
@@ -186,6 +188,12 @@ const HERALD_LAST_WORDS = [
   'Did Aldric tell you? That he sent Malakar into the Font to save her, then ordered him to give her back to the water when the light ran thin?',
   'He would not. He held her light for ten years, until it was the only thing left of him. I am what grew in the place where he used to be.',
   'Take her home. Tell her the stars are still where he showed her. And tell her father... no. Tell him nothing.',
+];
+const LICH_LAST_WORDS = [
+  'So. The throne gives up its last king. I counted every soul that climbed these steps, and every one was a candle I could not keep lit.',
+  'I was the guard who stayed behind when the Font went dark, and I kept the dead company so that no one would be alone. It curdled. Grief does that, if it is fed long enough.',
+  'The jar was never the secret. The secret is that I wanted someone to cut the cord.',
+  'Go home, little guard. Tell the village the Undying Throne is empty. Tell them to leave a light on anyway.',
 ];
 let towerFloor = 0;
 export const towerState = { floor: 0 };
@@ -268,9 +276,18 @@ export function debugGate(g: number): void {
 
 /** Debug / QA: straight into the Void throne room against the Void Herald (the final fight). */
 export function debugHerald(): void {
-  world.room.fade = 1; finalFight = true; endingDone = false;
+  world.room.fade = 1; finalFight = true; endingDone = false; forceLich = false;   // (QA: always the Herald)
   enterRoom(FINAL_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' });
+  forceLich = null;
 }
+/** Debug / QA: the secret final fight, forced: the Lich King on the Undying Throne (the roll is skipped). */
+export function debugLich(): void {
+  world.room.fade = 1; finalFight = true; endingDone = false; forceLich = true;
+  enterRoom(FINAL_BIOME, BOSS_INDEX, { type: 'BOSS', reward: 'NONE' });
+  forceLich = null;
+}
+/** Debug / QA: would a final fight with this room seed be the Lich King? (the same roll enterRoom makes) */
+export const lichRolls = (seed: number): boolean => lichRoll(seed) < LK_CHANCE;
 
 /** After a boss: continue into the next biome (harder, same hero). */
 export function descend(): void {
@@ -338,6 +355,11 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   clearTransient();
 
   const seed = coopForced ? coopForced.seed : daily.on ? dailyRoomSeed(towerFloor) : (Math.random() * 4294967296) >>> 0;   // daily: same layouts for everyone
+  // THE LICH KING (owner 2026-11-03, secret): the Adventure's final fight is him instead of the Herald ~20% of the time, rolled from the throne room's seed (the co-op host's seed = the guest's). Never in the Tower / Waves / Daily / Boss Trials.
+  lk.id = -1; lk.tether = false;
+  lk.on = finalFight && p.type === 'BOSS' && runInfo.mode === 'ADVENTURE' && !trial.on && !daily.on && !waves.on && (forceLich === true || (forceLich === null && lichRoll(seed) < LK_CHANCE));
+  if (finalFight && p.type === 'BOSS') lk.slain = false;
+  if (lk.on) { useGameStore.getState().addNotification('Something stirs on the throne...', '#7dffc4', 'BOSS'); }
   const R = waves.on ? WAVES_ARENA_R : runInfo.mode !== 'TOWER' && isArenaRoom(p.type) ? arenaRadius(p.type) : roomRadius(p.type, seed, b, idx);   // (Endless Waves: one boss-size arena)
   const campPath = p.type === 'CAMP' && !p.epilogue && !p.dream && runInfo.mode === 'ADVENTURE';   // the biome camp is a hand-authored transition path (engine/campPaths.ts)
   buildRoom(b, p.type, R, seed, idx, campPath, p.obj);
@@ -409,7 +431,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   const boss = p.type === 'BOSS';
   events.emit('waveStart', { wave: depth, boss, elite: p.type === 'ELITE' });
   const gname = p.type === 'GATEKEEPER' ? 'The Gatekeeper' : p.gate !== undefined ? GATES[p.gate].name : '';
-  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : p.type === 'HALL' ? 'The Hall of the Undying' : finalFight ? 'The Void Throne' : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
+  events.emit('roomEnter', { biome: b, index: idx, type: p.type, boss, name: p.dream ? 'A Dream at the Font' : p.epilogue ? 'A Quiet Clearing' : p.type === 'HALL' ? 'The Hall of the Undying' : finalFight ? (lk.on ? 'The Undying Throne' : 'The Void Throne') : trial.on ? `Boss Trial · ${bossNameIn(biomeOf(b).boss, b).name}` : runInfo.mode === 'TOWER' ? `${climbTitle()} · ${climbFloor(towerFloor)}` : gname || biomeOf(b).name });
   if (p.type === 'DUEL') st.addNotification(`${duelQ.length > 1 ? `${duelQ.length} dark champions step into the ring at once!` : `A dark champion steps into the ring: ${duelCls.charAt(0) + duelCls.slice(1).toLowerCase()} against you, alone.`}`, '#c9a2ff', 'BOSS');
   if (p.gate !== undefined && (p.step ?? 0) === 0) st.addNotification(`${GATES[p.gate].name}: ${GATES[p.gate].sub}.`, GATES[p.gate].color, 'BOSS');
   if (p.type === 'ELITE') st.addNotification('Elite champions guard this room!', '#a855f7', 'BOSS');
@@ -818,16 +840,18 @@ function spawnBossAt(kind: EnemyKind, x: number, z: number): void {
   const d = dd();
   const e = spawnEnemy(kind, tmp.set(x, 0, z));
   if (!e) return;
-  const names = finalFight ? { name: 'The Void Herald', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
+  const king = finalFight && lk.on && kind === 'BOSS_LICH';
+  if (king) initKing(e);   // (the Lich King: size, state, the Throne ring; before the HP split below)
+  const names = king ? { name: KING_NAME, title: KING_TITLE } : finalFight ? { name: 'The Void Herald', title: 'Lord of the Void' } : bossNameIn(kind as BossKind, biome);
   if (kind === 'BOSS_TREANT' && runInfo.mode === 'ADVENTURE' && !finalFight) { e.maxHp = Math.round(e.maxHp * 0.85); e.hp = e.maxHp; }   // the first guardian (Elderroot): -15% hp (balance pass 2: squishy ranged classes won ~15% at Lv 8-10)
   if (showcase.on) { e.maxHp = Math.round(e.maxHp * 1); e.hp = e.maxHp; }   // (showcase ice dragon: was 2x; spawnEnemy's boss HP is now 2x already, 2026-10-26)
   if (finalFight) { e.contactDamage *= 1.3; e.projectileDamage *= 1.3; }   // the final boss: form 1 = the Void boss's full HP, form 2 = +25% on top (bossForms.ts finalHp: two separate bar stacks)
   applyFormHp(e, finalFight);   // a transforming boss: form 1's HP share (bossForms.ts)
   d.bossId = e.id;
   const hud = world.boss;
-  hud.active = true; hud.name = names.name; hud.title = names.title; hud.layers = bossLayers();   // (cosmetic: the total HP drawn as 5 / 10 equal coloured bars)
+  hud.active = true; hud.name = names.name; hud.title = names.title; hud.layers = king ? 10 : bossLayers();   // (cosmetic: the total HP drawn as 5 / 10 equal coloured bars)
   hud.hp = e.hp; hud.maxHp = e.maxHp; hud.phase = 0;
-  hud.final = finalFight && kind === 'BOSS_VOID'; hud.stage = 1; hud.shieldCd = 14;   // the Void Herald's finale: two forms in ONE fight (bosses2.ts)
+  hud.final = finalFight && (kind === 'BOSS_VOID' || king); hud.stage = 1; hud.shieldCd = 14;   // the Void Herald's finale: two forms in ONE fight (bosses2.ts)
   events.emit('bossSpawn', { name: names.name, title: names.title });
   events.emit('shake', { amount: 0.5 });
   useGameStore.getState().addNotification(`${names.name}, the ${names.title}, approaches!`, '#ef4444', 'BOSS');
@@ -850,7 +874,7 @@ function tickSpawns(dt: number): void {
 
   if (bossPending && roomT >= 1.2) {
     bossPending = false;
-    const kind = finalFight ? 'BOSS_VOID' : nextBossKind || debug.bossOverride || biomeBoss(biome);
+    const kind = finalFight ? (lk.on ? 'BOSS_LICH' : 'BOSS_VOID') : nextBossKind || debug.bossOverride || biomeBoss(biome);
     if (isRootedBoss(kind)) { rootedHome(kind, R.radius, 0, rootTmp); placeMarker(kind, rootTmp.x, rootTmp.z, false, 1.8, 2); }   // (giant rooted boss: its marker sits on its root spot)
     else if (kind === 'BOSS_WARMACH' && shape.kind === 'SQUARE') placeMarker(kind, shape.fx * R.radius * 0.18, shape.fz * R.radius * 0.18, false, 1.8, 2);   // the 5x Colossus rises ahead of the hero's arrival side (never on top of the hero)
     else placeMarker(kind, 0, -R.radius * 0.35, false, 1.8, 2);
@@ -1241,6 +1265,13 @@ function onBossCleared(): void {
     const bx = body ? body.pos.x : 0, bz = body ? body.pos.z : 0;
     for (const e of world.enemies) if (e.active && e.state !== 'DYING') e.hp = 0;
     // The Void Herald falls for good: his last words, then the finale (tickFinale) -> epilogue clearing -> ending slides + store.completeEnding. Very rarely he leaves his Soul Ember (Mythic weapons)
+    if (lk.on) {   // the secret boss: the same ending, plus the secret achievement, the codex entry (bossSpawn) and a Mythic: the Lich's Eye, his phylactery shard and a purse of gems
+      lk.slain = true; lk.tether = false;
+      events.emit('secretBoss', { id: 7 });
+      for (const id of ['lich_eye', 'phylactery', 'phylactery']) if (LOOT_BY_ID[id]) spawnPickup('ITEM', at(bx + (Math.random() - 0.5) * 4, bz + (Math.random() - 0.5) * 4).clone(), 0, lootItem(LOOT_BY_ID[id]));
+      useGameStore.setState((s) => ({ gems: s.gems + 500 }));
+      useGameStore.getState().addNotification("The Lich King is slain! Secret reward: the Lich's Eye, soul shards and 500 gems.", '#7dffc4', 'BOSS');
+    }
     if (Math.random() < SOUL_EMBER_CHANCE) {
       spawnPickup('ITEM', at(bx, bz).clone(), 0, lootItem(LOOT_BY_ID[SOUL_EMBER]));
       useGameStore.getState().addNotification("The Herald's Soul Ember! (Mythic weapon material)", '#c084fc', 'ITEM');
@@ -1249,7 +1280,7 @@ function onBossCleared(): void {
     vacuumT = VACUUM_AFTER; vacuumTick = 0;
     world.run.bossKills = Math.max(world.run.bossKills, 1);
     finale.step = 1; finale.t = 0; finale.x = bx; finale.z = bz; finale.blasts = 0;
-    openCustomDialogue('The Void Herald', 'his last words', '#c084fc', HERALD_LAST_WORDS, { label: 'Let him fade', accept: () => { if (finale.step === 1) { finale.step = 2; finale.t = 0; } } });
+    openCustomDialogue(lk.on ? 'The Lich King' : 'The Void Herald', 'his last words', lk.on ? '#7dffc4' : '#c084fc', lk.on ? LICH_LAST_WORDS : HERALD_LAST_WORDS, { label: 'Let him fade', accept: () => { if (finale.step === 1) { finale.step = 2; finale.t = 0; } } });
     return;
   }
   d.phase = 'BIOME_DONE'; d.phaseT = 0;

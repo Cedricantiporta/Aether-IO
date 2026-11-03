@@ -6,6 +6,7 @@ import { useGameStore } from '../../store';
 import { useGameEvent } from '../hooks/useEvent';
 import { finishRunVictory } from '../../engine/systems/director';
 import { runInfo } from '../../engine/runMods';
+import { lk } from '../../engine/systems/bossForms';
 import { ASCENSION_MAX, ascRewardText } from '../../ascension';
 import { GameStatus } from '../../types';
 import { storyIdx } from '../../story';
@@ -22,7 +23,7 @@ const STORY_BASE = [
 /** The line after the bells: the Font takes the memory, unless this was the run you held on to it (story past 'remember'). */
 const storySlides = (): string[] => {
   const kept = useGameStore.getState().story.step > storyIdx('remember');
-  return STORY_BASE.map((l) => (l !== 'DREAM' ? l : kept ? 'This time, when you wake beside the well, you still remember her voice.' : 'You wake beside the well with the taste of light in your mouth. Already the dream is fading. A song. A name. Gone.'));
+  return STORY_BASE.map((l) => (lk.slain && l.startsWith('The Void Herald falls') ? 'The Lich King crumbles, and the Undying Throne falls silent. The grief that fed it goes quiet.' : l !== 'DREAM' ? l : kept ? 'This time, when you wake beside the well, you still remember her voice.' : 'You wake beside the well with the taste of light in your mouth. Already the dream is fading. A song. A name. Gone.'));
 };
 let STORY = storySlides();
 const CREDITS: [string, string][] = [

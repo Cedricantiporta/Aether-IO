@@ -22,6 +22,8 @@ Read first: `CLAUDE.md`, `docs/HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/RUN_DE
 
 - 2026-10-31 Extended hero kit: 10 new skills (2 per class, keys 4/5, class Lv 12/18) in engine/systems/heroExtra.ts; details in docs/HANDOFF.md 3.5. spGainAt raised in the 20s/30s/40s (sp4 migration).
 
+- 2026-11-03 Multi-boss HUD: `world.bosses[4]` slots (bossList.ts) + `ui/hud/BossStack.tsx`: one slim bar per extra live boss under the main bar, floating bars over each head, no protocol change (guest derives from enemies). Secret final boss: the Lich King replaces the Void Herald ~20% of Adventure runs (room-seed roll, never Tower / Waves / Trials; `bossKitLich.ts`: 8 skills, two forms, Phylactery tether = immune until the jar is smashed or the cord is cut). Secret achievement + hidden codex entry. QA hooks `debugLich()` / `debugHerald()` / `debugGate(-1)`; details in HANDOFF (Lich King section).
+
 ## Open
 - Eggs: owner's "eggs without a container" request is unclear (farm egg nests vs pet icons).
 - Tower milestone prizes still include gear/pets while the UI says crystals only.

@@ -27,7 +27,8 @@ import {
   spawnTelegraphCircle, spawnTelegraphLine,
 } from './enemies';
 import { isBoss2, updateBoss2, bossView } from './bosses2';
-import { formName } from './bossForms';
+import { formName, isKing, lk, KING_NAME, KING_TITLE } from './bossForms';
+import { updateKing } from './bossKitLich';
 import { bossWarded, proxTick, proxRate, proxPressure, bossNear, closeDue, closeUsed, proxBegin } from './bossMech';
 import { bp } from './bossPhaseState';
 import { spawnRune } from './voidFx';
@@ -62,11 +63,14 @@ function setVel(e: Enemy, ux: number, uz: number, spd: number): void {
 function stop(e: Enemy): void { e.vel.set(0, 0, 0); }
 
 function syncHud(e: Enemy): void {
+  const main = world.director.bossId;
+  if (main >= 0 && main !== e.id) { const m = world.enemies[main]; if (m.active && m.boss && m.state !== 'DYING') return; }   // (Endless Waves: only the room's main boss writes the main bar; the others have their own slots, bossList.ts)
   const b = world.boss;
   const names = BOSS_NAMES[e.kind as BossKind];
   b.active = e.state !== 'DYING';
-  b.name = formName(e, names.name);   // (a second form adds its suffix, bossForms.ts)
-  if (!b.final) b.title = bossWarded(e) ? `INVULNERABLE - ${bp.name}` : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
+  b.name = formName(e, isKing(e) ? KING_NAME : names.name);   // (a second form adds its suffix, bossForms.ts)
+  if (isKing(e)) b.title = lk.tether ? 'INVULNERABLE - break the soul tether!' : KING_TITLE;
+  else if (!b.final) b.title = bossWarded(e) ? `INVULNERABLE - ${bp.name}` : e.kind === 'BOSS_HYDRA' && bossView.headsDead < 5 ? `Shielded by its heads (${5 - bossView.headsDead}/5)` : names.title;   // (the final fight keeps 'Lord of the Void'; Ignar's second form)
   b.hp = e.hp;
   b.maxHp = e.maxHp;
   b.phase = e.phase;
@@ -78,6 +82,7 @@ function checkPhase(e: Enemy): void {
   if (ph <= e.phase) return;
   e.phase = ph;
   events.emit('bossPhase', { phase: ph });
+  if (isKing(e)) { events.emit('shake', { amount: 0.6 }); useGameStore.getState().addNotification(ph === 1 ? 'The Lich King grows furious!' : 'The Lich King is ENRAGED!', '#ef4444', 'BOSS'); e.attackCd = Math.min(Math.max(e.attackCd, 1.4), 1.6); return; }
   events.emit('shake', { amount: 0.6 });
   useGameStore.getState().addNotification(
     ph === 1 ? `${BOSS_NAMES[e.kind as BossKind].name} grows furious!` : `${BOSS_NAMES[e.kind as BossKind].name} is ENRAGED!`,
@@ -100,7 +105,7 @@ export function updateBoss(e: Enemy, dt: number, distToPlayer: number): void {
   proxTick(e, dt);   // proximity pressure (bossMech): close skills only with someone near, more often the longer they stay
   if (dodgeBoss(e, dt)) return;   // dodge mechanics (dodgeMechs.ts): i-frame rings, beams, gatlings, trails own the boss while they run
   if (e.kind === 'BOSS_GOLEM') { if (kitOwns(e)) gorathKit(e, dt, distToPlayer); else golem(e, distToPlayer); }   // Gorath's designed kit (bossKitGorath.ts); extra Goraths (Endless Waves) keep the old cycle
-  else if (e.kind === 'BOSS_LICH') lich(e, dt, distToPlayer);
+  else if (e.kind === 'BOSS_LICH') { if (isKing(e)) updateKing(e, dt, distToPlayer); else lich(e, dt, distToPlayer); }   // the secret final boss has his own kit (bossKitLich.ts)
   else if (e.kind === 'BOSS_TREANT' && kitOwns(e)) treantAI(e, dt, distToPlayer);   // Elderroot's designed kit (bossKitTreant.ts); extra Elderroots keep bosses2.treant()
   else updateBoss2(e, dt, distToPlayer); // Elderroot, Mire Hydra, Glacius, Ignar, Void Herald (bosses2.ts)
 }

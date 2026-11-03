@@ -10,7 +10,7 @@ export interface Discovered { items: string[]; pets: string[]; skills: string[];
 export const emptyDiscovered = (): Discovered => ({ items: [], pets: [], skills: [], loot: [], monsters: [] });
 export const CODEX_REWARD_GEMS = 50;
 
-export interface MonsterEntry { key: string; name: string; title: string; kind: EnemyKind; tier: 'MONSTER' | 'ELITE' | 'MINI-BOSS' | 'BOSS'; region: string; trick: string; color: number }
+export interface MonsterEntry { key: string; name: string; title: string; kind: EnemyKind; tier: 'MONSTER' | 'ELITE' | 'MINI-BOSS' | 'BOSS'; region: string; trick: string; color: number; /** not listed until discovered, not counted for the codex reward */ secret?: boolean }
 
 const TRICKS: Partial<Record<EnemyKind, string>> = {
   SLIME: 'Spits a goo puddle that slows you.', GOBLIN: 'Lobs a firebomb that leaves burning ground.', BAT: 'Screeches, disorienting everything nearby.',
@@ -69,6 +69,7 @@ export const CODEX_MONSTERS: MonsterEntry[] = [
   ...BOSS_ROTATION.map((k): MonsterEntry => ({
     key: k, name: BOSS_NAMES[k].name, title: BOSS_NAMES[k].title, kind: k, tier: 'BOSS', region: bossBiome(k), trick: TRICKS[k] ?? '', color: ENEMY_DEFS[k].color,
   })),
+  { key: 'BOSS_LICHKING', name: 'The Lich King', title: 'Sovereign of the Undying Throne', kind: 'BOSS_LICH', tier: 'BOSS', region: 'The Void Throne (secret)', trick: 'Immune while his soul jar tethers him: cut the cord or smash the jar. Bone spirals, homing skulls, a sweeping soul beam, bone cages and raised dead; he returns in a Soulfire Form.', color: 0x3dffb4, secret: true },
 ];
 
 /** Item/pet/loot discovery key: the template name (instances have unique ids, names are stable). */
@@ -79,7 +80,7 @@ export const CODEX_KEYS: Record<CodexTab, string[]> = {
   pets: [...new Set(PETS_POOL.map((i) => i.name))],
   skills: Object.keys(SKILLS_INFO),
   loot: LOOT.map((l) => l.name),
-  monsters: CODEX_MONSTERS.map((m) => m.key),
+  monsters: CODEX_MONSTERS.filter((m) => !m.secret).map((m) => m.key),
 };
 
 /** Monster key for a bossSpawn event name (boss or mini-boss). */

@@ -9,6 +9,7 @@ import {
   Mesh, MeshBasicMaterial, MeshStandardMaterial, PlaneGeometry, ShaderMaterial, SphereGeometry, TorusGeometry, Group,
 } from 'three';
 import { world } from '../engine/world';
+import { lk } from '../engine/systems/bossForms';
 import {
   waves, props, portals, echoes, breath, arena, chill,
   PROP_ROOT, PROP_ICE, PROP_PILLAR, PROP_GLOB, PROP_THORN,
@@ -53,7 +54,7 @@ void main(){
   #include <colorspace_fragment>
 }`;
 const VEIL_VS = `varying vec2 vQ; void main(){ vQ = position.xz * 2.0; gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }`;
-const VEIL_FS = `uniform float uTime; uniform float uR; varying vec2 vQ;
+const VEIL_FS = `uniform float uTime; uniform float uR; uniform vec3 uA; uniform vec3 uB; varying vec2 vQ;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
 void main(){
@@ -62,7 +63,7 @@ void main(){
   float out_ = smoothstep(r, r + 0.01, d);
   float n = noise(vQ * 90.0 + uTime * 0.6) * 0.6 + noise(vQ * 220.0 - uTime) * 0.4;
   float a = out_ * (0.34 + 0.2 * n) + edge * (0.65 + 0.35 * sin(uTime * 6.0));
-  vec3 c = mix(vec3(0.16, 0.03, 0.3), vec3(0.85, 0.45, 1.5), edge);
+  vec3 c = mix(uA, uB, edge);
   if (a < 0.01) discard;
   gl_FragColor = vec4(c, clamp(a, 0.0, 0.85));
   #include <tonemapping_fragment>
@@ -105,7 +106,7 @@ export function BossFx() {
 
     // Void arena veil (one big quad centred on the arena)
     const vg = new PlaneGeometry(1, 1); vg.rotateX(-Math.PI / 2);
-    const veilMat = new ShaderMaterial({ vertexShader: VEIL_VS, fragmentShader: VEIL_FS, uniforms: { uTime: { value: 0 }, uR: { value: 0.5 } }, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const veilMat = new ShaderMaterial({ vertexShader: VEIL_VS, fragmentShader: VEIL_FS, uniforms: { uTime: { value: 0 }, uR: { value: 0.5 }, uA: { value: new Color(0.16, 0.03, 0.3) }, uB: { value: new Color(0.85, 0.45, 1.5) } }, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     const veil = new Mesh(vg, veilMat); veil.frustumCulled = false; veil.renderOrder = 2; veil.visible = false; group.add(veil);
     return { group, rings, iW, iC, ringMat, root, iceSet, thorn, pillar, core, glob, portalRing, portalIn, portalDisc, echo, veil, veilMat };
   }, []);
@@ -217,6 +218,7 @@ export function BossFx() {
       if (arena.shrink) {
         const half = arena.r + 160; // the quad reaches 160 units past the ring
         v.position.set(arena.cx, 0.13, arena.cz); v.scale.set(half * 2, 1, half * 2);
+        if (lk.on) { sys.veilMat.uniforms.uA.value.setRGB(0.03, 0.2, 0.14); sys.veilMat.uniforms.uB.value.setRGB(0.7, 1.5, 1.0); } else { sys.veilMat.uniforms.uA.value.setRGB(0.16, 0.03, 0.3); sys.veilMat.uniforms.uB.value.setRGB(0.85, 0.45, 1.5); }   // (the Undying Throne: the Herald's ring in bone / green)
         sys.veilMat.uniforms.uTime.value = t; sys.veilMat.uniforms.uR.value = (arena.hard && arena.safeR > 0 ? arena.safeR : arena.r) / half;   // (the Herald: the veil + glowing rim start at the SAFE radius, the burning void)
       }
     }

@@ -522,6 +522,15 @@ export interface BossHud {
   layers: number;
 }
 
+/** One bar slot of the multi-boss HUD (engine/systems/bossList.ts): every live non-mini boss gets a stable slot while it lives; a dead boss's slot fades for `fade` seconds. */
+export interface BossSlot {
+  id: number; kind: string; active: boolean; fade: number;
+  name: string; title: string; hp: number; maxHp: number; layers: number;
+  shield: number; shieldMax: number; ward: boolean;
+  /** screen anchor above the boss's head (CameraRig) for the floating bar */
+  sx: number; sy: number; onScreen: boolean;
+}
+
 export interface RunStats {
   kills: number;
   eliteKills: number;
