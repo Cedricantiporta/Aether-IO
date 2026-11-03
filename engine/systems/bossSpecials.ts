@@ -21,6 +21,7 @@ import { TRICK, raiseWallAt, spawnHostileZone } from './tricks';
 import { mfx, spawnRune } from './voidFx';
 import { clampToVoid } from './bossFx';
 import { bp } from './bossPhaseState';
+import { isKing } from './bossForms';
 import { KB } from './combat';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
@@ -73,7 +74,7 @@ export const prism: { zone: import('../types').Zone | null } = { zone: null };
 hooks.onCleanse = () => { if (tether.active) { tether.active = false; events.emit('trick', { pos: world.player.pos.clone(), kind: 'CHAINS_BREAK', radius: 2 }); } };
 
 export function hasSpecial(e: Enemy): boolean {
-  return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId); }
+  return (e.boss || e.mini) && !!LIST[e.kind] && (e.kind !== 'SPLITTER' || e.id === slimeKingId) && !isKing(e); }   // (the Lich King has his own kit, bossKitLich.ts)
 export function initSpecial(e: Enemy): void { e.spCd = 3.5 + Math.random() * 3; e.spKind = 0; e.spT = 0; e.spStep = 0; }
 
 function clampArena(v: Vector3, margin: number): void {

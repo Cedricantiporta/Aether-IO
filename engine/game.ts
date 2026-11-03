@@ -29,6 +29,8 @@ import { updateVillage, placeVillageNodes, restoreInterior, bedWake, wakeInBed }
 import { useUiStore } from '../ui/uiStore';
 import { device } from './device';
 import { updateEnemies, updateEnemyProjectiles } from './systems/enemies';
+import { updateBossList } from './systems/bossList';
+import { tickKingFrame } from './systems/bossKitLich';
 import { updateRoomEvents } from './systems/roomEvents';
 import { updateBiomeHazards } from './systems/biomeHazards';
 import { updateMinions } from './systems/minions';
@@ -251,7 +253,8 @@ export function updateGame(rawDt: number): void {
   rebuildEnemyGrid();
   updateDirector(dt);
   if (coopRoom.guest) coopRoom.mirror?.(dt);   // co-op guest: the monsters are the host's (net/coopGuest.ts): interpolate the mirror, no AI
-  else { updateEnemies(dt); updateRoomEvents(dt); updateBiomeHazards(dt); }
+  else { updateEnemies(dt); tickKingFrame(dt); updateRoomEvents(dt); updateBiomeHazards(dt); }
+  updateBossList(dt);   // multi-boss HUD slots (bossList.ts; host and guest)
   updateMinions(dt);
   if (!coopRoom.guest) updateEnemyProjectiles(dt);
   updateProjectiles(dt);

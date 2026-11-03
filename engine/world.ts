@@ -6,7 +6,7 @@
 import { Vector3 } from 'three';
 import type {
   Enemy, Projectile, GroundFx, EnemyProjectile, Zone, Pickup, Obstacle, Crate,
-  PlayerRuntime, DirectorState, RoomState, BossHud, RunStats, CameraState, InputState,
+  PlayerRuntime, DirectorState, RoomState, BossHud, BossSlot, RunStats, CameraState, InputState,
 } from './types';
 import { SpatialGrid } from './grid';
 
@@ -178,6 +178,9 @@ export const world = {
   boss: { active: false, interrupt: 0, interruptOn: false, interruptLabel: '', stagger: 0, staggered: false, ability: '', abilityT: 0, name: '', title: '', hp: 0, maxHp: 1, phase: 0, sx: 0, sy: 0, onScreen: false, final: false, stage: 1, shieldCd: 0, shield: 0, shieldMax: 0, layers: 1 } as BossHud,
   /** Dark hero squad: a small hp bar over each hero's head (darkHero.ts fills hp, CameraRig the screen anchor, ui/hud/SquadBars draws them). */
   darkBars: [0, 1, 2, 3, 4, 5].map(() => ({ active: false, id: -1, name: '', hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
+  /** Multi-boss HUD slots (bossList.ts; Endless Waves stacks bosses): index = stable slot, `bossLive` = how many are active. */
+  bosses: [0, 1, 2, 3].map(() => ({ id: -1, kind: '', active: false, fade: 0, name: '', title: '', hp: 0, maxHp: 1, layers: 1, shield: 0, shieldMax: 0, ward: false, sx: 0, sy: 0, onScreen: false })) as BossSlot[],
+  bossLive: 0, bossMain: -1,
   /** The Void Herald's illusions wear a copy of his boss bar: screen anchors + hp (filled by CameraRig each frame). */
   illusionBars: [0, 1, 2, 3].map(() => ({ active: false, hp: 0, maxHp: 1, sx: 0, sy: 0, onScreen: false })),
   run: { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 } as RunStats,
@@ -279,7 +282,7 @@ export function clearWorld(): void {
   world.itemPickupsVersion++;
   Object.assign(world.player, makePlayerRuntime(), { aim: world.player.aim, pos: world.player.pos.set(0, 0, 0) });
   world.village.sit.on = false; world.village.ride.on = false; world.village.ride.horse = -1; world.village.ride.dashT = 0; world.village.ride.dashCd = 0; world.village.ride.moveT = 0;
-  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1; world.boss.layers = 1;
+  world.boss.active = false; world.boss.staggered = false; world.boss.stagger = 0; world.boss.final = false; world.boss.stage = 1; world.boss.layers = 1; for (const q of world.bosses) { q.id = -1; q.active = false; q.fade = 0; } world.bossLive = 0; world.bossMain = -1;
   for (const w of world.walls) w.active = false;
   world.camera.trauma = 0;
   Object.assign(world.run, { kills: 0, eliteKills: 0, bossKills: 0, damageDealt: 0, damageTaken: 0, goldEarned: 0, xpEarned: 0, time: 0, highestHit: 0 });

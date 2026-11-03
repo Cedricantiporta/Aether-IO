@@ -248,6 +248,7 @@ export function bossCamZoom(k: EnemyKind, sizeMul = 1): number {
   switch (k) {
     case 'BOSS_GOLEM': case 'BOSS_TREANT': case 'BOSS_HYDRA': case 'BOSS_WYRM': case 'BOSS_WARMACH': case 'BOSS_WARLORD': case 'BOSS_VOID':
       return Math.min(2.1, 1 + 0.12 * ENEMY_DEFS[k].radius * sizeMul);   // (sizeMul = the live body radius / the def radius: a transforming boss's smaller first form zooms in, the bigger second form out)
+    case 'BOSS_LICH': return sizeMul > 1.2 ? Math.min(2.1, 1 + 0.2 * ENEMY_DEFS[k].radius * sizeMul) : 1;   // (only the Lich King's big body; the crypt mini-boss Lich stays at 1)
     default: return 1;
   }
 }

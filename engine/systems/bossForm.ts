@@ -11,10 +11,11 @@ import type { Enemy } from '../types';
 import { useGameStore } from '../../store';
 import { BOSS_SKILL_MUL, isBossAdd } from '../enemyDefs';
 import { hooks } from './hooks';
-import { bf, FORMS, BEAT_T, SWAP_T, type BossFormDef } from './bossForms';
+import { bf, FORMS, BEAT_T, SWAP_T, isKing, type BossFormDef } from './bossForms';
 import { bp } from './bossPhaseState';
 import { S as B2 } from './bosses2';
 import { bossMechDied } from './bossMech';
+import { kingReset } from './bossKitLich';
 import { clearDecoys } from './bossSpecials';
 import { clearVoidFx, spawnRune } from './voidFx';
 import { BT, WAVE_VOID, WAVE_FIRE, waves, spawnWave } from './bossFx';
@@ -29,7 +30,7 @@ const pwr = (e: Enemy): number => Math.max(e.projectileDamage, e.contactDamage *
 hooks.bossFormDeath = (e: Enemy): boolean => {
   if (bf.beat[e.id] > 0) { e.hp = Math.min(e.hp, 0); return true; }   // (nothing can finish it mid-beat; it is warded anyway)
   const def = FORMS[e.kind];
-  if (!def || !e.boss || e.id !== B2.id || bf.form[e.id] !== 0) return false;
+  if (!def || !e.boss || e.id !== B2.id || bf.form[e.id] !== 0 || (e.kind === 'BOSS_LICH' && !isKing(e))) return false;
   startBeat(e, def);
   return true;
 };
@@ -49,6 +50,7 @@ function startBeat(e: Enemy, def: BossFormDef): void {
     events.emit('enemyDeath', { pos: a.pos, kind: a.kind, elite: false, boss: false, scale: a.scale, poof: true });
   }
   if (e.kind === 'BOSS_VOID') { clearDecoys(); clearVoidFx(); }
+  if (isKing(e)) kingReset(e);   // the soul jars and skeleton guards vanish with form 1
   for (const w of waves) w.active = false;
   const zs = world.zones;
   for (let i = 0; i < zs.length; i++) { const z = zs[i]; if (z.active && z.hostile && z.trick >= BT.VISUAL) z.active = false; }
@@ -61,7 +63,7 @@ function startBeat(e: Enemy, def: BossFormDef): void {
   const z = spawnTelegraphCircle(e.pos.x, e.pos.z, 12, SWAP_T, 0, def.aura);   // get clear of the coming nova (the visual only; the wave resolves the hit)
   if (z) z.trick = BT.VISUAL;
   spawnRune(e.pos.x, e.pos.z, 6, BEAT_T);
-  world.boss.ability = e.kind === 'BOSS_VOID' ? 'Final Form' : 'Burning Form'; world.boss.abilityT = BEAT_T;
+  world.boss.ability = e.kind === 'BOSS_VOID' ? 'Final Form' : isKing(e) ? 'Soulfire Form' : 'Burning Form'; world.boss.abilityT = BEAT_T;
 }
 
 /** Per-frame while a beat runs (enemies.updateEnemies calls it before any AI). */
@@ -80,7 +82,7 @@ export function tickFormBeat(e: Enemy, dt: number): void {
   if (bf.beat[e.id] <= 0) {   // the new form takes the field
     bp.xformId = -1;
     e.attackCd = 1.2; e.stateT = 0;
-    if (e.kind === 'BOSS_VOID') B2.vformT = 0; else B2.formT = 0;
+    if (e.kind === 'BOSS_VOID' || isKing(e)) B2.vformT = 0; else B2.formT = 0;
   }
 }
 
@@ -99,8 +101,9 @@ function swapForm(e: Enemy, def: BossFormDef): void {
   bp.xformId = e.id;
   B2.phase = 0; B2.cycle = 0; B2.guardT = 0;
   if (e.kind === 'BOSS_VOID') { B2.vform = 2; B2.vformT = 0; }
+  else if (isKing(e)) { B2.vform = 2; B2.vformT = 0; kingReset(e); }
   else { B2.enraged = true; B2.cleaveCd = 0; B2.formT = 0; }
-  const fire = e.kind !== 'BOSS_VOID';
+  const fire = e.kind === 'BOSS_WARLORD';
   spawnWave(e.pos.x, e.pos.z, fire ? 16 : 18, fire ? 22 : 26, fire ? 1.4 : 1.8, pwr(e) * (fire ? 0.8 : 1.1), fire ? WAVE_FIRE : WAVE_VOID, def.aura, e.radius);
   events.emit('shockwave', { pos: e.pos.clone(), radius: 24, color: def.auraAlt });
   events.emit('shockwave', { pos: e.pos.clone(), radius: 14, color: def.aura });

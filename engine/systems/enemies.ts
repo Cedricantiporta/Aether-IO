@@ -51,8 +51,9 @@ import { updateBossMech, bossMechDied, tickBossStrikes, bossMending, bossWarded 
 import { tickPhase, phaseOwns, phaseDrive } from './bossPhases';
 import { bp } from './bossPhaseState';
 import { addChill, frostHit, burnHit, voidRotHit } from './bossFx';
+import { kingDied } from './bossKitLich';
 import { initBoss2, isBoss2, bossDied2, saplingDied, aiSapling, aiHydraHead, tickHydraHeads } from './bosses2';
-import { bf, formColor, formTel, setFormCaster } from './bossForms';
+import { bf, formColor, formTel, setFormCaster, isKing } from './bossForms';
 import { tickFormBeat } from './bossForm';
 import { spawnPickup, dropCrystals } from './pickups';
 import { dropLoot } from './loot';
@@ -197,7 +198,7 @@ export function requestYaw(yaw: number): void {
 export function isUntargetable(e: Enemy): boolean {
   if (e.state === 'SPAWN' || e.hideT > 0 || e.pos.y > 2) return true;   // (y > 2: up in the air, Belly Flop)
   if (e.kind === 'WRAITH') return e.state === 'WINDUP';
-  return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK');
+  return e.kind === 'BOSS_LICH' && e.pattern === 2 && (e.state === 'WINDUP' || e.state === 'ATTACK') && !isKing(e);
 }
 
 /** HALLS rooms (owner): ordinary monsters idle until the hero comes within HALLS_AGGRO metres (or hurts one); once awake they stay awake, and wake packmates within 7 m. */
@@ -469,6 +470,7 @@ export function spawnEnemy(
 
   d.aliveCount++;
   events.emit('spawn', { pos: e.pos, kind, elite });
+  if (boss) { bf.form[e.id] = 0; bf.beat[e.id] = 0; }
   if (boss && isBoss2(kind)) initBoss2(e); // wave 30-70 bosses: reset their AI state (Mire Hydra spawns its heads here)
   return e;
 }
@@ -553,6 +555,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (e.kind === 'HUMAN_BOSS') humanBossDied(e);
   if (e.boss) {
     bossDied2(e);
+    if (isKing(e)) kingDied(e);
     bossMechDied(e);
     clearDecoys();
     world.boss.active = false;
@@ -1663,9 +1666,11 @@ function updateEnemy(e: Enemy): void {
   const fuseBurning = e.kind === 'BOMBER' && e.state === 'WINDUP';
   desiredYaw = Math.atan2(tdx, tdz); heroYaw = desiredYaw;
   if (e.boss || e.pattern === MINI.flag || e.pattern === MINI.slamFlag) {   // the boss bar follows ONE boss / mini (Endless Waves stacks several)
+    const mb = world.director.bossId >= 0 ? world.enemies[world.director.bossId] : null;
+    const extraBoss = e.boss && !e.mini && !!mb && mb.active && mb.boss && !mb.mini && mb.state !== 'DYING' && mb.id !== e.id;   // another boss of a multi-boss room: its bar lives in world.bosses
     const o = barOwner >= 0 ? world.enemies[barOwner] : null;
-    if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) { barOwner = e.id; world.boss.shieldMax = 0; }
-    if (barOwner === e.id) {
+    if (extraBoss) { /* not the main bar */ } else if (!o || !o.active || o.state === 'DYING' || !(o.boss || o.mini) || (e.boss && !o.boss)) { barOwner = e.id; world.boss.shieldMax = 0; }
+    if (!extraBoss && barOwner === e.id) {
       const b = world.boss; if (!e.boss) b.active = true; b.hp = e.hp; b.maxHp = e.maxHp;
       interruptView(e);
       b.shield = e.shield > 1 ? e.shield : 0;   // (shield 1 = the invincible ward: no bar)
@@ -1691,7 +1696,7 @@ function updateEnemy(e: Enemy): void {
   else if (bp.on && phaseOwns(e)) { desiredYaw = phaseDrive(e, dt); }   // an invulnerable phase runs this enemy (boss / its slimes / spare heads)
   else if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
   else if (dodging) { /* velocity set by tickDodge */ }   // free-hit window: stands there panting (no attacks, no new casts)
-  else if (e.boss && !locked && e.state !== 'SPAWN' && updateBossMech(e, dt)) { stop(e); }
+  else if (e.boss && !locked && e.state !== 'SPAWN' && !isKing(e) && updateBossMech(e, dt)) { stop(e); }
   else if (e.mini && e.kind === 'SPLITTER' && e.state !== 'SPAWN' && (hooks.phaseCheck(e), false)) { /* the Slime King's phase starts here */ }   // healing channel: the boss stands still
   else if (!locked || fuseBurning) {
     // early-biome bosses / champions act a little slower: longer wind-ups + attacks and longer gaps between skills

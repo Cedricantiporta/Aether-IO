@@ -71,8 +71,8 @@ const AchRow: React.FC<{ a: Achievement; value: number; unlocked: boolean; claim
   <div className={`gl-row ${unlocked && !claimed ? 'done' : ''} ${unlocked && claimed ? 'claimed' : ''}`} data-testid="ach-row" data-unlocked={unlocked}>
     <div className="gl-mark"><span>{unlocked ? '★' : '◆'}</span></div>
     <div className="flex-1 min-w-0">
-      <div className="gl-name">{a.name}{a.title && <span className="gl-sub ml-2" style={{ color: unlocked ? '#f1d58e' : undefined }}>Title: {a.title}</span>}</div>
-      <div className="gl-sub">{a.desc}</div>
+      <div className="gl-name">{a.secret && !unlocked ? '???' : a.name}{a.title && !(a.secret && !unlocked) && <span className="gl-sub ml-2" style={{ color: unlocked ? '#f1d58e' : undefined }}>Title: {a.title}</span>}</div>
+      <div className="gl-sub">{a.secret && !unlocked ? 'A secret achievement.' : a.desc}</div>
       {!unlocked && <><Bar f={value / a.target} /><div className="gl-sub mt-[.2rem]">{fmt(Math.min(value, a.target))} / {fmt(a.target)}</div></>}
     </div>
     <div className="flex flex-col items-end gap-1 shrink-0">

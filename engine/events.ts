@@ -78,6 +78,7 @@ export interface GameEvents {
   roomEnter: { biome: number; index: number; type: RoomType; boss: boolean; name: string };
   portalsOpen: {};
   biomeClear: { biome: number };
+  secretBoss: { id: number };                   // a secret boss fell (7 = the Lich King): secret achievement (goalsTracker)
   captiveFreed: {};                             // a RESCUE room's captive was set free (main story rescue steps)
   gameEnding: Record<string, never>;            // the Void Herald (final boss) defeated: ending + credits
   openSetOut: { mode: 'ADVENTURE' | 'TOWER'; /** the tower hub tab to open on (HUD corner icons) */ tab?: 'RUN' | 'DAILY' | 'WAVES' | 'ASC'; /** opened from the HUD, not at the door: stays open when the hero is far away */ remote?: boolean };  // town gate: Adventure (+ Ascension) / the Endless Tower building
