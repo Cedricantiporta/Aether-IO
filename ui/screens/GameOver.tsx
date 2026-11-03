@@ -24,6 +24,7 @@ const Row: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNo
 
 export const GameOver: React.FC = () => {
   const { run, stats, resetGame: reset, hero } = useGameStore(useShallow((s) => ({ run: s.lastRun, stats: s.gameStats, resetGame: s.resetGame, hero: s.hero })));
+  const ankhsLeft = useGameStore((s) => s.inventory.reduce((n, i) => (i.type === 'REVIVE' ? n + (i.quantity ?? 1) : n), 0));
   const victory = !!run?.victory;
   // after a defeat (not a victory) the town shows the "To do in town" popup once the hero spawns there
   // (owner, Hades-style) an adventure death never lands in the town square: straight into the dream (if due) or awake in bed at home
@@ -60,6 +61,7 @@ export const GameOver: React.FC = () => {
               <div className="rpg-frame px-3 py-1 go-rows">
                 {run.towerFloor ? <Row delay={.46} icon={<Crown size={16} />} label="Tower floor cleared" value={run.towerFloor} /> : null}
                 <Row delay={.5} icon={<Crown size={16} />} label="Depth reached" value={run.wave} record={waveRecord} />
+                <Row delay={.54} icon={<Zap size={16} />} label="Ankhs of Life left" value={ankhsLeft} />
                 <Row delay={.58} icon={<Swords size={16} />} label="Enemies slain" value={run.kills.toLocaleString()} />
                 <Row delay={.66} icon={<Flame size={16} />} label="Elites / bosses" value={`${run.eliteKills} / ${run.bossKills}`} />
                 <Row delay={.74} icon={<Zap size={16} />} label="Damage dealt" value={Math.round(run.damageDealt).toLocaleString()} />
