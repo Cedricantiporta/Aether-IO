@@ -91,7 +91,7 @@ const meteorOpts: DamageOpts = { kind: 'FIRE', source: 'PLAYER', knockback: 0.8,
 const volleyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', down: 1.2 };                     // Storm of a Thousand Arrows final volley
 const whirlOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true };
 const elecBreak: DamageOpts = { kind: 'LIGHTNING', source: 'PLAYER', armorBreak: true };
-const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9, down: 1.2 };   // Knight Holy Charge: knocks aside AND down
+const chargeOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', knockback: 0.9, down: 1.2, noPushHeavy: true };   // Knight Holy Charge: knocks aside AND down
 const holyOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER', armorBreak: true, knockback: 0.6, down: 1.0 };   // Judgment rays: stun + knock down
 const aimTmp = new Vector3();
 const wardTmp = new Vector3();
@@ -1143,7 +1143,7 @@ export function updateAbilities(dt: number): void {
       const lv = a.leapLv;
       const R = ((a.leapDash ? 7 : 9) + 0.5 * (lv - 1)) * titanScale();
       stunSt.duration = a.leapDash ? 0.6 : 1;
-      leapOpts.down = a.leapDash ? 1.2 : 1.4;
+      leapOpts.down = a.leapDash ? 1.2 : 1.4; leapOpts.noPushHeavy = a.leapDash;   // (owner 2026-11-03: a dash never shoves bosses / mini-bosses / elites / big enemies)
       damageEnemiesInRadius(p.pos.x, p.pos.z, R, a.leapDmg, leapOpts, stunSt);
       p.rageT = Math.max(p.rageT, (a.leapDash ? 1.5 + 0.5 * lv : 3 + lv) + st.stats.rageBonus);
       a.leapDash = false;

@@ -60,6 +60,8 @@ export interface DamageOpts {
   crit?: boolean;
   knockDir?: Vector3;
   knockback?: number;
+  /** (owner 2026-11-03) a DASH: never shoves bosses, mini-bosses, elites or big (radius >= 1.6) enemies (they still take damage / the dash's down rules) */
+  noPushHeavy?: boolean;
   dot?: boolean;
   source?: 'PLAYER' | 'PET';
   /** Launch distance (units): big knockback. With `slam` damage if the enemy hits an obstacle / crystal wall. */
@@ -452,7 +454,7 @@ function guestHit(e: Enemy, amount: number, o: DamageOpts): void {
   }
   world.run.damageDealt += amount;
   e.hitFlash = o.dot ? Math.max(e.hitFlash, 0.35) : 1;
-  const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE : true;
+  const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE && !(o.noPushHeavy && (e.boss || e.mini || e.elite || e.radius >= 1.6)) : true;
   coopRoom.sendHit(e, amount, o, knockRoll, p.pos.x, p.pos.z);
 }
 
