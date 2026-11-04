@@ -122,6 +122,45 @@ export const petEvolveCost = (p: Pick<Item, 'rarity' | 'petStage'>): EvolveCost 
   return { gold: gold * GOLD_SCALE, shards };
 };
 
+// ---- Evolved perk (owner 2026-11-04): from Stage II on a pet gets an ADDITIONAL ability on top of its own skill (x1.5 power at Stage III).
+// Data-driven, keyed by pet name; run by engine/systems/pets.ts (evolvedPerkTick) in fights only. HEAL = % of max HP, SHIELD = absorb % of max HP,
+// NOVA = an area burst round the pet (dmg = x its skill damage) that may carry a status and heal the hero.
+export interface EvolvedPerk {
+  name: string; kind: 'HEAL' | 'SHIELD' | 'NOVA'; cd: number;
+  /** HEAL / SHIELD: fraction of max HP. NOVA: damage multiplier. */
+  pow: number;
+  dmgType?: 'PHYSICAL' | 'FIRE' | 'ICE' | 'LIGHTNING' | 'MAGIC';
+  status?: 'BURN' | 'SLOW' | 'STUN' | 'POISON';
+  /** NOVA: heals the hero this fraction of max HP. */
+  heal?: number;
+  desc: string;
+}
+export const PET_EVOLVED_PERK: Record<string, EvolvedPerk> = {
+  'Green Blob': { name: 'Gooey Regrowth', kind: 'HEAL', cd: 10, pow: 0.05, desc: 'Heals you for 5% of your max HP every 10s in a fight.' },
+  'Vampire Bat': { name: 'Blood Nova', kind: 'NOVA', cd: 9, pow: 1.2, dmgType: 'MAGIC', heal: 0.03, desc: 'Every 9s a blood burst hurts nearby enemies and heals you for 3% max HP.' },
+  'Light Fairy': { name: 'Sparkle Ward', kind: 'SHIELD', cd: 14, pow: 0.12, desc: 'Every 14s wraps you in a shield worth 12% of your max HP.' },
+  'Spirit Wolf': { name: 'Moon Howl', kind: 'NOVA', cd: 8, pow: 1.4, dmgType: 'MAGIC', status: 'SLOW', desc: 'Every 8s a howl blasts and slows nearby enemies.' },
+  'Gold Dragon': { name: 'Ember Roar', kind: 'NOVA', cd: 9, pow: 1.6, dmgType: 'FIRE', status: 'BURN', desc: 'Every 9s a fiery roar burns nearby enemies.' },
+  'Pet Rock': { name: 'Rock Solid', kind: 'SHIELD', cd: 12, pow: 0.15, desc: 'Every 12s it hardens into a shield worth 15% of your max HP.' },
+  'Iron Golem': { name: 'Quake Stomp', kind: 'NOVA', cd: 10, pow: 1.8, dmgType: 'PHYSICAL', status: 'STUN', desc: 'Every 10s a stomp damages and stuns nearby enemies.' },
+  'Phoenix': { name: 'Warm Feathers', kind: 'HEAL', cd: 14, pow: 0.08, desc: 'Heals you for 8% of your max HP every 14s in a fight.' },
+  'Celestial Wisp': { name: 'Star Shower', kind: 'NOVA', cd: 8, pow: 1.5, dmgType: 'LIGHTNING', status: 'STUN', desc: 'Every 8s starlight rains down and dazes nearby enemies.' },
+  'Ember Fox': { name: 'Flame Burst', kind: 'NOVA', cd: 8, pow: 1.3, dmgType: 'FIRE', status: 'BURN', desc: 'Every 8s a puff of flame burns nearby enemies.' },
+  'Frost Owl': { name: 'Frost Ring', kind: 'NOVA', cd: 9, pow: 1.3, dmgType: 'ICE', status: 'SLOW', desc: 'Every 9s a ring of frost slows nearby enemies.' },
+  'Mimic Chest': { name: 'Lid Slam', kind: 'NOVA', cd: 10, pow: 1.6, dmgType: 'PHYSICAL', status: 'STUN', desc: 'Every 10s it slams its lid and stuns nearby enemies.' },
+  'Storm Sprite': { name: 'Static Pulse', kind: 'NOVA', cd: 8, pow: 1.3, dmgType: 'LIGHTNING', status: 'STUN', desc: 'Every 8s a static pulse zaps and stuns nearby enemies.' },
+  'Shield Turtle': { name: 'Shell Fortress', kind: 'SHIELD', cd: 16, pow: 0.18, desc: 'Every 16s an extra shield worth 18% of your max HP.' },
+  'Shadow Cat': { name: 'Shadow Burst', kind: 'NOVA', cd: 8, pow: 1.4, dmgType: 'MAGIC', status: 'SLOW', desc: 'Every 8s a shadow burst hurts and slows nearby enemies.' },
+  'Crystal Golemling': { name: 'Crystal Spikes', kind: 'NOVA', cd: 9, pow: 1.5, dmgType: 'ICE', status: 'STUN', desc: 'Every 9s crystal spikes pop up and stun nearby enemies.' },
+  'Aether Leviathan': { name: 'Tidal Swell', kind: 'NOVA', cd: 8, pow: 1.6, dmgType: 'ICE', status: 'SLOW', heal: 0.02, desc: 'Every 8s a swell hurts and slows nearby enemies and heals you for 2% max HP.' },
+};
+/** The extra ability of an evolved pet (Stage II+), or null. `power` = 1 at Stage II, 1.5 at Stage III. */
+export const petEvolvedPerk = (p: Pick<Item, 'name' | 'type' | 'petStage'>): (EvolvedPerk & { power: number }) | null => {
+  if (p.type !== 'PET') return null;
+  const st = petStage(p), d = PET_EVOLVED_PERK[p.name];
+  return st >= 2 && d ? { ...d, power: 1 + 0.5 * (st - 2) } : null;
+};
+
 /** XP granted per feed unit. Shards: 1 shard; loot: 1 crystal / ore item. */
 export const PET_SHARD_XP: Record<Rarity, number> = { COMMON: 5, UNCOMMON: 10, RARE: 20, EPIC: 80, LEGENDARY: 300, MYTHIC: 1200 };
 export const PET_LOOT_XP: Record<Rarity, number> = { COMMON: 10, UNCOMMON: 20, RARE: 40, EPIC: 160, LEGENDARY: 640, MYTHIC: 2500 };

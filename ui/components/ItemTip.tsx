@@ -15,7 +15,7 @@ import { gradeLabel, gradeOf, isGraded } from '../../grade';
 import { Lock } from './GoldIcons';
 import { weaponPerk, perkText } from '../../weaponPerks';
 import { gearStars, GEAR_MAX_STARS, GEAR_STAR_BONUS } from '../../gearStars';
-import { petPower, petStatShown, petWeights, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL } from '../../petGrowth';
+import { petPower, petStatShown, petWeights, petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petDisplayName, PET_STAGE_LABEL, PET_EVOLVED_PERK } from '../../petGrowth';
 import { SET_BY_NAME, setProgress, equippedSetCounts, SET_COLOR } from '../../itemSets';
 
 const statKeys = (a: Partial<PlayerStats>, b?: Partial<PlayerStats>) => {
@@ -153,6 +153,11 @@ const ItemTipCard: React.FC<{ item: Item; compare?: boolean; price?: 'sell' | 'b
             <span className="muted">{petLv(item) >= petLvCap(petStage(item)) ? (petStage(item) < 3 ? 'Ready to evolve' : 'MAX') : `${petXp(item)}/${petXpNeed(petLv(item))} XP`}</span></div>
           {petStars(item) > 0 && <div className="tt-row"><span style={{ color: '#e0a800', fontWeight: 800 }} data-testid="pet-stars-tip">{'★'.repeat(petStars(item))}{'☆'.repeat(5 - petStars(item))}</span><span className="muted">+{petStars(item) * 10}% power</span></div>}
           <div className="muted text-[.68rem]">Stats are a share of your own stats (Lv {petLv(item)} / {PET_STAGE_LABEL[petStage(item)]}); skill power x{pm.toFixed(2)}</div>
+          {PET_EVOLVED_PERK[item.name] && (
+            <div className="text-[.7rem] mt-0.5" style={{ color: petStage(item) > 1 ? '#7a2ec2' : 'var(--text-dim)' }} data-testid="pet-evolved-perk-tip">
+              {petStage(item) > 1 ? 'Evolved: ' : 'Unlocks when evolved: '}<b>{PET_EVOLVED_PERK[item.name].name}</b> - {PET_EVOLVED_PERK[item.name].desc}
+            </div>
+          )}
         </div>
       )}
       {item.petSkill && <div className="muted mt-1">Pet skill: {item.petSkill.replace('_', ' ').toLowerCase()}{item.petCooldown ? ` (${item.petCooldown}s)` : ''}</div>}

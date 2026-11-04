@@ -372,7 +372,7 @@ function enterRoom(b: number, idx: number, p: RoomPlan): void {
   else if (bossK === 'BOSS_TREANT') setupBossPlants();   // Elderroot: self-puffing poison plants
   else if (bossK === 'BOSS_GOLEM') setupBossBallistas(b);   // Gorath: ballistas on the sides
   setupLavaFloor(b, p, seed, bossK === 'BOSS_WARLORD');   // Ember lava streams / heavy-lava islands painted on the floor (lavaFloor.ts); Ignar's arena ~40% lava
-  setupIceFloor(b, p, seed, bossK === 'BOSS_WYRM');   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
+  setupIceFloor(b, p, seed, false);   // (owner 2026-11-04: no ice in Glacius' arena)   // Frostpeak big slippery ice sheets (iceFloor.ts; after the stationaries so it keeps clear of them)
 
   r.active = true; r.version++; r.seed = seed; r.biome = b; r.index = idx; r.plan = p; r.radius = world.room.radius;
   r.fadeTarget = 0; r.shrineOn = false; r.shrineDone = false;

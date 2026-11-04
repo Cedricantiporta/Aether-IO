@@ -3,7 +3,6 @@
 // Multi-frame effects run through the pooled ground-fx list (world.fx) + a few timers.
 // ============================================================================
 import { bp } from './bossPhaseState';
-import { iceAt } from '../iceFloor';
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind, raiseArmy } from './minions';
 import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
@@ -1308,10 +1307,6 @@ export function tryDash(auto: boolean): boolean {
   }
   if (bp.on && bp.kind === 'VOIDPULL') {   // (owner 2026-10-31) no dashing out of the Herald's universal pull
     if (world.time - iceDashTextT > 1) { iceDashTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'The pull holds you!', color: 0xc9a0ff, scale: 0.8, dy: 2.6 }); }
-    return false;
-  }
-  if (iceAt(p.pos.x, p.pos.z)) {   // (owner 2026-10-26) Frostpeak ice: too slippery to dash
-    if (world.time - iceDashTextT > 1) { iceDashTextT = world.time; events.emit('floatText', { pos: p.pos, text: 'Too slippery to dash!', color: 0xbfe8ff, scale: 0.8, dy: 2.6 }); }
     return false;
   }
   if (p.dashCharges <= 0) { notifyCooldown('dash'); return false; }
