@@ -245,7 +245,7 @@ Already the owner's favourite; keep and add small borrowed pieces.
 | Hellcleave (exists) | 10 | spinning drift | 14% |
 | Blazing Guard (exists) | 36 | shield; hits pop it | - |
 | Fire Wall | 14 | a row of fireballs with a gap | 14% |
-| Eruption Tiles (exists) | 22 | Floor is Lava | 14% |
+| Eruption Tiles (exists, reworked 2026-11-04: 9 random tile patterns, lavaPatterns.ts) | 22 | Floor is Lava | 14% |
 | Dark Knights (exists) | 31 | adds | - |
 
 **Signature:** *Creeping Lava + Burning Form* (exists). Borrow: Mithrix-style "pillars of flame thrown around the arena" in form 2 (spawn 2-3 slow fire pillars that drift toward the hero: 17).

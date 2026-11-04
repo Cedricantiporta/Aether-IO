@@ -13,7 +13,7 @@
 import { world } from '../engine/world';
 import { rt, trapAim, trapLock, trapAt, trapCount, damageTrap } from '../engine/systems/roomTraps';
 import { hz, HZ } from '../engine/systems/biomeHazards';
-import { bp, MAX_PROPS, MAX_HANDS, MAX_TILES, LAVA_HITS, type PhaseKind } from '../engine/systems/bossPhaseState';
+import { bp, MAX_PROPS, MAX_HANDS, MAX_TILES, LAVA_K, type PhaseKind } from '../engine/systems/bossPhaseState';
 import { addTempCollider, removeTempCollider, type Collider } from '../engine/mapgen';
 import { mirrorTrapTuning, resetRoomEvent, trapPeriod } from '../engine/systems/roomEvents';
 import { coopRoom } from './coopRoom';
@@ -71,7 +71,7 @@ let hh = 0;
 const mix = (v: number): void => { hh = (Math.imul(hh, 31) + Math.round(v * 10)) | 0; };
 
 // ====================================================================== HOST ===
-let lastTick = 0, lastSig = 0, sigSent = 0, layoutAge = 0, lastLayoutAt = 0, lastHash = 0, lastBeat = 0, lastBp = 0, lastEvt = 0, bpHash = 0, evtHash = 0, tileKey = 0, bpSentOn = false, textKey = '';
+let lastTick = 0, lastSig = 0, sigSent = 0, layoutAge = 0, lastLayoutAt = 0, lastHash = 0, lastBeat = 0, lastBp = 0, lastEvt = 0, bpHash = 0, evtHash = 0, tileKey = 0, hitKey = -1, lastFull = 0, bpSentOn = false, textKey = '';
 let evtSentOn = false;
 const rows: unknown[][] = [];
 
@@ -146,7 +146,7 @@ export function hazTick(now: number): void {
     const on = bp.on || bp.tail < 2.5;
     if (on || bpSentOn) {
       const sc = [bp.on ? 1 : 0, bp.immune ? 1 : 0, bp.id, PH.indexOf(bp.kind), bp.t, bp.count, bp.countMax, bp.tint, bp.flash, bp.floor, bp.wx, bp.wz, bp.wave, bp.windOn ? 1 : 0, bp.nx, bp.nz, bp.shiftT,
-        bp.dark ? 1 : 0, bp.ball ? 1 : 0, bp.crackT, bp.spin, bp.rx, bp.rz, bp.tail, bp.nt, bp.tileHalf, bp.xformId, bp.bannerT];
+        bp.dark ? 1 : 0, bp.ball ? 1 : 0, bp.crackT, bp.spin, bp.rx, bp.rz, bp.tail, bp.nt, bp.tileHalf, bp.xformId, bp.bannerT, bp.tver, bp.tbuild, bp.pat, bp.pat2];
       const props: number[] = [], hands: number[] = [];
       for (let i = 0; i < MAX_PROPS; i++) { const q = bp.props[i]; props.push(q.on ? 1 : 0, Math.round(q.x * 100) / 100, Math.round(q.z * 100) / 100, Math.round(q.r * 100) / 100, Math.round(q.h * 100) / 100); }
       for (let i = 0; i < MAX_HANDS; i++) { const h = bp.hands[i]; hands.push(h.on ? 1 : 0, Math.round(h.x * 100) / 100, Math.round(h.z * 100) / 100, Math.round(h.t * 100) / 100, Math.round(h.T * 100) / 100); }
@@ -154,12 +154,25 @@ export function hazTick(now: number): void {
       if (hh !== bpHash || now - lastBeat > 1200 || !bpSentOn) {
         bpHash = hh;
         const m: unknown[] = [MSG.HAZ, io.rv(), 2, sc, props, hands];
-        let tiles: number[] | null = null;
-        const tk = bp.nt > 0 ? bp.nt * 1000 + Math.round(bp.tx[0] + bp.tz[bp.nt - 1]) : 0;
-        if (tk !== tileKey) { tileKey = tk; tiles = []; for (let i = 0; i < bp.nt; i++) { tiles.push(Math.round(bp.tx[i] * 10), Math.round(bp.tz[i] * 10)); for (let k = 0; k < LAVA_HITS; k++) tiles.push(Math.round(bp.te[i * LAVA_HITS + k] * 100)); } }
+        // Floor-is-Lava: tile centres only when the layout was rebuilt (tbuild), the hit table (ix 8) whenever a pattern changed it (tver):
+        // flat [tile, n, (warnStart, lavaStart, coolStart) x n] x100, only tiles that hold hits. The guest draws exactly the host's pattern.
+        let tiles: number[] | null = null, hits: number[] | null = null;
+        if (now - lastFull > 2500) { lastFull = now; tileKey = 0; hitKey = -1; }   // (a lost packet heals: the whole table again every 2.5 s)
+        if (bp.kind === 'LAVA' && bp.nt > 0) {
+          if (bp.tbuild !== tileKey) { tileKey = bp.tbuild; tiles = []; for (let i = 0; i < bp.nt; i++) tiles.push(Math.round(bp.tx[i] * 10), Math.round(bp.tz[i] * 10)); }
+          if (bp.tver !== hitKey) {
+            hitKey = bp.tver; hits = [];
+            for (let i = 0; i < bp.nt; i++) {
+              const n = bp.tn[i]; if (n === 0) continue;
+              hits.push(i, n);
+              for (let k = 0; k < n; k++) { const o = i * LAVA_K + k; hits.push(Math.round(bp.tw[o] * 100), Math.round(bp.te[o] * 100), Math.round(bp.tc[o] * 100)); }
+            }
+          }
+        }
         m.push(tiles ?? 0);
         const text = bp.name + '|' + bp.sub + '|' + bp.color;
         m.push(text !== textKey ? (textKey = text, [bp.name, bp.sub, bp.color]) : 0);
+        m.push(hits ?? 0);
         hazStats.bp++;
         io.send(m);
       }
@@ -183,7 +196,7 @@ const OBJ = ['', 'DEFEND', 'RESCUE', 'GOBLIN', 'HUNT', 'SPEED'], TW = ['', 'DARK
 
 /** New room / run / disconnect (host side). */
 export function hazReset(): void {
-  lastTick = lastBp = lastEvt = lastBeat = 0; lastSig = 0; sigSent = 0; layoutAge = 0; lastLayoutAt = 0; lastHash = 0; bpHash = 0; evtHash = 0; tileKey = 0; bpSentOn = false; evtSentOn = false; textKey = '';
+  lastTick = lastBp = lastEvt = lastBeat = 0; lastSig = 0; sigSent = 0; layoutAge = 0; lastLayoutAt = 0; lastHash = 0; bpHash = 0; evtHash = 0; tileKey = 0; hitKey = -1; bpSentOn = false; evtSentOn = false; textKey = '';
 }
 
 /** HOST: the guest claimed a hit on stationary `index` of the host's list. */
@@ -301,14 +314,23 @@ function applyBp(d: unknown[]): void {
   const v = (i: number): number => (isNum(sc[i]) ? (sc[i] as number) : 0);
   bp.on = v(0) === 1; bp.immune = v(1) === 1; bp.id = v(2) | 0; bp.kind = PH[v(3) | 0] ?? ''; bp.t = v(4); bp.count = v(5); bp.countMax = v(6) || 1; bp.tint = v(7); bp.flash = v(8); bp.floor = v(9);
   bp.wx = v(10); bp.wz = v(11); bp.wave = v(12); bp.windOn = v(13) === 1; bp.nx = v(14); bp.nz = v(15); bp.shiftT = v(16); bp.dark = v(17) === 1; bp.ball = v(18) === 1; bp.crackT = v(19); bp.spin = v(20);
-  bp.rx = v(21); bp.rz = v(22); bp.tail = v(23); bp.nt = Math.max(0, Math.min(MAX_TILES, v(24) | 0)); bp.tileHalf = v(25) || 2.5; bp.xformId = v(26) | 0; bp.bannerT = v(27);
+  bp.rx = v(21); bp.rz = v(22); bp.tail = v(23); bp.nt = Math.max(0, Math.min(MAX_TILES, v(24) | 0)); bp.tileHalf = v(25) || 2.5; bp.xformId = v(26) | 0; bp.bannerT = v(27); bp.pat = sc.length > 30 ? v(30) | 0 : -1; bp.pat2 = sc.length > 31 ? v(31) | 0 : -1;
   for (let i = 0; i < MAX_PROPS && i * 5 + 4 < props.length; i++) { const q = bp.props[i], o = i * 5; q.on = props[o] === 1; q.x = (props[o + 1] as number) || 0; q.z = (props[o + 2] as number) || 0; q.r = (props[o + 3] as number) || 2; q.h = (props[o + 4] as number) || 0; }
   for (let i = 0; i < MAX_HANDS && i * 5 + 4 < hands.length; i++) { const h = bp.hands[i], o = i * 5; h.on = hands[o] === 1; h.x = (hands[o + 1] as number) || 0; h.z = (hands[o + 2] as number) || 0; h.t = (hands[o + 3] as number) || 0; h.T = (hands[o + 4] as number) || 1; }
   if (Array.isArray(tiles)) {
-    const stride = 2 + LAVA_HITS;
-    for (let i = 0; i < bp.nt && i * stride + stride - 1 < tiles.length; i++) {
-      bp.tx[i] = ((tiles[i * stride] as number) || 0) / 10; bp.tz[i] = ((tiles[i * stride + 1] as number) || 0) / 10;
-      for (let k = 0; k < LAVA_HITS; k++) bp.te[i * LAVA_HITS + k] = ((tiles[i * stride + 2 + k] as number) || 0) / 100;
+    for (let i = 0; i < bp.nt && i * 2 + 1 < tiles.length; i++) { bp.tx[i] = ((tiles[i * 2] as number) || 0) / 10; bp.tz[i] = ((tiles[i * 2 + 1] as number) || 0) / 10; }
+  }
+  const hits = d[8];
+  if (Array.isArray(hits)) {   // the whole hit table, replaced
+    bp.tn.fill(0, 0, MAX_TILES);
+    for (let p = 0; p + 1 < hits.length;) {
+      const i = (hits[p] as number) | 0, n = Math.min(LAVA_K, (hits[p + 1] as number) | 0);
+      p += 2;
+      for (let k = 0; k < n && p + 2 < hits.length; k++, p += 3) {
+        if (i < 0 || i >= MAX_TILES) continue;
+        const o = i * LAVA_K + k;
+        bp.tw[o] = ((hits[p] as number) || 0) / 100; bp.te[o] = ((hits[p + 1] as number) || 0) / 100; bp.tc[o] = ((hits[p + 2] as number) || 0) / 100; bp.tn[i] = k + 1;
+      }
     }
   }
   if (Array.isArray(text) && typeof text[0] === 'string' && typeof text[1] === 'string') { bp.name = text[0].slice(0, 40); bp.sub = text[1].slice(0, 80); bp.color = isNum(text[2]) ? text[2] : 0xffffff; }
