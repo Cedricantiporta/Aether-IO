@@ -47,7 +47,7 @@ export function pickRaiseKind(meleeOnly = false): number {
 }
 /** (owner 2026-10-31) Raise Dead live army: how many Raise Dead skeletons stand (`.alive`). The skill is castable again once every MELEE one
  *  (skeleton warrior) is dead even if archers / mages stand; that recast only raises the MISSING amount (cap - alive), all warriors (`.partial`). */
-export const raiseInfo = { alive: 0, partial: false };
+export const raiseInfo = { alive: 0, partial: false, /** a Raise Dead MELEE skeleton stands: the skill's cooldown is frozen (UI shows it as active) */ held: false };
 export function raiseArmy(): typeof raiseInfo { raiseInfo.alive = countSkeletons(SRC_RAISE); raiseInfo.partial = raiseInfo.alive > 0; return raiseInfo; }
 function randRanged(): number { return Math.random() < 0.5 ? MINION_ARCHER : MINION_MAGE; }
 const ids: number[] = [];
@@ -68,6 +68,14 @@ function minionMul(): { dmg: number; life: number; haste: number } {
 export const PERMANENT = 0;
 /** Skeleton tuning: move speed x0.8, damage x0.7, attack speed x0.7 (attack interval / 0.7). */
 const SPEED_MUL = 0.8, DMG_MUL = 0.7, ATK_SPD_MUL = 0.7;
+/** (owner 2026-11-04) melee skeletons run +45% faster (warrior base 8.5 x 0.8 = 6.8 m/s -> x1.45 = 9.86 m/s) so they get in front and engage. */
+export const MELEE_SPEED_MUL = 1.45;
+/** Melee formation (warriors): with a foe within COMBAT_R of the hero they form an arc FRONT_AHEAD m ahead toward it (a wall between hero and
+ *  enemies) and engage anything within ENGAGE_R of themselves; with none (for FOE_HOLD s, hysteresis) they trail BACK_MIN..BACK_MAX m behind. */
+const COMBAT_R = 25, FRONT_AHEAD = 4.5, ARC_SPREAD = 1.8, ENGAGE_R = 7, ENGAGE_LEASH = 13, BACK_MIN = 1.5, BACK_MAX = 3, FOE_HOLD = 1;
+/** Formation state (module scratch, no per-frame allocation). fx/fz = smoothed unit vector hero -> nearest foe, bx/bz = smoothed unit vector behind the hero. */
+export const formation = { foe: false, hold: 0, scanT: 0, tgt: -1, nd: 0, fx: 0, fz: 1, bx: 0, bz: -1 };
+const fIdx: number[] = [];   // per minion slot: its place among the living warriors
 /** (owner 2026-10-25) necro scaling: every summon +35% damage and HP at the base, upgrades (talents, gear, perk, skill level) count less. */
 const BASE_MUL = 1.35, UPG_K = 0.6;
 /** A summon farther than this from the hero teleports back beside it. */
@@ -271,16 +279,50 @@ function updateRocks(dt: number): void {
   }
 }
 
-export function clearMinions(): void { for (const m of world.minions) m.active = false; summonedN = 0; for (const r of rocks) r.on = false; rockCd = 0; }
+export function clearMinions(): void { formation.foe = false; formation.hold = 0; formation.tgt = -1; for (const m of world.minions) m.active = false; summonedN = 0; for (const r of rocks) r.on = false; rockCd = 0; }
 export function minionCount(kind = -1, src = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind) && (src < 0 || m.src === src)) n++; return n; }
+
+/** Combat flag with ~1 s hysteresis + smoothed front / back directions for the melee formation. */
+function updateFormation(dt: number, pl: typeof world.player): void {
+  const F = formation;
+  F.scanT -= dt;
+  if (F.scanT <= 0) {   // nearest live enemy within COMBAT_R of the hero (every 0.15 s)
+    F.scanT = 0.15;
+    const found = world.enemyGrid.query(pl.pos.x, pl.pos.z, COMBAT_R, ids);
+    let bd = COMBAT_R * COMBAT_R, best = -1;
+    for (let k = 0; k < found.length; k++) {
+      const c = world.enemies[found[k]];
+      if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || c.hideT > 0) continue;
+      const d2 = (c.pos.x - pl.pos.x) ** 2 + (c.pos.z - pl.pos.z) ** 2;
+      if (d2 < bd) { bd = d2; best = c.id; }
+    }
+    F.tgt = best;
+  }
+  const e = F.tgt >= 0 ? world.enemies[F.tgt] : null;
+  if (e && e.active && e.state !== 'DYING' && e.hideT <= 0) {
+    F.hold = FOE_HOLD; F.foe = true;
+    const dx = e.pos.x - pl.pos.x, dz = e.pos.z - pl.pos.z, d = Math.hypot(dx, dz);
+    F.nd = d;
+    if (d > 0.5) {
+      const k = Math.min(1, dt * 5), nx = F.fx + (dx / d - F.fx) * k, nz = F.fz + (dz / d - F.fz) * k, nl = Math.hypot(nx, nz) || 1;
+      F.fx = nx / nl; F.fz = nz / nl;
+    }
+  } else { F.hold -= dt; if (F.hold <= 0) F.foe = false; }
+  // behind the hero = opposite its movement (or facing when standing), smoothed
+  const vx = pl.vel.x, vz = pl.vel.z, sp = Math.hypot(vx, vz);
+  let hx: number, hz: number;
+  if (sp > 1) { hx = vx / sp; hz = vz / sp; } else { hx = Math.sin(pl.facing); hz = Math.cos(pl.facing); }
+  const k = Math.min(1, dt * (sp > 1 ? 3 : 1.5)), nx = F.bx + (-hx - F.bx) * k, nz = F.bz + (-hz - F.bz) * k, nl = Math.hypot(nx, nz) || 1;
+  F.bx = nx / nl; F.bz = nz / nl;
+}
 
 export function updateMinions(dt: number): void {
   const M = world.minions, pl = world.player, haste = minionMul().haste;
   updateRocks(dt);
   updateAlly(dt);   // the run ally lives in a minion slot but has its own brain
-  let slotI = 0, army = false, raised = false;   // raised = a Raise Dead MELEE skeleton stands
+  let slotI = 0, army = false, raised = false, wn = 0;   // raised = a Raise Dead MELEE skeleton stands
   let alive = 0;
-  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE && M[i].kind === MINION_WARRIOR) raised = true; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
+  for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE && M[i].kind === MINION_WARRIOR) raised = true; if (M[i].kind === MINION_WARRIOR && M[i].src !== SRC_ALLY) fIdx[i] = wn++; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
   // the last summon fell: one skeleton warrior claws up beside the hero for a few seconds (not again until a new summon has risen)
   if (alive === 0 && summonedN > 0 && pl.alive && world.room.active) {
     const st = useGameStore.getState();
@@ -288,7 +330,9 @@ export function updateMinions(dt: number): void {
   }
   summonedN = alive;
   // Raise Dead: its cooldown stays full while any of its MELEE skeletons stands (it ticks once the last warrior has fallen, even if archers / mages remain)
+  raiseInfo.held = raised;
   if (raised && pl.cdMax.q > 0) pl.cd.q = pl.cdMax.q;
+  if (wn > 0) updateFormation(dt, pl);
   // Army of the Dead: the ultimate's cooldown stays full until the whole army has fallen
   if (army) { if (ultHold <= 0) ultHold = abilityState.ultCd; abilityState.ultCd = ultHold; } else ultHold = 0;
   for (let i = 0; i < M.length; i++) {
@@ -313,7 +357,7 @@ export function updateMinions(dt: number): void {
     if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
     if (m.skillT > 0) m.skillT -= dt;
     const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 4.8 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 / 1.2 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
+    const reach = golem ? 4.8 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5 * MELEE_SPEED_MUL) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 / 1.2 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s)
     m.retarget -= dt;
     let e = m.tgt >= 0 ? world.enemies[m.tgt] : null;
@@ -329,9 +373,27 @@ export function updateMinions(dt: number): void {
       }
     }
     // (owner) no monster in reach: summons go after the nearest stationary (siege weapon / tower / statue)
-    const tr = e ? null : nearestTrap(m.x, m.z, 16);
+    const melee = m.kind === MINION_WARRIOR;
+    let form = 0;   // 1 = holding the front arc, 2 = trailing behind the hero
+    if (melee) {
+      if (formation.foe) {   // foes near the hero: engage only what is in reach (and not far out past the hero), otherwise hold the arc
+        if (e && ((e.pos.x - m.x) ** 2 + (e.pos.z - m.z) ** 2 > ENGAGE_R * ENGAGE_R || (e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > ENGAGE_LEASH * ENGAGE_LEASH)) e = null;
+        if (!e) form = 1;
+      } else e = null;   // peace: no hunting, trail the hero
+    }
+    const tr = e || form === 1 ? null : nearestTrap(m.x, m.z, 16);
     let tx: number, tz: number, stop: number;
-    if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
+    if (!e && !tr && melee) {
+      const wi = fIdx[i] ?? 0, off = (wi - (wn - 1) / 2) * (form === 1 ? ARC_SPREAD : 1.2);
+      if (form === 1) {   // arc between hero and foe: centre furthest ahead, wings curve back; never past the nearest foe
+        const ahead = Math.max(2.5, Math.min(FRONT_AHEAD, formation.nd - 2)) - 0.22 * Math.abs(off);
+        tx = pl.pos.x + formation.fx * ahead - formation.fz * off; tz = pl.pos.z + formation.fz * ahead + formation.fx * off;
+      } else {            // loose cluster 1.5-3 m behind the hero
+        const back = BACK_MIN + (BACK_MAX - BACK_MIN) * ((wi * 0.37) % 1);
+        tx = pl.pos.x + formation.bx * back - formation.bz * off; tz = pl.pos.z + formation.bz * back + formation.bx * off;
+      }
+      stop = 0.35; form = form || 2;
+    } else if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
     else if (tr) { tx = tr.x; tz = tr.z; stop = reach + tr.rad * 0.9; }
     else {   // trail the hero in a loose ring
       const a = m.slot + slotI++ * 0.9;
@@ -371,7 +433,8 @@ export function updateMinions(dt: number): void {
     }
     m.mv += (mv - m.mv) * Math.min(1, dt * 10);
     m.walk += dt * speed * m.mv * (golem ? 0.9 : 1.6);
-    if (d > 0.05) m.facing = Math.atan2(dx, dz);
+    if (form === 1 && d <= stop + 0.3) m.facing = Math.atan2(formation.fx, formation.fz);   // holding the line: face the enemy
+    else if (d > 0.05) m.facing = Math.atan2(dx, dz);
     m.atkT -= dt;
     if (golem && m.src === SRC_ULT) golemRockAI(m, dt, e);
     if (tr && d <= stop + 0.3 && m.atkT <= 0) {
