@@ -336,6 +336,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   if (final.multishot > MULTISHOT_CAP) final.multishot = MULTISHOT_CAP;
   applyPetCollection(final);   // Pet Collection milestones (petCollection.ts)
   applyAttrs(final, attrs);   // STR / DEX / INT / VIT / LUK (attributes.ts)
+  final.dodge += 0.03;   // (owner 2026-11-04) every hero has 3% base dodge
   if (hero === 'WIZARD') { final.maxHealth = Math.round(final.maxHealth * 0.75); final.moveSpeed *= 0.85; final.damage *= 0.85; }   // (damage feeds basic attacks and skills)   // fragile, slow caster (user tuning)
   applyActiveElixirs(final);   // run elixirs (elixirs.ts): on the final stats, before the caps
   for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps

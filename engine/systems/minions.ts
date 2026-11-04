@@ -358,7 +358,7 @@ function updateFormation(dt: number, pl: typeof world.player): void {
   const vx = pl.vel.x, vz = pl.vel.z, sp = Math.hypot(vx, vz);
   let hx: number, hz: number;
   if (sp > 1) { hx = vx / sp; hz = vz / sp; } else { hx = Math.sin(pl.facing); hz = Math.cos(pl.facing); }
-  const k = Math.min(1, dt * (sp > 1 ? 3 : 1.5)), nx = F.bx + (-hx - F.bx) * k, nz = F.bz + (-hz - F.bz) * k, nl = Math.hypot(nx, nz) || 1;
+  const k = Math.min(1, dt * (sp > 1 ? 1.2 : 0.8)), nx = F.bx + (-hx - F.bx) * k, nz = F.bz + (-hz - F.bz) * k, nl = Math.hypot(nx, nz) || 1;
   F.bx = nx / nl; F.bz = nz / nl;
 }
 
@@ -450,17 +450,18 @@ export function updateMinions(dt: number): void {
         const off = (wi - (wn - 1) / 2) * 1.2, back = BACK_MIN + (BACK_MAX - BACK_MIN) * ((wi * 0.37) % 1);
         tx = pl.pos.x + formation.bx * back - formation.bz * off; tz = pl.pos.z + formation.bz * back + formation.bx * off;
       }
-      stop = 0.35;
+      stop = form === 1 ? 0.9 : 1.3;   // (owner 2026-11-04) dead-zone: they only shuffle once the spot has really moved on (no mirroring of the hero's side steps)
     } else if (e && melee) {   // fight: close to melee range, each warrior on its own side of the target so they spread round it
       ad = Math.hypot(e.pos.x - m.x, e.pos.z - m.z); astop = reach + e.radius * 0.8;
       const base = Math.atan2(pl.pos.x - e.pos.x, pl.pos.z - e.pos.z), ang = base + (((fIdx[i] ?? 0) + 0.5) / Math.max(1, wn) - 0.5) * 2.2, rr = Math.max(0.6, astop - 0.35);
-      tx = e.pos.x + Math.sin(ang) * rr; tz = e.pos.z + Math.cos(ang) * rr; stop = 0.25;
+      if (ad <= astop) { tx = m.x; tz = m.z; stop = 0.25; }   // (owner 2026-11-04) in reach: stand put (the hero strafing must not make the army slide round the target)
+      else { tx = e.pos.x + Math.sin(ang) * rr; tz = e.pos.z + Math.cos(ang) * rr; stop = 0.25; }
     } else if (e) { tx = e.pos.x; tz = e.pos.z; stop = reach + e.radius * 0.8; }
     else if (tr) { tx = tr.x; tz = tr.z; stop = reach + tr.rad * 0.9; }
     else {   // trail the hero in a loose ring
       const a = m.slot + slotI++ * 0.9;
       heroTrailAt(0.8 + (m.slot % 3) * 0.1, trailPt);   // (owner: summons follow with a ~1 s delay)
-      tx = trailPt[0] + Math.cos(a) * 3.2; tz = trailPt[1] + Math.sin(a) * 3.2; stop = 0.6;
+      tx = trailPt[0] + Math.cos(a) * 3.2; tz = trailPt[1] + Math.sin(a) * 3.2; stop = 1.4;
     }
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
     // (owner 2026-10-25) a summon too far from the hero blinks back to its side (a puff where it left and where it lands)
@@ -473,7 +474,8 @@ export function updateMinions(dt: number): void {
       continue;
     }
     let mv = 0;
-    if (d > stop) {
+    const planted = m.swing > 0 || m.spin > 0;   // (owner 2026-11-04) planted while in the attack swing: no sliding, formation / chase resume after it
+    if (d > stop && !planted) {
       const s = Math.min(d - stop, speed * dt);
       m.x += (dx / d) * s; m.z += (dz / d) * s;
       mv = dt > 0 ? s / (speed * dt) : 0;

@@ -86,7 +86,7 @@ const EXTRA: Record<HeroClass, Row[][]> = {
   ARCHER: [
     [['Long Shot', '', 2, 'GALE_ARROW', { add: { attackRange: 2.2 } }], ['Hunter\'s Mark', '', 2, 'u:DAMAGE', { mul: { damage: 0.03 } }], ['Hawkeye', '', 2, 'u:CRIT_DAMAGE', { add: { critDamage: 0.12 } }], ['Rapid Fire', '', 2, 'u:FIRE_RATE', { mul: { fireRate: 0.05 } }]],
     [['Kindling', '', 2, 'burning', { add: { onHitBurnChance: 0.05 } }], ['Rime', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Wildfire', '', 2, 'u:SKILL_BURNING', { add: { skillDamage: 0.1 } }], ['Glacial Tips', '', 2, 'u:SKILL_FREEZING', { add: { critDamage: 0.12 } }]],
-    [['Light Step', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }], ['Tumble', '', 2, 'dash', { add: { dodge: 0.03 } }], ['Steady Stance', '', 2, 'u:DEFENSE', { add: { resCC: 0.06 } }], ['Windrunner', '', 2, 'u:SKILL_DASH', { add: { dodge: 0.03 }, mul: { moveSpeed: 0.03 } }]],
+    [['Light Step', '', 2, 'u:SPEED', { mul: { moveSpeed: 0.02, fireRate: 0.02 } }], ['Tumble', '', 2, 'dash', { add: { dodge: 0.03 } }], ['Steady Stance', '', 2, 'u:DEFENSE', { add: { resCC: 0.06 } }], ['Windrunner', '', 2, 'u:SKILL_DASH', { add: { dodge: 0.03 }, mul: { moveSpeed: 0.015, fireRate: 0.02 } }]],
     [['Eagle Eye', '', 2, 'u:CRIT_RATE', { add: { attackRange: 2.2, critRate: 0.01 } }], ['Falconer', 'Arrow storm lasts +1s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1 } }], ['Snare Shot', '', 2, 'freezing', { add: { onHitSlowChance: 0.06 } }], ['Deep Quiver', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }]],
   ],
   WIZARD: [
@@ -148,15 +148,15 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Convergence', 'Fire / ice arrows N -2, +10% burn and slow chance', 1, 'u:SKILL_PIERCING', { add: { procHaste: 2, onHitBurnChance: 0.1, onHitSlowChance: 0.1 } }],
     ]],
     ['s', [
-      ['Fleet Foot', '+3% move speed', 3, 'u:SPEED', { mul: { moveSpeed: 0.03 } }],
+      ['Fleet Foot', '+1.5% move speed, +1.5% attack speed', 3, 'u:SPEED', { mul: { moveSpeed: 0.015, fireRate: 0.015 } }],
       ['Evasion', '+2% dodge', 3, 'dash', { add: { dodge: 0.02 } }],
       ['Hardy', '+8 max health', 3, 'u:HEALTH', { add: { maxHealth: 8 } }],
       ['Second Wind', '+3% dodge', 2, 'u:DASH_COOLDOWN', { add: { dodge: 0.03 } }],
       ['Storm Caller', 'Storm of a Thousand Arrows lasts +1.5s', 2, 'STORM_ARROWS', { add: { hawkBonus: 1.5 } }],
-      ['Phantom', '+10% dodge, +5% move speed', 1, 'u:SKILL_DASH', { add: { dodge: 0.1 }, mul: { moveSpeed: 0.05 } }],
+      ['Phantom', '+10% dodge, +2.5% move speed, +2.5% attack speed', 1, 'u:SKILL_DASH', { add: { dodge: 0.1 }, mul: { moveSpeed: 0.025, fireRate: 0.025 } }],
     ]],
     ['r', [
-      ['Trailblazer', '', 3, 'u:SPEED', { mul: { moveSpeed: 0.03 } }],
+      ['Trailblazer', '', 3, 'u:SPEED', { mul: { moveSpeed: 0.015, fireRate: 0.015 } }],
       ['Ricochet', 'Arrows pierce +1 more enemy', 1, 'u:SKILL_PIERCING', { add: { pierceBonus: 1 } }],
       ['Bounty Hunter', '', 3, 'u:DAMAGE', { add: { goldFind: 0.08 } }],
       ['Ambush', '', 2, 'u:CRIT_DAMAGE', { add: { backstab: 0.25 } }],
@@ -178,7 +178,7 @@ const DEF: Record<HeroClass, [string, Row[]][]> = {
       ['Chain Lightning', 'Thundercaller and Storm Orbs chain +1 target', 2, 'thunder', { add: { thunderChain: 1 } }],
       ['Storm Surge', 'Arcane Shield lasts +0.5s, Storm Orbs last +2s', 3, 'storm', { add: { stormBonus: 2 } }],
       ['Overcharge', 'Thunder bolt N -1 per rank', 2, 'u:SKILL_THUNDER', { add: { procHaste: 1 } }],
-      ['Tailwind', '+4% move speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.04 } }],
+      ['Tailwind', '+2% move speed, +2% attack speed', 2, 'u:SPEED', { mul: { moveSpeed: 0.02, fireRate: 0.02 } }],
       ['Tempest', 'Arcane Shield +25% stronger, chain +1 target, Storm Orbs +1 orb', 1, 'STORM_ORBS', { add: { stormTwin: 1, thunderChain: 1, orbBonus: 1 } }],
     ]],
     ['f', [

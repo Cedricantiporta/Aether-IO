@@ -16,7 +16,7 @@ import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../
 import { combo, registerUlt } from './combo';
 import type { GroundFx, GroundFxKind } from '../types';
 import {
-  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim,
+  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim, skillHits, DODGE_TEMP_S,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
@@ -112,6 +112,7 @@ export function resetAbilities(): void {
   a.orbT = 0; a.leapT = 0; a.windupT = 0; a.chargeT = 0; a.judgeT = 0; a.whirlBoost = false; a.finisher = false; for (const c of chainOrbs) c.active = false; a.whirlTick = 0; a.finalSlam = 0; a.lastStep = 0;
   lastNoMana = -10; resetExtras();
   for (const k in lastCd) lastCd[k] = -10;
+  for (const k in missT0) missT0[k as ActiveSlot] = -1;
   gcdUntil = 0;   // world.time restarts at 0 each run: a lock stamped in town would block every skill for minutes
 }
 
@@ -158,8 +159,28 @@ function gate(slot: ActiveSlot): boolean {
   if (!trySpendMana(cost)) { notifyNoMana(); return false; }
   const cd = abilityCd(st.hero, slot, st.skillLevels[slot]) * (1 - st.stats.cooldownReduction);
   p.cd[slot] = cd; p.cdMax[slot] = cd;
+  if (st.hero === 'ARCHER' && MISS_WINDOW[slot]) { missT0[slot] = world.time; missHits0[slot] = skillHits.n; }   // arm the miss-refund watch
   gcdUntil = world.time + GCD;
   return true;
+}
+/** (owner 2026-11-04) Archer: a skill cast that deals NO damage (no non-basic player hit between the cast and the end of its window) refunds 30% of its cooldown. */
+const MISS_WINDOW: Partial<Record<ActiveSlot, number>> = { q: 4, s3: 3.8, s4: 3, s5: 8.6, s6: 1.6 };
+const MISS_REFUND = 0.3;
+const missT0: Partial<Record<ActiveSlot, number>> = {}, missHits0: Partial<Record<ActiveSlot, number>> = {};
+function tickMissRefund(): void {
+  const p = world.player;
+  for (const k in missT0) {
+    const slot = k as ActiveSlot, t0 = missT0[slot]!;
+    if (t0 < 0) continue;
+    const t = world.time - t0;
+    if (t < 0) { missT0[slot] = -1; continue; }   // world.time restarted (new run)
+    if (t < MISS_WINDOW[slot]!) continue;
+    missT0[slot] = -1;
+    if (skillHits.n === missHits0[slot] && p.cd[slot] > 0) {
+      p.cd[slot] = Math.max(0, p.cd[slot] - p.cdMax[slot] * MISS_REFUND);
+      events.emit('floatText', { pos: p.pos, text: 'MISS: -30% CD', color: 0x9fe3ff, scale: 0.6, dy: 2.4 });
+    }
+  }
 }
 /** Shared lock after any skill / ultimate cast, so skills can't all be fired in the same instant. */
 const GCD = 0.55;
@@ -393,6 +414,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
   if (!dash && !gate(slot)) return;
   const lv = st.skillLevels[slot];
   const hero = st.hero;
+  if (!dash && ((hero === 'ARCHER' && slot === 's6') || (hero === 'KNIGHT' && slot === 'e') || (hero === 'NECROMANCER' && slot === 's3'))) p.dodgeT = Math.max(p.dodgeT, DODGE_TEMP_S);   // Vault Shot / Shield Wall / Bone Ward: +2% dodge
   // hit-combo damage bonus is applied per hit in combat.damageEnemy
   curMul = 1;
   if (!dash) abilityState.castLockT = Math.max(abilityState.castLockT, 0.4);   // casting: no basic attacks for a moment
@@ -1109,6 +1131,7 @@ export function updateAbilities(dt: number): void {
   updateExtras(dt);
   updateChains(dt);
   updateUlt(dt);
+  tickMissRefund();
   if (a.castLockT > 0) a.castLockT -= dt;
   if (a.lpT > 0) {   // Lightpiercer charge -> fire (keep holding the key to charge it further)
     p.facing = Math.atan2(a.lpDx, a.lpDz);
@@ -1314,6 +1337,7 @@ export function tryDash(auto: boolean): boolean {
   p.dashCharges--;
   p.rootT = 0; p.slowT = 0; // dash cleanses root + slow
   dashModStart();
+  p.dodgeT = DODGE_TEMP_S;   // (owner 2026-11-04) dash: +2% dodge for a few seconds
   castDashSkill(auto);
   dashModFx();
   return true;

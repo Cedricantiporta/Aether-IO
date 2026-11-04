@@ -191,7 +191,7 @@ export function castExtra(slot: 's5' | 's6', lv: number, hero: string, b: number
     damageEnemiesInRadius(p.pos.x, p.pos.z, R, b * 1.8, novaOpts, novaSlow);
     novaFreeze.duration = 0.8 + 0.1 * (lv - 1);
     damageEnemiesInRadius(p.pos.x, p.pos.z, R * 0.5, 0, novaOpts, novaFreeze);
-    const hp = heroHp() * (0.2 + 0.03 * (lv - 1));
+    const hp = heroHp() * (0.06 + 0.009 * (lv - 1));   // (owner 2026-11-04) shield -70%
     p.arcane = Math.max(p.arcane, hp); p.arcaneMax = Math.max(p.arcaneMax, p.arcane); p.arcaneT = Math.max(p.arcaneT, 8);   // shares the purple Arcane Shield bar
     v1.set(p.pos.x, 0, p.pos.z);
     events.emit('frostNova', { pos: v1, radius: R * 1.1 });

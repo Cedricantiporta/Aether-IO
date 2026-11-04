@@ -235,6 +235,7 @@ export function updatePlayer(dt: number): void {
   // ---- timers
   p.invulnT = tickDown(p.invulnT, dt);
   p.rageT = tickDown(p.rageT, dt);
+  p.dodgeT = tickDown(p.dodgeT, dt);
   p.titanT = tickDown(p.titanT, dt);
   p.slowT = tickDown(p.slowT, dt); if (p.slowT <= 0) p.slowPow = 0;
   p.hpPotCd = tickDown(p.hpPotCd, dt);
