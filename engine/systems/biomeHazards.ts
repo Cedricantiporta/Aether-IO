@@ -31,7 +31,9 @@ const ICICLE_WARN = 1.0, ICICLE_R = 1.9, ICICLE_DMG = 0.08, ICICLE_STAY = 0.7;
 // (owner 2026-10-26) a real black hole: the hero's pull (14 u/s at the rim, 22 at the core) beats any walk speed; only a dash (pull x0.2) gets out.
 const RIFT_PULL_R = 6.5, RIFT_CORE_R = 2.0, RIFT_PULL_MIN = 14, RIFT_PULL_MAX = 22, RIFT_MOB_PULL = 5.0,
   RIFT_TICK = 0.5, RIFT_HERO = 0.04, RIFT_MOB = 0.02;
-export const RIFT_DASH_DRIFT = 0.2;   // drift multiplier while the hero dashes (player.ts)
+export const RIFT_DASH_DRIFT = 0;   // drift multiplier while the hero dashes (player.ts): (owner 2026-11-04) a dash always escapes the pull
+const RIFT_FREE_T = 0.6;   // after a dash / i-frames the black holes ignore the hero for this long (no instant re-catch, no stuck state)
+let riftFreeT = 0;
 
 export const hz = {
   kind: 0 as number, ver: 0,
@@ -132,7 +134,7 @@ export function setupBiomeHazards(biome: number, plan: RoomPlan): void {
   hz.kind = HZ.NONE; hz.nBr = hz.nMu = hz.nIce = hz.nRift = 0;
   for (const c of hz.clouds) c.on = false;
   for (const i of hz.ic) i.on = false;
-  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; brCd = brHold = riftCd = plRiftCd = plRiftCd2 = 0; icT = 3;
+  hazSlow = 1; iceGrip = 1; driftX = driftZ = 0; inRift = false; riftFreeT = 0; brCd = brHold = riftCd = plRiftCd = plRiftCd2 = 0; icT = 3;
   hz.ver++;
   if ((plan.type !== 'COMBAT' && plan.type !== 'ELITE') || plan.gate !== undefined || plan.shortcut || plan.epilogue) return;
   const b = biome % BIOMES.length;
@@ -301,6 +303,7 @@ function tickBiomeHazards(dt: number): void {
   if (hz.nRift > 0) {
     // ---- black holes: a violent pull + ticking damage for the hero inside the radius (dash to escape); monsters get a gentle pull and an HP drain in the core
     riftCd -= dt; plRiftCd -= dt; plRiftCd2 -= dt; inRift = false;
+    if (pl.dashT > 0 || pl.invulnT > 0) riftFreeT = RIFT_FREE_T; else if (riftFreeT > 0) riftFreeT -= dt;
     const tick = riftCd <= 0; if (tick) riftCd = RIFT_TICK;
     for (let i = 0; i < hz.nRift; i++) {
       const r = hz.rift[i];
@@ -315,7 +318,7 @@ function tickBiomeHazards(dt: number): void {
         if (fd > 1.2) { const sp = r.follow * (1 + 0.45 * Math.min(1, (r.age - BH_FORM) / 5)) * dt; r.x += fx / fd * sp; r.z += fz / fd * sp; }   // (owner 2026-10-31: the Herald's holes ramp 11 -> 16 u/s, were a flat 5)
       }
       const live = r.k >= 1 || (r.life !== Infinity && r.age > BH_FORM && r.k > 0);   // (still forming = harmless)
-      if (alive && live) {
+      if (alive && live && riftFreeT <= 0) {
         const dx = r.x - px, dz = r.z - pz, d = Math.sqrt(dx * dx + dz * dz);
         if (d < RIFT_PULL_R && d > 0.05) {
           const s = (RIFT_PULL_MIN + (RIFT_PULL_MAX - RIFT_PULL_MIN) * (1 - d / RIFT_PULL_R)) * r.k;

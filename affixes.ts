@@ -34,7 +34,7 @@ export const AFFIXES: AffixDef[] = [
   { key: 'critd', g: 'atk', label: 'Crit Damage',       stat: 'critDamage',      tiers: [0, .1, .15, .22, .3], weight: 9, cp: 100 },
   { key: 'hp', g: 'def',    label: 'Max Health',        stat: 'maxHealth',       mul: true, tiers: [0, .04, .06, .09, .12], weight: 9, cp: 300 },
   { key: 'def', g: 'def',   label: 'Defense',           stat: 'defense',         tiers: [0, 2, 4, 7, 11], weight: 8, cp: 8 },
-  { key: 'move', g: 'util',  label: 'Move Speed',        stat: 'moveSpeed',       mul: true, tiers: [0, .03, .04, .06, .08], weight: 7, cp: 300 },
+  { key: 'move', g: 'util',  label: 'Move Speed',        stat: 'moveSpeed',       mul: true, tiers: [0, .02, .025, .035, .05], weight: 7, cp: 300 },
   { key: 'skill', g: 'atk', label: 'Skill Damage',      stat: 'skillDamage',     tiers: [0, .05, .08, .12, .17], weight: 8, cp: 100 },
   { key: 'cdr', g: 'util',   label: 'Cooldown Reduction', stat: 'cooldownReduction', tiers: [0, .02, .03, .045, .06], weight: 6, cp: 500 },
   { key: 'steal', g: 'util', label: 'Life Steal',        stat: 'lifeSteal',       tiers: [0, .003, .004, .006, .008], weight: 5, cp: 3000 },   // (owner 2026-10-25: life steal halved everywhere)

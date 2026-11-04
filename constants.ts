@@ -347,7 +347,7 @@ export const ITEMS_POOL: Item[] = [
   { id: 'staff_god', name: 'Staff of Aether', classType: 'WIZARD', type: 'WEAPON', rarity: 'MYTHIC', price: 5000, level: 1, projectileType: 'MAGIC', ability: 'FIREBALL', 
     stats: { damage: 200, critRate: 0.3, critDamage: 1.0, skillDamage: 1.0, cooldownReduction: 0.2 }, description: 'Godly Power' },
   { id: 'bow_god', name: 'Apollo Bow', classType: 'ARCHER', type: 'WEAPON', rarity: 'MYTHIC', price: 5000, level: 1, projectileType: 'ARROW', ability: 'ARROW_RAIN', 
-    stats: { damage: 100, fireRate: 2.0, critRate: 0.4, critDamage: 1.0, moveSpeed: 0.5 }, description: 'Rain of Destruction' },
+    stats: { damage: 100, fireRate: 2.0, critRate: 0.4, critDamage: 1.0, moveSpeed: 0.3 }, description: 'Rain of Destruction' },
   { id: 'axe_god', name: 'Titan Killer', classType: 'BARBARIAN', type: 'WEAPON', rarity: 'MYTHIC', price: 5000, level: 1, projectileType: 'AXE', ability: 'AXE_SPIN', 
     stats: { damage: 300, maxHealth: 250, defense: 60, regen: 5.0, knockback: 3.0 }, description: 'Slays immortals.' }, // HP Halved
 
@@ -386,17 +386,17 @@ export const ITEMS_POOL: Item[] = [
   { id: 'gloves_5', name: 'Titan Fists', type: 'GLOVES', rarity: 'MYTHIC', price: 4500, level: 1, stats: { damage: 8, critRate: 0.1, fireRate: 0.5, critDamage: 0.2 } },
 
   // --- BOOTS (Hermes Boots is the Rare tier): move speed / dodge ---
-  { id: 'boots_0', name: 'Traveler Boots', type: 'BOOTS', rarity: 'COMMON', price: 120, level: 1, stats: { moveSpeed: 0.15 } },
-  { id: 'boots_3', name: 'Windrunner Boots', type: 'BOOTS', rarity: 'EPIC', price: 1300, level: 1, stats: { moveSpeed: 0.5, dodge: 0.07 } },
-  { id: 'boots_4', name: 'Shadowstep Greaves', type: 'BOOTS', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { moveSpeed: 0.7, dodge: 0.11 } },
-  { id: 'boots_5', name: 'Aether Striders', type: 'BOOTS', rarity: 'MYTHIC', price: 4500, level: 1, stats: { moveSpeed: 1.0, dodge: 0.16 } },
+  { id: 'boots_0', name: 'Traveler Boots', type: 'BOOTS', rarity: 'COMMON', price: 120, level: 1, stats: { moveSpeed: 0.1, fireRate: 0.04 } },
+  { id: 'boots_3', name: 'Windrunner Boots', type: 'BOOTS', rarity: 'EPIC', price: 1300, level: 1, stats: { moveSpeed: 0.3, fireRate: 0.08, dodge: 0.07 } },
+  { id: 'boots_4', name: 'Shadowstep Greaves', type: 'BOOTS', rarity: 'LEGENDARY', price: 2200, level: 1, stats: { moveSpeed: 0.4, fireRate: 0.12, dodge: 0.11 } },
+  { id: 'boots_5', name: 'Aether Striders', type: 'BOOTS', rarity: 'MYTHIC', price: 4500, level: 1, stats: { moveSpeed: 0.6, fireRate: 0.16, dodge: 0.16 } },
 
   // --- ACCESSORIES (1 Stat Common, 2 Rare, 3 Epic, 4 Leg, 5 Mythic) ---
   { id: 'ring_1', name: 'Ring of Vitality', type: 'ACCESSORY', rarity: 'COMMON', price: 250, level: 1, 
     stats: { maxHealth: 25 } }, // HP Halved
   
   { id: 'boots_1', name: 'Hermes Boots', type: 'BOOTS', rarity: 'RARE', price: 600, level: 1, 
-    stats: { moveSpeed: 0.3, dodge: 0.03 } },
+    stats: { moveSpeed: 0.2, fireRate: 0.06, dodge: 0.03 } },
   { id: 'amulet_mana', name: 'Mana Amulet', type: 'ACCESSORY', rarity: 'RARE', price: 800, level: 1, 
     stats: { manaRegen: 1.0, maxMana: 50 } },
 
@@ -409,7 +409,7 @@ export const ITEMS_POOL: Item[] = [
     stats: { critRate: 0.15, critDamage: 1.0, damage: 30, defense: -10 } },
   
   { id: 'ring_myth', name: 'Omni Ring', type: 'ACCESSORY', rarity: 'MYTHIC', price: 5000, level: 1, 
-    stats: { damage: 50, moveSpeed: 0.2, cooldownReduction: 0.2, skillDamage: 0.5, defense: 30 } },
+    stats: { damage: 50, moveSpeed: 0.1, fireRate: 0.08, cooldownReduction: 0.2, skillDamage: 0.5, defense: 30 } },
 ];
 
 // (owner) the hand-written gear above is the old catalog: kept for saves / starter weapons / ids, but retired from

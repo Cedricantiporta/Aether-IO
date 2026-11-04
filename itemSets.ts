@@ -34,7 +34,7 @@ export const SETS: SetDef[] = [
     names: { weapon: 'Gale Longbow', helmet: 'Gale Hood', armor: 'Gale Tunic', gloves: 'Gale Bracers', boots: 'Gale Striders', accessory: 'Gale Feather' },
     flavour: { weapon: 'swift', helmet: 'light', armor: 'light', gloves: 'light', boots: 'swift', accessory: 'light' },
     bonuses: [
-      { pieces: 2, text: '+10% attack speed, +8% move speed', fx: { mul: { fireRate: 0.1, moveSpeed: 0.08 } } },
+      { pieces: 2, text: '+12% attack speed, +4% move speed', fx: { mul: { fireRate: 0.12, moveSpeed: 0.04 } } },
       { pieces: 4, text: 'Every 5th attack fires twice', fx: { add: { echoEvery: 5 } } },
       { pieces: 6, text: "Storm of Arrows lasts +4s, +20% crit damage", fx: { add: { hawkBonus: 4, critDamage: 0.2 } } },
     ],
@@ -74,7 +74,7 @@ export const SETS: SetDef[] = [
     names: { weapon: { ARCHER: 'Shadowstep Bow', WIZARD: 'Shadowstep Wand', BARBARIAN: 'Shadowstep Hatchet', KNIGHT: 'Shadowstep Blade', NECROMANCER: 'Shadowstep Wand' }, helmet: 'Shadowstep Cowl', armor: 'Shadowstep Leathers', gloves: 'Shadowstep Wraps', boots: 'Shadowstep Treads', accessory: 'Shadowstep Locket' },
     flavour: { weapon: 'swift', helmet: 'light', armor: 'light', gloves: 'light', boots: 'swift', accessory: 'light' },
     bonuses: [
-      { pieces: 2, text: '+8% move speed, +5% dodge', fx: { mul: { moveSpeed: 0.08 }, add: { dodge: 0.05 } } },
+      { pieces: 2, text: '+4% move speed, +4% attack speed, +5% dodge', fx: { mul: { moveSpeed: 0.04, fireRate: 0.04 }, add: { dodge: 0.05 } } },
       { pieces: 4, text: '+10% cooldown reduction', fx: { add: { cooldownReduction: 0.1 } } },
       { pieces: 6, text: '+10% crit rate, +8% dodge, +10% attack speed', fx: { add: { critRate: 0.1, dodge: 0.08 }, mul: { fireRate: 0.1 } } },
     ],

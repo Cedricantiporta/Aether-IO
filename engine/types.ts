@@ -411,6 +411,7 @@ export interface PlayerRuntime {
   knockT: number; knockDur: number; knockDist: number; knockDx: number; knockDz: number; knockDone: number;
   downT: number; downMax: number; knockImmuneT: number;
   hawkT: number;         // archer R: Hawk's Focus (+60% attack speed, +40% damage)
+  dodgeT: number;        // (owner 2026-11-04) dash / some skills: +2% dodge chance while > 0
   rageT: number;         // barbarian Q: attack speed x2
   sprintT: number;       // archer E: speed x2 + invuln
   vitalityT: number;     // barbarian E: heal over time

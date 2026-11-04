@@ -137,9 +137,9 @@ function tickGravity(dt: number): void {
     if (!p.alive) return;
     const ally = p === coopRoom.ally;
     const dx = g.x - p.pos.x, dz = g.z - p.pos.z, d = Math.hypot(dx, dz) || 1e-3;
-    if (!playerTrickImmune() && d > 0.6) {   // the whole arena is pulled: ~1.5 u/s far away, up to ~12 u/s at the core (the hero walks ~6-8; a dash resists)
+    if (!playerTrickImmune() && d > 0.6 && p.dashT <= 0) {   // (owner 2026-11-04) a dash always escapes the pull; the whole arena is pulled: ~1.5 u/s far away, up to ~12 u/s at the core (the hero walks ~6-8; a dash resists)
       const near = Math.max(0, 1 - d / R);
-      const s = (1.5 + 10.5 * Math.pow(near, 1.4)) * g.ramp * (p.dashT > 0 ? 0.3 : 1) * dt;
+      const s = (1.5 + 10.5 * Math.pow(near, 1.4)) * g.ramp * dt;
       if (ally) shoveHero(p, dx / d * s, dz / d * s);   // (co-op: the guest's own hero is dragged on his screen)
       else {
         p.pos.x += dx / d * s; p.pos.z += dz / d * s;

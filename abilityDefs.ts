@@ -21,23 +21,23 @@ const f1 = (n: number) => Number(n.toFixed(1));
 export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   ARCHER: [
     { slot: 'q', icon: 'GALE_ARROW', name: 'Gale Arrow', mana: 22, cd: 7,
-      desc: 'Loose a slow giant wind arrow that pierces a full line, breaking armor and leaving a trail of tornadoes that tug enemies in.',
+      desc: 'Loose a slow giant wind arrow that pierces a full line, breaking armor and leaving a trail of tornadoes that tug enemies in. If it hits nothing, 30% of its cooldown is refunded.',
       per: (lv) => `Damage ${pct(4.8 * lvMul(lv))} · width x${f1(1 + 0.1 * (lv - 1))} · ${3 + lv} tornadoes` },
     { slot: 'e', icon: 'SHADOW_ROLL', name: 'Shadow Roll', mana: 0, cd: 0,
-      desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s.',
+      desc: 'Roll away with brief invulnerability (ends behind the nearest enemy when possible), leaving an arrow cluster that explodes after 0.6s. +2% dodge for 4s.',
       per: (lv) => `Blast ${pct(2.4 * lvMul(lv))} dmg · radius ${f1(4.2 + 0.3 * (lv - 1))} · i-frames ${f1(0.3 + 0.03 * lv)}s` },
     { slot: 's3', icon: 'LIGHT_ARROW', name: 'Lightpiercer', mana: 24, cd: 8,
-      desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Hold the key to keep charging it (up to 1.5s): up to x2.5 damage and twice the size. A full charge knocks enemies down (not bosses).',
+      desc: 'Loose a streak of white light: a very fast arrow that pierces every enemy in a long line. Hold the key to keep charging it (up to 1.5s): up to x2.5 damage and twice the size. A full charge knocks enemies down (not bosses). If it hits nothing, 30% of its cooldown is refunded.',
       per: (lv) => `Damage ${pct(5 * lvMul(lv))} (full charge ${pct(12.5 * lvMul(lv))}) · pierces all` },
     { slot: 's4', icon: 'FROST_FIELD', name: 'Frost Field', mana: 26, cd: 11,
-      desc: 'Throw 3 frost traps in a spread. Each bursts into ice crystals and a large slowing field with a small chance to freeze enemies solid; the centre is briefly frozen.',
+      desc: 'Throw 3 frost traps in a spread. Each bursts into ice crystals and a large slowing field with a small chance to freeze enemies solid; the centre is briefly frozen. If it hits nothing, 30% of its cooldown is refunded.',
       per: (lv) => `Burst ${pct(3 * lvMul(lv))} dmg · field radius ${f1(7.5 + 0.5 * (lv - 1))} · slow ${pct(Math.min(0.9, (0.5 + 0.04 * lv) * 1.5))}` },
     // ---- keys 4 / 5 (class Lv 12 / 18): the extended kit. Sources noted per skill; all scale with skill level 1-5 (engine/systems/heroExtra.ts).
     { slot: 's5', icon: 'EXPLOSIVE_TRAP', name: 'Explosive Trap', mana: 20, cd: 12,   // Diablo 3 Demon Hunter: Spike Trap / Explosive Trap
-      desc: 'Plant a trap at the aim point. It arms in half a second, then blows up when an enemy walks close (or after 8s), knocking enemies down (not bosses). Level 3 and 5 plant an extra trap beside it; level 3 and up also set the blast ablaze.',
+      desc: 'Plant a trap at the aim point. It arms in half a second, then blows up when an enemy walks close (or after 8s), knocking enemies down (not bosses). Level 3 and 5 plant an extra trap beside it; level 3 and up also set the blast ablaze. If it hits nothing, 30% of its cooldown is refunded.',
       per: (lv) => `${1 + (lv >= 3 ? 1 : 0) + (lv >= 5 ? 1 : 0)} trap(s) · ${pct(4.2 * lvMul(lv))} dmg each · radius ${f1(6 + 0.4 * (lv - 1))}` },
     { slot: 's6', icon: 'VAULT_SHOT', name: 'Vault Shot', mana: 18, cd: 8,   // Diablo 3 Demon Hunter: Vault + Risk of Rain 2 Huntress: Blink backstep
-      desc: 'Backflip away from the aim point with a moment of invulnerability, loosing a fan of slowing arrows as you land. More arrows at higher levels.',
+      desc: 'Backflip away from the aim point with a moment of invulnerability, loosing a fan of slowing arrows as you land. More arrows at higher levels. +2% dodge for 4s. If it hits nothing, 30% of its cooldown is refunded.',
       per: (lv) => `${[3, 3, 5, 5, 7][Math.min(5, Math.max(1, lv)) - 1]} arrows · ${pct(1.5 * lvMul(lv))} dmg each · i-frames ${f1(0.35 + 0.05 * lv)}s` },
   ],
   WIZARD: [
@@ -45,7 +45,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'A black hole traps enemies: heavy slow deepening toward the core, a gentle pull and constant damage to everything caught inside. Big monsters resist the pull; bosses and mini-bosses cannot be pulled (only slowed). When it collapses it knocks enemies down (not bosses).',
       per: (lv) => `${pct(6.5 * lvMul(lv))} dmg over its life · radius ${f1(11 + 0.6 * (lv - 1))} · lasts ${f1((3 + 0.1 * lv) * 0.7)}s` },
     { slot: 'e', icon: 'BLINK_NOVA', name: 'Blink Nova', mana: 0, cd: 0,
-      desc: 'Teleport to the aim point. A small frost nova at both the origin and the destination may freeze nearby enemies.',
+      desc: 'Teleport to the aim point. A small frost nova at both the origin and the destination may freeze nearby enemies. +2% dodge for 4s.',
       per: (lv) => `Nova ${pct(0.9 * lvMul(lv))} dmg x2 · radius ${f1(5 + 0.25 * (lv - 1))} · 35% freeze ${f1(0.8 + 0.1 * (lv - 1))}s` },
     { slot: 's3', icon: 'STORM_ORBS', name: 'Storm Orbs', mana: 28, cd: 14,
       desc: 'Three lightning orbs orbit you for 4s, zapping nearby enemies with chain lightning that breaks armor.',
@@ -56,9 +56,9 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 's5', icon: 'CHAIN_LIGHTNING', name: 'Chain Lightning', mana: 22, cd: 7,   // Diablo 3 Wizard / Sorcerer + Hades Zeus: Lightning Strike
       desc: 'Hurl a bolt at the nearest enemy that arcs from monster to monster, shocking each one. Each jump loses a little power.',
       per: (lv) => `${3 + lv} targets · ${pct(3 * lvMul(lv))} dmg (-8% per jump) · jump range 10` },
-    { slot: 's6', icon: 'FROST_BARRIER', name: 'Frost Barrier', mana: 26, cd: 16,   // World of Warcraft Mage: Ice Barrier + Frost Nova
+    { slot: 's6', icon: 'FROST_BARRIER', name: 'Frost Barrier', mana: 26, cd: 32,   // (owner 2026-11-04: cooldown x2, shield -70%)   // World of Warcraft Mage: Ice Barrier + Frost Nova
       desc: 'Wrap yourself in a frost shield that soaks damage for 8s, and burst a frost nova that slows nearby enemies and freezes the ones right next to you.',
-      per: (lv) => `Shield ${Math.round((0.2 + 0.03 * (lv - 1)) * 100)}% max HP · nova ${pct(1.8 * lvMul(lv))} dmg · radius ${f1(8 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.1 * (lv - 1))}s` },
+      per: (lv) => `Shield ${f1((0.06 + 0.009 * (lv - 1)) * 100)}% max HP · nova ${pct(1.8 * lvMul(lv))} dmg · radius ${f1(8 + 0.4 * (lv - 1))} · freeze ${f1(0.8 + 0.1 * (lv - 1))}s` },
   ],
   BARBARIAN: [
     { slot: 'q', icon: 'CROSS_SLASH', name: 'Cross Slash', mana: 18, cd: 5.75,   // (owner: +15%, was 5)
@@ -82,10 +82,10 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Skeletons claw out of the ground around you and hunt the nearest enemies: your army holds up to 5: the first three are skeleton warriors, the 4th and 5th each a random archer or mage. Monsters attack them before you and they stay until slain. With enemies near, the warriors (+45% faster) form a wall in front of you toward the enemy; with none, they follow behind you. While any skeleton WARRIOR of it lives the skill shows ON and its cooldown has not started; the cooldown only starts counting when the last warrior has fallen (archers and mages may still stand): recasting then raises only the missing skeletons, and all of them are warriors. Every summon slain costs you 9% of your max HP. Their skills: warriors Cleave (a spinning swing that hits everything close), archers loose a heavy Burning Arrow that sets the target ablaze and leaves a burning patch, mages cast a Chain Lightning that jumps through up to 4 enemies. Higher levels: more skeletons per cast (2 / 3 / 4 / 5 / 5), +5% skeleton HP and +2% skeleton damage reduction per level.',
       per: (lv) => `${[2, 3, 4, 5, 5][Math.min(5, Math.max(1, lv)) - 1]} skeletons (max 5: 3 warriors + 2 archers / mages) · ${pct(0.9 * 1.35 * Math.sqrt(lvMul(lv)))} dmg per hit · +${(lv - 1) * 5}% HP · ${Math.min(20, (lv - 1) * 2)}% armour` },
     { slot: 'e', icon: 'SOUL_STEP', name: 'Soul Step', mana: 0, cd: 0,
-      desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies.',
+      desc: 'Dissolve into shadow and reappear at the target point; bone shards burst where you left, slowing enemies. +2% dodge for 4s.',
       per: (lv) => `Burst ${pct(0.375 * lvMul(lv))} dmg · radius ${f1(5 + 0.3 * (lv - 1))} · slow 2s` },
     { slot: 's3', icon: 'BONE_WARD', name: 'Bone Ward', mana: 22, cd: 14,   // (owner: replaces Bone Spear)
-      desc: 'Wrap every one of your summons in a shield of bone that soaks damage before their health (a shield worth 30% of their max HP, more with level). Lasts a few seconds.',
+      desc: 'Wrap every one of your summons in a shield of bone that soaks damage before their health (a shield worth 30% of their max HP, more with level). Lasts a few seconds. +2% dodge for 4s.',
       per: (lv) => `shield ${Math.round((0.3 + 0.05 * (lv - 1)) * 100)}% of each summon's max HP · ${8 + lv - 1}s` },
     { slot: 's4', icon: 'CURSE_FIELD', name: 'Plague Ground', mana: 28, cd: 23.4,   // (owner: longer cooldown, was 12, then 18; +30%)
       desc: 'Curse a wide patch of ground: enemies inside rot (damage over time, slowed), and every enemy that dies there rises as a skeleton warrior for 8 seconds (up to 5 at a time, separate from Raise Dead).',
@@ -102,7 +102,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
       per: (lv) => `${pct(4.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
     { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 12,
-      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage.',
+      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage. +2% dodge for 4s.',
       per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
       desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage, stuns and knocks enemies down (not bosses). More rays per level (max 12).',
@@ -129,12 +129,12 @@ export const isDashKey = (hero: HeroClass, key: string): boolean => key === dash
 
 export const SHOULDER_CHARGE: AbilityDef = {
   slot: 'e', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 0, cd: 0,
-  desc: 'Leap to the target (tap: forward) and slam down: stuns and knocks down nearby enemies (not bosses) and grants a short Rage (faster attacks). Invulnerable while airborne.',
+  desc: 'Leap to the target (tap: forward) and slam down: stuns and knocks down nearby enemies (not bosses) and grants a short Rage (faster attacks). Invulnerable while airborne. +2% dodge for 4s.',
   per: (lv) => `Slam ${pct(1.05 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s`,
 };
 export const HOLY_CHARGE: AbilityDef = {
   slot: 'e', icon: 'HOLY_CHARGE', name: 'Holy Charge', mana: 0, cd: 0,
-  desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside and down (not bosses).',
+  desc: 'Charge forward behind your shield (invulnerable), striking every enemy you pass and knocking them aside and down (not bosses). +2% dodge for 4s.',
   per: (lv) => `${pct(0.9 * lvMul(lv))} dmg · length ${f1(11 + 0.5 * (lv - 1))}`,
 };
 /** Ordered active definitions (keys 1, 2, 3). */

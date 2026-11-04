@@ -189,6 +189,13 @@ function gainStagger(e: Enemy, amount: number): void {
 // ------------------------------------------------------------------ helpers --
 /** (owner) flat ult charge per landed hit (meter 0..100): basic attack 0.1, skill 0.3 (before the weapon-level / showcase multipliers). */
 export const ULT_PER_BASIC = 0.1, ULT_PER_SKILL = 0.3;
+/** (owner 2026-11-04) Archer: +5% damage on the basic attack and every skill; ultimate charges 7% faster. */
+export const ARCHER_DMG_MUL = 1.05, ARCHER_ULT_MUL = 1.07;
+function heroDmgMul(): number { return useGameStore.getState().hero === 'ARCHER' ? ARCHER_DMG_MUL : 1; }
+/** Count of landed non-basic, non-DoT player hits (skills / dashes); the Archer miss-refund watches it (abilities.ts). */
+/** (owner 2026-11-04) every hero has 3% base dodge (store.calculateStats); dashes / some skills add +2% for DODGE_TEMP_S seconds (p.dodgeT). */
+export const DODGE_TEMP = 0.02, DODGE_TEMP_S = 4;
+export const skillHits = { n: 0 };
 /** Ultimate charge (0..100) from damage dealt and kills. */
 export function addUlt(n: number): void {
   const p = world.player;
@@ -196,7 +203,7 @@ export function addUlt(n: number): void {
   const sl = useGameStore.getState().skillLevels;
   if (sl.ult <= 0) return;   // the ult is locked until Lv 10 (no charge)
   const wl = sl.weapon;
-  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1) * (1 + runCards.ultCharge));   // (+ Surging Heart run card) // ult charge (+40% vs 0.62)
+  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1) * (1 + runCards.ultCharge) * (useGameStore.getState().hero === 'ARCHER' ? ARCHER_ULT_MUL : 1));   // (+ Surging Heart run card) // ult charge (+40% vs 0.62)
   if (p.ult >= 100) events.emit('ultReady', {});
 }
 
@@ -443,7 +450,7 @@ function startAnkhCooldown(): void { ankhReadyAt = Date.now() + ANKH_COOLDOWN_MS
 function guestHit(e: Enemy, amount: number, o: DamageOpts): void {
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN' || e.shellT > 0 || !(amount > 0) || !coopRoom.sendHit) return;
   if (!o.dot && o.source !== 'PET') { amount *= comboMul(); registerHit(); }
-  if (o.source === 'PLAYER') amount *= cardDamageMul(e);
+  if (o.source === 'PLAYER') { amount *= cardDamageMul(e) * heroDmgMul(); if (!o.dot && !o.basic) skillHits.n++; }
   const p = world.player;
   if (o.source === 'PLAYER') {
     addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, amount / Math.max(1, e.maxHp)) + (o.dot ? 0 : o.basic ? ULT_PER_BASIC : ULT_PER_SKILL));
@@ -505,7 +512,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     }
   }
   if (!o.dot && o.source !== 'PET') { dealt *= comboMul(); registerHit(); }
-  if (o.source === 'PLAYER') dealt *= cardDamageMul(e);   // special cards: Afflictor / Giant Slayer / Executioner / First Strike
+  if (o.source === 'PLAYER') dealt *= cardDamageMul(e) * heroDmgMul();   // (owner 2026-11-04: Archer +5%) special cards: Afflictor / Giant Slayer / Executioner / First Strike
   if (e.kind === 'ROCK_CRAB' && !o.dot) dealt = crabArmor(e, dealt);
   if (e.boss) dealt *= hooks.damageMul(e, o.fromX !== undefined ? o.fromX : world.player.pos.x, o.fromZ !== undefined ? o.fromZ : world.player.pos.z) * hooks.phaseMul(e) * hooks.kitMul(e); // Elderroot bark armor, Mire Hydra heads shielding the body
   else if (e.kind === 'DARK_HERO') { dealt *= hooks.heroMul(e); if (dealt <= 0) { e.hitFlash = 0.4; return; } }   // Dark Knight shield block: no damage at all
@@ -524,6 +531,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
     e.hp -= dealt;
     const run = world.run;
     run.damageDealt += dealt;
+    if (o.source === 'PLAYER' && !o.dot && !o.basic) skillHits.n++;
     if (o.source === 'PLAYER') addUlt((o.dot ? 0.04 : 0.28) * Math.min(1, dealt / Math.max(1, e.maxHp)) + (o.dot ? 0 : o.basic ? ULT_PER_BASIC : ULT_PER_SKILL));
     if (!o.dot && dealt > run.highestHit) run.highestHit = dealt;
     // Life steal (gear affixes / sets / talents): direct player damage only; healed in chunks to limit floating text.
@@ -918,7 +926,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
     events.emit('floatText', { pos: p.pos, text: 'Interrupted!', color: 0xffb070, scale: 0.9, dy: 2.4 });
   }
 
-  if (!isDot && !crit && st.stats.dodge > 0 && Math.random() < st.stats.dodge) return;
+  if (!isDot && !crit && (st.stats.dodge + (p.dodgeT > 0 ? DODGE_TEMP : 0)) > 0 && Math.random() < st.stats.dodge + (p.dodgeT > 0 ? DODGE_TEMP : 0)) return;
   if (!isDot && !o?.env) {   // (owner 2026-10-25) remember who hit the hero: it hits back (player.ts)
     let src: Enemy | null = o?.src ?? (o?.srcId !== undefined && o.srcId >= 0 ? world.enemies[o.srcId] ?? null : null);
     if (!src && o?.pos) {   // melee / scripted hits pass the attacker's position: the nearest monster to it
