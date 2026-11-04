@@ -283,7 +283,8 @@ export interface GameState {
   brewElixir: (id: import('./elixirs').ElixirId, n?: number) => number;   // Elixir Brewer: spend monster parts + gold, add elixirs to the bag; returns how many were brewed
   drinkElixir: (item: Item) => boolean;            // bag: drink an elixir (town: queued for the next run; in a run: active at once)
   buyInventorySlots: () => boolean;
-  upgradeItem: (item: Item) => { success: boolean; msg: string; newItem?: Item };
+  upgradeItem: (item: Item, opts?: { fortune?: boolean; protect?: boolean; maxLevel?: number }) => { success: boolean; msg: string; newItem?: Item; great?: boolean; broke?: boolean; saved?: boolean };
+  instantUpgrade: (item: Item, targetPlus?: number) => { item: Item; attempts: number; fails: number; greats: number; gold: number; cores: number; reached: boolean; msg: string };
   /** Wishing Fountain: toss today's coin (null when already wished today); uses a wish target up (RUN consumed at run start, FISH / CRAFT count steps, MINE once) */
   makeWish: () => import('./wishing').WishId | null;
   wishUse: (t: import('./wishing').WishTarget, n?: number) => void;

@@ -199,9 +199,19 @@ export const applyPlus = (item: Item, plus: number): void => {
 };
 
 // ------------------------------------------------------------------ upgrade --
-/** Blacksmith upgrade odds/costs by the item's level (level 1 == +0). Owner rules: every + tier fails 10% more, higher +
- *  needs many more cores, gold x1.8, and going past +7 can shatter the item on a failure. */
-export const upgradeChanceAt = (level: number): number => { const plus = level - 1; return plus <= 0 ? 1 : Math.max(0.05, 0.9 - plus * 0.1); };
+/** Blacksmith upgrade odds/costs by the item's CURRENT level (level 1 == +0, so a +2 piece is level 3 and its attempt is
+ *  +2 -> +3). Owner (2026-11): up to +5 is almost a sure thing, then it gets harder. Index = current plus (0..8). */
+const UPGRADE_CHANCE = [1, 1, 0.99, 0.99, 0.98, 0.75, 0.65, 0.55, 0.45];
+export const upgradeChanceAt = (level: number): number => { const plus = Math.max(0, level - 1); return UPGRADE_CHANCE[Math.min(plus, UPGRADE_CHANCE.length - 1)]; };
+/** Chance of a "Great Success" (+2 levels instead of +1) on every successful attempt. */
+export const GREAT_UPGRADE_CHANCE = 0.3;
+/** Fortune Charm: +10% success chance (additive, capped at 100%). */
+export const FORTUNE_BONUS = 0.1;
+export const FORTUNE_CHARM = { id: 'fortune_charm', name: 'Fortune Charm' } as const;
+export const PROTECTION_CHARM = { id: 'protection_charm', name: 'Protection Charm' } as const;
+export const UPGRADE_CHARM_NAMES: ReadonlySet<string> = new Set([FORTUNE_CHARM.name, PROTECTION_CHARM.name]);
+/** Protection Charms needed to make a failed attempt from `level` safe: 1 at the first level that can break, +1 for each one after (0 = no break risk). */
+export const upgradeProtectNeed = (level: number): number => (level >= 8 ? level - 7 : 0);
 export const upgradeCoresAt = (level: number): number => Math.ceil((level * level) / 6);
 /** Tiered cores (owner: 2 tiers): Common..Epic gear upgrades with Upgrade Cores, Legendary and above with Refined Cores. */
 export const CORE_IDS = ['upgrade_core', 'upgrade_core_2'] as const;
@@ -211,8 +221,8 @@ export const upgradeCoreTierFor = (rarity: string): number => (rarity === 'COMMO
 /** Tier (0..2) of a bag core by its name, -1 when not a core. */
 export const coreTierOf = (item: { type: string; name: string }): number => (item.type === 'CORE' ? (item.name === 'Upgrade Core' ? 0 : 1) : -1)   // (an old 'Radiant Core' counts as a Refined Core);
 export const upgradeGoldFor = (price: number, level: number): number => Math.floor(price * level * 0.36);
-/** Chance a FAILED upgrade towards +8 or more destroys the item (target +8: 25%, +9: 40%). */
-export const upgradeBreakAt = (level: number): number => (level >= 8 ? 0.25 + (level - 8) * 0.15 : 0);
+/** Chance a FAILED upgrade towards +8 or more destroys the item (target +8: 25%, then +5% for every + after that). */
+export const upgradeBreakAt = (level: number): number => (level >= 8 ? 0.25 + (level - 8) * 0.05 : 0);
 
 const roundStat = (v: number): number => (Math.abs(v) >= 10 ? Math.round(v) : parseFloat(v.toFixed(2)));
 

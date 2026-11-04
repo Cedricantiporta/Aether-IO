@@ -6,16 +6,16 @@ import type { Item } from '../../types';
 import { ItemSlot } from './ItemSlot';
 import { RARITY_LIGHT } from '../theme';
 
-export interface ForgeOutcome { success: boolean; item: Item; title: string; sub?: string }
+export interface ForgeOutcome { success: boolean; item: Item; title: string; sub?: string; great?: boolean }
 
 type Phase = 'charge' | 'burst' | 'result';
 
-export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void; heading?: string; noLevel?: boolean }> = ({ item, run, onDone, heading = 'Enhancement Result', noLevel }) => {
+export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onDone: () => void; heading?: string; noLevel?: boolean; fast?: boolean }> = ({ item, run, onDone, heading = 'Enhancement Result', noLevel, fast }) => {
   const [phase, setPhase] = useState<Phase>('charge');
   const [out, setOut] = useState<ForgeOutcome | null>(null);
   const runRef = useRef(run); runRef.current = run;
   useEffect(() => {
-    const t1 = setTimeout(() => { setOut(runRef.current()); setPhase('burst'); }, 1400);
+    const t1 = setTimeout(() => { setOut(runRef.current()); setPhase('burst'); }, fast ? 350 : 1400);
     const t2 = setTimeout(() => setPhase('result'), 2100);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
@@ -27,7 +27,7 @@ export const ForgeCinematic: React.FC<{ item: Item; run: () => ForgeOutcome; onD
   const close = (e: React.MouseEvent) => { e.stopPropagation(); if (phase === 'result') onDone(); };
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   return createPortal(
-    <div className={`fc-root fc-${phase} ${ok ? 'fc-ok' : 'fc-fail'}`} onClick={close} onPointerDown={stop} onMouseDown={stop} data-testid="forge-cinematic" style={{ ['--rc' as any]: rc }}>
+    <div className={`fc-root fc-${phase} ${ok ? 'fc-ok' : 'fc-fail'}${out?.great ? ' fc-great' : ''}${fast ? ' fc-fast' : ''}`} onClick={close} onPointerDown={stop} onMouseDown={stop} data-testid="forge-cinematic" style={{ ['--rc' as any]: rc }}>
       <div className="fc-smoke" /><div className="fc-smoke b" />
       <div className="fc-rays" />
       <div className="fc-sparks">{Array.from({ length: 26 }, (_, i) => <i key={i} style={{ ['--a' as any]: `${(i * 137.5) % 360}deg`, ['--d' as any]: `${(i % 7) * 0.09}s`, ['--r' as any]: `${14 + (i * 7) % 22}rem` }} />)}</div>

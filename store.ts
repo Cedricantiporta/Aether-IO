@@ -39,13 +39,13 @@ import { newAcc, accumulate, applyAcc } from './statFx';
 import { accumulateTalents, allocBlock, emptyTalents, respecCost, sanitizeTalents, talentPointsTotal, talentsSpent, TALENT_BY_ID, type TalentRanks } from './talents';
 import { STARTER_GEAR, classWearId } from './itemCatalog';
 import { SET_BY_NAME } from './itemSets';
-import { applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierFor, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
+import { UPGRADE_CHARM_NAMES, FORTUNE_CHARM, PROTECTION_CHARM, FORTUNE_BONUS, GREAT_UPGRADE_CHANCE, upgradeProtectNeed, applyPlus, plusMul, upgradeChanceAt, upgradeCoresAt, upgradeGoldFor, upgradeBreakAt, upgradeCoreTierFor, coreTierOf, CORE_IDS, CORE_NAMES, CORE_FUSE, canCraft, consumeLoot, craft, recycleYield, recycleYieldAll, type Recipe, CRAFT_SUCCESS } from './crafting';
 import { deviceDefaults } from './engine/device';
 import { feedReward } from './rewardFeed';
 import { reforge, REFORGE_ITEM, type ReforgeMode } from './reforge';
 /** The captain's ticket: sail from the pier straight to the Coral Isles (biome 3, its first room). */
 export const SHIP_TICKET_CRYSTALS = 60;   // (owner 2026-10-24) the Coral Isles ticket costs Aether Crystals, not gems
-const REFORGE_NAMES = new Set(Object.values(REFORGE_ITEM).map((r) => r.name));
+const REFORGE_NAMES = new Set([...Object.values(REFORGE_ITEM).map((r) => r.name), ...UPGRADE_CHARM_NAMES]);   // (+ the upgrade charms: not trade goods)
 /** What a bulk sell would take from the bag (gear at 30%, loot stacks at full value). Shared by the store and the popup preview. */
 export function bulkSellPick(inv: Item[], o: BulkSellOpts): { items: Item[]; gold: number; count: number; loot: number; fish: number } {
   const items: Item[] = []; let gold = 0, count = 0, loot = 0, fish = 0;
@@ -2053,11 +2053,11 @@ export const useGameStore = create<GameState>()((set, get) => {
       return true;
     },
 
-    upgradeItem: (item) => {
+    upgradeItem: (item, opts) => {   // opts: Fortune Charm (+10%), Protection Charm (no break), maxLevel (instant +5 never overshoots)
       const s = get();
       const fail = (msg: string) => {
         set({ actionResult: { type: 'UPGRADE', success: false, message: msg } });
-        return { success: false, msg, newItem: item };
+        return { success: false, msg, newItem: item, stop: true };
       };
       if (item.level >= 10) return fail('Max Level Reached!');
 
@@ -2069,8 +2069,13 @@ export const useGameStore = create<GameState>()((set, get) => {
       const goldCost = free ? 0 : upgradeGoldFor(item.price, item.level);
       if (s.gold < goldCost) return fail('Not enough Gold!');
       if (requiredCores > 0 && (!core || (core.quantity || 1) < requiredCores)) return fail(`Need ${requiredCores} ${CORE_NAMES[tier]}s`);
+      const charmCount = (name: string) => s.inventory.reduce((n, i) => (i.name === name ? n + (i.quantity || 1) : n), 0);
+      const useFortune = !free && !!opts?.fortune && charmCount(FORTUNE_CHARM.name) >= 1;
+      const protectNeed = upgradeProtectNeed(item.level);
+      const wantProtect = !free && !!opts?.protect && protectNeed > 0;
+      if (wantProtect && charmCount(PROTECTION_CHARM.name) < protectNeed) return fail(`Need ${protectNeed} ${PROTECTION_CHARM.name}s`);
 
-      const chance = free ? 100 : upgradeChanceAt(item.level) * 100;
+      const chance = free ? 100 : Math.min(1, upgradeChanceAt(item.level) + (useFortune ? FORTUNE_BONUS : 0)) * 100;
       const success = Math.random() * 100 < chance;
 
       const inv = s.inventory.slice();
@@ -2079,17 +2084,29 @@ export const useGameStore = create<GameState>()((set, get) => {
         if (coreQty > requiredCores) inv[coreIndex] = { ...core, quantity: coreQty - requiredCores };
         else inv.splice(coreIndex, 1);
       }
+      /** Takes n charms of `name` out of `inv` (inventory is a fresh copy). */
+      const takeCharm = (name: string, n: number) => {
+        for (let k = 0; k < inv.length && n > 0; k++) {
+          if (inv[k].name !== name) continue;
+          const q = inv[k].quantity || 1;
+          if (q > n) { inv[k] = { ...inv[k], quantity: q - n }; n = 0; } else { n -= q; inv.splice(k, 1); k--; }
+        }
+      };
+      if (useFortune) takeCharm(FORTUNE_CHARM.name, 1);
 
-      if (!success && !free && Math.random() < upgradeBreakAt(item.level)) {   // past +7 a failure can shatter the item
-        const equipment = { ...s.equipment } as Equipment;
-        for (const sl of SLOTS) if (equipment[sl]?.id === item.id) equipment[sl] = null;
-        const msg = `${item.name} shattered!`;
-        set({ gold: s.gold - goldCost, inventory: inv.filter((i) => i.id !== item.id), equipment, stats: calc(s.baseStats, equipment), actionResult: { type: 'UPGRADE', success: false, message: msg } });
-        return { success: false, msg, newItem: item };
-      }
       if (!success) {
-        set({ gold: s.gold - goldCost, inventory: inv, actionResult: { type: 'UPGRADE', success: false, message: 'Upgrade Failed...' } });
-        return { success: false, msg: 'Upgrade Failed...', newItem: item };
+        const wouldBreak = !free && Math.random() < upgradeBreakAt(item.level);   // from +8 on a failure can destroy the item
+        if (wouldBreak && !wantProtect) {
+          const equipment = { ...s.equipment } as Equipment;
+          for (const sl of SLOTS) if (equipment[sl]?.id === item.id) equipment[sl] = null;
+          const msg = `${item.name} shattered!`;
+          set({ gold: s.gold - goldCost, inventory: inv.filter((i) => i.id !== item.id), equipment, stats: calc(s.baseStats, equipment), actionResult: { type: 'UPGRADE', success: false, message: msg } });
+          return { success: false, msg, newItem: item, broke: true };
+        }
+        if (wouldBreak) takeCharm(PROTECTION_CHARM.name, protectNeed);   // the charms are only spent when they really saved the item
+        const msg = wouldBreak ? `The ${PROTECTION_CHARM.name} saved your ${item.name}!` : 'Upgrade Failed...';
+        set({ gold: s.gold - goldCost, inventory: inv, actionResult: { type: 'UPGRADE', success: false, message: msg } });
+        return { success: false, msg, newItem: item, saved: wouldBreak };
       }
 
       const upgraded = (i: Item): Item => {
@@ -2102,7 +2119,11 @@ export const useGameStore = create<GameState>()((set, get) => {
         }
         return { ...i, level: i.level + 1, stats };
       };
-      const result = upgraded(item);
+      // Great Success (30% of every success): +2 levels instead of +1 (never past the max / the caller's cap)
+      const cap = Math.min(10, opts?.maxLevel ?? 10);
+      const great = !free && item.level + 2 <= cap && Math.random() < GREAT_UPGRADE_CHANCE;
+      const result = great ? upgraded(upgraded(item)) : upgraded(item);
+      const msg = great ? 'Great Success!' : 'Success!';
       const sameId = (i: Item | null) => (i && i.id === item.id ? result : i);
       const equipment = { ...EMPTY_EQUIPMENT } as Equipment;
       for (const sl of SLOTS) equipment[sl] = sameId(s.equipment[sl]);
@@ -2111,10 +2132,27 @@ export const useGameStore = create<GameState>()((set, get) => {
         inventory: inv.map((i) => (i.id === item.id ? result : i)),
         equipment,
         stats: calc(s.baseStats, equipment),
-        actionResult: { type: 'UPGRADE', success: true, message: 'Upgrade Successful!', item: result },
+        actionResult: { type: 'UPGRADE', success: true, message: msg, item: result },
       });
-      events.emit('hub', { kind: 'upgrade', n: 1 });
-      return { success: true, msg: 'Upgrade Successful!', newItem: result };
+      events.emit('hub', { kind: 'upgrade', n: great ? 2 : 1 });
+      return { success: true, msg, newItem: result, great };
+    },
+    /** Instant upgrade towards +5: repeats every step (a failed step is simply paid for and tried again) until +5 or the cores / gold run out. */
+    instantUpgrade: (item, targetPlus = 5) => {
+      const target = targetPlus + 1;   // item level of +N
+      const tierOf = upgradeCoreTierFor(item.rarity);
+      const coresNow = () => get().inventory.reduce((n, i) => (coreTierOf(i) === tierOf ? n + (i.quantity || 1) : n), 0);
+      const g0 = get().gold, c0 = coresNow();
+      let cur = item, attempts = 0, fails = 0, greats = 0, msg = '';
+      while (cur.level < target && attempts < 400) {
+        const r = get().upgradeItem(cur, { maxLevel: target });
+        if ((r as { stop?: boolean }).stop) { msg = r.msg; break; }
+        attempts++;
+        if (!r.success) fails++;
+        else if (r.great) greats++;
+        cur = r.newItem ?? cur;
+      }
+      return { item: cur, attempts, fails, greats, gold: g0 - get().gold, cores: c0 - coresNow(), reached: cur.level >= target, msg };
     },
 
     rollItemDrop: (rarityOverride, ctx) => {

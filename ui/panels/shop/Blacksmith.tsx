@@ -4,11 +4,11 @@ import { useDrop } from '../../lib/dnd';
 import { ChevronsDown, Hammer, Recycle, RefreshCcw, ArrowRight, Hexagon } from '../../components/GoldIcons';
 import { CoinGlyph } from '../../components/SkillIcons';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameStore, questFree, makeItemById } from '../../../store';
+import { useGameStore, questFree, makeItemById, calculateItemCP } from '../../../store';
 import { shardItem } from '../../../shards';
 import { useShallow } from 'zustand/react/shallow';
 import { SHARD_FUSE_COST, MATERIAL_DOWNGRADE_YIELD } from '../../../constants';
-import { coreTierOf, CORE_NAMES, CORE_FUSE, CORE_IDS, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, type CraftSlot } from '../../../crafting';
+import { coreTierOf, CORE_NAMES, CORE_FUSE, CORE_IDS, CRAFT_SLOTS, CRAFT_RARITIES, SLOT_LABEL, getRecipe, canCraft, recipeTemplates, statRange, lootOwned, recycleYield, recycleYieldAll, CRAFT_PLUS1_CHANCE, CRAFT_PLUS2_CHANCE, FORTUNE_CHARM, PROTECTION_CHARM, FORTUNE_BONUS, GREAT_UPGRADE_CHANCE, upgradeProtectNeed, type CraftSlot } from '../../../crafting';
 import { LOOT_BY_ID } from '../../../loot';
 import { Lock } from '../../components/GoldIcons';
 import type { Rarity, PlayerStats, Item } from '../../../types';
@@ -68,19 +68,18 @@ const UpgradePicker: React.FC<{ selectedId?: string; onPick: (it: Item) => void 
   const { inventory, equipment } = useGameStore(useShallow((s) => ({ inventory: s.inventory, equipment: s.equipment })));
   const worn = Object.values(equipment).filter((i): i is Item => !!i && isGear(i) && i.type !== 'PET');
   const bag = inventory.filter((i) => isGear(i) && i.type !== 'PET');
+  const wornIds = new Set(worn.map((i) => i.id));
+  const all = [...worn, ...bag].sort((a, b) => calculateItemCP(b) - calculateItemCP(a));   // (owner) highest CP first
   return (
     <div className="flex flex-col gap-1.5 w-full" data-testid="upgrade-picker">
       <div className="rpg-label">Choose gear to upgrade</div>
       <div className="rpg-scroll p-1.5" style={{ maxHeight: '11.5rem', overflowY: 'auto' }}>
         {worn.length + bag.length === 0 ? <div className="rpg-label opacity-70 text-center py-3">No gear to upgrade yet.</div> : (
           <div className="slot-grid" style={{ ['--cell' as any]: '3.4rem' }}>
-            {worn.map((it) => (
-              <ItemSlot key={`w${it.id}`} item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} selected={selectedId === it.id} onClick={() => onPick(it)}>
-                <i className="absolute top-0 left-0 px-1 rounded-br text-[.55rem] font-bold bg-[var(--good)] text-black" aria-label="Equipped">E</i>
+            {all.map((it) => (
+              <ItemSlot key={it.id} item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} selected={selectedId === it.id} onClick={() => onPick(it)}>
+                {wornIds.has(it.id) && <i className="absolute top-0 left-0 px-1 rounded-br text-[.55rem] font-bold bg-[var(--good)] text-black" aria-label="Equipped">E</i>}
               </ItemSlot>
-            ))}
-            {bag.map((it) => (
-              <ItemSlot key={`b${it.id}`} item={it} fluid size="100%" iconSize="78%" tooltip="none" compare={false} selected={selectedId === it.id} onClick={() => onPick(it)} />
             ))}
           </div>
         )}
@@ -95,6 +94,10 @@ export const Upgrade: React.FC = () => {
   const setSelected = useUiStore((s) => s.setSelectedItem);
   const free = useGameStore((s) => questFree(s, 'forge'));   // tutorial "Temper the Steel": no gold, no cores, sure success
   const [forging, setForging] = useState(false);
+  const [quick, setQuick] = useState(false);   // the instant +5 run (short animation)
+  const [useFortune, setUseFortune] = useState(false), [useProtect, setUseProtect] = useState(false);
+  const instantUpgrade = useGameStore((s) => s.instantUpgrade);
+  const charmHave = (name: string) => inventory.reduce((n, i) => (i.name === name ? n + (i.quantity || 1) : n), 0);
   const worn = Object.values(equipment).filter((i): i is NonNullable<typeof i> => !!i);   // equipped gear can be upgraded too (drag it from the equipped slots)
   const item = selected ? (inventory.find((i) => i === selected) ?? inventory.find((i) => i.id === selected.id) ?? worn.find((i) => i.id === selected.id) ?? (forging ? selected : null)) : null;   // (a shattered item stays on screen until its cinematic ends)
   const coreTier = selected ? upgradeCoreTier(selected) : 0;   // tiered cores: the one this upgrade needs
@@ -109,17 +112,30 @@ export const Upgrade: React.FC = () => {
   const goldCost = free ? 0 : upgradeGoldCost(item), coreCost = free ? 0 : upgradeCoreCost(item);
   const chance = free ? 1 : upgradeChance(item), brk = free ? 0 : upgradeBreakChance(item);
   const next = upgradedStats(item);
+  const fortuneHave = charmHave(FORTUNE_CHARM.name), protectHave = charmHave(PROTECTION_CHARM.name);
+  const protectNeed = free ? 0 : upgradeProtectNeed(item.level);
+  const fortuneOn = !free && useFortune && fortuneHave >= 1, protectOn = protectNeed > 0 && useProtect && protectHave >= protectNeed;
+  const shownChance = Math.min(1, chance + (fortuneOn ? FORTUNE_BONUS : 0));
   const can = !maxed && gold >= goldCost && cores >= coreCost && !forging;
+  const canQuick = !maxed && item.level < 6 && !free && gold >= goldCost && cores >= coreCost && !forging;
   const forge = () => {
     if (!can) return;
+    setQuick(false);
     setForging(true);
   };
   const runForge = (): ForgeOutcome => {
-    const r = upgradeItem(item);
+    const r = upgradeItem(item, { fortune: fortuneOn, protect: protectOn });
     const it = r.newItem ?? item;
-    return r.success
-      ? { success: true, item: it, title: 'Great Success!', sub: `${it.name} reached +${it.level - 1}` }
-      : { success: false, item: it, title: r.msg.endsWith('shattered!') ? 'Shattered!' : 'Enhancement Failed', sub: r.msg };
+    if (r.success) return r.great
+      ? { success: true, great: true, item: it, title: 'Great Success!', sub: `Double level up! ${it.name} jumped to +${it.level - 1}` }
+      : { success: true, item: it, title: 'Success!', sub: `${it.name} reached +${it.level - 1}` };
+    return { success: false, item: it, title: r.broke ? 'Shattered!' : r.saved ? 'Saved!' : 'Enhancement Failed', sub: r.msg };
+  };
+  const runQuick = (): ForgeOutcome => {
+    const r = instantUpgrade(item, 5);
+    const parts = [`${r.attempts} tries`, `${r.cores.toLocaleString()} ${CORE_NAMES[coreTier]}s`, `${r.gold.toLocaleString()} gold`];
+    if (r.fails) parts.splice(1, 0, `${r.fails} failed`);
+    return { success: r.reached, great: r.reached && r.greats > 0, item: r.item, title: r.reached ? 'Reached +5!' : 'Out of materials', sub: `${parts.join(' · ')}${r.reached ? '' : ` · stopped at +${r.item.level - 1}${r.msg ? ` (${r.msg})` : ''}`}` };
   };
   const keys = Object.keys(item.stats) as (keyof PlayerStats)[];
 
@@ -146,8 +162,8 @@ export const Upgrade: React.FC = () => {
         <div className="enc-item" style={{ ['--rc' as any]: RARITY_COLOR[item.rarity] }}>
           <ItemSlot item={item} size="4.6rem" iconSize={40} tooltip="none" compare={false} />
         </div>
-        <div className={`enc-mat chance ${chance < 0.5 ? 'low' : ''}`} data-testid="upgrade-chance" title="Success chance">
-          <b className="rpg-num">{Math.round(chance * 100)}%</b>
+        <div className={`enc-mat chance ${shownChance < 0.5 ? 'low' : ''}`} data-testid="upgrade-chance" title="Success chance">
+          <b className="rpg-num">{Math.round(shownChance * 100)}%</b>
           <span>chance</span>
         </div>
       </div>
@@ -160,12 +176,28 @@ export const Upgrade: React.FC = () => {
         ))}
       </div>
       {free && <FreeNote />}
-      {brk > 0 && !maxed && <div className="enc-warn" data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure)</div>}
+      {!maxed && !free && <div className="enc-sub" data-testid="upgrade-great">Great Success {Math.round(GREAT_UPGRADE_CHANCE * 100)}%: +2 levels at once</div>}
+      {!maxed && !free && (
+        <div className="flex gap-2 w-full justify-center flex-wrap" data-testid="upgrade-charms">
+          <button className={`rpg-btn bevel pe px-2 py-1 text-[.72rem] ${fortuneOn ? 'is-active' : ''}`} disabled={fortuneHave < 1 || forging} onClick={() => setUseFortune(!useFortune)} data-testid="charm-fortune" title={`+${Math.round(FORTUNE_BONUS * 100)}% success chance (uses 1)`}>
+            {fortuneOn ? '[x]' : '[ ]'} Fortune Charm +{Math.round(FORTUNE_BONUS * 100)}% · 1/{fortuneHave}
+          </button>
+          {protectNeed > 0 && (
+            <button className={`rpg-btn bevel pe px-2 py-1 text-[.72rem] ${protectOn ? 'is-active' : ''}`} disabled={protectHave < protectNeed || forging} onClick={() => setUseProtect(!useProtect)} data-testid="charm-protect" title="Stops the item breaking if this upgrade fails (only spent when it saves the item)">
+              {protectOn ? '[x]' : '[ ]'} Protection Charm · {protectNeed}/{protectHave}
+            </button>
+          )}
+        </div>
+      )}
+      {brk > 0 && !maxed && <div className="enc-warn" data-testid="upgrade-break">Shatter risk: a failed upgrade destroys the item ({Math.round(brk * 100)}% on failure){protectOn ? ' - protected by your charm' : ''}</div>}
       <button className="enc-btn" disabled={!can} onClick={forge}>
         <span className="enc-btn-t"><Hammer size={18} className={forging ? 'hammer-anim' : ''} /> {maxed ? 'Max level' : forging ? 'Forging...' : 'Upgrade'}</span>
         {!maxed && <span className="enc-btn-c rpg-num" style={{ color: gold >= goldCost ? undefined : '#ffb4a8' }}><CoinGlyph size={14} /> {goldCost.toLocaleString()}</span>}
       </button>
-      {forging && <ForgeCinematic item={item} run={runForge} onDone={() => setForging(false)} />}
+      {!maxed && !free && item.level < 6 && (
+        <button className="rpg-btn bevel pe px-3 py-1.5 self-center" disabled={!canQuick} data-testid="upgrade-quick" title="Keeps upgrading (retrying failed steps) until +5 or you run out of cores / gold" onClick={() => { setQuick(true); setForging(true); }}>Instant upgrade to +5</button>
+      )}
+      {forging && <ForgeCinematic item={item} run={quick ? runQuick : runForge} fast={quick} heading={quick ? 'Instant Upgrade' : undefined} onDone={() => { setForging(false); setQuick(false); }} />}
     </div></GearDrop><UpgradePicker selectedId={item.id} onPick={setSelected} /></div>
   );
 };

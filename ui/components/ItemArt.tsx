@@ -499,7 +499,7 @@ const DRAW: Record<string, Draw> = {
   ring_1: Ring(0), ring_wiz: Ring(1), ring_crit: Ring(2), ring_myth: Ring(3), boots_1: Boots, amulet_mana: Amulet(true), focus_crystal: Focus,
   potion_hp: Potion('red', false), potion_mana: Potion('blue', false), potion_hp_big: Potion('red', true), potion_mana_big: Potion('blue', true), potion_hp_grand: Potion('red', true), potion_mana_grand: Potion('blue', true),
   upgrade_core: Core, upgrade_core_2: CoreT('gold', '#ffd24a'), upgrade_core_3: CoreT('red', '#ff4a6a'), revive_ankh: Ankh,
-  boss_ticket: lootDraw('page', '#a96bff', '#f5e8ff'), reforge_stone: lootDraw('rune', '#5a7cff', '#e8f0ff'), temper_oil: lootDraw('goblet', '#e0a84a', '#fff2c0'), erase_scroll: lootDraw('page', '#efe2c0', '#c0392b'), augment_rune: lootDraw('rune', '#3fd0a0', '#e8fff6'), binding_seal: lootDraw('seal', '#c06bff', '#fff0ff'),
+  boss_ticket: lootDraw('page', '#a96bff', '#f5e8ff'), reforge_stone: lootDraw('rune', '#5a7cff', '#e8f0ff'), temper_oil: lootDraw('goblet', '#e0a84a', '#fff2c0'), erase_scroll: lootDraw('page', '#efe2c0', '#c0392b'), augment_rune: lootDraw('rune', '#3fd0a0', '#e8fff6'), binding_seal: lootDraw('seal', '#c06bff', '#fff0ff'), fortune_charm: lootDraw('seal', '#3fd07a', '#f2fff0'), protection_charm: lootDraw('seal', '#4aa8ff', '#f0f8ff'),
   helm_1: Helmet(0), helm_2: Helmet(1), helm_3: Helmet(2), helm_4: Helmet(3), helm_5: Helmet(4),
   gloves_1: Gloves(0), gloves_2: Gloves(1), gloves_3: Gloves(2), gloves_4: Gloves(3), gloves_5: Gloves(4),
   boots_0: BootsT(0), boots_3: BootsT(2), boots_4: BootsT(3), boots_5: BootsT(4),
@@ -543,7 +543,7 @@ const ITEM_PAINT: Record<string, string> = {
   potion_hp: 'potion_hp', potion_hp_fb: 'potion_hp', potion_hp_big: 'potion_hp_big', potion_mana: 'potion_mana', potion_mp_fb: 'potion_mana', potion_mana_big: 'potion_mana_big', potion_hp_grand: 'potion_hp_grand', potion_mana_grand: 'potion_mana_grand',
   upgrade_core: 'upgrade_core', core: 'upgrade_core', upgrade_core_2: 'upgrade_core_2', upgrade_core_3: 'upgrade_core_3',
   revive_ankh: 'revive_ankh', ankh: 'revive_ankh', reforge_stone: 'reforge_stone', temper_oil: 'temper_oil', augment_rune: 'augment_rune',
-  erase_scroll: 'erase_scroll', binding_seal: 'binding_seal', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
+  erase_scroll: 'erase_scroll', binding_seal: 'binding_seal', fortune_charm: 'fortune_charm', protection_charm: 'protection_charm', tool_pickaxe: 'tool_pickaxe', pickaxe: 'tool_pickaxe',
   elixir_might: 'elixir_might', elixir_iron: 'elixir_iron', elixir_swift: 'elixir_swift', elixir_fortune: 'elixir_fortune', elixir_vigor: 'elixir_vigor',
   // no art yet for the resistance elixirs: borrow the closest painted flask and hue-shift it (ITEM_PAINT_TINT). TODO art: elixir_fireward, elixir_steadfast, elixir_poisonward
   elixir_fireward: 'elixir_might', elixir_steadfast: 'elixir_swift', elixir_poisonward: 'elixir_vigor',
