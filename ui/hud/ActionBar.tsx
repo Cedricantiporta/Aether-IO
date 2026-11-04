@@ -1,3 +1,4 @@
+import { raiseInfo } from '../../engine/systems/minions';
 import React from 'react';
 import { dashModDef } from '../../dashMods';
 import { unlockLevel, DASH_UNLOCK_LV, ULT_UNLOCK_LV } from '../../classLevels';
@@ -50,7 +51,7 @@ export const ActionBar: React.FC = () => {
           <div key={slot} className="auto-wrap"><AutoPill id={slot} />
           <ActionSlot id={slot} keyLabel={key} keyCode={code} size="4.3rem" icon={<PaintedIcon id={def.icon} />} level={lv} manaCost={cost} active={lv > 0}
             blocked={hero === 'NECROMANCER' && slot === 's3' ? noSummons : undefined}
-            getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot] })}
+            getCd={() => ({ t: p.cd[slot], max: p.cdMax[slot], held: hero === 'NECROMANCER' && slot === 'q' && raiseInfo.held })}
             tooltip={<SimpleTip title={def.name} sub={lv <= 0 ? `Locked · unlocks at Lv ${unlockLevel(hero, def.slot)}, then learn it at the Skill Trainer` : `Active [${key}] · Lv ${lv} · hold to aim, release to cast`} body={def.desc}
               lines={[cdLine('Mana', `${cost}`), cdLine('Cooldown', `${cd.toFixed(1)}s`), cdLine(`Lv ${lv}`, def.per(lv)), ...(lv < 5 ? [cdLine(`Lv ${lv + 1}`, def.per(lv + 1))] : [])]} />} />
           </div>

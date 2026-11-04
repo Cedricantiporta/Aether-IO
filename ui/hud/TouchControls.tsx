@@ -1,5 +1,6 @@
 // Touch controls: floating virtual joystick (move), optional aim stick (auto-aim off) and big ability buttons.
 // Everything is pointer-event based (multi-touch safe) and writes straight into world.input like the keyboard does.
+import { raiseInfo } from '../../engine/systems/minions';
 import React, { useEffect, useRef } from 'react';
 import { SpinRing } from './CornerButtons';
 import { world } from '../../engine/world';
@@ -66,7 +67,7 @@ const Stick: React.FC<{ style: React.CSSProperties; onMove: (x: number, y: numbe
 };
 
 interface BtnProps {
-  inert?: boolean; code: string; label: string; size: number; icon?: React.ReactNode; accent?: string; ult?: boolean; getCd?: () => { t: number; max: number }; qty?: (s: ReturnType<typeof useGameStore.getState>) => number; mana?: () => number; testId?: string;
+  inert?: boolean; code: string; label: string; size: number; icon?: React.ReactNode; accent?: string; ult?: boolean; getCd?: () => { t: number; max: number; held?: boolean }; qty?: (s: ReturnType<typeof useGameStore.getState>) => number; mana?: () => number; testId?: string;
 }
 /** Round action button (size in units of --u). Edge-triggers `pressed[code]` and holds `keys[code]` while the finger is down. */
 const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#ffffff', ult, getCd, qty, mana, testId }) => {
@@ -91,7 +92,7 @@ const TBtn: React.FC<BtnProps> = ({ inert, code, label, size, icon, accent = '#f
     if (getCd) { const c = getCd(); t = c.t; frac = c.max > 0 ? Math.min(1, Math.max(0, t / c.max)) : 0; }
     const v = t > 0.04 ? frac.toFixed(3) : '0';
     if (v !== p.cd) { p.cd = v; sweep.current?.style.setProperty('--cd', v); sweep.current?.style.setProperty('--cdv', v === '0' ? '0' : '1'); }
-    const tx = t > 0.04 ? (t >= 10 ? String(Math.ceil(t)) : t.toFixed(1)) : '';
+    const tx = t > 0.04 ? (getCd && getCd().held ? 'ON' : t >= 10 ? String(Math.ceil(t)) : t.toFixed(1)) : '';
     if (tx !== p.tx) { p.tx = tx; if (txt.current) txt.current.textContent = tx; }
     const dim = mana ? world.player.mana < mana() : false;
     if (dim !== p.dim) { p.dim = dim; root.current?.classList.toggle('tc-dim', dim); }
@@ -245,7 +246,7 @@ export const TouchControls: React.FC = () => {
   const dDef = dashDef(hero);
   const icon = (i: number) => <PaintedIcon id={defs[i].icon} />;
   const p = world.player;
-  const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]] }), mana: () => useGameStore.getState().getManaCost(order[i]) });
+  const sk = (i: number) => ({ getCd: () => ({ t: p.cd[order[i]], max: p.cdMax[order[i]], held: order[i] === 'q' && hero === 'NECROMANCER' && raiseInfo.held }), mana: () => useGameStore.getState().getManaCost(order[i]) });
   const joyZone: React.CSSProperties = { position: 'absolute', top: '22%', bottom: 0, [side === 'LEFT' ? 'left' : 'right']: 0, width: '46%', zIndex: 5 } as any;
   const aimZone: React.CSSProperties = { position: 'absolute', top: '16%', bottom: '38%', [side === 'LEFT' ? 'right' : 'left']: 0, width: '36%', zIndex: 5 } as any;
   const potion = (k: 'hp' | 'mp') => (
