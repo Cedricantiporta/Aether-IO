@@ -23,6 +23,7 @@ import { clampToVoid } from './bossFx';
 import { bp } from './bossPhaseState';
 import { isKing } from './bossForms';
 import { KB } from './combat';
+import { SLIME_KING_ACID_MUL } from '../bossBalance';
 
 export const SP = { NONE: 0, PRISON: 21, VEINS: 22, CHAINS: 23, CLONES: 24, DEAD: 25, AMBUSH: 26, PRISM: 27, STAMPEDE: 28, SHELL: 29, SLAM: 30, FLOOD: 31, RAIN: 32 } as const;
 /** Boulder Prison: rises this long after the shout, 15 of 16 rock slots (one small opening) at PRISON_R, meteor lands PRISON_FALL s later. */
@@ -44,6 +45,8 @@ let slimeKingId = -1;
 export function setSlimeKing(id: number): void { slimeKingId = id; }
 export function isSlimeKing(e: Enemy): boolean { return e.id === slimeKingId && e.kind === 'SPLITTER'; }
 // Belly Flop timeline (s): crouch, leap out of sight, hang while the circle hunts you, lock, slam down fast.
+/** (owner 2026-11-04) acid rain / flood red warning before the pool appears (>= 1.0 s everywhere; the flood one is 1.5 s). */
+const RAIN_WARN = 1.25;
 const FLOP = { up: 0.45, top: 1.05, lock: 2.75, drop: 3.0, land: 3.62, end: 4.3, h: 24, r: 5.2 };   // (owner: slower drop 0.62 s, smaller circle 5.2)
 /** Height of an enemy in a Belly Flop (enemies.ts writes it to pos.y; > 2 = airborne: untouchable, no contact). */
 export function flopY(e: Enemy): number {
@@ -248,7 +251,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       if (e.spStep === 1 && t >= FLOP.land) {   // SPLAT (the zone's expiry deals the hit + shake)
         e.spStep = 2;
         if (z) { e.pos.x = z.pos.x; e.pos.z = z.pos.z; }
-        spawnHostileZone('ACID', e.pos.x, e.pos.z, 3, 4, power(e) * 0.25, 0x9be32a);
+        spawnHostileZone('ACID', e.pos.x, e.pos.z, 3, 4, power(e) * 0.25 * SLIME_KING_ACID_MUL, 0x9be32a);
         events.emit('trick', { pos: e.pos.clone(), kind: 'ACID', radius: FLOP.r });
         events.emit('shockwave', { pos: e.pos.clone(), radius: FLOP.r, color: 0x9be32a });
         addShake(0.55);
@@ -263,7 +266,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
     case SP.FLOOD: {
       if (e.spStep === 0 && t >= 1.5) {
         e.spStep = 1;
-        spawnHostileZone('ACID', d.cx, d.cz, 8.5, 7, power(e) * 0.32, 0x9be32a);
+        spawnHostileZone('ACID', d.cx, d.cz, 8.5, 7, power(e) * 0.32 * SLIME_KING_ACID_MUL, 0x9be32a);
         events.emit('trick', { pos: tv.set(d.cx, 0, d.cz).clone(), kind: 'ACID', radius: 8.5 });
         addShake(0.3);
       }
@@ -272,12 +275,12 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
     }
     case SP.RAIN: {
       const n = d.slots.length / 2;
-      while (e.spStep < n && t >= 1.0 + e.spStep * 0.09) {
+      while (e.spStep < n && t >= RAIN_WARN + e.spStep * 0.09) {
         const i = e.spStep++;
-        spawnHostileZone('ACID', d.slots[i * 2], d.slots[i * 2 + 1], 2.1, 6, power(e) * 0.3, 0x9be32a);
+        spawnHostileZone('ACID', d.slots[i * 2], d.slots[i * 2 + 1], 2.1, 6, power(e) * 0.3 * SLIME_KING_ACID_MUL, 0x9be32a);
         if ((i & 1) === 0) events.emit('trick', { pos: tv.set(d.slots[i * 2], 0, d.slots[i * 2 + 1]).clone(), kind: 'ACID', radius: 2.1 });
       }
-      if (t >= 1.0 + n * 0.09 + 0.4) e.spKind = 0;
+      if (t >= RAIN_WARN + n * 0.09 + 0.4) e.spKind = 0;
       break;
     }
     default: e.spKind = 0;
@@ -362,7 +365,7 @@ export function tryStartSpecial(e: Enemy, tdist: number): boolean {
         if (i === 0) tv.set(p.x, 0, p.z);
         else { const a = Math.random() * 6.283, r = 3.5 + Math.random() * 10; tv.set(p.x + Math.sin(a) * r, 0, p.z + Math.cos(a) * r); clampArena(tv, 2); }
         d.slots.push(tv.x, tv.z);
-        tel(tv.x, tv.z, 2.1, 1.0 + i * 0.09, 0, 0x9be32a);
+        tel(tv.x, tv.z, 2.1, RAIN_WARN + i * 0.09, 0, 0x9be32a);
       }
       break;
     }

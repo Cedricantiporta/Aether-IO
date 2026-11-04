@@ -38,10 +38,10 @@ import { damageMinion, nearestMinion, minionDebuff, minionTraitHit } from './min
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
-import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY } from './bossSpecials';
+import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY, isSlimeKing } from './bossSpecials';
 import { useGameStore, rollDropPlus, DMG_INFLATE } from '../../store';
 import { runMods, veteran, VET, runInfo } from '../runMods';
-import { BOSS_HP_TOTAL, BOSS_LAYERS, BOSS_LAYERS_HARD, bossLvArmor, bossHitScale } from '../bossBalance';
+import { BOSS_HP_TOTAL, BOSS_LAYERS, BOSS_LAYERS_HARD, bossLvArmor, bossHitScale, SLIME_KING_ACID_MUL } from '../bossBalance';
 import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { trial, TRIAL_SCALE_BIOME, TRIAL_DMG, TRIAL_TELE, TRIAL_CD } from '../../bossTrials';
@@ -605,7 +605,7 @@ export function onEnemyDeath(e: Enemy): void {
   }
 
   if (e.kind === 'SPLITTER') {
-    spawnHostileZone('ACID', e.pos.x, e.pos.z, 3.4, 5, Math.max(e.contactDamage, 8) * 0.3, 0x9be32a);
+    spawnHostileZone('ACID', e.pos.x, e.pos.z, 3.4, 5, Math.max(e.contactDamage, 8) * 0.3 * (isSlimeKing(e) ? SLIME_KING_ACID_MUL : 1), 0x9be32a);
     events.emit('trick', { pos: e.pos, kind: 'ACID', radius: 3.4 });
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + Math.random();

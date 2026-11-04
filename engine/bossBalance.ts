@@ -8,6 +8,12 @@
 //          typical skill hit lands near HIT_TARGET (10%, trial 14%) share of the hero's max HP AFTER defence: k = clamp((target / share) ^ 0.6, 1, 4).
 //          Exponent < 1: more defence still means a smaller hit, just never immunity; k >= 1: a hit that is already harder than the target is never softened. Share-of-max-HP hits (`pct`) are untouched, except x TRIAL_PCT_MUL in Boss Trials (combat.damagePlayer).
 
+/** (owner 2026-11-04) Ticking POISON / BURN damage on the HERO (debuff ticks, acid / poison / fire zones, gas, lava, trap jets, boss fire patches) is x this, applied once in combat.damagePlayer
+ *  AFTER HERO_DOT_MUL: 50% in Greenwood (biome 0), +10% of that per biome (Marble 55% .. Void 80%). Direct hits of kind FIRE / POISON are not reduced. */
+export const dotBiomeMul = (biome: number): number => 0.5 * (1 + 0.1 * Math.max(0, Math.min(6, biome | 0)));
+/** The Slime King's poison zones (belly-flop splat, acid flood / rain, burst acid) hit 40% weaker than other acid, on top of dotBiomeMul. */
+export const SLIME_KING_ACID_MUL = 0.6;
+
 export const BOSS_HP_TOTAL = 1;   // (owner 2026-10-31: halved again, 2 -> 1; the bars stay x10)
 /** Cosmetic stacked-bar counts. */
 export const BOSS_LAYERS = 10, BOSS_LAYERS_HARD = 10;

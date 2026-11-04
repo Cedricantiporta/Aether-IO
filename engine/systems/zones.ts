@@ -162,11 +162,14 @@ function holeTick(z: Zone, dt: number): void {
   }
 }
 
+/** (owner 2026-11-04) overlapping poison clouds / gas vents hurt the hero once per tick window, never stacked. */
+let poisonZoneT = -9;
+const poisonZoneReady = (): boolean => { if (world.time - poisonZoneT < POISON_TICK * 0.9) return false; poisonZoneT = world.time; return true; };
 function poisonTick(z: Zone): void {
   const p = world.player;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
   const rr = z.radius + PLAYER_RADIUS;
-  if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage * POISON_TICK, { pos: z.pos, kind: 'POISON', env: true });
+  if (dx * dx + dz * dz < rr * rr && poisonZoneReady()) damagePlayer(z.damage * POISON_TICK, { pos: z.pos, kind: 'POISON', env: true });
 }
 
 // ------------------------------------------------------ environmental hazards --
@@ -273,7 +276,7 @@ function hazardTick(z: Zone): void {
   const gas = z.kind === 'GAS';
   const dps = gas ? 7 + wave * 1.2 : 6 + wave * 1.0;
   const p = world.player;
-  if (p.alive && inZone(z, p.pos.x, p.pos.z, PLAYER_RADIUS)) {
+  if (p.alive && inZone(z, p.pos.x, p.pos.z, PLAYER_RADIUS) && (!gas || poisonZoneReady())) {
     damagePlayer(dps * HAZARD_TICK, { pos: z.pos, kind: gas ? 'POISON' : 'FIRE', env: true });
   }
   const ids = world.enemyGrid.query(z.pos.x, z.pos.z, z.radius + 4, out);

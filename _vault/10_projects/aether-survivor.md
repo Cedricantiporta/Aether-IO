@@ -24,6 +24,8 @@ Read first: `CLAUDE.md`, `docs/HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/RUN_DE
 
 - 2026-11-03 Multi-boss HUD: `world.bosses[4]` slots (bossList.ts) + `ui/hud/BossStack.tsx`: one slim bar per extra live boss under the main bar, floating bars over each head, no protocol change (guest derives from enemies). Secret final boss: the Lich King replaces the Void Herald ~20% of Adventure runs (room-seed roll, never Tower / Waves / Trials; `bossKitLich.ts`: 8 skills, two forms, Phylactery tether = immune until the jar is smashed or the cord is cut). Secret achievement + hidden codex entry. QA hooks `debugLich()` / `debugHerald()` / `debugGate(-1)`; details in HANDOFF (Lich King section).
 
+- 2026-11-04 DoT balance: hero poison / burn ticks x0.5 * (1 + 0.1 * biome) (`bossBalance.dotBiomeMul`, applied in `combat.damagePlayer` after HERO_DOT_MUL); Slime King acid a further -40%, rain warning 1.25 s, poison zone ticks never stack.
+
 ## Open
 - Eggs: owner's "eggs without a container" request is unclear (farm egg nests vs pet icons).
 - Tower milestone prizes still include gear/pets while the UI says crystals only.
