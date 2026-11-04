@@ -19,7 +19,7 @@ import type { RoomPlan } from './types';
 import type { CaveLayout } from './caveData';
 
 export interface LDisc { x: number; z: number; r: number }
-export const EMBER_BIOME = 5, CELL = 0.5, BOSS_LAVA_START = 0.1;
+export const EMBER_BIOME = 5, CELL = 0.5, BOSS_LAVA_START = 0.15;
 export const lava = {
   on: false, heavy: false, ver: 0, coverage: 0,
   /** bumps whenever `addLavaDisc` grows the floor (Ignar's creeping lava): render/Room.tsx re-rasterises the ground mask */
@@ -201,14 +201,33 @@ function measure(): number {
   }
   return tot ? c / tot : 0;
 }
-/** Ignar's start floor: pools hugging the arena rim only (golden-angle spread round the wall) until `target` of the floor is lava. */
+/**
+ * Ignar's start floor (owner 2026-11-04: it must be CLEARLY visible from the first second): ~15% lava in several irregular, big pools. About 60% of the
+ * target hugs the rim (pools of 3.4-5 m, golden-angle spread), then 3 short tongues crawl from the rim toward the middle, then a few smaller pools sit further in
+ * (0.3-0.62 of the arena radius, so they show in the fight camera, not only at the wall). The arrival keep zone, the bare lane to the middle and the centre stay clear.
+ */
 function rimPools(out: LDisc[], rnd: () => number, target: number): void {
   buildGrid(out, false);
   let cov = 0, a = rnd() * 6.283;
-  for (let s = 0; s < 120 && cov < target; s++) {
+  for (let s = 0; s < 120 && cov < target * 0.6; s++) {   // 1) pools on the rim
     a += 2.399 + (rnd() - 0.5) * 0.3;
-    const c = Math.cos(a), sn = Math.sin(a), d = shapeLimit(c, sn) * (0.84 + rnd() * 0.08), rad = 2.6 + rnd() * 1.4;
+    const c = Math.cos(a), sn = Math.sin(a), d = shapeLimit(c, sn) * (0.8 + rnd() * 0.1), rad = 3.4 + rnd() * 1.6;
     const n0 = out.length;
+    pool(out, rnd, c * d, sn * d, rad, false, false);
+    if (out.length === n0) continue;
+    buildGrid(out, false); cov = measure();
+  }
+  for (let k = 0; k < 3 && cov < target; k++) {   // 2) tongues from the rim toward the middle
+    for (let t = 0; t < 20; t++) {
+      const b = rnd() * 6.283, c = Math.cos(b), sn = Math.sin(b), d = shapeLimit(c, sn) * 0.78, x = c * d, z = sn * d;
+      if (!free(x, z, 1.6, false, false)) continue;
+      stream(out, rnd, x, z, Math.atan2(-z, -x) + (rnd() - 0.5) * 0.9, 10 + rnd() * 6, 1.2 + rnd() * 0.4, false, false, 0);
+      break;
+    }
+    buildGrid(out, false); cov = measure();
+  }
+  for (let s = 0; s < 80 && cov < target; s++) {   // 3) smaller pools further in
+    const b = rnd() * 6.283, c = Math.cos(b), sn = Math.sin(b), d = shapeLimit(c, sn) * (0.3 + rnd() * 0.32), rad = 2.0 + rnd() * 1.1, n0 = out.length;
     pool(out, rnd, c * d, sn * d, rad, false, false);
     if (out.length === n0) continue;
     buildGrid(out, false); cov = measure();

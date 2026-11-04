@@ -10,8 +10,8 @@ export interface PhaseProp { x: number; z: number; r: number; /** free value: po
 export interface PhaseHand { x: number; z: number; t: number; T: number; on: boolean }
 
 export const MAX_PROPS = 8, MAX_TILES = 300, MAX_HANDS = 6, MAX_FOOT = 14;
-/** Lava floor: every tile erupts exactly this many times during the phase (te holds MAX_TILES x LAVA_HITS times). */
-export const LAVA_HITS = 2;
+/** Floor-is-Lava tiles: each tile holds up to LAVA_K hit windows (engine/systems/lavaPatterns.ts fills them, the host schedules, the co-op guest mirrors them). */
+export const LAVA_K = 8;
 
 export const bp = {
   on: false,
@@ -37,8 +37,11 @@ export const bp = {
   wx: 0, wz: 1, wave: 2, windOn: false,
   /** the next wind direction (Sandstorm shifts once) shown as a ghost while `shiftT` > 0 */
   nx: 0, nz: 1, shiftT: 0,
-  /** Lava floor tiles: centre, the LAVA_HITS erupt times per tile (phase seconds, te[i * LAVA_HITS + k]), half size */
-  tx: new Float32Array(MAX_TILES), tz: new Float32Array(MAX_TILES), te: new Float32Array(MAX_TILES * LAVA_HITS), nt: 0, tileHalf: 2.5,
+  /** Floor-is-Lava tiles: centre + half size. Hit k of tile i (phase seconds): RED warning from tw[i * LAVA_K + k], lava from te[..], cool from tc[..]; tn[i] = hits used. */
+  tx: new Float32Array(MAX_TILES), tz: new Float32Array(MAX_TILES), nt: 0, tileHalf: 2.5,
+  tw: new Float32Array(MAX_TILES * LAVA_K), te: new Float32Array(MAX_TILES * LAVA_K), tc: new Float32Array(MAX_TILES * LAVA_K), tn: new Uint8Array(MAX_TILES),
+  /** bumps when the hit table changed (tver) / the tile layout was rebuilt (tbuild): the co-op host resends on a change; `pat` = running pattern id (QA / banner) */
+  tver: 0, tbuild: 0, pat: -1, pat2: -1,
   /** Lights Out */
   dark: false, dOn: false, dsx: 0, dsy: 0,
   hands: Array.from({ length: MAX_HANDS }, (): PhaseHand => ({ x: 0, z: 0, t: 0, T: 1, on: false })),

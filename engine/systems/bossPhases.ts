@@ -7,7 +7,7 @@
 //   Gorath   PINBALL     rolls as a boulder along telegraphed lines and bounces off the walls; hit a pillar to crack him
 //   Elderroot SPORES     4 spore pods swell: pop them (touch / hit) before they burst (heals him + poison); roots grab you
 //   Hydra    HEADS       3 new heads surface (bossKitHydra.ts): each one cut down = a 5 s EXPOSED window (body x1.5). (TIDAL, the old rock-cover wave, is unused)
-//   Ignar    LAVA        the floor is tiles; 4 sweeps (random directions) erupt half the floor each so EVERY tile erupts twice: keep moving
+//   Ignar    LAVA        the floor is tiles; one of 9 random patterns (lavaPatterns.ts: sweeps, checkerboard, spiral, ripples, zipper, fire rain, clock hands, hopping islands, snakes) turns tiles red, then lava
 //   Colossus SAND        a sandstorm from one direction, shifting once: hide behind a pillar / wreck or take ticking damage
 //   Void H.  VOIDPULL    EVENT HORIZON: the floor turns to void, stand on a glowing sigil (they go dark one by one before each collapse) and dodge the seeker orbs
 // Human mini bosses (Varn / Sable / Rook) have their own small versions in humanBosses.ts.
@@ -29,7 +29,9 @@ import { spawnHostileZone } from './tricks';
 import { isSlimeKing } from './bossSpecials';
 import { mfx } from './voidFx';
 import { hooks } from './hooks';
-import { bp, MAX_PROPS, MAX_TILES, MAX_HANDS, LAVA_HITS, SEEKER, type PhaseKind } from './bossPhaseState';
+import { bp, MAX_PROPS, MAX_HANDS, SEEKER, type PhaseKind } from './bossPhaseState';
+import { lavaStart, lavaTick, lavaReset, tileOf, tileState, lavaDry, lavaDbg, LP, PAT_NAMES, PAT_HINT } from './lavaPatterns';
+import type { PlayerRuntime } from '../types';
 import { useGameStore } from '../../store';
 import { forEachHero, nearestHero, randomHero, heroNear, asHero, isAlly, shoveHero } from '../heroes';
 
@@ -45,7 +47,7 @@ const INFO: Record<string, { name: string; sub: string; color: number }> = {
   SPORES: { name: 'SPORE GARDEN', sub: 'Pop the spore pods before they burst!', color: 0x84cc16 },
   TIDAL: { name: 'TIDAL WAVE', sub: 'Hide behind a rock!', color: 0x38bdf8 },   // (kept, no boss uses it since the Hydra got HEADS)
   HEADS: { name: 'HEADS OF THE HYDRA', sub: 'Cut a new head down: the body is EXPOSED for 5 s - hit it!', color: 0x38bdf8 },
-  LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Every tile erupts twice - keep moving to one that is not flashing!', color: 0xff7a1a },
+  LAVA: { name: 'THE FLOOR IS LAVA', sub: 'Tiles flash RED, then burn - always move to a cool tile!', color: 0xff7a1a },
   SAND: { name: 'SANDSTORM', sub: 'Hide behind a pillar, out of the wind!', color: 0xe0b060 },
   VOIDPULL: { name: 'EVENT HORIZON', sub: 'The void floor collapses: stand on a glowing sigil - and dodge the seeker orbs!', color: 0xa060ff },
 };
@@ -74,7 +76,7 @@ const G = {
   // slimes
   scale0: 1,
   // lava
-  hitCd: 0,
+  hitCd: 0, lavaEnd: 10,
   // darkness
   handT: 0,
 };
@@ -173,7 +175,7 @@ hooks.phaseReset = (): void => {
   bp.windOn = false; bp.wave = 2; bp.nt = 0; bp.slimes.length = 0; bp.id = -1; bp.crackT = 0; bp.shiftT = 0; bp.tail = 9;
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
-  D.id = -1; D.n = 0; D.since = -1; D.lastEnd = -99; mfx.major = false; headsReset();
+  D.id = -1; D.n = 0; D.since = -1; D.lastEnd = -99; mfx.major = false; headsReset(); lavaReset(); lavaBossId = -1; lavaCycle = 0;
   for (let i = 0; i < DB.length; i++) { DB[i].id = -1; DB[i].n = 0; DB[i].since = -1; DB[i].lastEnd = -99; }
   sayT = -99; sayId = -1;
 };
@@ -468,90 +470,39 @@ function tickSand(e: Enemy, dt: number): void {
   if (bp.t >= SAND_END) end(e);
 }
 
-const CELL = 5.0, LAVA_LEAD = 1.6, LAVA_GAP = 2.0, LAVA_SWEEP = 1.0, LAVA_WARN = 1.05, LAVA_END = LAVA_LEAD + 3 * LAVA_GAP + LAVA_SWEEP + 0.7;
-const LAVA_PCT = 0.28, LAVA_HIT_CD = 0.5, LAVA_RANGE = 10;
-/** Tile class 0..3 = (ix & 1) + 2 * (iz & 1) (a 2x2 repeating pattern). Wave w erupts the two classes of PAIRS[order[w]]; the four pairs
- *  {0,1} {1,2} {2,3} {3,0} (in a random order) cover every class exactly twice, so EVERY tile erupts exactly twice (lavaVerify proves it),
- *  while half the floor is always cool: a tile is safe against a wave when its class is not in the pair, and every tile touches tiles
- *  of other classes, so there is always a cooled tile one step away. Each wave sweeps in from its own random direction (1 s across the arena),
- *  and every tile flashes for ~1 s before it erupts. */
-const PAIRS = [[0, 1], [1, 2], [2, 3], [3, 0]];
-const lavaOrder = [0, 1, 2, 3];
-function lavaBuild(): void {
-  let n = 0;
-  for (let w = 0; w < 4; w++) { const a = Math.random() * 6.283; waveDx[w] = Math.cos(a); waveDz[w] = Math.sin(a); }   // every wave sweeps in from its own direction
-  for (let i = 3; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = lavaOrder[i]; lavaOrder[i] = lavaOrder[j]; lavaOrder[j] = x; }
-  for (let ix = -LAVA_RANGE; ix <= LAVA_RANGE && n < MAX_TILES; ix++) {
-    for (let iz = -LAVA_RANGE; iz <= LAVA_RANGE && n < MAX_TILES; iz++) {
-      const cx = ix * CELL, cz = iz * CELL;
-      // a tile exists when ANY part of it is inside the arena (a hero hugging the wall must not find a tile-less safe strip)
-      if (Math.hypot(cx, cz) - CELL * 0.75 > edgeLimit(cx, cz, 0)) continue;
-      bp.tx[n] = cx; bp.tz[n] = cz;
-      const cls = (ix & 1) + 2 * (iz & 1);
-      let k = 0;
-      for (let w = 0; w < 4; w++) {
-        const pr = PAIRS[lavaOrder[w]];
-        if (pr[0] !== cls && pr[1] !== cls) continue;
-        bp.te[n * LAVA_HITS + k++] = w;   // wave index for now; time below
-      }
-      n++;
-    }
-  }
-  // sweep times: projection of the tile on the wave direction, normalised over the arena diameter
-  for (let i = 0; i < n; i++) {
-    for (let k = 0; k < LAVA_HITS; k++) {
-      const w = bp.te[i * LAVA_HITS + k] | 0;
-      const f = Math.min(1, Math.max(0, ((bp.tx[i] * waveDx[w] + bp.tz[i] * waveDz[w]) / 48 + 1) * 0.5));
-      bp.te[i * LAVA_HITS + k] = LAVA_LEAD + w * LAVA_GAP + f * LAVA_SWEEP;
-    }
-  }
-  bp.nt = n; bp.tileHalf = CELL * 0.5;
-  lavaVerify();
-}
-const waveDx = [0, 0, 0, 0], waveDz = [0, 0, 0, 0];
-/** Proof that no spot is safe for the whole phase: (1) every tile has LAVA_HITS finite eruption times, (2) the times are at least a
- *  warning apart, (3) every point of the arena (1 m grid) lies inside some tile (+ the 0.3 m hit margin) so no strip is tile-less.
- *  Returns the problems found (0 = proven). Dev builds log it. */
-export function lavaVerify(): number {
-  let bad = 0;
-  for (let i = 0; i < bp.nt; i++) {
-    const a = bp.te[i * LAVA_HITS], b = bp.te[i * LAVA_HITS + 1];
-    if (!(a > 0) || !(b > 0) || Math.abs(a - b) < 0.9 || b > LAVA_END || a > LAVA_END) bad++;
-  }
-  for (let x = -50; x <= 50; x++) {
-    for (let z = -50; z <= 50; z++) {
-      if (Math.hypot(x, z) > edgeLimit(x, z, 0)) continue;
-      const ix = Math.round(x / CELL), iz = Math.round(z / CELL);
-      let found = false;
-      for (let i = 0; i < bp.nt; i++) if (bp.tx[i] === ix * CELL && bp.tz[i] === iz * CELL) { found = true; break; }
-      if (!found) bad++;
-    }
-  }
-  if ((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) console.log(`[lava] ${bp.nt} tiles, ${bad} problems (0 = every tile erupts ${LAVA_HITS}x, whole arena covered)`);
-  return bad;
+/**
+ * THE FLOOR IS LAVA (owner 2026-11-04 rework): the 5 m tile grid + 9 seeded pattern generators live in lavaPatterns.ts (never the same twice in a row,
+ * the first cycle gentler, a second pattern joins below 40% boss HP). A tile flashes RED (warning), turns to lava (a burning hit every LAVA_HIT_CD s
+ * + a burn debuff), then cools. The host runs it; the co-op guest mirrors the hit table (coopHaz) and draws the same tiles (BossPhaseFx).
+ */
+const LAVA_PCT = 0.12, LAVA_HIT_CD = 0.6;
+let lavaCycle = 0, lavaBossId = -1;
+const lavaStat = { hits: 0, cycles: 0 };
+function lavaHero(p: PlayerRuntime): void {
+  if (!p.alive) return;
+  const ally = isAlly(p);
+  if ((ally ? G.hitCdA : G.hitCd) > 0) return;
+  const i = tileOf(p.pos.x, p.pos.z);
+  if (i < 0 || tileState(i, bp.t) !== 2) return;
+  if (ally) G.hitCdA = LAVA_HIT_CD; else G.hitCd = LAVA_HIT_CD;
+  lavaStat.hits++;
+  hitHero(LAVA_PCT * (LP.gentle ? 0.8 : 1), 'FIRE', bp.tx[i], bp.tz[i], 0, 0);
+  applyPlayerDebuff('BURN', 2.2, 8 + world.director.wave * 1.2);
 }
 function tickLava(e: Enemy, dt: number): void {
-  if (G.stage === 0) { G.stage = 1; lavaBuild(); bp.count = LAVA_END; bp.countMax = LAVA_END; }
-  bp.count = Math.max(0, LAVA_END - bp.t);
-  G.hitCd -= dt; G.hitCdA -= dt;
-  const t0 = bp.t - dt;
-  for (let i = 0; i < bp.nt; i++) {
-    for (let k = 0; k < LAVA_HITS; k++) {
-      const te = bp.te[i * LAVA_HITS + k];
-      if (!(te > t0 && te <= bp.t)) continue;   // this tile erupts now
-      tv.set(bp.tx[i], 0.4, bp.tz[i]);
-      events.emit('explosion', { pos: tv.clone(), radius: 1.8, color: 0xff7a1a });
-      const tx = bp.tx[i], tz = bp.tz[i];
-      forEachHero((p) => {
-        const ally = isAlly(p);
-        if (p.alive && (ally ? G.hitCdA : G.hitCd) <= 0 && Math.abs(p.pos.x - tx) < bp.tileHalf + 0.3 && Math.abs(p.pos.z - tz) < bp.tileHalf + 0.3) {
-          if (ally) G.hitCdA = LAVA_HIT_CD; else G.hitCd = LAVA_HIT_CD;
-          hitHero(LAVA_PCT, 'FIRE', tx, tz, 2.5, 0);
-        }
-      });
-    }
+  if (G.stage === 0) {
+    G.stage = 1;
+    if (lavaBossId !== e.id) { lavaBossId = e.id; lavaCycle = 0; }
+    G.lavaEnd = lavaStart(lavaCycle++, e.maxHp > 0 ? e.hp / e.maxHp : 1);
+    lavaStat.cycles++;
+    bp.count = G.lavaEnd; bp.countMax = G.lavaEnd;
+    bp.sub = PAT_NAMES[LP.pat] + (LP.pat2 >= 0 ? ' + ' + PAT_NAMES[LP.pat2] : '') + ': ' + PAT_HINT[LP.pat];
   }
-  if (bp.t >= LAVA_END) end(e);
+  lavaTick(bp.t);
+  bp.count = Math.max(0, G.lavaEnd - bp.t);
+  G.hitCd -= dt; G.hitCdA -= dt;
+  forEachHero(lavaHero);
+  if (bp.t >= G.lavaEnd) end(e);
 }
 
 /**
@@ -717,7 +668,11 @@ if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: 
       }
       return 'none';
     },
-    lavaCheck: (): number => { lavaBuild(); return lavaVerify(); },
+    lavaStart: (pat: number, seed: number, cycle = 1): number => lavaStart(cycle, 1, pat, seed),
+    lavaDry,
+    lavaForce: (pat: number): void => { lavaDbg.pat = pat; },
+    tiles: (): { t: number; nt: number; pat: number } => ({ t: bp.t, nt: bp.nt, pat: LP.pat }),
+    lavaStat: (): { hits: number; cycles: number } => lavaStat,
     state: (): string => `${bp.on}|${bp.kind}|${bp.t.toFixed(1)}|stage ${G.stage}`,
     stat: (): { orbHits: number; coreHits: number } => bpStat,
   };

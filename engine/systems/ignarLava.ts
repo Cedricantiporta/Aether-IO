@@ -1,6 +1,6 @@
 // ============================================================================
 // Ignar's creeping lava (owner 2026-10-31): "the longer the fight, the more floor turns to lava".
-// His arena STARTS at ~10% lava hugging the rim (lavaFloor.rimPools) and grows toward LAVA_CAP: the target coverage follows fight time AND the boss's
+// His arena STARTS at ~15% lava hugging the rim (lavaFloor.rimPools) and grows toward LAVA_CAP: the target coverage follows fight time AND the boss's
 // lost HP (a fast kill sees less lava; ~60% at ~35-40% HP of the burning form). Every LAVA_EVERY seconds of the fight two new lava patches (a main pool +
 // 2 satellites, planned by lavaFloor.planLavaPatch: spreading out from the existing lava or the arena edge, never on the arrival keep zone, the
 // bare lane from the arrival spot to the middle, or the centre) are marked with an orange telegraph for LAVA_WARN s and then become lava
@@ -9,14 +9,14 @@
 // ============================================================================
 import { world } from '../world';
 import type { Enemy } from '../types';
-import { lava, planLavaPatch, addLavaDisc, lavaCoverage, type LDisc } from '../lavaFloor';
+import { lava, BOSS_LAVA_START, planLavaPatch, addLavaDisc, lavaCoverage, type LDisc } from '../lavaFloor';
 import { spawnTelegraphCircle } from './enemies';
 import { BT } from './bossFx';
 import { bp } from './bossPhaseState';
 import { S } from './bosses2';
 import { mulberry32 } from '../mapgen';
 
-const LAVA_FIRST = 4, LAVA_EVERY = 2.5, LAVA_WARN = 2.4, LAVA_CAP = 0.65, LAVA_BASE = 0.1, PATCHES = 3, MAXQ = 16, T_FULL = 200;
+const LAVA_FIRST = 3, LAVA_EVERY = 2.0, LAVA_WARN = 2.2, LAVA_CAP = 0.65, LAVA_BASE = BOSS_LAVA_START, PATCHES = 3, MAXQ = 16, T_FULL = 110;
 const plan: LDisc[] = [];
 const q = Array.from({ length: MAXQ }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0 }));
 export const ignarLava = { id: -1, t: 0, batches: 0, start: 0, cov: 0, fight: 0, want: 0, log: [] as number[] };
@@ -43,9 +43,9 @@ export function tickIgnarLava(e: Enemy, dt: number): void {
     if (s.t <= 0) { s.on = false; addLavaDisc(s.x, s.z, s.r); }
   }
   ignarLava.fight += dt;
-  // wanted coverage: 10% -> 65% by a mix of elapsed time (50%) and HP lost (85%, over both forms; the burning form is the second half)
+  // wanted coverage: 15% -> 65% by a mix of elapsed time (60%, full at 110 s) and HP lost (70%, over both forms; the burning form is the second half)
   const hpLost = e.maxHp > 0 ? 1 - Math.max(0, e.hp) / e.maxHp : 0, hpP = S.enraged ? 0.5 + hpLost * 0.5 : hpLost * 0.5;
-  const prog = Math.min(1, 0.5 * Math.min(1, ignarLava.fight / T_FULL) + 0.85 * Math.min(1, hpP / 0.8));
+  const prog = Math.min(1, 0.6 * Math.min(1, ignarLava.fight / T_FULL) + 0.7 * Math.min(1, hpP / 0.8));
   ignarLava.want = LAVA_BASE + (LAVA_CAP - LAVA_BASE) * prog;
   ignarLava.t -= dt;
   if (ignarLava.t > 0) return;

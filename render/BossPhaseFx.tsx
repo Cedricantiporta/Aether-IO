@@ -10,7 +10,7 @@ import {
   InstancedMesh, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, ShaderMaterial, Vector4, type BufferGeometry,
 } from 'three';
 import { world } from '../engine/world';
-import { bp, MAX_TILES, LAVA_HITS, VP_ORBS, VP_ORB_R, VP_WARM, VP_END, VP_CORE_R, vpOrb } from '../engine/systems/bossPhaseState';
+import { bp, MAX_TILES, LAVA_K, VP_ORBS, VP_ORB_R, VP_WARM, VP_END, VP_CORE_R, vpOrb } from '../engine/systems/bossPhaseState';
 import { humanView, humanFoot } from '../engine/systems/humanBosses';
 import { CELL, pushHalo } from './fx';
 import { commitInst, setInst, smooth } from './util';
@@ -185,20 +185,26 @@ export function BossPhaseFx() {
     // ---- lava tiles
     let nt = 0;
     if (vis && kind === 'LAVA') {
-      const hs = bp.tileHalf - 0.2;
+      const hs = bp.tileHalf - 0.2, pt = bp.t;
       for (let i = 0; i < bp.nt; i++) {
-        // two eruptions per tile: show the most urgent state (erupting > flashing warning), else a dim ember (it may erupt again)
-        const d0 = bp.t - bp.te[i * LAVA_HITS], d1 = bp.t - bp.te[i * LAVA_HITS + 1];
-        const dtE = (d0 > -1.05 && d0 < 0.55) ? d0 : (d1 > -1.05 && d1 < 0.55) ? d1 : Math.max(d0, d1) >= 0.55 && Math.min(d0, d1) >= 0.55 ? 1 : -2;
+        // newest state of the tile: lava (time since it started) > RED warning (progress) > just cooled (time since) > cool
+        const o = i * LAVA_K, nh = bp.tn[i];
+        let st = 0, since = 9, wp = 0, cooled = 9;
+        for (let k = 0; k < nh; k++) {
+          const tw = bp.tw[o + k], te = bp.te[o + k], tc = bp.tc[o + k];
+          if (pt >= tc) { if (pt - tc < cooled) cooled = pt - tc; }
+          else if (pt >= te) { st = 2; since = pt - te; }
+          else if (pt >= tw && st < 1) { st = 1; wp = (pt - tw) / Math.max(0.05, te - tw); }
+        }
         let r: number, g: number, b: number, y = 0.075;
-        if (dtE >= 1) { r = 0.07; g = 0.09; b = 0.14; }                                      // both eruptions done: cooled for good
-        else if (dtE >= 0) { r = 3; g = 1.9 * (1 - dtE); b = 0.5; y = 0.12; }                 // erupting
-        else if (dtE > -1.05) { const w = 0.55 + 0.45 * Math.sin(t * 22); r = 2.2 * w + 0.4; g = 0.55 * w; b = 0.05; }   // warning
-        else { r = 0.1; g = 0.1; b = 0.17; }                                                  // cool right now (safe until it flashes)
+        if (st === 2) { const f = Math.max(0, 1 - since / 0.4); r = 2.7 + f * 0.6; g = 0.75 + 0.3 * Math.sin(t * 5 + i * 1.7) + f * 1.3; b = 0.12 + f * 0.4; y = 0.12; }   // lava: molten orange, a white-hot flash as it lights
+        else if (st === 1) { const w = 0.55 + 0.45 * Math.sin(t * 22), a = 0.45 + 0.55 * wp; r = (0.55 + 0.95 * w) * a; g = 0.02; b = 0.02; }   // RED warning (telegraph rule: hostile warnings are red), stronger as the strike nears
+        else if (cooled < 0.8) { const f = 1 - cooled / 0.8; r = 0.1 + 1.0 * f; g = 0.1 + 0.18 * f; b = 0.17; }   // just cooled: the glow fades
+        else { r = 0.1; g = 0.12; b = 0.2; }   // cool and safe
         _c.setRGB(r * live, g * live, b * live); S.tiles.setColorAt(nt, _c);
         setInst(S.tiles, nt, bp.tx[i], y, bp.tz[i], 0, hs * 2, 1, hs * 2);
         nt++;
-        if (dtE >= 0 && dtE < 0.35) pushHalo(bp.tx[i], 1.0, bp.tz[i], 4, 2, 1, 0.2, 0.3 * (1 - dtE / 0.35), CELL.GLOW);
+        if (st === 2 && since < 0.35) pushHalo(bp.tx[i], 1.0, bp.tz[i], 4, 2, 1, 0.2, 0.3 * (1 - since / 0.35), CELL.GLOW);
       }
     }
     const norb = 0;   // (the Maelstrom's spinning orbs are gone: the Event Horizon's seeker orbs are ordinary enemy projectiles)
