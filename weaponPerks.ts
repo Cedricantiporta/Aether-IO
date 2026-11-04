@@ -6,7 +6,7 @@
 // ============================================================================
 import type { HeroClass, Item, Rarity } from './types';
 
-export type PerkKind = 'MULTI' | 'PIERCE' | 'TWIN' | 'GREAT' | 'BLEED' | 'LIFESTEAL' | 'AXES' | 'BIG' | 'ELEMENT' | 'HORDE' | 'MAGES' | 'BOWMEN';
+export type PerkKind = 'MULTI' | 'PIERCE' | 'TWIN' | 'GREAT' | 'BLEED' | 'LIFESTEAL' | 'AXES' | 'BIG' | 'ELEMENT' | 'HORDE' | 'MAGES' | 'BOWMEN' | 'DARK_LEGION';
 export type PerkElement = 'FIRE' | 'ICE' | 'LIGHTNING';
 export interface WeaponPerk { k: PerkKind; lv: number; el: PerkElement }
 
@@ -43,11 +43,17 @@ export const raiseEvery = (lv: number): number => [0, 12, 10, 9, 8][lv] ?? 12;  
 export const raiseCap = (k: PerkKind, lv: number): number => (k === 'MAGES' ? (lv >= 3 ? 2 : 1) : lv >= 4 ? 3 : lv >= 2 ? 2 : 1);
 export const elementChance = (lv: number): number => 0.15 + 0.1 * lv;
 
+/** (owner 2026-11-04) The Necromancer's Mythic staff (catalog `w_necromancer_4a`, crafted / dropped copies keep the name): while it is equipped the
+ *  Army of the Dead summons a DARK DRAGON instead of the Bone Golem and every skeleton warrior is a DARK KNIGHT (minions.ts `dark`). */
+export const DARK_LEGION_WEAPON = 'Crown of Bones';
+export const hasDarkLegion = (it: Item | null | undefined): boolean => weaponPerk(it)?.k === 'DARK_LEGION';
+
 /** The perk of a weapon (null: not a class weapon, or Common). */
 export function weaponPerk(it: Item | null | undefined): WeaponPerk | null {
   if (!it || it.type !== 'WEAPON' || !it.classType) return null;
   const lv = LV[it.rarity] ?? 0;
   if (!lv) return null;
+  if (it.classType === 'NECROMANCER' && it.rarity === 'MYTHIC' && it.name === DARK_LEGION_WEAPON) return { k: 'DARK_LEGION', lv: 4, el: 'FIRE' };   // fixed perk of the Mythic necro staff
   const list = BY_CLASS[it.classType as HeroClass];
   if (!list) return null;
   const h = hash(it.id || it.name);
@@ -67,6 +73,7 @@ export function perkText(p: WeaponPerk): { name: string; desc: string } {
     case 'AXES': return { name: `Twin Axes ${r}`, desc: `Throws ${axeCount(p.lv)} axes side by side.` };
     case 'BIG': { const b = bigMul(p.lv); return { name: `Arcane Swell ${r}`, desc: `Bolts ${pc(b.size - 1)} bigger and ${pc(b.speed - 1)} faster.` }; }
     case 'HORDE': return { name: `Lord of Bones ${r}`, desc: `Your minions deal +${pc(hordeMul(p.lv) - 1)} damage and have +${pc(hordeMul(p.lv) - 1)} HP.` };
+    case 'DARK_LEGION': return { name: 'Dark Legion IV', desc: `Army of the Dead calls a DARK DRAGON instead of the Bone Golem, and your skeleton warriors rise as armoured DARK KNIGHTS. Minions deal +${pc(hordeMul(1) - 1)} damage and have +${pc(hordeMul(1) - 1)} HP.` };
     case 'MAGES': return { name: `Bone Choir ${r}`, desc: `Every ${raiseEvery(p.lv)}th soul bolt raises a skeleton mage (up to ${raiseCap('MAGES', p.lv)}).` };
     case 'BOWMEN': return { name: `Grave Archers ${r}`, desc: `Every ${raiseEvery(p.lv)}th soul bolt raises a skeleton bowman (up to ${raiseCap('BOWMEN', p.lv)}).` };
     case 'ELEMENT': {

@@ -14,7 +14,7 @@ import type { Enemy } from '../types';
 import { inCurse } from './zones';
 import { abilityState } from './abilities';
 import { spawnProjectile } from './projectiles';
-import { weaponPerk, hordeMul } from '../../weaponPerks';
+import { weaponPerk, hordeMul, hasDarkLegion } from '../../weaponPerks';
 import { SRC_ALLY, allyHurt, updateAlly } from './ally';
 
 export const MINION_WARRIOR = 0, MINION_MAGE = 1, MINION_GOLEM = 2, MINION_ARCHER = 3;
@@ -58,7 +58,7 @@ const tmp = new Vector3();
 /** Damage / HP (life) multiplier from talents and the wand perk. */
 function minionMul(): { dmg: number; life: number; haste: number } {
   const st = useGameStore.getState(), s = st.stats, wp = weaponPerk(st.equipment.weapon);
-  const h = wp?.k === 'HORDE' ? hordeMul(wp.lv) : 1;
+  const h = wp?.k === 'HORDE' ? hordeMul(wp.lv) : wp?.k === 'DARK_LEGION' ? hordeMul(1) : 1;
   // (owner 2026-10-25) flatter scaling: summons start stronger (BASE_MUL) but talents / gear / the wand perk count at UPG_K
   const hk = 1 + UPG_K * (h - 1);
   return { dmg: (1 + UPG_K * (s.minionDmg || 0)) * hk, life: hk, haste: 1 + UPG_K * (s.minionHaste || 0) };
@@ -125,12 +125,19 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
     * (1 + (st.minionLife || 0) * 0.1 * UPG_K) * mm.life;   // minionLife talent: +6% HP per point (x UPG_K); HORDE perk too
   m.def = (warrior ? Math.min(0.2, 0.02 * (rdLv - 1)) : kind === MINION_GOLEM ? 0.15 : 0) + (src === SRC_RAISE && (warrior || kind === MINION_GOLEM) ? 0.1 : 0);   // Raise Dead warriors: +10% defense (archers / mages get none)
   m.skillT = 1.5 + Math.random() * 2; m.spin = 0;
+  // (owner 2026-11-04) Dark Legion staff: the ult golem is a DARK DRAGON (v 1, kind stays MINION_GOLEM so every golem rule still applies) and skeleton warriors are
+  // DARK KNIGHTS (v 1, kind stays MINION_WARRIOR: formation / Raise Dead hold / caps unchanged). Tougher and harder hitting than the bone ones.
+  m.v = src !== SRC_ALLY && (kind === MINION_GOLEM || warrior) && hasDarkLegion(useGameStore.getState().equipment.weapon) ? 1 : 0;
+  if (m.v) {
+    if (kind === MINION_GOLEM) { m.dmg *= 1.15; m.hp = m.maxHp = m.hp * 1.15; }
+    else { m.dmg *= 1.4; m.hp = m.maxHp = m.hp * 1.7; m.def = Math.min(0.35, m.def + 0.12); }
+  }
   if (!dropped) events.emit('explosion', { pos: tmp.set(x, 0, z).clone(), radius: kind === MINION_GOLEM ? 3 : 1.4, color: 0x9a6bd8 });
 }
 
 function crumble(m: (typeof world.minions)[number]): void {
   m.active = false;
-  if (m.kind === MINION_GOLEM && m.src === SRC_ULT && world.player.alive) golemExplode(m.x, m.z, m.dmg);
+  if (m.kind === MINION_GOLEM && m.src === SRC_ULT && world.player.alive) golemExplode(m.x, m.z, m.dmg, m.v === 1);
   events.emit('explosion', { pos: tmp.set(m.x, 0, m.z).clone(), radius: m.kind === MINION_GOLEM ? 2.5 : 1.2, color: 0xd8d0b8 });
 }
 
@@ -226,22 +233,22 @@ const rockStun = { type: 'STUN' as const, duration: 0.5 };
 const ROCK_T = 0.9, ROCK_R = 3.6;
 const rocks = Array.from({ length: 4 }, () => ({ on: false, x: 0, z: 0, t: 0, dmg: 0 }));
 let rockCd = 0;
-function mkBurnPatch(x: number, z: number, r: number, life: number, dps: number): void {
+function mkBurnPatch(x: number, z: number, r: number, life: number, dps: number, color = 0xff5a1a): void {
   const zn = allocZone();
   if (!zn) return;
   zn.active = true; zn.kind = 'FIRE'; zn.hostile = false;
-  zn.pos.set(x, 0, z); zn.radius = r; zn.life = zn.maxLife = life; zn.damage = dps; zn.color = 0xff5a1a;
+  zn.pos.set(x, 0, z); zn.radius = r; zn.life = zn.maxLife = life; zn.damage = dps; zn.color = color;
   zn.length = 0; zn.maxPull = 0; zn.tickT = 0; zn.aux = 1;   // aux 1 = real burn on everything inside (zones.fireTick)
 }
 /** The golem ends (timer out or slain): fiery blast + burn on everything near, and a burning patch for 5 s. */
-function golemExplode(x: number, z: number, dmg: number): void {
+function golemExplode(x: number, z: number, dmg: number, dark = false): void {
   const R = 6;
   boomBurn.value = Math.max(2, dmg * 0.4);
   damageEnemiesInRadius(x, z, R, dmg * 2.5, boomO, boomBurn);
-  mkBurnPatch(x, z, R * 0.8, 5, dmg * 0.5);
+  mkBurnPatch(x, z, R * 0.8, 5, dmg * 0.5, dark ? 0x8a3aff : 0xff5a1a);
   tmp.set(x, 0, z);
-  events.emit('explosion', { pos: tmp.clone(), radius: R * 0.7, color: 0xff6a2a });
-  events.emit('shockwave', { pos: tmp.clone(), radius: R * 1.4, color: 0xffa050 });
+  events.emit('explosion', { pos: tmp.clone(), radius: R * 0.7, color: dark ? 0x9a4aff : 0xff6a2a });
+  events.emit('shockwave', { pos: tmp.clone(), radius: R * 1.4, color: dark ? 0xc08aff : 0xffa050 });
   events.emit('crater', { pos: tmp.clone(), radius: R * 0.45, color: 0x1a0c08 });
 }
 /** Every 4-6 s, if an enemy is 6-16 m away: lob a boulder (telegraphed by a shadow circle) that lands after ROCK_T. */
@@ -268,6 +275,42 @@ function golemRockAI(m: (typeof world.minions)[number], dt: number, e: Enemy | n
   }
   rockCd = 4 + Math.random() * 2;
 }
+// ---- Dark Dragon (Dark Legion staff): shadow-fire BREATH in a cone every 4-6 s at an enemy 3-14 m away (damage + burn, leaves violet burning patches), bites in between
+const BREATH_LEN = 13, BREATH_HALF = 0.5;
+const breathO: DamageOpts = { kind: 'FIRE', source: 'PET', knockback: 0.8 };
+const breathBurn = { type: 'BURN' as const, duration: 3, value: 4 };
+let breathCd = 0;
+function dragonBreathAI(m: (typeof world.minions)[number], dt: number): void {
+  breathCd -= dt;
+  if (breathCd > 0 || m.rise > 0) return;
+  const ids2 = world.enemyGrid.query(m.x, m.z, BREATH_LEN + 2, ids);
+  let best: Enemy | null = null, bd = 1e9;
+  for (let k = 0; k < ids2.length; k++) {
+    const c = world.enemies[ids2[k]];
+    if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || c.hideT > 0) continue;
+    const d2 = (c.pos.x - m.x) ** 2 + (c.pos.z - m.z) ** 2;
+    if (d2 < 9 || d2 > (BREATH_LEN + 1) * (BREATH_LEN + 1)) continue;
+    if (d2 < bd) { bd = d2; best = c; }
+  }
+  if (!best) { breathCd = 0.5; return; }
+  const dx = best.pos.x - m.x, dz = best.pos.z - m.z, a0 = Math.atan2(dx, dz), fx = Math.sin(a0), fz = Math.cos(a0);
+  m.facing = a0; m.swing = 1; m.spin = 1;   // (render: spin on the dragon = mouth open / head up)
+  breathO.fromX = m.x; breathO.fromZ = m.z; breathBurn.value = Math.max(2, m.dmg * 0.3);
+  const hit = world.enemyGrid.query(m.x, m.z, BREATH_LEN + 6, ids);
+  for (let k = 0; k < hit.length; k++) {
+    const c = world.enemies[hit[k]];
+    if (!c.active || c.state === 'DYING' || c.state === 'SPAWN' || c.hideT > 0) continue;
+    const ex = c.pos.x - m.x, ez = c.pos.z - m.z, d = Math.hypot(ex, ez);
+    if (d > BREATH_LEN + c.radius) continue;
+    const da = Math.abs(Math.atan2(ex * fz - ez * fx, ex * fx + ez * fz));   // angle off the breath line
+    if (d > 1 && da > BREATH_HALF + Math.atan2(c.radius, d)) continue;
+    damageEnemy(c, m.dmg * 1.7, breathO);
+    applyStatus(c, breathBurn);
+  }
+  for (let j = 1; j <= 3; j++) mkBurnPatch(m.x + fx * j * 4, m.z + fz * j * 4, 1.4 + j * 0.45, 2.5, m.dmg * 0.25, 0x8a3aff);
+  events.emit('shockwave', { pos: tmp.set(m.x + fx * 6, 0, m.z + fz * 6).clone(), radius: 5, color: 0xb070ff });
+  breathCd = 4 + Math.random() * 2;
+}
 function updateRocks(dt: number): void {
   for (let k = 0; k < rocks.length; k++) {
     const r = rocks[k]; if (!r.on) continue;
@@ -282,7 +325,7 @@ function updateRocks(dt: number): void {
   }
 }
 
-export function clearMinions(): void { formation.foe = false; formation.hold = 0; formation.tgt = -1; for (const m of world.minions) m.active = false; summonedN = 0; for (const r of rocks) r.on = false; rockCd = 0; }
+export function clearMinions(): void { formation.foe = false; formation.hold = 0; formation.tgt = -1; for (const m of world.minions) m.active = false; summonedN = 0; for (const r of rocks) r.on = false; rockCd = 0; breathCd = 0; }
 export function minionCount(kind = -1, src = -1): number { let n = 0; for (const m of world.minions) if (m.active && (kind < 0 || m.kind === kind) && (src < 0 || m.src === src)) n++; return n; }
 
 /** Combat flag with ~1 s hysteresis + smoothed front / back directions for the melee formation. */
@@ -359,8 +402,9 @@ export function updateMinions(dt: number): void {
     if (m.shieldT > 0) { m.shieldT -= dt; if (m.shieldT <= 0) m.shield = 0; }
     if (m.spin > 0) m.spin = Math.max(0, m.spin - dt * 2.5);
     if (m.skillT > 0) m.skillT -= dt;
-    const golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
-    const reach = golem ? 4.8 : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? 6 : mage || bow ? 7.5 : 8.5 * MELEE_SPEED_MUL) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? 1.3 / 1.2 : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
+    const melee0 = m.kind === MINION_WARRIOR, golem = m.kind === MINION_GOLEM, mage = m.kind === MINION_MAGE, bow = m.kind === MINION_ARCHER;
+    const dragon = golem && m.v === 1, dk = melee0 && m.v === 1;
+    const reach = golem ? (dragon ? 5.4 : 4.8) : mage ? 10 : bow ? 13 : 1.5, speed = (golem ? (dragon ? 7.5 : 6) : mage || bow ? 7.5 : 8.5 * MELEE_SPEED_MUL) * SPEED_MUL * (m.slowT > 0 ? 0.6 : 1), cd = (golem ? (dragon ? 1.0 : 1.3 / 1.2) : mage ? 1.1 : bow ? 0.95 : 0.85) / (haste * ATK_SPD_MUL);
     const melee = m.kind === MINION_WARRIOR;
     // target: the nearest enemy within 16 of the minion (re-picked every 0.3 s). Warriors measure to the enemy's EDGE (centre - radius), look farther
     // (big bosses) and attack anything within ENGAGE_R of themselves or ENGAGE_HERO_R of the hero: attacking always beats the formation.
@@ -455,7 +499,7 @@ export function updateMinions(dt: number): void {
     else if (form === 1 && d <= stop + 0.3) m.facing = Math.atan2(formation.fx, formation.fz);   // idle in the wedge: face the foe
     else if (d > 0.05) m.facing = Math.atan2(dx, dz);
     m.atkT -= dt;
-    if (golem && m.src === SRC_ULT) golemRockAI(m, dt, e);
+    if (golem && m.src === SRC_ULT) { if (dragon) dragonBreathAI(m, dt); else golemRockAI(m, dt, e); }
     if (tr && d <= stop + 0.3 && m.atkT <= 0) {
       m.atkT = cd; m.swing = 1;
       if (mage) { const p = spawnProjectile('PET_BOLT', m.x, m.z, dx / d, dz / d, 22, m.dmg, { life: 1, pierce: 1, radius: 0.9, y: 1.2 }); if (p) p.tint = 9; }
@@ -486,11 +530,12 @@ export function updateMinions(dt: number): void {
         if (!golem && m.skillT <= 0) {   // skeleton skill: CLEAVE, a spinning swing that hits everything close (small AoE)
           m.skillT = 5 / haste; m.spin = 1; m.swing = 0;
           cleaveO.knockback = 0.6;
-          damageEnemiesInRadius(m.x, m.z, 2.8, m.dmg * 2, cleaveO);
-          events.emit('shockwave', { pos: tmp.set(m.x, 0, m.z).clone(), radius: 2.8, color: 0xc9b8ff });
+          damageEnemiesInRadius(m.x, m.z, dk ? 3.4 : 2.8, m.dmg * (dk ? 2.4 : 2), cleaveO);   // dark knights cleave wider and harder
+          events.emit('shockwave', { pos: tmp.set(m.x, 0, m.z).clone(), radius: dk ? 3.4 : 2.8, color: dk ? 0x9a4aff : 0xc9b8ff });
         } else if (golem) {   // (owner 2026-10-25) the golem's slam hits everything around the target
-          damageEnemiesInRadius(e.pos.x, e.pos.z, GOLEM_HIT_R, m.dmg, hitO);
-          events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: GOLEM_HIT_R, color: 0xb8a888 });
+          const hr = dragon ? 2.6 : GOLEM_HIT_R;   // the dragon bites a smaller area (its breath covers the rest)
+          damageEnemiesInRadius(e.pos.x, e.pos.z, hr, m.dmg * (dragon ? 0.9 : 1), hitO);
+          events.emit('shockwave', { pos: tmp.set(e.pos.x, 0, e.pos.z).clone(), radius: hr, color: dragon ? 0x9a4aff : 0xb8a888 });
         } else damageEnemy(e, m.dmg, hitO);
       }
     }

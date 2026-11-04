@@ -8,6 +8,7 @@ import { world } from '../engine/world';
 import { GB, litMat } from './util';
 import { CELL, pushHalo } from './fx';
 
+import { darkKnightDef, darkDragonDef } from './darkLegionRig';
 import { BONE, BONE2, glowOf, sub, skeletonDef, type V3, type RigDef } from './skeletonRig';
 
 function golemDef(): RigDef {
@@ -47,8 +48,9 @@ function buildRig(d: RigDef, mat: Material, glow: Material): Rig {
 }
 
 const PET_GHOST: [number, number, number][] = [[1.6, 1.6, 1.6], [0.8, 1.8, 0.8], [0.7, 1.2, 2.2], [1.6, 0.8, 2.2], [2.2, 1.7, 0.6], [2.2, 0.8, 1.6]];
-const SCALE = [1.3, 1.3, 2.85, 1.3];   // warrior, mage, golem, bowman
-const BAR_Y = [2.75, 3.0, 8.7, 2.85];
+// rig index = kind (0 warrior, 1 mage, 2 golem, 3 bowman) or, for the Dark Legion variants (minion.v 1): 4 dark knight, 5 dark dragon
+const SCALE = [1.3, 1.3, 2.85, 1.3, 1.5, 2.1];
+const BAR_Y = [2.75, 3.0, 8.7, 2.85, 3.05, 8.4];
 
 export function Minions({ pool = world.minions as unknown as typeof world.ghostMinions, ghost = false }: { pool?: typeof world.ghostMinions; ghost?: boolean } = {}) {   // (ghost: the co-op partner's summons, see net/coopMinions.ts)
   const N = pool.length;
@@ -56,7 +58,7 @@ export function Minions({ pool = world.minions as unknown as typeof world.ghostM
     const mat = litMat({ roughness: 0.8 });
     if (ghost) { mat.transparent = true; mat.opacity = 0.5; mat.depthWrite = false; }
     const glow = new MeshBasicMaterial({ color: 0xc27cff, toneMapped: false });
-    const defs = [skeletonDef('W'), skeletonDef('M'), golemDef(), skeletonDef('A')];
+    const defs = [skeletonDef('W'), skeletonDef('M'), golemDef(), skeletonDef('A'), darkKnightDef(), darkDragonDef()];
     const barBg = new MeshBasicMaterial({ color: 0x140c1c, transparent: true, opacity: 0.8, depthTest: false, side: DoubleSide });
     const barFg = new MeshBasicMaterial({ color: 0xb48cff, depthTest: false, side: DoubleSide });
     const plane = new PlaneGeometry(1, 1);
@@ -81,14 +83,15 @@ export function Minions({ pool = world.minions as unknown as typeof world.ghostM
       const S = slots[i], m = pool[i];
       S.outer.visible = m.active && m.src !== 6;   // (src 6 = the run ally, drawn by render/Ally.tsx)
       if (!m.active || m.src === 6) continue;
-      const k = m.kind;
+      const k = m.v ? (m.kind === 0 ? 4 : m.kind === 2 ? 5 : m.kind) : m.kind;   // (Dark Legion: dark knight / dark dragon)
       for (let r = 0; r < S.rigs.length; r++) S.rigs[r].root.visible = r === k;
-      const R = S.rigs[k], golem = k === 2, mage = k === 1, bow = k === 3;
+      const R = S.rigs[k], golem = k === 2 || k === 5, dragon = k === 5, mage = k === 1, bow = k === 3;
       const rise = m.rise > 0 ? Math.min(1, m.rise / 0.6) : 0;   // climbing out of the ground
       const mv = m.mv, w = m.walk, sw = Math.sin(w);
       const hurt = m.hitT > 0 ? m.hitT / 0.25 : 0;
       S.outer.position.set(m.x + (hurt > 0 ? Math.sin(t * 60) * 0.05 * hurt : 0), -rise * 1.8, m.z);
-      S.body.rotation.set(0, m.facing + (m.spin > 0 ? (1 - m.spin) * Math.PI * 2 : 0), 0);   // cleave: one full spin
+      S.body.rotation.set(0, m.facing + (m.spin > 0 && !dragon ? (1 - m.spin) * Math.PI * 2 : 0), 0);   // cleave: one full spin (the dragon's spin = fire breath)
+      S.body.position.y = dragon ? 2.3 + Math.sin(t * 2 + i) * 0.18 : 0;   // the dragon hovers
       const fade = m.life < 1 ? m.life : 1;
       S.body.scale.setScalar(fade * SCALE[k]);
 
@@ -122,8 +125,15 @@ export function Minions({ pool = world.minions as unknown as typeof world.ghostM
           R.hips.rotation.y += (up - strike) * 0.35;
         }
       }
-      if (m.spin > 0) { aR = -1.6; zR = -1.2 * m.spin - 0.3; aL = -0.6; zL = 0.9; }   // cleave: sword arm swept out to the side
-      if (rise > 0) { aL = aR = -2.9 * rise; zL = 0.3 * rise; zR = -zL; R.head.rotation.x = 0.4 * rise; }   // clawing up
+      if (m.spin > 0 && !dragon) { aR = -1.6; zR = -1.2 * m.spin - 0.3; aL = -0.6; zL = 0.9; }   // cleave: sword arm swept out to the side
+      if (dragon) {   // wings flap (arm z), bite = head dips, breath = head up + wings wide
+        const fl = Math.sin(t * (4.5 + 3 * mv) + i * 1.7), br = m.spin > 0 ? m.spin : 0;
+        aL = aR = 0.15; zL = -(0.35 + 0.55 * fl + 0.4 * br); zR = -zL;
+        R.head.rotation.x = Math.sin(t * 1.3 + i) * 0.06 + (m.swing > 0 ? Math.sin((1 - m.swing) * Math.PI) * 0.55 : 0) - 0.55 * Math.min(1, br * 2);
+        R.head.rotation.y = 0; R.hips.rotation.x = 0.06 * mv + (m.swing > 0 ? 0.12 * m.swing : 0);
+        R.legL.rotation.x = R.legR.rotation.x = -0.4;
+      } else if (rise > 0) { aL = aR = -2.9 * rise; zL = 0.3 * rise; zR = -zL; R.head.rotation.x = 0.4 * rise; }   // clawing up
+      if (dragon && rise > 0) { zL = -0.9; zR = 0.9; }
       R.armL.rotation.set(aL, 0, zL); R.armR.rotation.set(aR, 0, zR);
 
       // HP bar once hurt, always facing the camera

@@ -43,7 +43,7 @@ export function minTick(now: number, dt: number): void {
   for (let i = 0; i < M.length && flat.length < STRIDE * 16; i++) {
     const m = M[i];
     if (!m.active || m.src === 6) continue;
-    flat.push(m.kind, Math.round(m.x * 10), Math.round(m.z * 10), Math.round(m.facing * 100), Math.round(m.mv * 100), Math.round(m.swing * 100), Math.round(Math.max(0, Math.min(1, m.maxHp > 0 ? m.hp / m.maxHp : 1)) * 100), m.shield > 0 ? 1 : 0, Math.round(m.spin * 100), Math.round(m.rise * 100));
+    flat.push(m.kind + (m.v ? 10 : 0), Math.round(m.x * 10), Math.round(m.z * 10), Math.round(m.facing * 100), Math.round(m.mv * 100), Math.round(m.swing * 100), Math.round(Math.max(0, Math.min(1, m.maxHp > 0 ? m.hp / m.maxHp : 1)) * 100), m.shield > 0 ? 1 : 0, Math.round(m.spin * 100), Math.round(m.rise * 100));
   }
   const eq = useGameStore.getState().equipment as unknown as Record<string, { rarity?: string; name?: string; id?: string } | null | undefined>;
   const pet = eq?.pet, p = world.pet.pos;
@@ -68,10 +68,10 @@ export function onMinions(d: unknown[]): void {
     const g = G[i];
     if (i >= n) { g.active = false; continue; }
     const o = i * STRIDE, v = (k: number): number => (isNum(flat[o + k]) ? (flat[o + k] as number) : 0);
-    const kind = v(0) | 0;
+    const kv = v(0) | 0, kind = kv % 10, dv = kv >= 10 ? 1 : 0;
     g.tx = v(1) / 10; g.tz = v(2) / 10;
     if (!g.active) { g.x = g.tx; g.z = g.tz; }
-    g.active = true; g.kind = kind >= 0 && kind <= 3 ? kind : 0; g.facing = v(3) / 100; g.mv = v(4) / 100; g.swing = Math.max(0, Math.min(1, v(5) / 100));
+    g.active = true; g.kind = kind >= 0 && kind <= 3 ? kind : 0; g.v = dv && (g.kind === 0 || g.kind === 2) ? 1 : 0; g.facing = v(3) / 100; g.mv = v(4) / 100; g.swing = Math.max(0, Math.min(1, v(5) / 100));
     g.maxHp = 100; g.hp = Math.max(1, v(6)); g.shield = v(7) ? 1 : 0; g.spin = Math.max(0, v(8) / 100); g.rise = Math.max(0, v(9) / 100); g.life = 9; g.src = 1;
   }
   const gp = world.ghostPet;
