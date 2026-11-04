@@ -18,7 +18,7 @@ import type { Enemy } from '../types';
 import { spawnProjectile } from './projectiles';
 import { getMagnetRadius, petCollect } from './pickups';
 import type { Pickup } from '../types';
-import { petPower, petStage, petStars, petKillXp } from '../../petGrowth';
+import { petPower, petStage, petStars, petKillXp, petEvolvedPerk } from '../../petGrowth';
 import { bufferPetXp, flushPetXp } from '../../petActions';
 
 // ---- pet growth: kill XP is buffered in world.pet.xpBuf and committed to the pet item on discrete moments (level-up, room clear, death, run end).
@@ -358,6 +358,7 @@ let swoopT = 0, swoopEnemy: Enemy | null = null, swoopHit = false;
 let shield = 0, lastHp = -1;
 let markT = 0;
 let beamTick = 0;
+let evT = 0;           // evolved-perk cooldown accumulator
 const nearIds: number[] = [];
 const tmpP = new Vector3();
 
@@ -372,7 +373,7 @@ export const BEAM = { t: 0, x: 0, z: 0, dx: 0, dz: 1, len: 20 };
 export function getPetShield(): number { return shield; }
 
 function resetAbilities(): void {
-  abT = 0; trailT = 0; fireTickT = 0; swoopT = 0; swoopEnemy = null; shield = 0; lastHp = -1; markT = 0; beamTick = 0; BEAM.t = 0;
+  abT = 0; trailT = 0; fireTickT = 0; swoopT = 0; swoopEnemy = null; shield = 0; lastHp = -1; markT = 0; beamTick = 0; evT = 0; BEAM.t = 0;
   for (const f of FIRE_PATCHES) f.t = 0;
   for (const m of MARKS) { m.e = null; m.t = 0; }
 }
@@ -412,6 +413,44 @@ function pickNearest(x: number, z: number, r: number, n: number, out: Enemy[]): 
 const zapList: Enemy[] = [];
 const tmpV = { x: 0, z: 0 };
 
+const evOpts: DamageOpts = { kind: 'MAGIC', source: 'PET' };
+const evStatus = { type: 'SLOW' as 'SLOW' | 'BURN' | 'STUN' | 'POISON', duration: 2.5, value: 0.45 };
+/** Evolved pets (Stage II+) have an extra ability (petGrowth.ts PET_EVOLVED_PERK): heal, shield or an area burst. Fights only; no allocations. */
+function evolvedPerkTick(dt: number, value: number, lvMul: number, statDmg: number, maxHp: number): void {
+  const pet = useGameStore.getState().equipment.pet;
+  const perk = pet ? petEvolvedPerk(pet) : null;
+  if (!perk || !inFight()) return;
+  evT += dt;
+  if (evT < perk.cd) return;
+  const wp = world.pet, pl = world.player, pw = perk.power;
+  if (perk.kind === 'HEAL') {
+    if (pl.hp >= maxHp) { evT = perk.cd; return; }
+    evT = 0; wp.attackT = 1; healPlayer(maxHp * perk.pow * pw);
+    events.emit('floatText', { pos: wp.pos, text: perk.name.toUpperCase(), color: 0x7dffb0, scale: 0.7, dy: 1.2 });
+  } else if (perk.kind === 'SHIELD') {
+    evT = 0; wp.attackT = 1;
+    shield = Math.min(maxHp * 0.6, shield + maxHp * perk.pow * pw);
+    events.emit('floatText', { pos: wp.pos, text: perk.name.toUpperCase(), color: 0x7fd8ff, scale: 0.7, dy: 1.2 });
+  } else {
+    const e = findNearestEnemy(wp.pos.x, wp.pos.z, 9);
+    if (!e) { evT = perk.cd; return; }
+    evT = 0; wp.attackT = 1;
+    const r = 4 + 0.5 * (pw - 1) * 2, dmg = (value * lvMul + statDmg * 0.15) * perk.pow * pw;
+    evOpts.kind = perk.dmgType ?? 'MAGIC';
+    let st: typeof evStatus | undefined;
+    if (perk.status) {
+      st = evStatus; st.type = perk.status;
+      st.duration = perk.status === 'STUN' ? 0.8 : perk.status === 'BURN' ? 3 : 2.5;
+      st.value = perk.status === 'BURN' ? 4 + dmg * 0.12 : perk.status === 'SLOW' ? 0.45 : 0;
+    }
+    damageEnemiesInRadius(wp.pos.x, wp.pos.z, r, dmg, evOpts, st);
+    if (perk.heal) healPlayer(maxHp * perk.heal * pw);
+    const el = getPetProfile(pet!.name).el ?? 0;
+    events.emit('petBurst', { pos: burstPos.set(wp.pos.x, 0, wp.pos.z), el, r, tier: 1 });
+    petAtk(3, el, wp.pos.x, wp.pos.z, 0, 1, r, 1);
+  }
+}
+
 function petAbility(dt: number, skill: string | undefined, value: number, cd: number, lvMul: number, statDmg: number, maxHp: number): void {
   const wp = world.pet, pl = world.player;
   const dmg = (value * lvMul + statDmg * 0.15);
@@ -427,6 +466,7 @@ function petAbility(dt: number, skill: string | undefined, value: number, cd: nu
   // Mark timers always tick.
   for (let i = 0; i < 3; i++) { const m = MARKS[i]; if (m.t > 0) { m.t -= dt; if (m.t <= 0 || !m.e || !m.e.active || m.e.state === 'DYING') { m.t = 0; m.e = null; } } }
   if (BEAM.t > 0) BEAM.t -= dt;
+  evolvedPerkTick(dt, value, lvMul, statDmg, maxHp);
   if (!skill) return;
   if (!inFight()) return;   // (owner) pet abilities only act in a fight; the cooldown holds while idle / in town
   abT += dt;

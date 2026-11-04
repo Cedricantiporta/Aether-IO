@@ -7,7 +7,7 @@ import { CoinGlyph } from '../../components/SkillIcons';
 import { STAT_LABEL, fmtItemStat, RARITY_TEXT } from '../../lib/game';
 import {
   petLv, petStage, petStars, petXp, petXpNeed, petLvCap, petPowerAt, petDisplayName, petCanEvolve, petEvolveCost, petStatShown, petWeights,
-  PET_SHARD_XP, petEats, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV,
+  PET_SHARD_XP, petEats, PET_STAGE_LABEL, PET_STAGE_PREFIX, PET_MAX_LV, PET_EVOLVED_PERK,
 } from '../../../petGrowth';
 import { feedLoot, feedShards, evolvePet, lootFoodXp, canAffordEvolve } from '../../../petActions';
 import type { PlayerStats, Rarity } from '../../../types';
@@ -70,6 +70,13 @@ export const PetCare: React.FC = () => {
         <div className="flex justify-between"><span style={{ color: 'var(--text-dim)' }}>Pet skill power</span>
           <span className="rpg-num">x{cur.toFixed(2)}{nxt !== cur && <span style={{ color: 'var(--good)' }}> {'->'} x{nxt.toFixed(2)}</span>}</span></div>
       </div>
+
+      {PET_EVOLVED_PERK[pet.name] && (
+        <div className="text-[.74rem] rounded-lg px-2 py-1" style={{ background: st > 1 ? 'rgba(197,139,255,.16)' : 'rgba(0,0,0,.06)' }} data-testid="pet-evolved-perk">
+          <div className="rpg-label">{st > 1 ? 'Evolved ability' : 'Unlocks at Stage II'}</div>
+          <b>{PET_EVOLVED_PERK[pet.name].name}</b> <span style={{ color: 'var(--text-dim)' }}>{PET_EVOLVED_PERK[pet.name].desc}{st >= 3 ? '' : st === 2 ? ' (+50% power at Stage III)' : ''}</span>
+        </div>
+      )}
 
       <div>
         <div className="rpg-label mb-1">Feed</div>

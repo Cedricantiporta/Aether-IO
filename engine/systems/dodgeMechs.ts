@@ -31,7 +31,6 @@ import { bp } from './bossPhaseState';
 import { bossWarded, bossGapOn, bossGapSet } from './bossMech';
 import { forEachHero, nearestHero, isAlly } from '../heroes';
 import { edgeLimit } from '../mapgen';
-import { iceAt } from '../iceFloor';
 import { useGameStore } from '../../store';
 import { DASH_UNLOCK_LV } from '../../classLevels';
 import { coopRoom } from '../../net/coopRoom';
@@ -132,10 +131,10 @@ function clearAll(): void {
   D.cast = 0; D.id = -1; D.beam = -1; live = false;
 }
 
-/** True when a hero could answer a ring right now: dash unlocked, not on ice, a charge (or one back inside ~0.9 s). */
+/** True when a hero could answer a ring right now: dash unlocked, a charge (or one back inside ~0.9 s). */
 function ringFair(): boolean {
   const p = world.player;
-  if (!p.alive || useGameStore.getState().level < DASH_UNLOCK_LV || iceAt(p.pos.x, p.pos.z)) return false;
+  if (!p.alive || useGameStore.getState().level < DASH_UNLOCK_LV) return false;
   return p.dashCharges >= 1 || p.dashCd < 0.9;
 }
 const canDouble = (): boolean => world.player.maxDashCharges >= 2 && world.player.dashCharges >= 2;

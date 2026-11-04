@@ -1,7 +1,7 @@
 // ============================================================================
 // Frostpeak ice floors (owner-approved mock "ice_mock.png"). COMBAT / ELITE / TREASURE rooms of the ice biome (index 4) get a few BIG irregular sheets of
 // slippery ice on the floor (lobed blobs of discs, like the lava pools of lavaFloor.ts); the rest of the floor stays normal snow (no small patches).
-//   - the hero keeps his momentum on a sheet (player.ts: x0.1 acceleration while steering, x0.04 friction while letting go, x1.25 top speed; no dash while standing on ice),
+//   - the hero keeps his momentum on a sheet (player.ts: x0.4 acceleration while steering, x0.14 friction while letting go, x1.1 top speed; dashing allowed),
 //   - walking monsters slide a bit (biomeHazards.ts iceMobs; bosses / minis / flyers-as-stationaries excluded),
 //   - the arrival spot, exits, station / chests, the centre, placed stationaries, frozen pools and liquids stay ice-free.
 // One generator, deterministic per room seed: discs -> a 0.5 m Uint8Array grid (O(1) `iceAt`), rebuilt once per room in director.enterRoom; the renderer
@@ -25,8 +25,8 @@ export const ice = {
   discs: [] as IDisc[],
   grid: new Uint8Array(0), n: 0, o: 0,
 };
-/** Hero slip numbers (player.ts): velocity lerp rate = 12 * grip per second. Steering on ice: x0.1; letting go: x0.04 (a very long glide); top slide speed x1.25 of walking; no dash on ice (abilities.ts tryDash). */
-export const ICE_ACCEL = 0.05, ICE_FRICTION = 0.015, ICE_SPEED_MUL = 1.25;   // (owner 2026-10-26 round 2: steering x0.05 = ~1.7 s to turn, letting go x0.015 = ~5.5 s glide)
+/** Hero slip numbers (player.ts): velocity lerp rate = 12 * grip per second. Steering on ice: x0.4; letting go: x0.14 (a short glide); top slide speed x1.1 of walking; dashing is allowed. */
+export const ICE_ACCEL = 0.4, ICE_FRICTION = 0.14, ICE_SPEED_MUL = 1.1;   // (owner 2026-11-04: more control: steering x0.4 = ~0.2 s to turn, letting go x0.14 = ~0.6 s glide; was 0.05 / 0.015 / 1.25; dashing works on ice)
 /** Monster slide: their slide velocity lerps toward the AI's velocity at this rate per second (normal ground = instant). */
 export const ICE_MOB_LERP = 1.6;
 
@@ -75,7 +75,7 @@ function sheet(out: IDisc[], rnd: () => number, cx: number, cz: number, R0: numb
   return out.length - n0;
 }
 
-/** `bossIce`: Glacius' arena (BOSS room) gets big slides too. Normal rooms aim for 50-70% of the floor, the boss arena ~50%. */
+/** `bossIce`: the boss arena may get big slides (director passes false: Glacius' arena is plain snow since 2026-11-04). Normal rooms aim for 50-70% of the floor, the boss arena ~50%. */
 export function setupIceFloor(biome: number, plan: RoomPlan, seed: number, bossIce = false): void {
   ice.on = false; ice.coverage = 0; ice.discs = []; ice.ver++;
   if (((biome % 7) + 7) % 7 !== FROST_BIOME) return;
