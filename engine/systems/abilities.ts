@@ -656,7 +656,7 @@ function battleCryRoar(b: number, lv: number): void {
   const r2 = R * R;
   for (let i = 0; i < ids.length; i++) {
     const e = world.enemies[ids[i]];
-    if (!e.active || e.state === 'DYING' || e.boss) continue;
+    if (!e.active || e.state === 'DYING' || e.boss || e.mini) continue;
     const ex = e.pos.x - p.pos.x, ez = e.pos.z - p.pos.z;
     if (ex * ex + ez * ez <= r2) e.fearT = Math.max(e.fearT, fear);
   }
@@ -1004,7 +1004,7 @@ function bigMeteorImpact(f: GroundFx): void {
     applyStatus(e, stunSt);
     burnSt.duration = 3; burnSt.value = f.dmg * 0.02;
     applyStatus(e, burnSt);
-    if (!e.boss) {
+    if (!e.boss && !e.mini) {
       const k = (1 - d / R) * 32 + 6;
       const inv = 1 / (d || 1);
       e.knock.x += dx * inv * k; e.knock.z += dz * inv * k;
@@ -1108,7 +1108,7 @@ function stepFx(dt: number): void {
           if (Math.abs(d - r) > 2.6) continue;
           burnSt.duration = 2; burnSt.value = f.dmg * 0.12;
           applyStatus(e, burnSt);
-          if (!e.boss && d > 0.1) { const kk = (e.mini ? 3 : e.elite ? 6 : 12) / d; e.knock.x += dx * kk; e.knock.z += dz * kk; }
+          if (!e.boss && !e.mini && d > 0.1) { const kk = (e.mini ? 3 : e.elite ? 6 : 12) / d; e.knock.x += dx * kk; e.knock.z += dz * kk; }
           damageEnemy(e, f.dmg, fireOpts);
         }
       }
@@ -1230,11 +1230,7 @@ export function updateAbilities(dt: number): void {
       const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z;
       const d2 = dx * dx + dz * dz;
       if (d2 > R2) continue;
-      if (e.boss || e.mini) { // big targets: no pull, only a gentle shove so they don't stand inside the hero
-        const d = Math.sqrt(d2) || 1, keep = 1.5 + e.radius;
-        if (d < keep) { const push = Math.min(keep - d, 6 * dt); e.pos.x -= (dx / d) * push; e.pos.z -= (dz / d) * push; }
-        continue;
-      }
+      if (e.boss || e.mini) continue;   // big targets: no pull, no shove (the hero is blocked by their body instead: enemies.ts)
       const d = Math.sqrt(d2) || 1;
       // keep-out ring: nothing gets close enough to touch the hero while spinning (still damaged by the ticks below)
       const keep = 3.0 + e.radius;

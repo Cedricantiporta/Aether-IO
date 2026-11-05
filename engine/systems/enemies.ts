@@ -41,7 +41,7 @@ import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } fro
 import { hasSpecial, initSpecial, updateSpecial, tryStartSpecial, cancelSpecial, shellBounce, updateDecoy, clearDecoys, flopY, isSlimeKing } from './bossSpecials';
 import { useGameStore, rollDropPlus, DMG_INFLATE } from '../../store';
 import { runMods, veteran, VET, runInfo } from '../runMods';
-import { BOSS_HP_TOTAL, BOSS_LAYERS, BOSS_LAYERS_HARD, bossLvArmor, bossHitScale, SLIME_KING_ACID_MUL } from '../bossBalance';
+import { BOSS_HP_TOTAL, BOSS_LAYERS, BOSS_LAYERS_HARD, bossLvArmor, bossHitScale, SLIME_KING_ACID_MUL, IGNAR_HP_MUL, IGNAR_DMG_MUL } from '../bossBalance';
 import { BIOMES } from '../roomDefs';
 import { showcase, SHOWCASE_SHIELD_CHANCE } from '../showcase';
 import { trial, TRIAL_SCALE_BIOME, TRIAL_DMG, TRIAL_TELE, TRIAL_CD } from '../../bossTrials';
@@ -429,7 +429,9 @@ export function spawnEnemy(
   e.gold = Math.round(rewardDef.gold * rewardMul * (elite ? 3 : 1) * (1 + LEVEL_REWARD * (lvl - 1)));
   e.armor = armorFor(kind, wave, elite);
   if (boss) e.armor = Math.round(e.armor * BOSS_ARMOR_MUL) + bossLvArmor(lvl, trial.on);   // (owner 2026-10-26) bosses were too easy: +80% defense; (2026-10-31) + a term that grows with the hero's level (bossBalance.ts)
-  if (boss) { const k = bossDmgScale(e, wave); e.contactDamage *= k; e.projectileDamage *= k; }   // (2026-10-31) flat boss hits track the hero's max HP / defence (bossBalance.ts)
+  // (2026-10-31) flat boss hits track the hero's max HP / defence (bossBalance.ts)
+  if (boss) { const k = bossDmgScale(e, wave) * (kind === 'BOSS_WARLORD' ? IGNAR_DMG_MUL : 1); e.contactDamage *= k; e.projectileDamage *= k; }
+  if (kind === 'BOSS_WARLORD') { e.maxHp = Math.round(e.maxHp * IGNAR_HP_MUL); e.hp = e.maxHp; }   // Ignar: -30% HP / flat damage (bossBalance.ts)
   if (kind === 'BOMBER' && world.room.active && world.room.biome >= 3) { e.speed *= 1.45; e.armor = Math.max(e.armor, 45); }   // (owner 2026-10-25) later realms: fast rushing bombers with medium defense
   // (owner 2026-10-26) The Void breeds corrupted monsters: 2x damage, 1.3x bigger (the shots turn black-purple in render)
   e.corrupt = !boss && !opts?.fixed && !isStationary(kind) && world.room.active && ((world.room.biome | 0) % BIOMES.length) === VOID_BIOME && Math.random() < CORRUPT_CHANCE;
@@ -1559,6 +1561,7 @@ function contactHit(e: Enemy, locked: boolean): void {
   if (e.kind === 'BAT') enter(e, 'RECOVER');
 }
 
+const HERO_BLOCK_MAX = 0.6;   // max hero displacement per enemy per frame when blocked by a solid body
 function updateEnemy(e: Enemy): void {
   const dt = frameDt;
   const player = world.player;
@@ -1622,8 +1625,8 @@ function updateEnemy(e: Enemy): void {
   }
 
   // ---- status effects
-  if (e.boss) { e.freezeT = 0; e.stunT = 0; e.knock.set(0, 0, 0); }
-  if (e.mini) { e.freezeT = 0; e.stunT = 0; }
+  if (e.boss) { e.freezeT = 0; e.stunT = 0; e.fearT = 0; e.knock.set(0, 0, 0); }
+  if (e.mini) { e.freezeT = 0; e.stunT = 0; e.fearT = 0; }
   if (e.armorBreakT > 0) e.armorBreakT -= dt;
   if (e.burnStackCd > 0) e.burnStackCd -= dt;
   if (e.slamT > 0) e.slamT -= dt;
@@ -1749,10 +1752,15 @@ function updateEnemy(e: Enemy): void {
     }
   } else if (still) { e.pos.x = e.dir.x; e.pos.z = e.dir.z; e.knock.set(0, 0, 0); e.vel.set(0, 0, 0); }   // towers / lakes: pinned to the home spot
   if (!e.boss && !still && e.kind !== 'BOSS_HYDRA_HEAD') separate(e);
-  // never inside the hero: monsters stop short of its body (owner: a bit more room) (they still reach it with their strikes)
-  if (world.player.alive && !still && e.kind !== 'BOSS_HYDRA_HEAD') {
-    const hx = e.pos.x - world.player.pos.x, hz = e.pos.z - world.player.pos.z, minD = e.radius + 0.95, hd2 = hx * hx + hz * hz;
-    if (hd2 < minD * minD) { const hd = Math.sqrt(hd2) || 1e-3; e.pos.x = world.player.pos.x + (hx / hd) * minD; e.pos.z = world.player.pos.z + (hz / hd) * minD; }
+  // (owner 2026-11-05) the hero NEVER shoves a monster by walking into it: enemies are not displaced by the hero's body. Solid bodies (bosses, mini-bosses,
+  // big monsters) block the HERO instead (the hero is pushed out, at most HERO_BLOCK_MAX per frame); small monsters may overlap the hero lightly. A dash passes through.
+  const hp = world.player;
+  if (hp.alive && hp.dashT <= 0 && !still && e.kind !== 'BOSS_HYDRA_HEAD' && !e.decoy && e.state !== 'SPAWN' && (e.boss || e.mini || e.radius >= 1.3)) {
+    const hx = hp.pos.x - e.pos.x, hz = hp.pos.z - e.pos.z, minD = e.radius * (e.boss ? 0.82 : 0.9) + 0.7, hd2 = hx * hx + hz * hz;
+    if (hd2 < minD * minD) {
+      const hd = Math.sqrt(hd2) || 1e-3, push = Math.min(minD - hd, HERO_BLOCK_MAX);
+      hp.pos.x += (hx / hd) * push; hp.pos.z += (hz / hd) * push;
+    }
   }
   if (e.kind !== 'BAT' && e.kind !== 'WRAITH' && e.kind !== 'BOSS_HYDRA_HEAD' && !still) {
     const pushed = pushOutOfObstacles(e);

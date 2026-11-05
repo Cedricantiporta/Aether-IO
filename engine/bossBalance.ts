@@ -14,6 +14,10 @@ export const dotBiomeMul = (biome: number): number => 0.5 * (1 + 0.1 * Math.max(
 /** The Slime King's poison zones (belly-flop splat, acid flood / rain, burst acid) hit 40% weaker than other acid, on top of dotBiomeMul. */
 export const SLIME_KING_ACID_MUL = 0.6;
 
+/** (owner 2026-11-05) Ignar the Infernal Warlord (BOSS_WARLORD, both forms; Boss Trials too: it all goes through enemies.spawnEnemy): -30% HP (the Burning Form HP derives from it)
+ *  and -30% on his flat hits (contact / projectile damage, so everything built on pwr()). Share-of-max-HP hazards (lava tiles, `pct` hits) are NOT touched. */
+export const IGNAR_HP_MUL = 0.7, IGNAR_DMG_MUL = 0.7;
+
 export const BOSS_HP_TOTAL = 1;   // (owner 2026-10-31: halved again, 2 -> 1; the bars stay x10)
 /** Cosmetic stacked-bar counts. */
 export const BOSS_LAYERS = 10, BOSS_LAYERS_HARD = 10;

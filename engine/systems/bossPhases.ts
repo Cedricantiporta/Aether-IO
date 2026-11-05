@@ -145,6 +145,7 @@ function begin(e: Enemy, kind: PhaseKind): void {
   for (let i = 0; i < MAX_PROPS; i++) bp.props[i].on = false;
   for (let i = 0; i < MAX_HANDS; i++) bp.hands[i].on = false;
   G.stage = 0; G.t0 = 0; G.hit = false; G.tick = 0; G.hitA = false; G.tickA = 0; G.hitCdA = 0; G.slowA = 0; G.legs = 0; G.legHit = false; G.windT = 0; G.rootT = 0; G.hitCd = 0; G.handT = 0; G.dust = 0;
+  if (kind === 'VOIDPULL') { const pr = world.enemyProjectiles; for (let i = 0; i < pr.length; i++) { const q = pr[i]; if (q.active && q.kind === 'BOSS_ORB' && q.homing > 0) q.active = false; } }   // (owner 2026-11-05) Event Horizon brings its own seeker orbs: a Seeker Orbs cast still in flight is removed (no stacking)
   banner(kind);
   e.vel.set(0, 0, 0);
   events.emit('shockwave', { pos: e.pos.clone(), radius: e.radius * 3 + 4, color: bp.color });

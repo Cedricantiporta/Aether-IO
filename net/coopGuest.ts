@@ -190,7 +190,7 @@ function onSnap(d: unknown[]): void {
     e.vel.set(((IN[o + 6] & 255) - 128) / 2, 0, ((IN[o + 6] >> 8) - 128) / 2);
     const w7 = IN[o + 7], sb = w7 >> 6;
     e.pattern = w7 & 63;
-    e.freezeT = sb & 1 ? 1 : 0; e.burnT = sb & 2 ? 1 : 0; e.poisonT = sb & 4 ? 1 : 0; e.stunT = sb & 8 ? 1 : 0; e.fearT = sb & 16 ? 1 : 0; e.slowT = sb & 32 ? 1 : 0; e.winT = sb & 64 ? 1 : 0;
+    e.freezeT = sb & 1 ? 1 : 0; e.burnT = sb & 2 ? 1 : 0; e.poisonT = sb & 4 ? 1 : 0; e.stunT = sb & 8 ? 1 : 0; e.fearT = sb & 16 && !e.boss && !e.mini ? 1 : 0; e.slowT = sb & 32 ? 1 : 0; e.winT = sb & 64 ? 1 : 0;
     e.hideT = sb & 128 ? 1 : 0; e.armorBreakT = sb & 256 ? 1 : 0; e.staggerT = sb & 512 ? 1 : 0;
     if (st !== 'DYING') e.stateT = IN[o + 8] / 50;
     e.shield = (IN[o + 9] / 65535) * e.maxHp;

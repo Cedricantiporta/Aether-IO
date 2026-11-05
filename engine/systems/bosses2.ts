@@ -35,7 +35,7 @@ import { headsReset, hydraExposeMul, spareHeadAI, headsPhaseOn } from './bossKit
 import { warmReset, warmDamageMul, warmTick, ventDue, ventBegin, ventFire, ventAim, ventTick, ventEnd, addHeat, missileVolley, wallBegin, wallFire, WX, VENT_T, VENT_WIND } from './bossKitColossus';
 import { spawnIllusions, clearDecoys } from './bossSpecials';
 import {
-  mfx, queueHole, holesBusy, tickVoidFx, clearVoidFx,
+  mfx, queueHole, holesBusy, tickVoidFx, clearVoidFx, ehBusy, gravityBusy, meteorsBusy, mirrorBusy,
 } from './voidFx';
 
 export function isBoss2(k: EnemyKind): boolean {
@@ -1278,7 +1278,22 @@ function herald(e: Enemy, dt: number, dist: number, ux: number, uz: number): voi
   { const pl = world.player; if (pl.downT > 0 || pl.knockImmuneT > 0 || pl.stunT > 0) e.attackCd = Math.max(e.attackCd, pl.downT > 0 ? 1.0 : 0.5); }   // fairness: no new skill lands on a hero who is down / just got up (the anti-chain rules only stop the CC, not the damage)
   if (e.attackCd > 0) return;
   const order = S.vform === 2 ? HERALD_F2 : HERALD_F1;
-  beginAtk(e, list, order[S.cycle++ % order.length], ux, uz, dist);
+  let id = order[S.cycle++ % order.length];
+  if (id === V_ORBS && orbsBlocked()) {   // (owner 2026-11-05) no Seeker Orbs during Event Horizon / another skill / while earlier seeker orbs still fly: take the next skill in the rotation
+    let tries = order.length;
+    while (tries-- > 0 && id === V_ORBS) id = order[S.cycle++ % order.length];
+    if (id === V_ORBS) { e.attackCd = Math.max(e.attackCd, 0.5); return; }   // (cannot happen with these lists: every rotation has other skills) just wait a moment
+  }
+  beginAtk(e, list, id, ux, uz, dist);
+}
+/** True while the Herald must not cast Seeker Orbs: a phase (Event Horizon...) runs, another major skill / hazard is live, he transforms, or seeker orbs are still alive. */
+function orbsBlocked(): boolean {
+  if (bp.on || mfx.major || S.vformT > 0 || ehBusy() || gravityBusy() || meteorsBusy() || holesBusy() || mirrorBusy()) return true;
+  for (const l of mfx.lasers) if (l.on) return true;
+  for (const b of mfx.bombs) if (b.on) return true;
+  const pr = world.enemyProjectiles;
+  for (let i = 0; i < pr.length; i++) { const q = pr[i]; if (q.active && q.kind === 'BOSS_ORB' && q.homing > 0) return true; }
+  return false;
 }
 
 if (typeof window !== 'undefined' && (import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV) {   // QA: `__bossKit.cast(id)` starts attack `id` of the live boss's own list (boss must be in CHASE); `S` = the shared state

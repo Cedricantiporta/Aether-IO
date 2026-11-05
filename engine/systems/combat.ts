@@ -125,7 +125,7 @@ export function resetCombat(): void { resetInterrupt(); xpAcc = 0; xpTextT = 0; 
 
 /** Big knockback: launches the enemy `dist` units away along (dx,dz); slam damage if it hits an obstacle while flying. */
 export function launchEnemy(e: Enemy, dx: number, dz: number, dist: number, slam = 0): void {
-  if (!e.active || e.state === 'DYING' || e.boss || e.freezeT > 0) return;
+  if (!e.active || e.state === 'DYING' || e.boss || e.mini || e.freezeT > 0) return;
   if (coopRoom.guest) return;   // (a guest's launch rides on its hit: coopRoom.sendHit carries `launch`)
   const l = Math.sqrt(dx * dx + dz * dz) || 1;
   const resist = e.mini ? 0.25 : e.elite ? 0.5 : 1;
@@ -553,7 +553,7 @@ export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
   const knockRoll = o.source === 'PLAYER' ? Math.random() < KNOCK_CHANCE : true;
   if (o.down && !o.dot) downEnemy(e, o.down);   // (a skill that knocks down: always, not a 50% roll)
   if (o.launch && o.knockDir) { if (knockRoll) launchEnemy(e, o.knockDir.x, o.knockDir.z, o.launch, o.slam ?? 0); }
-  else if (knockRoll && o.knockDir && o.knockback && !e.boss && e.freezeT <= 0) {
+  else if (knockRoll && o.knockDir && o.knockback && !e.boss && !e.mini && e.freezeT <= 0) {
     const k = Math.min(KNOCK_MAX, o.knockback * KNOCK_SCALE) * (e.elite ? 0.5 : 1) * (e.mini ? 0.5 : 1);
     e.knock.x += o.knockDir.x * k;
     e.knock.z += o.knockDir.z * k;
@@ -732,7 +732,7 @@ function triggerBarrier(level: number): void {
     const d2 = dx * dx + dz * dz;
     if (d2 > r2) continue;
     const d = Math.sqrt(d2) || 1;
-    if (!e.boss) { e.knock.x += (dx / d) * force; e.knock.z += (dz / d) * force; }
+    if (!e.boss && !e.mini) { e.knock.x += (dx / d) * force; e.knock.z += (dz / d) * force; }
     applyStatus(e, { type: 'STUN', duration: 2 });
   }
   events.emit('shieldBlock', { pos: p.pos, radius });
