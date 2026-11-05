@@ -38,6 +38,8 @@ export interface ProjSpec {
 
 /** Boomerang axe: initial turn against its curve (rad) so its loop straddles the aim line (see the AXE steering). */
 const AXE_PRE_TURN = 0.48;
+/** Boomerang axe: the way-back pass deals this share of the throw's damage (out 100% + back 50% = 1.5 hits per target instead of 2). */
+const AXE_RETURN_MUL = 0.5;
 /** Boomerang loop depth per unit of throw speed (simulated with the steering below: ~0.38 u per u/s). */
 const AXE_REACH_PER_SPEED = 0.38;
 const ORIGIN_Y = 1.2;
@@ -451,6 +453,7 @@ function hitEnemy(p: Projectile, e: Enemy, critRate: number, critDamage: number)
   const mult = p.kind === 'ORBITAL_BLADE' ? 1 : rollCrit(critRate, critDamage);
   const crit = p.kind === 'ORBITAL_BLADE' ? false : lastCrit;
   let dmg = p.damage * mult;
+  if (p.kind === 'AXE' && p.state === 1) dmg *= AXE_RETURN_MUL;   // (owner 2026-11-05) the boomerang's return pass hits for half: the out + back double hit was ~+40% over the other basic attacks
   const dkind = damageKindOf(p.kind);
   // Archer synergy: enemies chilled by Frost Field / Chain Frost shatter under Gale Arrow (+30%)
   if (p.kind === 'GALE_ARROW' && e.frostT > 0) {

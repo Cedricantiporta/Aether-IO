@@ -65,16 +65,16 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Hurl a slow, burning X of crossed axe waves that rolls forward through every enemy in the lane, knocking them back. Titan\'s Wrath makes it (and every other skill) 40% bigger.',
       per: (lv) => `${pct(4.2 * lvMul(lv))} dmg · slow, pierces all · width 3.5` },
     { slot: 'e', icon: 'WHIRLWIND', name: 'Whirlwind', mana: 24, cd: 12,
-      desc: 'Spin for 1.2s (hold the key to keep spinning, up to 4s), barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
-      per: (lv) => `${pct(1.76 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
+      desc: 'Spin for 1.2s (hold the key to keep spinning, up to 3.5s), barely tugging nearby enemies and shredding them (breaks armor). Hits heal you slightly (max ~12% HP per cast). Enemies are kept from touching you. After Cross Slash: pulls 30% harder, heals +50%.',
+      per: (lv) => `${pct(1.25 * lvMul(lv))} dmg per tick · radius ${f1(7.5 + 0.3 * (lv - 1))} · heal ${f1((0.5 + 0.1 * (lv - 1)) * 0.5)}% per hit` },
     { slot: 's3', icon: 'EARTHSPLITTER', name: 'Earthsplitter', mana: 24, cd: 9,
       desc: 'Slam the ground in front of you: a short fissure erupts in stone spikes. Launches enemies far (wall-slam bonus), knocks them down (not bosses) and breaks armor.',
-      per: (lv) => `${pct(5 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
+      per: (lv) => `${pct(3.6 * lvMul(lv))} dmg per spike · length ${f1(9 + 0.6 * (lv - 1))} · stun ${f1(0.6 + 0.1 * lv)}s` },
     { slot: 's5', icon: 'ANCIENT_SPEAR', name: 'Ancient Spear', mana: 20, cd: 8,   // Diablo 3 Barbarian: Ancient Spear (impale + yank) / Hades Spear: Flurry-throw
       desc: 'Hurl a spear down the lane: it skewers enemies and yanks them in to your feet, knocking them down (not bosses; they are only hit). Skewers more enemies every two levels.',
       per: (lv) => `${1 + Math.ceil(lv / 2)} enemies · ${pct(3.6 * lvMul(lv))} dmg each · range ${f1(22 + 1 * (lv - 1))}` },
     { slot: 's6', icon: 'REND', name: 'Rend', mana: 20, cd: 10,   // Diablo 3 Barbarian: Rend / Blood Rage life tap
-      desc: 'Two quick bloody slashes around you; the first heals you for each enemy it hits (up to 5) and breaks armor, and you fall into a short Rage.',
+      desc: 'Two quick bloody slashes around you; the first heals you for each enemy it hits (up to 5) and breaks armor, and you fall into a short Rage (+50% attack speed).',
       per: (lv) => `2 x ${pct(1.7 * lvMul(lv))} dmg · radius ${f1(8 + 0.4 * (lv - 1))} · heal ${f1(1.5 + 0.3 * (lv - 1))}% HP per enemy (max 5) · Rage ${f1(1.5 + 0.5 * lv)}s` },
   ],
   NECROMANCER: [
@@ -129,7 +129,7 @@ export const isDashKey = (hero: HeroClass, key: string): boolean => key === dash
 
 export const SHOULDER_CHARGE: AbilityDef = {
   slot: 'e', icon: 'BLOODRAGE_LEAP', name: 'Bloodrage Leap', mana: 0, cd: 0,
-  desc: 'Leap to the target (tap: forward) and slam down: stuns and knocks down nearby enemies (not bosses) and grants a short Rage (faster attacks). Invulnerable while airborne. +2% dodge for 4s.',
+  desc: 'Leap to the target (tap: forward) and slam down: stuns and knocks down nearby enemies (not bosses) and grants a short Rage (+50% attack speed). Invulnerable while airborne. +2% dodge for 4s.',
   per: (lv) => `Slam ${pct(1.05 * lvMul(lv))} dmg · radius ${f1(7 + 0.5 * (lv - 1))} · Rage ${f1(1.5 + 0.5 * lv)}s`,
 };
 export const HOLY_CHARGE: AbilityDef = {

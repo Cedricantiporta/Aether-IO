@@ -113,7 +113,7 @@ function axeStorm(level: number): void {
   const dir = getAimDir(aim);
   const n = 3 + (st.axeCount | 0);
   const size = 1 + st.axeSize;
-  const dmg = st.damage * 2.2 * st.skillDamage * lvScale(level) * (1 + st.stompPower);
+  const dmg = st.damage * 1.7 * st.skillDamage * lvScale(level) * (1 + st.stompPower);
   const spread = 0.35; // half-angle (~40 deg total)
   for (let i = 0; i < n; i++) {
     const a = n === 1 ? 0 : (i / (n - 1) - 0.5) * 2 * spread;

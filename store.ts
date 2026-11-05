@@ -349,7 +349,7 @@ export const getEffectiveStats = (): PlayerStats => {
   const s = useGameStore.getState().stats;
   const p = world.player;
   const out = { ...s };
-  if (p.rageT > 0) out.fireRate *= 2;
+  if (p.rageT > 0) out.fireRate *= 1.5;   // Rage: +50% attack speed (was x2, owner 2026-11-05 Barbarian damage pass)
   if (p.cryT > 0) out.damage *= 1.3;
   if (p.titanT > 0) { out.damage *= 1.5; out.knockback += 1; }
   return out;
