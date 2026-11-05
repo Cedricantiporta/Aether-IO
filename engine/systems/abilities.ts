@@ -237,7 +237,7 @@ function safeSpot(o: Vector3): void {
 
 /** Lightpiercer: extra charge time when held (s). Whirlwind: base spin and the longest a held spin can last (s). */
 export const LP_CHARGE = 1.5;
-const WHIRL_BASE = 1.2, WHIRL_MAX = 4;
+const WHIRL_BASE = 1.2, WHIRL_MAX = 3.5;
 /** Hold time of the key / button that cast the current skill (aim.ts sets it; 0 for auto casts). */
 export const castHold = { t: 0 };
 /** Is the key / touch button of this active slot still held down? */
@@ -625,7 +625,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     announce('CROSS_SLASH');
   } else if (slot === 'e') {
     const a = abilityState;
-    p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.76; a.whirlLv = lv; a.whirlR = (7.5 + 0.3 * (lv - 1)) * titanScale();
+    p.whirlT = WHIRL_BASE; a.whirlExt = 0; a.whirlHeal = 0; a.whirlTick = 0; a.whirlDmg = b * 1.25; a.whirlLv = lv; a.whirlR = (7.5 + 0.3 * (lv - 1)) * titanScale();
     announce('WHIRLWIND');
   } else if (slot === 's3') {
     const ts = titanScale(), L = (9 + 0.6 * (lv - 1)) * ts, n = 6;   // close-range cleave (was a 34+ unit lane)
@@ -633,9 +633,9 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     for (let i = 0; i < n; i++) {
       const d = 1.5 + (i / (n - 1)) * L;
       const x = p.pos.x + dx * d, z = p.pos.z + dz * d;
-      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8 * ts, b * 5, stun, 0xa89a80, true);
-      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2 * ts, z + dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 2, 0.3, 0xa89a80, true);
-      else mkFx('SPIKE', x + dz * 2.2 * ts, z - dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 2, 0.3, 0xa89a80, true);
+      mkFx('SPIKE', x, z, 0.1 + i * 0.045, 1.5 + i * 0.045, 2.8 * ts, b * 3.6, stun, 0xa89a80, true);
+      if (i % 2 === 0) mkFx('SPIKE', x - dz * 2.2 * ts, z + dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 1.5, 0.3, 0xa89a80, true);
+      else mkFx('SPIKE', x + dz * 2.2 * ts, z - dx * 2.2 * ts, 0.2 + i * 0.045, 1.4 + i * 0.045, 1.4 * ts, b * 1.5, 0.3, 0xa89a80, true);
     }
     events.emit('fissure', { from: p.pos.clone(), dir: dir.clone(), length: L + 1.5 });
     announce('EARTHSPLITTER');

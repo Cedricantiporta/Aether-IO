@@ -519,7 +519,7 @@ export function updatePlayer(dt: number): void {
   }
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
-    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 2 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste);
+    const rate = Math.max(0.1, stats.fireRate * (1 + p.buffHaste) * (p.rageT > 0 ? 1.5 : 1) * (p.avatarT > 0 ? 1.5 : 1) * lowHaste);
     fireBasicAttack();
     p.fireT = Math.max(0, p.fireT + 1 / rate);
   }
