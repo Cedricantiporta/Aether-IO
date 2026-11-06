@@ -13,7 +13,7 @@ import type { ProjectileType } from '../../types';
 import { MULTISHOT_CAP } from '../../constants';
 import { useGameStore } from '../../store';
 import {
-  damageEnemy, damageEnemiesInRadius, autoAim, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
+  damageEnemy, damageEnemiesInRadius, autoAim, aimOverride, applyStatus, findNearestEnemy, getAimDir, rollCrit, lastCrit,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { queryColliders, roomHalls, type Collider } from '../mapgen';
@@ -188,6 +188,36 @@ function defaultProjectileType(): ProjectileType {
 }
 
 /** Fires the hero's basic attack towards the aim point. Called by player.ts on its fire timer. */
+const _bnear: number[] = [];
+/**
+ * Direction of a basic attack. Auto-aim ON: the locked / auto-aimed enemy, else (the per-frame pick can be empty: nothing within the 22 u pick radius, a stale
+ * pick) the nearest living enemy anywhere close (the archer prefers one with a clear line), else a stationary, and ONLY with no valid target at all the cursor /
+ * facing. Auto-aim OFF (or a skill's aim override): plain getAimDir (cursor / aim stick). Every class shares this.
+ */
+export function basicAimDir(out: Vector3): Vector3 {
+  if (aimOverride.on || useGameStore.getState().settings.autoAim === false) return getAimDir(out);
+  const p = world.player;
+  let e: Enemy | null = null;
+  if (autoAim.id >= 0) { const c = world.enemies[autoAim.id]; if (c && c.active && c.state !== 'DYING') e = c; }
+  if (!e && !(trapAim.obj && !trapAim.obj.dead)) {
+    e = findNearestEnemy(p.pos.x, p.pos.z, 60);
+    if (e && useGameStore.getState().hero === 'ARCHER' && !clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z)) {
+      const ids = world.enemyGrid.query(p.pos.x, p.pos.z, 20, _bnear);
+      let bd = 1e9;
+      for (let i = 0; i < ids.length; i++) {
+        const o = world.enemies[ids[i]];
+        if (!o.active || o.state === 'DYING' || o.decoy) continue;
+        const d2 = (o.pos.x - p.pos.x) ** 2 + (o.pos.z - p.pos.z) ** 2;
+        if (d2 < bd && clearShot(p.pos.x, p.pos.z, o.pos.x, o.pos.z)) { bd = d2; e = o; }
+      }
+    }
+  }
+  if (!e) return getAimDir(out);   // a stationary target or nothing at all: cursor / facing
+  const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, l = Math.sqrt(dx * dx + dz * dz);
+  if (l < 0.05) return getAimDir(out);
+  return out.set(dx / l, 0, dz / l);
+}
+
 export function fireBasicAttack(): void {
   if (world.village.miningT > 0) return;   // busy mining (owner: no attacks while mining)
   const st = useGameStore.getState();
@@ -195,7 +225,7 @@ export function fireBasicAttack(): void {
   const weapon = st.equipment.weapon;
   const ptype = weapon?.projectileType ?? defaultProjectileType();
   const pl = world.player;
-  const dir = getAimDir(aim);
+  const dir = basicAimDir(aim);
   let count = Math.max(1, Math.min(MULTISHOT_CAP, Math.floor(stats.multishot + 1e-6)));
   procHaste = stats.procHaste;
   const extraPierce = stats.pierceBonus | 0;

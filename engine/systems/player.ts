@@ -13,7 +13,7 @@ import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target
 import { trapAim, lockedTrap, nearestTrapPri, trapBusy, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
-import { fireBasicAttack, clearShot, ARCHER_BASE_RANGE } from './projectiles';
+import { fireBasicAttack, basicAimDir, clearShot, ARCHER_BASE_RANGE } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { wardedBossId } from './bossMech';
 import { updateSkillInput, resetAim } from './aim';
@@ -411,7 +411,7 @@ export function updatePlayer(dt: number): void {
     if (tr) autoAim.id = -1;
     trapAim.obj = tr;
   }
-  const dir = getAimDir(aim);
+  const dir = basicAimDir(aim);
 
   // ---- movement input
   const k = inp.keys;
