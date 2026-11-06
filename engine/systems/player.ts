@@ -55,7 +55,7 @@ const _mv = { x: 0, z: 0 };
 /** Combat feel: attacks are manual (F / ATTACK / pad button; AUTO-battle is an opt-in bot), aimed at the lock or nearest enemy, walking is allowed while attacking, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
-/** Basic attack reach: class base (archer 13.5: arrows must really reach it and have a clear line) + the attackRange stat (DEX, talents, bows, gear lines). */
+/** Basic attack reach: class base (archer 15: arrows must really reach it and have a clear line) + the attackRange stat (DEX, talents, bows, gear lines). */
 export const heroRange = (st: { hero: string; stats: { attackRange?: number } }): number => (ATTACK_RANGE[st.hero] ?? 18) + (st.stats.attackRange || 0);
 /** Basic-attack range per class: used for the AUTO-battle bot, the chase ring and the town hermit hits (manual attacks fire at any range). */
 const ATTACK_RANGE: Record<string, number> = { ARCHER: ARCHER_BASE_RANGE, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 15 };   // (owner 2026-10-25: necro 15, was 17)   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
@@ -66,7 +66,17 @@ let autoChase = false, lastAimId = -1;
 /** Archer only: is this enemy in weapon reach AND in a clear line of fire (arrows are stopped by rocks / trees / walls)? */
 function archerCanShoot(e: { pos: { x: number; z: number }; radius: number }, range: number): boolean {
   const p = world.player, d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
-  return d - Math.min(6, e.radius * 0.8) <= range + 0.8 && clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z);
+  return d - Math.min(6, e.radius * 0.8) <= range + 0.8 && clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.radius);
+}
+/** Archer anti-stall: fires anyway when the target has been in reach but 'covered' for 0.6 s, or the walk-in was stuck (freeFireT). Never idle with an enemy in reach. */
+let coverSince = -1, freeFireT = 0, chaseWatchT = 0, chaseX = 0, chaseZ = 0, sideT = 0, sideSg = 1;
+function archerMayFire(e: { pos: { x: number; z: number }; radius: number }, range: number): boolean {
+  const p = world.player, d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) - Math.min(6, e.radius * 0.8);
+  if (d > range + 0.8 + (freeFireT > 0 ? 3 : 0)) { coverSince = -1; return false; }
+  if (archerCanShoot(e, range + (freeFireT > 0 ? 3 : 0))) { coverSince = -1; return true; }
+  if (freeFireT > 0) return true;
+  if (coverSince < 0) coverSince = world.time;
+  return world.time - coverSince > 0.6;
 }
 const archerOut: number[] = [];
 const KNOCK_EASE = (x: number): number => 1 - (1 - x) * (1 - x) * (1 - x);   // easeOutCubic
@@ -433,7 +443,7 @@ export function updatePlayer(dt: number): void {
 
   // ---- auto-chase (AUTO-battle bot only, and only with the 'Auto: chase enemies' setting on; owner 2026-10-26: on by default, never in a boss fight): no movement input + an enemy inside the chase ring but outside weapon range -> walk toward it.
   // Manual play never walks by itself: attacks only fire from the attack input.
-  autoChase = false;
+  autoChase = false; freeFireT = Math.max(0, freeFireT - dt); sideT = Math.max(0, sideT - dt);
   if (ml === 0 && world.autoBattle.on && st.settings.autoChase === true && !world.boss.active && st.settings.autoAim !== false && !world.input.keys.KeyF && p.dashT <= 0 && abilityState.leapT <= 0 && p.whirlT <= 0) {
     const range = heroRange(st);
     const chaseR = range * CHASE_MUL;
@@ -462,6 +472,15 @@ export function updatePlayer(dt: number): void {
     }
     }
   }
+
+  // archer walk-in watchdog: walking toward a target but hardly moving (a rock / tree / arch in the way) -> sidestep round it for a second and shoot anyway while stuck
+  if (autoChase && st.hero === 'ARCHER') {
+    if ((chaseWatchT += dt) >= 0.5) {
+      if ((p.pos.x - chaseX) ** 2 + (p.pos.z - chaseZ) ** 2 < 0.36 && p.rootT <= 0 && !stunned) { sideT = 1.0; sideSg = -sideSg; freeFireT = 1.5; }
+      chaseWatchT = 0; chaseX = p.pos.x; chaseZ = p.pos.z;
+    }
+    if (sideT > 0) { const nx = mx * 0.35 - mz * 0.95 * sideSg, nz = mz * 0.35 + mx * 0.95 * sideSg, l3 = Math.sqrt(nx * nx + nz * nz) || 1; mx = nx / l3; mz = nz / l3; }
+  } else { chaseWatchT = 0; chaseX = p.pos.x; chaseZ = p.pos.z; }
 
   // (owner 2026-10-25) no PATH auto-walk in adventures any more (it pushed the hero into trees); the red lost trail is only a hint
 
@@ -542,7 +561,7 @@ export function updatePlayer(dt: number): void {
     const trInRange = !!trT && !trT.dead && trapDist(trT, p.pos.x, p.pos.z) <= range + 0.8;   // (owner) a stationary in reach is swung at too
     if (st.hero === 'ARCHER') {   // the archer shoots only at its real target: in reach AND a clear line (otherwise it keeps walking in, see auto-chase)
       const ta = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
-      if (!trInRange && !(ta && ta.active && ta.state !== 'DYING' && archerCanShoot(ta, range))) return;
+      if (!trInRange && !(ta && ta.active && ta.state !== 'DYING' && archerMayFire(ta, range))) return;
     } else if (!lockInRange && !trInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
   }
   if (p.fireT <= 0) {

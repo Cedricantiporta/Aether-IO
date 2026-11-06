@@ -203,14 +203,14 @@ export function basicAimDir(out: Vector3): Vector3 {
   if (autoAim.id >= 0) { const c = world.enemies[autoAim.id]; if (c && c.active && c.state !== 'DYING') e = c; }
   if (!e && !(trapAim.obj && !trapAim.obj.dead)) {
     e = findNearestEnemy(p.pos.x, p.pos.z, 60);
-    if (e && useGameStore.getState().hero === 'ARCHER' && !clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z)) {
+    if (e && useGameStore.getState().hero === 'ARCHER' && !clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.radius)) {
       const ids = world.enemyGrid.query(p.pos.x, p.pos.z, 20, _bnear);
       let bd = 1e9;
       for (let i = 0; i < ids.length; i++) {
         const o = world.enemies[ids[i]];
         if (!o.active || o.state === 'DYING' || o.decoy) continue;
         const d2 = (o.pos.x - p.pos.x) ** 2 + (o.pos.z - p.pos.z) ** 2;
-        if (d2 < bd && clearShot(p.pos.x, p.pos.z, o.pos.x, o.pos.z)) { bd = d2; e = o; }
+        if (d2 < bd && clearShot(p.pos.x, p.pos.z, o.pos.x, o.pos.z, o.radius)) { bd = d2; e = o; }
       }
     }
   }
@@ -406,18 +406,20 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 /** Archer base weapon reach (player.ts ATTACK_RANGE); arrows fly this + the attackRange stat + 4. */
 const losOut: Collider[] = [];
 /** Line of fire: true when a rock / tree / pillar / wall (what stops arrows) is NOT between the two points. Mirrors the projectile obstacle test. Allocation-free. */
-export function clearShot(x0: number, z0: number, x1: number, z1: number): boolean {
+export function clearShot(x0: number, z0: number, x1: number, z1: number, tr = 0.8): boolean {
   const dx = x1 - x0, dz = z1 - z0, len = Math.sqrt(dx * dx + dz * dz);
   const hallsR = roomHalls();
   const n = Math.max(1, Math.ceil(len / 0.9));
   for (let i = 1; i <= n; i++) {
     const t = i / n, x = x0 + dx * t, z = z0 + dz * t;
-    if (len - t * len < 0.8) break;   // the last bit is the target itself (its own cover does not count)
+    if (len - t * len < tr * 0.8 + 0.4) break;   // the last bit is the target itself (its own cover does not count)
     if (hallsR && hallsWall(x, z)) return false;
     const cols = queryColliders(x, z, 1.2, losOut);
     for (let c = 0; c < cols.length; c++) {
       const o = cols[c];
-      if (!o.blocksProjectiles) continue;
+      if (!o.blocksProjectiles || o.r < 0.6) continue;   // (permissive: only solid blockers count, small stones / bushes do not)
+      const tx = x1 - o.x, tz = z1 - o.z, tq = o.r + tr + 0.3;
+      if (tx * tx + tz * tz < tq * tq) continue;   // the target stands against / in this one: the arrow reaches it first
       const ex = x - o.x, ez = z - o.z, rr = o.r + 0.3;
       if (ex * ex + ez * ez < rr * rr) return false;
     }
