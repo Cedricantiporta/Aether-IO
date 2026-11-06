@@ -4,6 +4,7 @@
 // ============================================================================
 import { bp } from './bossPhaseState';
 import { spawnMinion, MINION_WARRIOR, MINION_MAGE, MINION_GOLEM, MINION_ARCHER, MAX_SKELETONS, PERMANENT, pickRaiseKind, raiseArmy } from './minions';
+import { SRC_ALLY } from './ally';
 import { showcase, ULT_CD_MUL } from '../showcase';
 import { unlockLevel, DASH_UNLOCK_LV } from '../../classLevels';
 import { dashModStart, dashModFx, dashDmgBonus, updateDashMods } from './dashMods';
@@ -550,8 +551,15 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       announce('SOUL_STEP');
     } else if (slot === 's3') {   // BONE WARD (owner: replaces Bone Spear): every summon gets a bone shield of 30% of its max HP
       const frac = boneWardFrac(lv), dur = boneWardDur(lv);
-      for (const m of world.minions) {
-        if (!m.active) continue;
+      // (owner 2026-11-06) only up to BONE_WARD_MAX summons are shielded per cast (the golem / dragon first, then the oldest warriors): the necro was too tanky
+      const picked: number[] = [];
+      for (let i = 0; i < world.minions.length; i++) {
+        const m = world.minions[i]; if (!m.active || m.src === SRC_ALLY || m.rise > 0) continue;
+        picked.push(i);
+      }
+      picked.sort((a, b) => { const A = world.minions[a], B = world.minions[b]; return (B.kind === MINION_GOLEM ? 1 : 0) - (A.kind === MINION_GOLEM ? 1 : 0) || A.born - B.born; });
+      for (let k = 0; k < picked.length && k < BONE_WARD_MAX; k++) {
+        const m = world.minions[picked[k]];
         m.shield = Math.max(m.shield, m.maxHp * frac); m.shieldT = dur;
         events.emit('shockwave', { pos: wardTmp.set(m.x, 0, m.z).clone(), radius: 1.6, color: 0xd8c8ff });
       }
@@ -1341,5 +1349,7 @@ export function tryDash(auto: boolean): boolean {
 }
 
 /** Bone Ward (necromancer s3): shield = this fraction of each summon's max HP (30% at Lv 1, +5% per level) for `boneWardDur` s. */
+/** Most summons a single Bone Ward cast can shield. */
+export const BONE_WARD_MAX = 3;
 export const boneWardFrac = (lv: number): number => 0.3 + 0.05 * (Math.max(1, lv) - 1);
 export const boneWardDur = (lv: number): number => 8 + Math.max(1, lv) - 1;
