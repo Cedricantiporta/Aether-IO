@@ -220,7 +220,7 @@ export function fireBasicAttack(): void {
     case 'SWORD': kind = 'SLASH'; speed = 24; life = 0.32; pierce = 999; radius = world.player.avatarT > 0 ? 5 : 2.5; break;   // knight: a short wide sword arc (2x in Divine Avatar)   // knight: a short wide sword arc
     case 'MAGIC': kind = 'MAGIC'; speed *= 0.6; pierce = 4 + extraPierce; aoe = 2.0; radius = 2.8; break;   // arcane orbs (smaller splash)
     case 'SOUL': kind = 'SOUL_BOLT'; speed *= 0.95; life = 1.6; pierce = 1; aoe = 3; radius = 1.2; break;   // necromancer: no pierce; the bolt bursts on up to 4 enemies (the target + 3 nearby, half damage)
-    default: kind = 'ARROW'; speed *= 1.5; life = Math.min(2.2, (16.5 + (stats.attackRange || 0) + 4) / Math.max(1, speed)); pierce = 1 + extraPierce; break;   // (arrows fly about the archer's reach)
+    default: kind = 'ARROW'; speed *= 1.5; life = Math.min(2.2, (ARCHER_BASE_RANGE + (stats.attackRange || 0) + 4) / Math.max(1, speed)); pierce = 1 + extraPierce; break;   // (arrows fly about the archer's reach)
   }
 
   // ---- weapon perk (weaponPerks.ts): one class-specific perk per weapon, strength by rarity
@@ -369,6 +369,29 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
   }
   const cx = ax + abx * t - px, cz = az + abz * t - pz;
   return cx * cx + cz * cz;
+}
+
+/** Archer base weapon reach (player.ts ATTACK_RANGE); arrows fly this + the attackRange stat + 4. */
+export const ARCHER_BASE_RANGE = 13.5;
+const losOut: Collider[] = [];
+/** Line of fire: true when a rock / tree / pillar / wall (what stops arrows) is NOT between the two points. Mirrors the projectile obstacle test. Allocation-free. */
+export function clearShot(x0: number, z0: number, x1: number, z1: number): boolean {
+  const dx = x1 - x0, dz = z1 - z0, len = Math.sqrt(dx * dx + dz * dz);
+  const hallsR = roomHalls();
+  const n = Math.max(1, Math.ceil(len / 0.9));
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, x = x0 + dx * t, z = z0 + dz * t;
+    if (len - t * len < 0.8) break;   // the last bit is the target itself (its own cover does not count)
+    if (hallsR && hallsWall(x, z)) return false;
+    const cols = queryColliders(x, z, 1.2, losOut);
+    for (let c = 0; c < cols.length; c++) {
+      const o = cols[c];
+      if (!o.blocksProjectiles) continue;
+      const ex = x - o.x, ez = z - o.z, rr = o.r + 0.3;
+      if (ex * ex + ez * ez < rr * rr) return false;
+    }
+  }
+  return true;
 }
 
 function blockedByObstacles(kind: ProjectileKind): boolean {

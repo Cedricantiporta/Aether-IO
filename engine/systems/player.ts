@@ -13,7 +13,7 @@ import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target
 import { trapAim, lockedTrap, nearestTrapPri, trapBusy, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
-import { fireBasicAttack } from './projectiles';
+import { fireBasicAttack, clearShot, ARCHER_BASE_RANGE } from './projectiles';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { wardedBossId } from './bossMech';
 import { updateSkillInput, resetAim } from './aim';
@@ -54,14 +54,20 @@ const _mv = { x: 0, z: 0 };
 /** Combat feel: attacks are manual (F / ATTACK / pad button; AUTO-battle is an opt-in bot), aimed at the lock or nearest enemy, walking is allowed while attacking, slower movement. */
 const MOVE_SPEED_SCALE = 0.8;
 const AUTO_TARGET_RANGE = 22;
-/** Basic attack reach: class base (archer 16.5, owner: a bit shorter) + the attackRange stat (DEX, talents, bows, gear lines). */
+/** Basic attack reach: class base (archer 13.5: arrows must really reach it and have a clear line) + the attackRange stat (DEX, talents, bows, gear lines). */
 export const heroRange = (st: { hero: string; stats: { attackRange?: number } }): number => (ATTACK_RANGE[st.hero] ?? 18) + (st.stats.attackRange || 0);
 /** Basic-attack range per class: used for the AUTO-battle bot, the chase ring and the town hermit hits (manual attacks fire at any range). */
-const ATTACK_RANGE: Record<string, number> = { ARCHER: 16.5, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 15 };   // (owner 2026-10-25: necro 15, was 17)   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
+const ATTACK_RANGE: Record<string, number> = { ARCHER: ARCHER_BASE_RANGE, WIZARD: 18, BARBARIAN: 7.5, KNIGHT: 8.5, NECROMANCER: 15 };   // (owner 2026-10-25: necro 15, was 17)   // knight: sword arc reach ~ 24 u/s x 0.32 s + its 2.5 width (owner: knight a bit longer, barbarian a bit shorter)
 const STOP_TO_FIRE_DELAY = 0.12;
 /** Move-speed multiplier right after a basic attack / cast: every class can attack while walking, a bit slower (owner: ~12%). */
 const ATTACK_MOVE_MUL = 0.88;
 let autoChase = false, lastAimId = -1;
+/** Archer only: is this enemy in weapon reach AND in a clear line of fire (arrows are stopped by rocks / trees / walls)? */
+function archerCanShoot(e: { pos: { x: number; z: number }; radius: number }, range: number): boolean {
+  const p = world.player, d = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z);
+  return d - Math.min(6, e.radius * 0.8) <= range + 0.8 && clearShot(p.pos.x, p.pos.z, e.pos.x, e.pos.z);
+}
+const archerOut: number[] = [];
 const KNOCK_EASE = (x: number): number => 1 - (1 - x) * (1 - x) * (1 - x);   // easeOutCubic
 /** Auto-chase ring = weapon range x this (the hero walks in when an enemy is inside it but out of weapon range). */
 const CHASE_MUL = 1.35;
@@ -366,6 +372,22 @@ export function updatePlayer(dt: number): void {
       }
     }
   }
+  // ---- archer: only aim at enemies it can really hit. A pick that is in reach but behind a rock / tree / wall (arrows stop there) is swapped for the
+  // nearest enemy in reach with a clear line; if there is none the pick stays and auto-chase walks round the cover (see below).
+  if (st.hero === 'ARCHER' && autoAim.id >= 0 && !lockedEnemy()) {
+    const cur = world.enemies[autoAim.id], range = heroRange(st);
+    if (cur.active && (cur.pos.x - p.pos.x) ** 2 + (cur.pos.z - p.pos.z) ** 2 <= (range + 7) ** 2 && !archerCanShoot(cur, range)) {
+      const ids = world.enemyGrid.query(p.pos.x, p.pos.z, range + 1, archerOut);
+      let best = -1, bd = 1e9;
+      for (let i = 0; i < ids.length; i++) {
+        const o = world.enemies[ids[i]];
+        if (!o.active || o.state === 'DYING' || o.state === 'SPAWN' || o.decoy || o.id === cur.id) continue;
+        const d2 = (o.pos.x - p.pos.x) ** 2 + (o.pos.z - p.pos.z) ** 2;
+        if (d2 < bd && archerCanShoot(o, range)) { bd = d2; best = o.id; }
+      }
+      if (best >= 0) autoAim.id = best;
+    }
+  }
   // ---- (owner) stationaries (siege weapons, towers, breath statues) are targets too: the click-locked one, else the nearest one when no
   // monster is closer (a monster has to be clearly nearer to win it back, so the pick doesn't flicker)
   {
@@ -429,10 +451,12 @@ export function updatePlayer(dt: number): void {
     if (!e && !findNearestEnemy(p.pos.x, p.pos.z, range)) e = findNearestEnemy(p.pos.x, p.pos.z, world.autoBattle.on && st.status === GameStatus.PLAYING ? 80 : chaseR);   // auto battle: hunt anywhere in the room
     if (e) {
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.sqrt(dx * dx + dz * dz);
-      if (d > range - 0.4 && d > 0.01) {
+      const covered = st.hero === 'ARCHER' && d <= range - 0.4 && !archerCanShoot(e, range);   // in reach but no clear line (a rock / tree / wall is in the way)
+      if ((d > range - 0.4 || covered) && d > 0.01) {
         mx = dx / d; mz = dz / d; ml = 1; autoChase = true;   // (stops inside the firing check's range)
         // water / obstacles in the way (river rooms): follow an A* route (over a bridge, round the shore) instead of the straight line
         if (navActive() && !navClear(p.pos.x, p.pos.z, e.pos.x, e.pos.z) && autoPathDir(p.pos.x, p.pos.z, e.pos.x, e.pos.z, dt)) { mx = pathDir.x; mz = pathDir.z; }
+        else if (covered) { const sg = (e.id & 1) ? 1 : -1; mx = mx * 0.5 - mz * 0.85 * sg; mz = mz * 0.5 + dx / d * 0.85 * sg; const l2 = Math.sqrt(mx * mx + mz * mz) || 1; mx /= l2; mz /= l2; }   // no route found: sidestep round the cover
       }
     }
     }
@@ -515,7 +539,10 @@ export function updatePlayer(dt: number): void {
     const lockInRange = !!lkd && autoAim.id === lkd.id && (lkd.pos.x - p.pos.x) ** 2 + (lkd.pos.z - p.pos.z) ** 2 <= (range + lkd.radius) ** 2;
     const trT = trapAim.obj;
     const trInRange = !!trT && !trT.dead && trapDist(trT, p.pos.x, p.pos.z) <= range + 0.8;   // (owner) a stationary in reach is swung at too
-    if (!lockInRange && !trInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
+    if (st.hero === 'ARCHER') {   // the archer shoots only at its real target: in reach AND a clear line (otherwise it keeps walking in, see auto-chase)
+      const ta = autoAim.id >= 0 ? world.enemies[autoAim.id] : null;
+      if (!trInRange && !(ta && ta.active && ta.state !== 'DYING' && archerCanShoot(ta, range))) return;
+    } else if (!lockInRange && !trInRange && !findNearestEnemy(p.pos.x, p.pos.z, range + 0.8)) return;
   }
   if (p.fireT <= 0) {
     const lowHaste = stats.lowHpHaste > 0 && p.hp < stats.maxHealth * 0.5 ? 1 + stats.lowHpHaste : 1;
