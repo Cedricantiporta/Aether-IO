@@ -29,7 +29,7 @@ export interface BossFormDef {
 export const FORMS: Partial<Record<EnemyKind, BossFormDef>> = {
   // Ignar: hot orange-red fire -> white-hot azure inferno
   BOSS_WARLORD: {
-    s1: 0.75, s2: 1.3, hp: [0.75, 1], finalHp: [0.75, 1], speed: 1.3, dmg: 1,
+    s1: 0.75, s2: 1.3, hp: [0.75, 0.5], finalHp: [0.75, 0.5], speed: 1.3, dmg: 1,
     suffix: ' - Burning Form', fallText: 'IGNAR FALLS...', ascendText: 'IGNAR BURNS ANEW', fallNote: 'Ignar collapses - but the flames are not done!', ascendNote: 'IGNAR RISES, THE BURNING FORM!',
     tint: [0.55, 1.05, 1.9], emissive: 0x2a9bff, emissiveI: 0.55, aura: 0x58c8ff, auraAlt: 0xe2f8ff,
     hue: 185, snap: false, sat: 1, lum: 1.12, tel: 1.12, wing: 0x2a8cff, burst: 0xff6a1a,
