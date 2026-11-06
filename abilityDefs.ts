@@ -100,19 +100,19 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
   KNIGHT: [
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
-      per: (lv) => `${pct(4.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
-    { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 12,
-      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a few seconds you take far less damage. +2% dodge for 4s.',
-      per: (lv) => `Burst ${pct(2.5 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round((0.5 + 0.04 * (lv - 1)) * 100)}% damage taken · ${f1(3 + 0.4 * (lv - 1))}s` },
-    { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 9,
+      per: (lv) => `${pct(3.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
+    { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 18,
+      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a short moment you take much less damage (weaker while another shield is up, no refresh while active). +2% dodge for 4s.',
+      per: (lv) => `Burst ${pct(1.8 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round(Math.min(0.5, 0.35 + 0.03 * (lv - 1)) * 100)}% damage taken · ${f1(2 + 0.25 * (lv - 1))}s` },
+    { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 10,
       desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage, stuns and knocks enemies down (not bosses). More rays per level (max 12).',
-      per: (lv) => `${Math.min(12, 5 + lv)} rays · ${pct(1.5 * lvMul(lv))} dmg each · radius ${f1(4 + 0.2 * (lv - 1))} · stun ${f1(0.8 + 0.1 * lv)}s` },
+      per: (lv) => `${Math.min(12, 5 + lv)} rays · ${pct(1.2 * lvMul(lv))} dmg each · radius ${f1(4 + 0.2 * (lv - 1))} · stun ${f1(0.8 + 0.1 * lv)}s` },
     { slot: 's5', icon: 'AEGIS_THROW', name: 'Aegis Throw', mana: 22, cd: 8,   // WoW Paladin: Avenger's Shield + Hades Shield of Chaos (shield throw that ricochets)
       desc: 'Hurl your shield: it ricochets from enemy to enemy, stunning each and healing you a little per hit. With only one enemy it comes back for a second hit.',
-      per: (lv) => `${3 + lv} ricochets · ${pct(2.4 * lvMul(lv))} dmg each · stun ${f1(0.4 + 0.1 * lv)}s` },
+      per: (lv) => `${3 + lv} ricochets · ${pct(1.9 * lvMul(lv))} dmg each · stun ${f1(0.4 + 0.1 * lv)}s` },
     { slot: 's6', icon: 'BLESSED_HAMMERS', name: 'Blessed Hammers', mana: 28, cd: 9,   // Diablo 2 Hammerdin / Diablo 3 Crusader: Blessed Hammer
       desc: 'Holy hammers spiral outward around you, smashing everything they sweep over. More hammers and a longer spiral at higher levels.',
-      per: (lv) => `${2 + lv} hammers · ${pct(1.8 * lvMul(lv))} dmg per hit · lasts ${f1(2.2 + 0.15 * lv)}s` },
+      per: (lv) => `${2 + lv} hammers · ${pct(1.5 * lvMul(lv))} dmg per hit · lasts ${f1(2.2 + 0.15 * lv)}s` },
   ],
 };
 
@@ -159,8 +159,8 @@ export const ULTS: Record<HeroClass, AbilityDef> = {
     desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning, knocking down (not bosses) and battering everything in the crater, then fights for you for 26s. It is 50% bigger, swings 20% faster with a shockwave that hits everything around the target, and every 4-6s lobs a boulder at enemies 6-16m away. When its time runs out (or it falls) it EXPLODES, knocking enemies down, setting them ablaze and leaving a burning patch on the ground. Its 90s cooldown starts once the golem is gone; it also needs a full charge bar.',
     per: (lv) => `Impact ${pct(8 * lvMul(lv) * 0.7)} dmg · golem ${pct(3 * lvMul(lv) * 0.8)} per hit (area) · boulder ${pct(3 * lvMul(lv) * 0.8 * 1.5)} · explosion ${pct(3 * lvMul(lv) * 0.8 * 2.5)} + burn · 26s` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
-    desc: 'A column of light crashes down around you (damage, stun and knockdown; not bosses), and you become a radiant avatar for 8s: +50% damage, +50% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
-    per: (lv) => `Burst ${pct(14 * lvMul(lv) * 0.7)} dmg · wave ${pct(2 * lvMul(lv))} per swing` },
+    desc: 'A column of light crashes down around you (damage, stun and knockdown; not bosses), and you become a radiant avatar for 8s: +30% damage, +30% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a smaller Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
+    per: (lv) => `Burst ${pct(9 * lvMul(lv) * 0.7)} dmg · wave ${pct(1.2 * lvMul(lv))} per swing` },
 };
 
 export function abilityDef(hero: HeroClass, slot: ActiveSlot | 'ult'): AbilityDef {

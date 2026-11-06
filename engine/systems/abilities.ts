@@ -184,6 +184,7 @@ function tickMissRefund(): void {
 }
 /** Shared lock after any skill / ultimate cast, so skills can't all be fired in the same instant. */
 const GCD = 0.55;
+const AVATAR_DMG = 1.3;
 let gcdUntil = 0;
 
 let curMul = 1;
@@ -195,7 +196,7 @@ function base(lv: number): number {
   if (p.cryT > 0) d *= 1.3;
   d *= 1 + p.buffDmg;   // Warcry / Inspire
   if (p.titanT > 0) d *= 1.5;
-  if (p.avatarT > 0) d *= 1.5;   // knight Divine Avatar
+  if (p.avatarT > 0) d *= AVATAR_DMG;   // knight Divine Avatar (+30%, was +50%)
   return d * curMul;
 }
 
@@ -571,15 +572,15 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
     const a = abilityState;
     if (slot === 'q') {
       // Holy Wave: a wide golden crescent that sweeps forward through everything
-      spawnProjectile('HOLY_WAVE', p.pos.x + dx * 1.4, p.pos.z + dz * 1.4, dx, dz, 20, b * 4.4,
+      spawnProjectile('HOLY_WAVE', p.pos.x + dx * 1.4, p.pos.z + dz * 1.4, dx, dz, 20, b * 3.4,
         { life: 0.95, pierce: 999, knockback: 1.6, radius: (3.6 + 0.4 * (lv - 1)) * (p.avatarT > 0 ? 2 : 1), y: 1.1 });
       p.anim.attackT = 1; addShake(0.12);
       announce('HOLY_WAVE');
     } else if (slot === 'e') {
       // Shield Wall: knockback burst, then heavy damage reduction
-      p.guardT = 3 + 0.4 * (lv - 1); p.guardRed = Math.min(0.75, 0.5 + 0.04 * (lv - 1));
+      if (p.guardT <= 0) { p.guardT = 2 + 0.25 * (lv - 1); p.guardRed = Math.min(0.5, 0.35 + 0.03 * (lv - 1)); }   // never refreshed while up;   // (owner: shield -50%: was 3s+0.4/lv at 50-75%)
       const wr = 8 + 0.3 * (lv - 1);
-      damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 2.5, physKnock);
+      damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 1.8, physKnock);
       events.emit('shockwave', { pos: p.pos.clone(), radius: wr, color: 0xffe08a });
       events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4, gold: true });
       p.anim.castT = 1; addShake(0.2);
@@ -588,7 +589,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       // Judgment: up to 12 rays of holy light strike enemies around the target from above, one after another (wide AoE)
       aimPoint(26, 0, tgt);
       const area = 14 + 0.6 * (lv - 1), n = Math.min(12, 5 + lv);
-      a.judgeR = 4.0 + 0.2 * (lv - 1); a.judgeDmg = b * 1.5; a.judgeStun = 0.8 + 0.1 * lv;   // (damage -50%)
+      a.judgeR = 4.0 + 0.2 * (lv - 1); a.judgeDmg = b * 1.2; a.judgeStun = 0.8 + 0.1 * lv;   // (damage -50%)
       const ids = world.enemyGrid.query(tgt.x, tgt.z, area + 2, out);
       judgeN = 0; judgeUsed.length = 0;
       // nearest-first distinct enemies, then random spots around the target for the leftover rays
@@ -704,7 +705,7 @@ function shoulderCharge(holy = false): void {
   void kl;
   p.dashT = holy ? 0.3 : 0.22; p.dashDir.set(mx, 0, mz);
   p.dashIframes = holy;   // Holy Charge: invulnerable behind the shield
-  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 3 : 2.2) * dashMul(); a.chargeLv = lv; a.chargeHit.length = 0; chargeTrapHit = false;
+  a.chargeT = holy ? 0.34 : 0.26; a.chargeDmg = base(lv) * (holy ? 2.4 : 2.2) * dashMul(); a.chargeLv = lv; a.chargeHit.length = 0; chargeTrapHit = false;
   if (holy) { events.emit('shockwave', { pos: p.pos.clone(), radius: 3, color: 0xffe08a }); announce('HOLY_CHARGE'); }
   events.emit('dash', { from: p.pos.clone(), dir: p.dashDir.clone() });
   p.anim.castT = 1;
@@ -818,7 +819,7 @@ function releaseUlt(): void {
     const dur = 8 + (st.stats.avatarBonus || 0);
     p.ultT = dur; p.avatarT = dur; p.invulnT = Math.max(p.invulnT, 0.8);
     stunSt.duration = 1.5;
-    damageEnemiesInRadius(p.pos.x, p.pos.z, 12, b * 14, ultDownOpts, stunSt);
+    damageEnemiesInRadius(p.pos.x, p.pos.z, 12, b * 9, ultDownOpts, stunSt);   // (owner: ult -35%, was 14x)
     p.levelUpFx = 1;   // the golden pillar
     a.tintRgb = [0.14, 0.11, 0.03]; a.tintTarget = 0;
     events.emit('ultImpact', { pos: p.pos.clone(), name: 'DIVINE_AVATAR', radius: 12 });

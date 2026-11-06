@@ -856,7 +856,7 @@ export function knockHero(fromX: number, fromZ: number, force: number, downSec =
   if (!p.alive || force <= 0 && downSec <= 0) return;
   if (((p.dashT > 0 || p.anim.dashing) && p.dashIframes) || p.sprintT > 0 || p.invulnT > 0) return;   // i-frames: not even pushed
   if (p.downT > 0) return;   // already on the ground
-  const unstoppable = p.guardT > 0 || p.avatarT > 0 || p.titanT > 0 || p.ultT > 0 || p.radiant > 0 || p.whirlT > 0 || boneArmorMul() <= 0.8;
+  const unstoppable = p.guardT > 0 || p.avatarT > 0 || p.titanT > 0 || p.ultT > 0 || p.whirlT > 0 || boneArmorMul() <= 0.8;
   if (unstoppable) { force *= 0.35; downSec = 0; }
   else if (p.arcane > 0 || p.aegis > 0) force *= 0.7;
   { const cc = useGameStore.getState().stats.resCC; if (cc > 0) { force *= 1 - cc; downSec *= 1 - cc; } }   // CC Resistance: shorter knockdown, shorter push
@@ -947,7 +947,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   // CURSE: defense -30%. Deeper monsters pierce armour (defense counts 1/(1 + 2.5% per depth)): late-game gear stacks
   // hundreds of defense, which made the last biomes easier than the first ones.
   const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1) / (1 + 0.025 * Math.max(0, world.director.wave - 1));
-  const holy = (p.guardT > 0 ? 1 - p.guardRed : 1);   // knight Shield Wall
+  const holy = (p.guardT > 0 ? 1 - p.guardRed * (p.radiant > 0 || p.aegis > 0 ? 0.6 : 1) : 1);   // Shield Wall; weaker while another shield is up (no immunity stacking)   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
   const bone = boneArmorMul();
   let reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)

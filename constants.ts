@@ -144,7 +144,7 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
         description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
     },
     KNIGHT: {
-        stats: { maxHealth: 96, defense: 22, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.75, dmgReduce: 0.05, manaRegen: 1.0 },
+        stats: { maxHealth: 86, defense: 18, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.6, dmgReduce: 0.03, manaRegen: 1.0 },
         weaponId: 'sword_1',
         description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
     },
@@ -176,12 +176,12 @@ export const SKILLS_INFO = {
     
     // Barbarian Only
     orbital: { name: 'Orbital Blades', description: 'Passive: 1 + level blades orbit and damage enemies, then launch outward.', classType: 'BARBARIAN', type: 'PASSIVE' },
-    consecrate: { name: 'Consecration', description: 'Always-on holy aura: once a second it burns every enemy within reach and heals you a little per enemy hit (radius and damage grow per level).', classType: 'KNIGHT', type: 'PASSIVE' },
-    smite: { name: 'Righteous Riposte', description: 'Passive: when an enemy hits you, a holy counter-nova bursts around you, damaging and stunning everything close, and a small holy shield wraps you (about every 5 s; stronger, wider and faster to recharge per level).', classType: 'KNIGHT', type: 'PASSIVE' },
+    consecrate: { name: 'Consecration', description: 'Always-on holy aura: once a second it burns every enemy within reach and heals you a tiny bit per enemy hit (radius and damage grow per level).', classType: 'KNIGHT', type: 'PASSIVE' },
+    smite: { name: 'Righteous Riposte', description: 'Passive: when an enemy hits you, a holy counter-nova bursts around you, damaging and stunning everything close, and a small holy shield wraps you (about every 7 s; stronger, wider and faster to recharge per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     graveCall: { name: 'Grave Call', description: 'Passive: every few soul bolts, a skeleton warrior claws its way up beside your target and fights for 8s (fewer bolts needed and +1s per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
     soulHarvest: { name: 'Soul Harvest', description: 'Passive: every kill near you (or by your minions) restores 0.7% max HP and 2 mana (+0.35% HP and +1 mana per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
     boneArmor: { name: 'Bone Armor', description: 'Passive: each living minion grants 3% damage reduction to you and to your minions (max 30%; +1% per minion per level).', classType: 'NECROMANCER', type: 'PASSIVE' },
-    radiant: { name: 'Radiant Burst', description: 'Passive: when you drop below 60% HP, a ring of holy crescents bursts out and a radiant shield worth 25% of your max HP wraps you for 8s; while it holds, 20% of the damage you take is reflected to the attacker. Stacks with other shields (17s cooldown; +1 crescent, +3% shield and more damage per level).', classType: 'KNIGHT', type: 'PASSIVE' },
+    radiant: { name: 'Radiant Burst', description: 'Passive: when you drop below 60% HP, a ring of holy crescents bursts out and a radiant shield worth 12% of your max HP wraps you for 5s; while it holds, 20% of the damage you take is reflected to the attacker. Stacks with other shields (28s cooldown; +1 crescent, +2% shield and more damage per level).', classType: 'KNIGHT', type: 'PASSIVE' },
     warcry: { name: 'Warcry', description: 'Passive: every 12s in battle you roar, gaining +10% damage and +8 defense for 5s (+5% damage, +4 defense, +0.5s per level).', classType: 'BARBARIAN', type: 'PASSIVE' },
     stamp: { name: 'Axe Storm', description: 'On-attack: every Nth axe throw (12 at Lv1, -1 per level) hurls 3 giant spinning axes in a fan. Each ricochets once off the first enemy or obstacle it hits, hits hard and breaks armor.', classType: 'BARBARIAN', type: 'PASSIVE' },
 };

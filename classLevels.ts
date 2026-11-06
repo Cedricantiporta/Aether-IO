@@ -77,7 +77,7 @@ export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
   if (hero === 'WIZARD') { base.skillDamage += 0.03; base.manaRegen *= 1.02; }   // (owner balance: additive, was x1.03 compounding = x4.3 by Lv 50)
   else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
   else if (hero === 'NECROMANCER') { base.skillDamage += 0.025; base.maxMana += 3; base.manaRegen *= 1.015; }
-  else if (hero === 'KNIGHT') { base.maxHealth *= 1.025; base.defense += 0.5; base.damage *= 1.012; }
+  else if (hero === 'KNIGHT') { base.maxHealth *= 1.02; base.defense += 0.3; base.damage *= 1.012; }
   return base;
 }
 

@@ -263,7 +263,7 @@ export function fireBasicAttack(): void {
 
   const emp = kind === 'SLASH' && pl.avatarT > 0;   // Divine Avatar: golden double-size sword arcs (render reads p.emp)
   const lowHp = stats.berserk > 0 && pl.hp < stats.maxHealth * 0.35;
-  const dmgMul = perkDmg * (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.5 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
+  const dmgMul = perkDmg * (1 + pl.buffDmg) * (pl.avatarT > 0 ? 1.3 : 1) * (kind === 'SLASH' ? 0.8 : 1) * (pl.cryT > 0 ? 1.3 : 1) * (pl.titanT > 0 ? 1.5 : 1) * (lowHp ? 1 + stats.berserk : 1);
   // Echo (sets / talents): every Nth attack fires a second volley.
   let echo = false;
   if (stats.echoEvery > 0 && ++echoCount >= stats.echoEvery) { echo = true; echoCount = 0; }
@@ -337,7 +337,7 @@ export function fireBasicAttack(): void {
   }
   // Divine Avatar: every sword swing also releases a Holy Wave
   if (kind === 'SLASH' && pl.avatarT > 0) {
-    spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 3.2, y: 1.1 });
+    spawnProjectile('HOLY_WAVE', baseX, baseZ, dir.x, dir.z, 22, stats.damage * dmgMul * 1.2 * stats.skillDamage, { life: 0.8, pierce: 999, knockback: 1.2, radius: 3.2, y: 1.1 });
   }
   // Grave Call: a skeleton warrior claws up beside the target and fights for 8 s (+1 s per level); its own cap (2)
   if (graveProc) {

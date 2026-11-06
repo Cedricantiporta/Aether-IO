@@ -21,4 +21,4 @@ export const BLADE_DMG = 0.8, BLADE_KNOCK = 0.6, BLADE_RADIUS = 1.9, BLADE_BASE_
 export const SWIFT_CD_MUL = 0.8, SWIFT_SPEED = 1.25, SWIFT_SEC = 1.5;
 
 /** Share of damage from enemy PROJECTILES (arrows, orbs, bolts, rocks, boss shots) a class shrugs off. */
-export const PROJ_RESIST: Record<HeroClass, number> = { ARCHER: 0, WIZARD: 0, BARBARIAN: 0.15, KNIGHT: 0.25, NECROMANCER: 0.1 };
+export const PROJ_RESIST: Record<HeroClass, number> = { ARCHER: 0, WIZARD: 0, BARBARIAN: 0.15, KNIGHT: 0.15, NECROMANCER: 0.1 };

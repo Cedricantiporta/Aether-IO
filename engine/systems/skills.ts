@@ -32,7 +32,7 @@ export const passiveCooldowns: Record<string, { t: number; max: number; kind: 't
   warcry: { t: 0, max: 12, kind: 'time' },
   inspire: { t: 0, max: 12, kind: 'time' },
   consecrate: { t: 0, max: 0, kind: 'time' },   // always-on aura: no cooldown shown
-  smite: { t: 0, max: 5, kind: 'time' },   // Righteous Riposte: cooldown between counter-novas
+  smite: { t: 0, max: 7, kind: 'time' },   // Righteous Riposte: cooldown between counter-novas
   radiant: { t: 0, max: 10, kind: 'time' },
 };
 
@@ -87,7 +87,7 @@ const smiteStun: StatusEffect = { type: 'STUN', duration: 0.6 };
  *  counter-nova bursts around him (damage + stun to everything close) and a small shield wraps him. The cooldown shortens per level. */
 function riposte(level: number): void {
   const pl = world.player, st = useGameStore.getState().stats;
-  const R = 4.2 + 0.4 * (level - 1), dmg = st.damage * 2.6 * st.skillDamage * lvScale(level);
+  const R = 4.2 + 0.4 * (level - 1), dmg = st.damage * 2.0 * st.skillDamage * lvScale(level);
   smiteStun.duration = 0.7 + 0.1 * (level - 1);
   hitRoomTraps(pl.pos.x, pl.pos.z, R, dmg);
   const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, R + 2, smiteOut);
@@ -97,8 +97,8 @@ function riposte(level: number): void {
     if ((e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > (R + e.radius) ** 2) continue;
     damageEnemy(e, dmg, smiteOpts); applyStatus(e, smiteStun);
   }
-  const sh = st.maxHealth * (0.04 + 0.01 * (level - 1));   // a small holy shield (shares the Radiant bar)
-  pl.radiant = Math.min(st.maxHealth * 0.5, pl.radiant + sh); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = Math.max(pl.radiantT, 5);
+  const sh = st.maxHealth * (0.02 + 0.005 * (level - 1));   // a small holy shield (shares the Radiant bar)
+  pl.radiant = Math.min(st.maxHealth * 0.2, pl.radiant + sh); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = Math.max(pl.radiantT, 4);
   events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xfff3c0 });
   events.emit('crater', { pos: pl.pos.clone(), radius: R * 0.8, color: 0xffe08a });
   events.emit('floatText', { pos: pl.pos.clone(), text: 'RIPOSTE!', color: 0xfff3a0, scale: 0.9, dy: 2.4 });
@@ -273,7 +273,7 @@ export function updateSkills(dt: number): void {
       const R = 4.5 + 0.4 * (lv.consecrate - 1);
       const ids = world.enemyGrid.query(pl.pos.x, pl.pos.z, R + 2, auraOut);
       let hits = 0;
-      const dmg = stats.damage * 0.6 * stats.skillDamage * lvScale(lv.consecrate);
+      const dmg = stats.damage * 0.45 * stats.skillDamage * lvScale(lv.consecrate);
       hitRoomTraps(pl.pos.x, pl.pos.z, R, dmg);
       for (let i = 0; i < ids.length; i++) {
         const e = world.enemies[ids[i]];
@@ -282,7 +282,7 @@ export function updateSkills(dt: number): void {
         damageEnemy(e, dmg, holyAuraOpts); hits++;
       }
       if (hits > 0) {
-        healPlayer(stats.maxHealth * 0.002 * Math.min(hits, 3));   // (owner: heal cut, was 0.4% x up to 5)
+        healPlayer(stats.maxHealth * 0.0015 * Math.min(hits, 2));   // (owner: heal cut, was 0.4% x up to 5)
         events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xffe08a });
       }
     }
@@ -293,15 +293,15 @@ export function updateSkills(dt: number): void {
   // taken is reflected to the attacker (combat.damagePlayer). It stacks with the Aegis / Arcane shields in the same HUD bar.
   if (pl.radiantT > 0) { pl.radiantT -= dt; if (pl.radiantT <= 0) { pl.radiantT = 0; pl.radiant = 0; pl.radiantMax = 0; } }
   if (lv.radiant > 0) {
-    const max = 17 * cdrMul();
+    const max = 28 * cdrMul();
     radT = Math.min(max, radT + dt * chargeMul);
     setCd('radiant', max - radT, max);
     if (radT >= max && pl.hp < stats.maxHealth * 0.6 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
       radT = 0;
-      const rsize = stats.maxHealth * (0.25 + 0.03 * (lv.radiant - 1));
-      pl.radiant = Math.max(pl.radiant, rsize); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = 8;
+      const rsize = stats.maxHealth * (0.12 + 0.02 * (lv.radiant - 1));
+      pl.radiant = Math.max(pl.radiant, rsize); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = 5;
       events.emit('floatText', { pos: pl.pos, text: 'RADIANT SHIELD', color: 0xffe08a, scale: 0.9, dy: 2.4 });
-      const n = 7 + lv.radiant, dmg = stats.damage * 1.6 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
+      const n = 7 + lv.radiant, dmg = stats.damage * 1.3 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;
       for (let i = 0; i < n; i++) {
         const a = a0 + (i / n) * Math.PI * 2, dx = Math.sin(a), dz = Math.cos(a);
         spawnProjectile('HOLY_WAVE', pl.pos.x + dx * 1.2, pl.pos.z + dz * 1.2, dx, dz, 16, dmg, { life: 0.75, pierce: 999, knockback: 1, radius: 2.2, y: 1.1 });
@@ -357,7 +357,7 @@ export function updateSkills(dt: number): void {
   // Axe Storm: the basic attack flags a proc (see projectiles.fireBasicAttack).
   if (procFlags.stomp > 0) { const l = procFlags.stomp; procFlags.stomp = 0; axeStorm(l); }
   {   // Righteous Riposte: ready again after 5 s (-0.4 s per level, min 2.6 s, shortened by cooldown reduction); fires on the next hit taken
-    const rl = lv.smite, rmax = Math.max(2.6, 5 - 0.4 * (rl - 1)) * cdrMul();
+    const rl = lv.smite, rmax = Math.max(4, 7 - 0.5 * (rl - 1)) * cdrMul();
     if (rl > 0) {
       riposteCd = Math.max(0, riposteCd - dt);
       setCd('smite', riposteCd, rmax);

@@ -121,17 +121,17 @@ export function castExtra(slot: 's5' | 's6', lv: number, hero: string, b: number
     if (slot === 's5') {   // AEGIS THROW: a ricocheting shield
       const j = newJob(J_AEGIS);
       if (j) {
-        j.x = p.pos.x; j.z = p.pos.z; j.dmg = b * 2.4; j.lv = lv; j.n = 3 + lv; j.t = 0.05; j.r = 24;   // r: first-hop reach
+        j.x = p.pos.x; j.z = p.pos.z; j.dmg = b * 1.9; j.lv = lv; j.n = 3 + lv; j.t = 0.05; j.r = 24;   // r: first-hop reach
         const first = nextTarget(tx, tz, 9, j.hit) ?? nextTarget(p.pos.x, p.pos.z, 24, j.hit);
         if (first) j.hit.push(-first.id - 1);   // negative marker: the opening target (picked in the first step)
-        else { j.on = false; if (!strikeTrap(tx, tz, 9, b * 2.4) && !strikeTrap(p.pos.x, p.pos.z, 24, b * 2.4)) { v1.set(tx, 1, tz); events.emit('shieldBlock', { pos: v1, radius: 3, gold: true }); } }
+        else { j.on = false; if (!strikeTrap(tx, tz, 9, b * 1.9) && !strikeTrap(p.pos.x, p.pos.z, 24, b * 1.9)) { v1.set(tx, 1, tz); events.emit('shieldBlock', { pos: v1, radius: 3, gold: true }); } }
       }
       p.anim.attackT = 1; addShake(0.1);
       return 'AEGIS_THROW';
     }
     // BLESSED HAMMERS: hammers spiral outward around the hero
     const j = newJob(J_HAMMER);
-    if (j) { j.n = 2 + lv; j.dmg = b * 1.8; j.life = 2.2 + 0.15 * lv; j.ang = Math.random() * 6.283; j.lv = lv; }
+    if (j) { j.n = 2 + lv; j.dmg = b * 1.5; j.life = 2.2 + 0.15 * lv; j.ang = Math.random() * 6.283; j.lv = lv; }
     p.anim.castT = 1; addShake(0.12);
     return 'BLESSED_HAMMERS';
   }
@@ -328,7 +328,7 @@ export function updateExtras(dt: number): void {
           aegisStun.duration = 0.4 + 0.1 * j.lv;
           applyStatus(e, aegisStun);
           damageEnemy(e, j.dmg * (j.flag ? 0.7 : 1), aegisOpts);
-          healPlayer(heroHp() * 0.01);
+          healPlayer(heroHp() * 0.005);
           v1.set(e.pos.x, 1.2, e.pos.z); events.emit('shieldBlock', { pos: v1, radius: 2.2, gold: true });
           addShake(0.06);
           j.t = 0.1 + Math.hypot(e.pos.x - fromX, e.pos.z - fromZ) * 0.012;
