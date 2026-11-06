@@ -15,6 +15,7 @@ import { fireEnemyProjectile, spawnTelegraphCircle, spawnTelegraphLine } from '.
 import { formColor } from './bossForms';
 import { spawnHostileZone } from './tricks';
 import { edgeLimit } from '../mapgen';
+import { hurtMinionsCircle, hurtMinionsLine, hurtMinionsCone, hurtMinionsRing } from './minionHurt';
 import { forEachHero, nearestHero, randomHero, isAlly, shoveHero } from '../heroes';
 
 /** Zone.trick ids owned by the new bosses (>= 30 routes through tricks.resolveTrick -> resolveBossZone). */
@@ -219,6 +220,7 @@ function tickRamps(dt: number): void {
     if (doTick) q.tick = RAMP_TICK;
     const lr = q.beam ? zn.radius * 0.5 + 0.7 : (zn.radius + 0.4), blen = q.beam ? zn.length : 0;   // (the telegraph's own scaled size = what the player sees)
     const dxd = Math.sin(q.ang), dzd = Math.cos(q.ang);
+    if (doTick) { const d = q.pct * (1 + (RAMP_MUL - 1) * 0.5); if (q.beam) hurtMinionsLine(q.x, q.z, dxd, dzd, blen, lr, 0, d); else hurtMinionsCircle(q.x, q.z, lr, 0, d); }   // (summons do not ramp: the mid-ramp value)
     forEachHero((h) => {
       const k = isAlly(h) ? 1 : 0;
       let inside = false;
@@ -260,6 +262,12 @@ export function resolveBossZone(z: Zone): void {
   const rx = p.pos.x - z.pos.x, rz = p.pos.z - z.pos.z;
   const inside = p.alive && rx * rx + rz * rz < (z.radius + 0.6) * (z.radius + 0.6);
   const pw = z.damage * BOSS_SKILL_MUL;
+  if (z.trick !== BT.VISUAL && pw > 0) {   // the strike hurts the Necromancer's summons in the same shape (minionHurt.ts)
+    const md = z.trick === BT.BREATH ? pw * 0.8 : z.trick === BT.SURFACE ? pw * 1.2 : pw;
+    if (z.kind === 'TELEGRAPH_LINE') hurtMinionsLine(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.length, z.radius * 0.5 + 0.6, md);
+    else if (z.kind === 'TELEGRAPH_CONE') hurtMinionsCone(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux, md);
+    else hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, md);
+  }
   switch (z.trick) {
     case BT.ROOT:
       if (z.kind === 'TELEGRAPH_LINE') {
@@ -414,8 +422,10 @@ export function updateBossFx(dt: number): void {
   for (let i = 0; i < waves.length; i++) {
     const w = waves[i];
     if (!w.active) continue;
+    const rPrev = w.r;
     w.r += w.speed * dt;
     if (w.speed > 0 ? w.r >= w.maxR : w.r <= w.maxR) { w.active = false; continue; }
+    if (w.dmg > 0) hurtMinionsRing(w.x, w.z, Math.min(rPrev, w.r), Math.max(rPrev, w.r), w.dmg * BOSS_SKILL_MUL);   // the front hurts each summon once as it sweeps past
     if (w.dmg <= 0 || (w.hit && w.hitA)) continue;
     forEachHero((h) => {   // (co-op: the ring hits each hero once)
       const ally = isAlly(h);
@@ -492,6 +502,7 @@ export function updateBossFx(dt: number): void {
     breath.tick -= dt;
     if (breath.tick <= 0) {
       breath.tick = 0.45;
+      hurtMinionsCone(breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half, breath.dmg * 0.3 * BOSS_SKILL_MUL);
       forEachHero((h) => {   // (co-op: the breath chills either hero standing in the cone)
         if (h.alive && inCone(h.pos.x, h.pos.z, breath.x, breath.z, breath.dx, breath.dz, breath.range, breath.half)) {
           damagePlayer(breath.dmg * 0.3 * BOSS_SKILL_MUL, { pos: tv.set(breath.x, 0, breath.z), kind: 'ICE', dot: false });
@@ -522,7 +533,7 @@ export function updateBossFx(dt: number): void {
     if (arena.graceT > 0) arena.graceT -= dt;
     arena.voidT -= dt;
     const tickNow = arena.voidT <= 0;
-    if (tickNow) arena.voidT = VOID_TICK;
+    if (tickNow) { arena.voidT = VOID_TICK; if (arena.graceT <= 0) hurtMinionsRing(arena.cx, arena.cz, arena.safeR, 9999, 0, VOID_PCT); }   // summons outside the light burn too
     forEachHero((h) => {
       if (!h.alive || arena.graceT > 0) return;
       const d2 = (h.pos.x - arena.cx) ** 2 + (h.pos.z - arena.cz) ** 2;
@@ -539,6 +550,7 @@ export function updateBossFx(dt: number): void {
     arena.edgeT -= dt;
     if (arena.edgeT <= 0) {
       arena.edgeT = 0.4;
+      hurtMinionsRing(arena.cx, arena.cz, arena.r, 9999, Math.max(6, world.boss.maxHp * 0.0022));   // the closing void burns summons outside the ring
       forEachHero((h) => {   // (co-op: the closing void burns both heroes outside the ring)
         if (!h.alive) return;
         const d = Math.hypot(h.pos.x - arena.cx, h.pos.z - arena.cz);

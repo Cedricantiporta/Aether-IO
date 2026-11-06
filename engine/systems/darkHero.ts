@@ -33,6 +33,7 @@
 // champion itself is staggered. Render reads `darkView` / `darkShots` / `darkOrbs`. Pure engine code, no per-frame
 // allocations (pools + scratch vectors; Vector3 clones only for discrete events).
 // ============================================================================
+import { hurtMinionsCircle, hurtMinionsCircleOnce } from './minionHurt';
 import { Vector3 } from 'three';
 import { world, allocEnemyProjectile, allocZone, allocFx, pass2 } from '../world';
 import { forEachHero, nearestHero, heroesFill, HL, isAlly } from '../heroes';
@@ -116,8 +117,8 @@ function slotOf(id: number): number { for (let k = 0; k < DARK_MAX; k++) if (SV[
 
 /** Skill shots (own pool, own collision: they pierce and hit the hero once). Tags drive the render look. */
 export const SHOT_GALE = 1, SHOT_LIGHT = 2, SHOT_FIRE = 3, SHOT_XSLASH = 4, SHOT_HOLY = 5, SHOT_BONE = 6, SHOT_SLASH = 7, SHOT_CLEAVE = 8;
-export interface DarkShot { active: boolean; own: number; tag: number; x: number; z: number; vx: number; vz: number; life: number; maxLife: number; r: number; dmg: number; hit: boolean; /** co-op: the partner's own once-per-shot flag */ hitA: boolean; trail: number; n: number; big: boolean }
-export const darkShots: DarkShot[] = Array.from({ length: 36 }, () => ({ active: false, own: 0, tag: 0, x: 0, z: 0, vx: 0, vz: 0, life: 0, maxLife: 1, r: 1, dmg: 0, hit: false, hitA: false, trail: 0, n: 0, big: false }));
+export interface DarkShot { active: boolean; own: number; tag: number; x: number; z: number; vx: number; vz: number; life: number; maxLife: number; r: number; dmg: number; hit: boolean; /** summons already hit by this shot (bit per minion slot) */ mm: number; /** co-op: the partner's own once-per-shot flag */ hitA: boolean; trail: number; n: number; big: boolean }
+export const darkShots: DarkShot[] = Array.from({ length: 36 }, () => ({ active: false, own: 0, tag: 0, x: 0, z: 0, vx: 0, vz: 0, life: 0, maxLife: 1, r: 1, dmg: 0, hit: false, mm: 0, hitA: false, trail: 0, n: 0, big: false }));
 /** Storm Orbs (wizard): positions of every hero's orbs, written each frame while they spin (compact list, 3 per wizard). */
 export const darkOrbs = { n: 0, x: new Array<number>(3 * DARK_MAX).fill(0), z: new Array<number>(3 * DARK_MAX).fill(0) };
 
@@ -280,7 +281,7 @@ function shot(e: Enemy, tag: number, dx: number, dz: number, speed: number, life
   for (const s of darkShots) {
     if (s.active) continue;
     s.active = true; s.own = S.slot; s.tag = tag; s.x = e.pos.x + dx * ahead; s.z = e.pos.z + dz * ahead; s.vx = dx * speed; s.vz = dz * speed;
-    s.life = s.maxLife = life; s.r = r; s.dmg = dmg; s.hit = false; s.hitA = false; s.trail = 0; s.n = 0; s.big = big;
+    s.life = s.maxLife = life; s.r = r; s.dmg = dmg; s.hit = false; s.mm = 0; s.hitA = false; s.trail = 0; s.n = 0; s.big = big;
     return;
   }
 }
@@ -555,6 +556,7 @@ function release(e: Enemy, px: number, pz: number): void {
     } else if (k === 2) { S.orbT = 4.5; S.orbTick = 0.9; darkView.orbR = 8; }
     else if (k === 3) { field('BLACKHOLE', S.toX, S.toZ, 7, 2.6, P * 0.25, 0x6d28d9); events.emit('shockwave', { pos: tmp.set(S.toX, 0, S.toZ), radius: 7, color: 0x8a3aff }); }
     else if (k === DASH) {   // Blink Nova: nova where it stood, blink away, nova where it lands
+      hurtMinionsCircle(e.pos.x, e.pos.z, 5, P * 0.9);   // (summons in the nova too)
       if (playerIn(e.pos.x, e.pos.z, 5)) { damagePlayer(P * 0.9, { pos: e.pos, kind: 'ICE' }); effects(FREEZE | SLOW | DOWN, P, e.pos.x, e.pos.z); }   // the nova in the hero's face knocks down (the landing nova only shoves)
       events.emit('frostNova', { pos: e.pos, radius: 5 });
       retreatPoint(e, px, pz, 12, dirV);
@@ -592,6 +594,7 @@ function release(e: Enemy, px: number, pz: number): void {
       darkView.atk++;
     } else if (k === DASH) { tmp.set(S.fromX, 0, S.fromZ); tmp2.set(S.toX, 0, S.toZ); events.emit('leap', { from: tmp.clone(), to: tmp2.clone(), dur: S.act }); S.inv = S.act; fx('LEAP', S.fromX, S.fromZ, 4.5); }
     else {   // ULT: the roar terrifies (stun + slow), then giant form
+      hurtMinionsCircle(e.pos.x, e.pos.z, 9, P * 0.8);   // (the roar rattles summons too)
       if (playerIn(e.pos.x, e.pos.z, 9)) { damagePlayer(P * 0.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); if (applyPlayerDebuff('STUN', 0.9)) events.emit('floatText', { pos: world.player.pos, text: 'TERRIFIED', color: 0xff8a6a, scale: 0.8, dy: 0.9 }); slowPlayer(3); }
       fx('ROAR', e.pos.x, e.pos.z, 9);
       S.titanT = 6; S.stepT = 0.5; S.mul = 1.4; e.scale = S.baseScale * 1.8; e.radius = S.baseRadius * 1.5; e.speed = S.baseSpeed * 1.15; darkView.titan = 1;
@@ -674,6 +677,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
     S.tick -= dt;
     if (S.tick <= 0) {
       S.tick = 0.3;
+      hurtMinionsCircle(e.pos.x, e.pos.z, 4.5, mdmg(e) * 0.4);   // the whirlwind cuts summons in range on the same 0.3 s tick
       if (dd < 4.5 + 0.6 && world.player.alive) {
         damagePlayer(mdmg(e) * 0.4, { pos: e.pos, kind: 'PHYSICAL' }); hitSpark();
         if (S.healAcc < e.maxHp * 0.06) { const h = e.maxHp * 0.01; e.hp = Math.min(e.maxHp, e.hp + h); S.healAcc += h; }
@@ -939,6 +943,7 @@ function tickHero(e: Enemy, dt: number): void {
     if (S.orbTick <= 0) {
       S.orbTick = 0.8;
       const i = Math.floor(Math.random() * n);
+      hurtMinionsCircle(e.pos.x, e.pos.z, 8, P * 0.6);   // (the storm zaps summons in range too)
       forEachHero((p) => {   // (co-op: the storm zaps either hero in range)
         if (p.alive && playerIn(e.pos.x, e.pos.z, 8)) {
           tmp.set(darkOrbs.x[o0 + i], 1.6, darkOrbs.z[o0 + i]); tmp2.set(p.pos.x, 1.2, p.pos.z);
@@ -956,6 +961,7 @@ function tickHero(e: Enemy, dt: number): void {
     if (Math.hypot(e.vel.x, e.vel.z) > 0.5 && (S.stepT -= dt) <= 0) {
       S.stepT = 0.5;
       events.emit('quake', { pos: e.pos, radius: 4.5 }); events.emit('shake', { amount: 0.12 });
+      hurtMinionsCircle(e.pos.x, e.pos.z, 4.5, mdmg(e) * 0.45);   // (the Titan's steps crush summons too)
       forEachHero(() => { if (playerIn(e.pos.x, e.pos.z, 4.5)) damagePlayer(mdmg(e) * 0.45, { pos: e.pos, kind: 'PHYSICAL' }); });
     }
     if (S.titanT <= 0) {
@@ -1004,6 +1010,7 @@ function tickShots(dt: number): void {
     const e = world.enemies[S.id];
     s.x += s.vx * dt; s.z += s.vz * dt; s.life -= dt;
     if (s.life <= 0) { s.active = false; continue; }
+    s.mm = hurtMinionsCircleOnce(s.x, s.z, s.r, s.dmg, 0, s.mm);   // the bolt also hits each summon it passes through once
     if (!(s.hit && s.hitA)) {
       const hn = heroesFill();   // (co-op: each hero can be hit once by a shot)
       for (let hi = 0; hi < hn; hi++) {
@@ -1033,6 +1040,7 @@ function tickFields(dt: number): void {
     f.tick -= dt;
     const tick = f.tick <= 0;
     if (tick) f.tick = f.kind === 'BLACKHOLE' ? 0.35 : 0.5;
+    if (tick && f.kind !== 'CURSE') hurtMinionsCircle(z.pos.x, z.pos.z, f.kind === 'TORNADO' ? z.radius + 0.5 : z.radius, f.dmg);   // (summons in the field take its tick too)
     const hn = heroesFill();   // (co-op: the field works on both heroes; the partner's stand-in only gets the damage / slow ticks)
     for (let hi = 0; hi < hn; hi++) {
       const p = HL[hi], ally = hi === 1;
@@ -1072,6 +1080,7 @@ function tickPending(dt: number): void {
     if (p.kind === 1) { spawnWave(p.x, p.z, 14, 22, 1.4, p.dmg, WAVE_FIRE, 0xc04aff); events.emit('shockwave', { pos: tmp.set(p.x, 0, p.z), radius: 22, color: 0xff7a3a }); continue; }
     if (p.fx) fx(p.fx, p.x, p.z, p.r);
     else events.emit('explosion', { pos: tmp.set(p.x, 0, p.z), radius: p.r, color: C_VIOLET });
+    hurtMinionsCircle(p.x, p.z, p.r, p.dmg);   // (summons inside the circle take the same blow)
     const hn = heroesFill(), cur = world.player;   // (co-op: everyone inside the circle)
     for (let hi = 0; hi < hn; hi++) {
       world.player = HL[hi];
@@ -1104,10 +1113,12 @@ function hostileFxOne(f: GroundFx): void {
   switch (f.kind) {
     case 'RAIN_ARROW':
       fx('RAIN', f.x, f.z, f.radius);
+      if (f.dmg > 0) hurtMinionsCircle(f.x, f.z, f.radius * 0.6, f.dmg);
       if (f.dmg > 0 && playerIn(f.x, f.z, f.radius * 0.6)) damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' });
       break;
     case 'SPIKE':
       events.emit('fxImpact', { pos: fxPos.set(f.x, 0, f.z), kind: 'SPIKE', radius: f.radius });
+      if (f.dmg > 0) hurtMinionsCircle(f.x, f.z, f.radius, f.dmg);   // (each spike hurts the summons on it)
       if (f.dmg > 0 && !(pass2.on ? S.spikeHitA : S.spikeHit) && playerIn(f.x, f.z, f.radius)) {
         if (pass2.on) S.spikeHitA = true; else S.spikeHit = true;   // one hit per fissure (and per hero)
         damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' });
@@ -1118,11 +1129,13 @@ function hostileFxOne(f: GroundFx): void {
     case 'ARROW_STICK':
       if (f.dmg > 0) {
         events.emit('explosion', { pos: fxPos.set(f.x, 0, f.z), radius: f.radius * 0.8, color: C_VIOLET });
+        hurtMinionsCircle(f.x, f.z, f.radius, f.dmg);
         if (playerIn(f.x, f.z, f.radius)) { damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' }); effects(KNOCK, f.dmg, f.x, f.z); }
       }
       break;
     case 'TRAP':   // Frost Field: burst + a slowing ice field + crystals
       events.emit('frostNova', { pos: fxPos.set(f.x, 0, f.z), radius: f.radius * 1.3 });
+      hurtMinionsCircle(f.x, f.z, f.radius, f.dmg);
       if (playerIn(f.x, f.z, f.radius)) { damagePlayer(f.dmg, { pos: fxPos, kind: 'ICE' }); effects(FREEZE | SLOW, f.dmg, f.x, f.z); slowPlayer(2.5); }
       field('FROST_FIELD', f.x, f.z, f.aux, 3.6, P * 0.2, 0x9fc8ff);
       for (let i = 0; i < 5; i++) { const a = (i / 5) * 6.283 + f.seed * 6, dd = 1.5 + (i % 2) * 1.6; const c = allocFx(); if (c) { c.active = true; c.kind = 'CRYSTAL'; c.x = f.x + Math.cos(a) * dd; c.z = f.z + Math.sin(a) * dd; c.delay = 0; c.life = 3.6; c.radius = 0; c.dmg = 0; c.hostile = true; } }
@@ -1141,6 +1154,7 @@ function hostileFxOne(f: GroundFx): void {
       events.emit('shockwave', { pos: fxPos, radius: f.radius * 1.8, color: 0xc8a8ff });
       events.emit('crater', { pos: fxPos, radius: f.radius * 0.6, color: 0x120a18 });
       events.emit('shake', { amount: 0.6 });
+      hurtMinionsCircle(f.x, f.z, f.radius, f.dmg);
       if (playerIn(f.x, f.z, f.radius)) { damagePlayer(f.dmg, { pos: fxPos, kind: 'PHYSICAL' }); effects(STUN | KNOCK, f.dmg, f.x, f.z); }
       if (S.id >= 0 && !pass2.on) {
         const g = spawnEnemy('BONE_GOLEM', tmp.set(f.x, 0, f.z));

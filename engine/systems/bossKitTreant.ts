@@ -27,6 +27,7 @@ import { events } from '../events';
 import type { Enemy, Zone } from '../types';
 import { edgeLimit } from '../mapgen';
 import { damagePlayer, applyPlayerDebuff, KB } from './combat';
+import { hurtMinionsCone } from './minionHurt';
 import { BOSS_SKILL_MUL } from '../enemyDefs';
 import { enter, requestYaw, spawnEnemy, spawnTelegraphLine, spawnTelegraphCircle, spawnTelegraphCone, fireEnemyProjectile } from './enemies';
 import { BT, inCone } from './bossFx';
@@ -279,6 +280,7 @@ function fireThorns(e: Enemy): void {
 
 function fireVines(e: Enemy): void {
   events.emit('trick', { pos: e.pos.clone(), kind: 'ROOTS', radius: 10 });
+  hurtMinionsCone(e.pos.x, e.pos.z, e.dir.x, e.dir.z, 24, 0.5, pwr(e) * K_VINE);   // the vines lash summons in the cone too
   forEachHero((p) => {
     if (!p.alive || !inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, 24, 0.5)) return;
     const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, pull = Math.max(0, d - (e.radius + 1.5));

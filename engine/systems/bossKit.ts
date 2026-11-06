@@ -13,6 +13,7 @@
 // beams through 'trick' events whose kind starts with "KIT_" (drawn by render/BossKitFx.tsx).
 // NOTE: imports from the AI modules are only used inside functions (import cycle through enemies.ts).
 // ============================================================================
+import { hurtMinionsCircle, hurtMinionsLine } from './minionHurt';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events, type DamageKind } from '../events';
@@ -157,6 +158,10 @@ function iframes(h: typeof world.player): boolean { return h.invulnT > 0 || (h.d
 function hitHeroes(s: Strike, len: number): void {
   const src = s.src >= 0 ? world.enemies[s.src] : undefined;
   const maxHp = Math.max(1, useGameStore.getState().stats.maxHealth);
+  if (s.pct > 0) {   // the same strike hurts the Necromancer's summons (same shape, same % of max HP; minionHurt.ts)
+    if (s.shape === 0) hurtMinionsCircle(s.x, s.z, s.r, 0, s.pct);
+    else hurtMinionsLine(s.x, s.z, s.dx, s.dz, len, s.r + 0.55, 0, s.pct);
+  }
   forEachHero((h) => {
     if (!h.alive) return;
     let inside: boolean;

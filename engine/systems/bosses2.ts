@@ -9,6 +9,7 @@
 // No allocations in the per-frame paths: scratch vectors, no closures (attack tables are built once at load).
 // NOTE: imported consts (BT, WAVE_*) are only read inside functions - this module is part of an import cycle.
 // ============================================================================
+import { hurtMinionsCircle, hurtMinionsCone, hurtMinionsCircleOnce } from './minionHurt';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { events } from '../events';
@@ -76,7 +77,7 @@ export const S = {
   guardT: 0, shT: 0, dashPh: 2, dashT: 0, dashLen: 0, slashT: 0, slashD: 0, trailD: 0, sx: 0, sz: 0, sdx: 0, sdz: 1,   // (owner rework) Blazing Guard / fire shield timers, dash + slash state, fire-trail lane
   formT: 0, auraT: 0,   // (owner) Burning Form: formT = the transformation in progress; enraged = in the burning form
   // the Dune Colossus (desert war machine)
-  rayA: 0, rayT: 0, rayN: 0, ramHit: false, stompCd: 0, turret: 0, stride: 1, strideT: 0, trailT: 0,   // (owner 2026-10-31) the flamethrower: strafe direction / timer, fire-trail timer
+  rayA: 0, rayT: 0, rayN: 0, ramHit: false, ramM: 0, stompCd: 0, turret: 0, stride: 1, strideT: 0, trailT: 0,   // (owner 2026-10-31) the flamethrower: strafe direction / timer, fire-trail timer
   // Void Herald
   voidOn: false, gravT: 0, pushed: false,
   /** form: 0 first form, 1 transforming (untouchable), 2 final form (huge wings); formT = transformation seconds left; sweep = laser sweep direction */
@@ -381,6 +382,7 @@ LISTS.BOSS_TREANT = [
     fire(e) {
       const p = world.player;
       events.emit('trick', { pos: e.pos.clone(), kind: 'ROOTS', radius: 10 });
+      hurtMinionsCone(e.pos.x, e.pos.z, e.dir.x, e.dir.z, 24, 0.5, pwr(e));   // the vines lash summons in the cone too
       if (!p.alive || !inCone(p.pos.x, p.pos.z, e.pos.x, e.pos.z, e.dir.x, e.dir.z, 24, 0.5)) return;
       const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d = Math.hypot(dx, dz) || 1, pull = Math.max(0, d - (e.radius + 1.5));
       p.pos.x += (dx / d) * pull; p.pos.z += (dz / d) * pull;
@@ -906,7 +908,7 @@ LISTS.BOSS_WARLORD = [
       lane(e, ux, uz, S.dashLen + 1, 5.4, 0.55 * fast(e), BT.VISUAL, 0, 0xff5a1a);   // (owner 2026-10-26) wider red lane + bigger hit area on every boss dash
     },
     fire(e) {
-      S.dashPh = 0; S.dashT = S.dashLen / DASH_SP; S.ramHit = false;
+      S.dashPh = 0; S.dashT = S.dashLen / DASH_SP; S.ramHit = false; S.ramM = 0;
       S.sx = e.pos.x; S.sz = e.pos.z; S.sdx = e.dir.x; S.sdz = e.dir.z; S.trailD = 1.5; S.slashD = 0;
       events.emit('trick', { pos: e.pos.clone(), kind: 'LEAP', radius: 4 });
     },
@@ -915,6 +917,7 @@ LISTS.BOSS_WARLORD = [
         drive(e, S.sdx, S.sdz, DASH_SP); S.slashD += DASH_SP * dt; S.dashT -= dt;
         laneTrail(e, S.slashD, 2.4, 3.2);
         const p = world.player;
+        S.ramM = hurtMinionsCircleOnce(e.pos.x, e.pos.z, e.radius + 2.2, ipwr(e) * 1.3, 0, S.ramM);   // the rush hits each summon in its path once
         if (!S.ramHit && p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 2.2) ** 2) {
           S.ramHit = true; damagePlayer(ipwr(e) * 1.3, { pos: e.pos, kind: 'FIRE', ...KB.SLAM });   // (owner) the Blazing Rush knocks down
           burnHit(ipwr(e) * 0.14);
@@ -950,6 +953,7 @@ function warlord(e: Enemy, dt: number, dist: number, ux: number, uz: number): vo
     if (S.auraT <= 0) {
       S.auraT = 0.5;
       const p = world.player;
+      hurtMinionsCircle(e.pos.x, e.pos.z, e.radius + 3.2, pwr(e) * 0.22);   // the scorching aura burns summons on the same 0.5 s tick
       if (p.alive && (p.pos.x - e.pos.x) ** 2 + (p.pos.z - e.pos.z) ** 2 < (e.radius + 3.2) ** 2) { damagePlayer(pwr(e) * 0.22, { pos: e.pos, kind: 'FIRE', dot: true, noDotMul: true }); burnHit(pwr(e) * 0.12); }
     }
   }
@@ -1021,11 +1025,12 @@ LISTS.BOSS_WARMACH = [
   },
   { // Rampage: the machine lowers itself and charges along a lane, trampling anything in the way.
     name: 'Rampage!', wind: () => 1.6, act: () => 1.8, rec: () => 1.4,
-    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; addHeat(e); lane(e, ux, uz, 30, e.radius * 2 + 3, 1.6, BT.VISUAL, 0, 0xff5a1a); },
+    begin(e, ux, uz) { e.dir.set(ux, 0, uz); S.ramHit = false; S.ramM = 0; addHeat(e); lane(e, ux, uz, 30, e.radius * 2 + 3, 1.6, BT.VISUAL, 0, 0xff5a1a); },
     fire() { events.emit('shake', { amount: 0.5 }); },
     tick(e) {
       drive(e, e.dir.x, e.dir.z, 13 + 1.5 * e.phase);   // (very slow walker, but the charge is still a real threat: ~25 m lane)
       const p = world.player, d = Math.hypot(p.pos.x - e.pos.x, p.pos.z - e.pos.z);
+      S.ramM = hurtMinionsCircleOnce(e.pos.x, e.pos.z, e.radius + 2.2, pwr(e) * 1.8, 0, S.ramM);   // the rampage tramples each summon once
       if (!S.ramHit && p.alive && d < e.radius + 2.2) { S.ramHit = true; damagePlayer(pwr(e) * 1.8, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.6); }
     },
     end(e) { stand(e); },

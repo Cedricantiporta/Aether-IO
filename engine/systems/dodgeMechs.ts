@@ -28,6 +28,7 @@ import { enter, requestYaw, fireEnemyProjectile, spawnTelegraphLine, spawnTelegr
 import { spawnHostileZone } from './tricks';
 import { firePatch, firePatchRaw, fireRoom, frostHit, burnHit, spawnProp, PROP_ICE, BT } from './bossFx';
 import { bp } from './bossPhaseState';
+import { hurtMinionsCircle, hurtMinionsLine, hurtMinionsRing } from './minionHurt';
 import { bossWarded, bossGapOn, bossGapSet } from './bossMech';
 import { forEachHero, nearestHero, isAlly } from '../heroes';
 import { edgeLimit } from '../mapgen';
@@ -82,8 +83,8 @@ const arenaVis = (): number => Math.max(30, world.room.radius * 1.1);
 // ============================================================================ pools
 interface Ring { on: boolean; x: number; z: number; r: number; speed: number; pct: number; fx: number; dmg: 'PHYSICAL' | 'FIRE' | 'ICE' | 'POISON'; hit0: boolean; hit1: boolean; /** each hero's distance from the centre when the wave was released: the wave hits him when its front reaches THAT distance, so the dash window does not depend on how far his dash carried him */ d0: number; d1: number; src: number; }
 const rings: Ring[] = Array.from({ length: 4 }, () => ({ on: false, x: 0, z: 0, r: 0, speed: 0, pct: 0, fx: 0, dmg: 'PHYSICAL', hit0: false, hit1: false, d0: 0, d1: 0, src: -1 }));
-interface Beam { on: boolean; ox: number; oz: number; mode: number; a0: number; w: number; amp: number; per: number; t: number; dur: number; len: number; width: number; pct: number; hitCd: number; hit0: number; hit1: number; fx: number; dmg: 'FIRE' | 'ICE' | 'PHYSICAL'; patch: number; pt: number; src: number; }
-const beams: Beam[] = Array.from({ length: 6 }, () => ({ on: false, ox: 0, oz: 0, mode: 0, a0: 0, w: 0, amp: 0, per: 1, t: 0, dur: 0, len: 40, width: 2, pct: 0.1, hitCd: 0.5, hit0: 0, hit1: 0, fx: 0, dmg: 'FIRE', patch: 0, pt: 0, src: -1 }));
+interface Beam { on: boolean; ox: number; oz: number; mode: number; a0: number; w: number; amp: number; per: number; t: number; dur: number; len: number; width: number; pct: number; hitCd: number; hit0: number; hit1: number; hitM: number; fx: number; dmg: 'FIRE' | 'ICE' | 'PHYSICAL'; patch: number; pt: number; src: number; }
+const beams: Beam[] = Array.from({ length: 6 }, () => ({ on: false, ox: 0, oz: 0, mode: 0, a0: 0, w: 0, amp: 0, per: 1, t: 0, dur: 0, len: 40, width: 2, pct: 0.1, hitCd: 0.5, hit0: 0, hit1: 0, hitM: 0, fx: 0, dmg: 'FIRE', patch: 0, pt: 0, src: -1 }));
 interface Ent { on: boolean; x: number; z: number; r: number; t: number; sh: number; shown: boolean; pct: number; fx: number; zk: number; zr: number; zl: number; zd: number; src: number; }
 const ents: Ent[] = Array.from({ length: 200 }, () => ({ on: false, x: 0, z: 0, r: 2, t: 0, sh: 0, shown: false, pct: 0, fx: 0, zk: 0, zr: 2, zl: 5, zd: 0, src: -1 }));
 
@@ -99,7 +100,7 @@ function addBeam(e: Enemy, mode: number, a0: number, w: number, amp: number, per
     const b = beams[i]; if (b.on) continue;
     const a = beamAngle(mode, a0, w, amp, per, 0);
     live = true; b.on = true; b.ox = e.pos.x + Math.sin(a) * e.radius * 0.8; b.oz = e.pos.z + Math.cos(a) * e.radius * 0.8; b.mode = mode; b.a0 = a0; b.w = w; b.amp = amp; b.per = per; b.t = 0; b.dur = dur;
-    b.len = len; b.width = width; b.pct = pct; b.hitCd = hitCd; b.hit0 = 0; b.hit1 = 0; b.fx = fx; b.dmg = dmg; b.patch = patch; b.pt = 0.4; b.src = e.id;
+    b.len = len; b.width = width; b.pct = pct; b.hitCd = hitCd; b.hit0 = 0; b.hit1 = 0; b.hitM = 0; b.fx = fx; b.dmg = dmg; b.patch = patch; b.pt = 0.4; b.src = e.id;
     tv.set(b.ox, 0, b.oz);
     events.emit('trick', { pos: tv.clone(), kind: `DG_BEAM|${mode}|${a0.toFixed(3)}|${w.toFixed(3)}|${amp.toFixed(3)}|${per.toFixed(3)}|${dur.toFixed(2)}|${len}|${width}|${hex(color)}|${vis}`, radius: width });
     return i;
@@ -377,9 +378,13 @@ function shoot(e: Enemy, dt: number): void {
 function tickBeam(b: Beam, dt: number): void {
   b.t += dt;
   if (b.t >= b.dur) { b.on = false; return; }
-  b.hit0 -= dt; b.hit1 -= dt;
+  b.hit0 -= dt; b.hit1 -= dt; b.hitM -= dt;
   const aN = beamAngle(b.mode, b.a0, b.w, b.amp, b.per, b.t), aP = beamAngle(b.mode, b.a0, b.w, b.amp, b.per, Math.max(0, b.t - dt));
   const src = b.src >= 0 ? world.enemies[b.src] : undefined;
+  if (b.hitM <= 0) {   // summons in the swept beam, same hit cooldown as the hero's
+    b.hitM = b.hitCd;
+    hurtMinionsLine(b.ox, b.oz, Math.sin(aN), Math.cos(aN), b.len, b.width * 0.5 + 0.55, 0, b.pct);
+  }
   forEachHero((h) => {
     if (!h.alive) return;
     const ally = isAlly(h);
@@ -419,6 +424,7 @@ function resolveEnt(q: Ent): void {
   else if (q.fx === 2) { events.emit('trick', { pos: tv.clone(), kind: 'RAIN_ICE', radius: q.r }); events.emit('shake', { amount: 0.15 }); }
   if (q.pct > 0) {
     const rr = q.r + 0.5;
+    hurtMinionsCircle(q.x, q.z, q.r, 0, q.pct);
     forEachHero((h) => {
       if (!h.alive || (h.pos.x - q.x) ** 2 + (h.pos.z - q.z) ** 2 >= rr * rr) return;
       tv.set(q.x, 0, q.z);
@@ -442,6 +448,7 @@ function tickFloors(dt: number): void {
     if (!z.active || z.kind !== 'PLAGUE' || z.period !== 7.77) continue;
     any = true;
     const rr = z.radius + 0.4;
+    hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, 0, SHROOM.tick);
     forEachHero((h) => {
       if (!h.alive || (h.pos.x - z.pos.x) ** 2 + (h.pos.z - z.pos.z) ** 2 >= rr * rr) return;
       tv.set(z.pos.x, 0, z.pos.z);
@@ -480,8 +487,10 @@ export function updateDodge(dt: number): void {
 
   for (const r of rings) {
     if (!r.on) continue;
+    const rPrev = r.r;
     r.r += r.speed * dt;
     if (r.r > RING_MAXR) { r.on = false; continue; }
+    hurtMinionsRing(r.x, r.z, rPrev, r.r, 0, r.pct);   // the wave front hurts each summon once as it sweeps past (minionHurt.ts)
     forEachHero((h) => {
       if (!h.alive) return;
       const ally = isAlly(h);
@@ -536,6 +545,7 @@ function explodeShroom(e: Enemy): void {
   events.emit('trick', { pos: tv.clone(), kind: 'DG_BOOM', radius: SHROOM.floor });
   events.emit('shake', { amount: 0.3 });
   const rr = SHROOM.blast + 0.5;
+  hurtMinionsCircle(x, z, SHROOM.blast, 0, SHROOM.pct);
   forEachHero((h) => {
     if (!h.alive || (h.pos.x - x) ** 2 + (h.pos.z - z) ** 2 >= rr * rr) return;
     tv.set(x, 0, z);

@@ -24,6 +24,7 @@ import { spawnHostileZone } from './tricks';
 import { firePatch } from './bossFx';
 import { useGameStore } from '../../store';
 import { forEachHero, nearestHero } from '../heroes';
+import { hurtMinionsCircle } from './minionHurt';
 
 interface Mech {
   cc: PlayerDebuff; ccDur: number;      // signature crowd control (quake + crush)
@@ -164,7 +165,8 @@ function resolve(s: (typeof strikes)[number]): void {
       if (s.ccDur > 0) applyPlayerDebuff(s.cc, s.ccDur, s.cc === 'BURN' || s.cc === 'POISON' ? s.dmg * 0.1 : s.cc === 'SLOW' ? SLOW_BOSS : 0);
     }
   });
-  if (s.minDmg > 0) {
+  if (th) hurtMinionsCircle(s.x, s.z, rr, 0, RAIN_PCT[Math.min(2, s.pi >> 8)]);   // themed rain: summons take the same % of max HP the hero does (capped per hit, minionHurt.ts)
+  else if (s.minDmg > 0) {
     const M = world.minions;
     for (let i = 0; i < M.length; i++) { const m = M[i]; if (m.active && (m.x - s.x) ** 2 + (m.z - s.z) ** 2 < rr * rr) damageMinion(i, s.minDmg); }
   }

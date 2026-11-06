@@ -18,6 +18,7 @@ import { WEAK_KINDS } from '../enemyDefs';
 import { veteran, VET } from '../runMods';
 import { isEliteBigTrick, resolveEliteBig } from './eliteBig';
 import { formColor } from './bossForms';
+import { hurtMinionsCircle, hurtMinionsLine } from './minionHurt';
 
 export const TRICK = {
   NONE: 0, STAMPEDE: 15, GOO: 1, FIREBOMB: 2, SCREECH: 3, PIN: 4, CURSE: 5, STOMP: 7, PLAGUE: 9, TERROR: 10, WALL: 11, CALTROPS: 12, SMOKE: 13, PINCH: 14,
@@ -137,6 +138,16 @@ export function spawnHostileZone(kind: ZoneKind, x: number, zz: number, r: numbe
 }
 
 // ------------------------------------------------------------ resolve (zone expiry) --
+/** The damaging elite tricks hurt the Necromancer's summons in the same shape and for the same amount (minionHurt.ts). */
+function hurtTrickMinions(z: Zone): void {
+  const d = z.damage;
+  switch (z.trick) {
+    case TRICK.FIREBOMB: case TRICK.PINCH: hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, d * 0.9); break;
+    case TRICK.STOMP: hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, d * 1.1); break;
+    case TRICK.STAMPEDE: hurtMinionsLine(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.length, z.radius * 0.5 + 0.6, d); break;
+    default: break;
+  }
+}
 function inside(z: Zone): boolean {
   const p = world.player;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
@@ -145,7 +156,8 @@ function inside(z: Zone): boolean {
 }
 
 export function resolveTrick(z: Zone): void {
-  if (isEliteBigTrick(z.trick)) { resolveEliteBig(z); return; }   // elite signature big attacks (eliteBig.ts)
+  if (isEliteBigTrick(z.trick)) { resolveEliteBig(z); return; }
+  hurtTrickMinions(z);   // elite signature big attacks (eliteBig.ts)
   const id = z.trick;
   const power = z.damage;
   const p = world.player;

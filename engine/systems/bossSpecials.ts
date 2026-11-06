@@ -7,6 +7,7 @@
 //   Warden   RAISE THE DEAD   Captain AMBUSH   Behemoth PRISM BEAM   Old Tusk STAMPEDE   Shellback TIDAL SHELL
 // ============================================================================
 import { Vector3 } from 'three';
+import { hurtMinionsLine } from './minionHurt';
 import { world, allocEnemy, allocFx } from '../world';
 import { events } from '../events';
 import type { Enemy } from '../types';
@@ -212,6 +213,7 @@ export function updateSpecial(e: Enemy, dt: number): boolean {
       }
       if (t >= w && z) {
         if ((e.spStep & 1) === 0 && Math.floor(t * 8) !== Math.floor((t - dt) * 8)) {
+          hurtMinionsLine(e.pos.x, e.pos.z, z.dir.x, z.dir.z, z.length, 1.3 + 0.6, power(e) * 0.28);   // the prism beam burns summons in the lane on the same tick
           const rx = p.pos.x - e.pos.x, rz = p.pos.z - e.pos.z;
           const along = rx * z.dir.x + rz * z.dir.z, perp = Math.abs(rx * z.dir.z - rz * z.dir.x);
           if (p.alive && along > 0 && along < z.length && perp < 1.3 + 0.6) {

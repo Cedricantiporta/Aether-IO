@@ -20,6 +20,7 @@ import { edgeLimit } from '../mapgen';
 import type { Enemy } from '../types';
 import { damagePlayer, applyPlayerDebuff, knockHero, playerTrickImmune, SLOW_BOSS, slowHero } from './combat';
 import { damageMinion } from './minions';
+import { hurtMinionsWhere } from './minionHurt';
 import { spawnEnemy, onEnemyDeath, spawnTelegraphLine, fireEnemyProjectile } from './enemies';
 import { bossStrike, bossPwr } from './bossMech';
 import { BT, voidRotHit, arena } from './bossFx';
@@ -490,6 +491,8 @@ function lavaHero(p: PlayerRuntime): void {
   hitHero(LAVA_PCT * (LP.gentle ? 0.8 : 1), 'FIRE', bp.tx[i], bp.tz[i], 0, 0);
   applyPlayerDebuff('BURN', 2.2, 8 + world.director.wave * 1.2);
 }
+let lavaMinT = 0, ehMinT = 0;   // summons' own hit timers (same cadence as the hero's: LAVA_HIT_CD / 0.5 s)
+function onLava(x: number, z: number): boolean { const i = tileOf(x, z); return i >= 0 && tileState(i, bp.t) === 2; }
 function tickLava(e: Enemy, dt: number): void {
   if (G.stage === 0) {
     G.stage = 1;
@@ -502,6 +505,7 @@ function tickLava(e: Enemy, dt: number): void {
   lavaTick(bp.t);
   bp.count = Math.max(0, G.lavaEnd - bp.t);
   G.hitCd -= dt; G.hitCdA -= dt;
+  if ((lavaMinT -= dt) <= 0) { lavaMinT = LAVA_HIT_CD; hurtMinionsWhere(onLava, 0, LAVA_PCT * (LP.gentle ? 0.8 : 1)); }   // summons on a lava tile burn too
   forEachHero(lavaHero);
   if (bp.t >= G.lavaEnd) end(e);
 }
@@ -520,6 +524,7 @@ function ehSafe(x: number, z: number): boolean {
   for (let i = 0; i < 4; i++) { const q = bp.props[i]; if (q.on && (q.x - x) ** 2 + (q.z - z) ** 2 < (q.r + 0.15) ** 2) return true; }
   return false;
 }
+function ehUnsafe(x: number, z: number): boolean { return !ehSafe(x, z); }
 function tickVoidPull(e: Enemy, dt: number): void {
   const t = bp.t;
   G.hitCd -= dt; G.tick -= dt; G.tickA -= dt;
@@ -562,6 +567,7 @@ function tickVoidPull(e: Enemy, dt: number): void {
     G.stage = 1; G.legs++;
     bp.flash = 1;
     events.emit('shake', { amount: 0.5 });
+    hurtMinionsWhere(ehUnsafe, 0, EH_PULSE_PCT);   // summons off the sigils are caught by the collapse too
     forEachHero((p) => {
       if (!p.alive || ehSafe(p.pos.x, p.pos.z)) return;
       bpStat.pulseHits++;
@@ -571,6 +577,7 @@ function tickVoidPull(e: Enemy, dt: number): void {
   }
   // the void floor ticks outside the sigils
   if (t >= 1.5 && t < EH_END - 0.5) {
+    if ((ehMinT -= dt) <= 0) { ehMinT = 0.5; hurtMinionsWhere(ehUnsafe, 0, EH_VOID_PCT); }
     forEachHero((p) => {
       if (!p.alive || ehSafe(p.pos.x, p.pos.z)) return;
       const ally = isAlly(p);
