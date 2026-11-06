@@ -35,7 +35,7 @@ import {
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, freezePlayer, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion, minionDebuff, minionTraitHit } from './minions';
-import { hurtMinionsCircle } from './minionHurt';
+import { hurtMinionsCircle, hurtMinionShot, bossSwat } from './minionHurt';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
@@ -1697,6 +1697,7 @@ function updateEnemy(e: Enemy): void {
   const qm = e.traits & TR.QUICK ? QUICK_RATE : 1;   // Quickdraw: shorter wind-ups
   const tg = isTreasureGoblin(e);   // (owner: the treasure goblin flees at a steady, readable speed: no dodge dash / flank / retreat)
   const dodging = ENEMY_DODGE && !tg && !locked && !winded && e.state !== 'SPAWN' && !e.boss && !e.mini && e.trickT <= 0 && e.bigT <= 0 && e.fearT <= 0 && tickDodge(e, dt);   // (smarter monsters sidestep what the hero throws)
+  if (anyMinion && (e.boss || e.mini) && !e.decoy) bossSwat(e, dt);   // bosses cleave summons next to them (minionHurt.ts)
   if (e.boss && bf.beat[e.id] > 0) { tickFormBeat(e, dt); stop(e); }   // a boss's form switch (bossForm.ts): untouchable, no AI
   else if (bp.on && phaseOwns(e)) { desiredYaw = phaseDrive(e, dt); }   // an invulnerable phase runs this enemy (boss / its slimes / spare heads)
   else if (winded) { stop(e); desiredYaw = Math.atan2(tdx, tdz); }
@@ -2189,7 +2190,7 @@ export function updateEnemyProjectiles(dt: number): void {
       }
       if (hitM >= 0) {
         p.active = false;
-        damageMinion(hitM, p.damage);
+        { const o = p.owner != null && p.owner >= 0 ? world.enemies[p.owner] : null; hurtMinionShot(hitM, p.damage, p.pct || 0, o ? (o.boss || o.mini || o.decoy) : world.director.bossId >= 0); }   // (boss / illusion shots: x2 like the hero's hit, pct shots = share of max HP; minionHurt.ts)
         // (owner) elemental shots carry their effect onto summons too
         if (p.kind === 'FIRE_BOLT' || p.debuff === 2 || p.debuff === 5) minionDebuff(hitM, 'BURN', 3, Math.max(2, p.damage * 0.12));
         else if (p.kind === 'POISON_ARROW') minionDebuff(hitM, 'POISON', 3.5, Math.max(1.5, p.damage * 0.1));
