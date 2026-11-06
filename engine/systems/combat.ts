@@ -904,6 +904,18 @@ function applyTraitHit(tr: number, from?: Vector3, boss = false): void {
   else if (tr & TR.KNOCK) { if (Math.random() < 0.5) knockHero(from.x, from.z, 3.4, 0.6, true); else knockHero(from.x, from.z, 3.2, 0, true); }   // Shover: half of the shoves are short knockdowns
 }
 
+/** (owner 2026-11-06) All soak shields together (Knight Radiant, Wizard Arcane, Aegis card) may never exceed this share of max HP: stacking them cannot make the hero effectively immune. Scales the shields down together. */
+export const SHIELD_CAP_FRAC = 0.4;
+export function clampShields(): void {
+  const p = world.player, mx = useGameStore.getState().stats.maxHealth, cap = mx * SHIELD_CAP_FRAC;
+  const tot = p.radiant + p.arcane + p.aegis;
+  if (tot <= cap || tot <= 0) return;
+  const k = cap / tot;
+  p.radiant *= k; p.arcane *= k; p.aegis *= k;
+  if (p.radiantMax > p.radiant) p.radiantMax = p.radiant;
+  if (p.arcaneMax > p.arcane) p.arcaneMax = p.arcane;
+  if (p.aegisMax > p.aegis) p.aegisMax = p.aegis;
+}
 export function damagePlayer(amount: number, o?: { /** hit for this share of the hero's MAX hp (boss phase attacks, see bossPhases.ts) */ pct?: number; pos?: Vector3; kind?: DamageKind; slow?: number; dot?: boolean; src?: Enemy; /** push distance (u) */ kb?: number; /** knockdown seconds */ down?: number; /** the attacker's TR.* trait bits (projectiles / telegraphs that carry them) */ tr?: number; /** terrain / hazard tick (spikes, lava, thorns, gas, fire patches): counts as ticking damage (HERO_DOT_MUL) */ env?: boolean; /** a boss aura tick: ticking, but not multiplied */ noDotMul?: boolean; /** an enemy PROJECTILE hit: the class projectile resist applies (dashMods.PROJ_RESIST) */ proj?: boolean; /** the shooter's enemy id (projectiles) */ srcId?: number; /** MECHANIC-CHECK hit (Avalanche, Tidal Wave, Sandstorm, collapses): needs `pct`; dodge roll, dash / dodge i-frames and the Energy Shield do NOT stop it (only the safe spot does); no defence reduction; leaves 1 HP when the hero is above 50% max HP, can kill at or below it. Big red number + screen flash */ crit?: boolean }): void {
   if (world.player === coopRoom.ally) { coopRoom.fwdHit?.(amount, o); return; }   // co-op host: this blow lands on the partner's hero (he applies his own defence)
   const p = world.player;
@@ -959,6 +971,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
     triggerBarrier(barrier);
     return;
   }
+  clampShields();
   // Aegis (card): the shield soaks the hit first; only what breaks through reaches health
   let toHp = reduced;
   if (p.radiant > 0 && !crit) {   // (a mechanic hit ignores every soak shield: only the safe spot saves you) Knight Radiant shield (gold): soaks first and reflects 20% of the hit to the attacker

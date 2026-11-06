@@ -9,7 +9,7 @@ import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import {
-  damageEnemy, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer,
+  damageEnemy, clampShields, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
@@ -336,6 +336,7 @@ export function updateSkills(dt: number): void {
 
   // Arcane Shield (Wizard passive, skill key 'storm'): every 12 s (-1 s per level, min 7 s) in battle a purple shield
   // absorbs 20% (+5% per level) of max HP for 6 s or until broken (combat.damagePlayer soaks it before the Aegis card).
+  clampShields();   // total shield cap (combat.ts)
   if (pl.arcaneT > 0) { pl.arcaneT -= dt; if (pl.arcaneT <= 0) { pl.arcaneT = 0; pl.arcane = 0; pl.arcaneMax = 0; } }
   if (lv.storm > 0 && st.hero === 'WIZARD') {
     stormT += dt;   // (charges at full speed while moving: a defensive passive for a kiting caster)
