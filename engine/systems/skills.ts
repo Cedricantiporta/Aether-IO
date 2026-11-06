@@ -9,7 +9,7 @@ import type { Projectile, Zone } from '../types';
 import { useGameStore } from '../../store';
 import { GameStatus } from '../../types';
 import {
-  damageEnemy, clampShields, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer,
+  damageEnemy, clampShields, damageEnemiesInRadius, findNearestEnemy, applyStatus, getAimDir, rollCrit, lastCrit, trySpendMana, healPlayer, shareGuardianShield,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile, procFlags, procHud, resetProcs } from './projectiles';
@@ -100,6 +100,7 @@ function riposte(level: number): void {
     damageEnemy(e, dmg, smiteOpts); applyStatus(e, smiteStun);
   }
   const sh = st.maxHealth * (0.02 + 0.005 * (level - 1)) * knightShieldGrow();   // a small holy shield (shares the Radiant bar)
+  shareGuardianShield(sh, pl.pos.x, pl.pos.z);
   pl.radiant = Math.min(st.maxHealth * 0.2, pl.radiant + sh); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = Math.max(pl.radiantT, 4);
   events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xfff3c0 });
   events.emit('crater', { pos: pl.pos.clone(), radius: R * 0.8, color: 0xffe08a });
@@ -301,6 +302,7 @@ export function updateSkills(dt: number): void {
     if (radT >= max && pl.hp < stats.maxHealth * 0.6 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
       radT = 0;
       const rsize = stats.maxHealth * (0.12 + 0.02 * (lv.radiant - 1)) * knightShieldGrow();
+      shareGuardianShield(rsize, pl.pos.x, pl.pos.z);
       pl.radiant = Math.max(pl.radiant, rsize); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = 5;
       events.emit('floatText', { pos: pl.pos, text: 'RADIANT SHIELD', color: 0xffe08a, scale: 0.9, dy: 2.4 });
       const n = 7 + lv.radiant, dmg = stats.damage * 1.3 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;

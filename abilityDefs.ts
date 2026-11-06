@@ -102,7 +102,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
       per: (lv) => `${pct(3.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
     { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 17,
-      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a short moment you take much less damage (weaker while another shield is up, no refresh while active). +2% dodge for 4s.',
+      desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a short moment you take much less damage (weaker while another shield is up, no refresh while active). Guardian: nearby monsters (not bosses) turn on you and nearby summons / allies get a small shield. +2% dodge for 4s.',
       per: (lv) => `Burst ${pct(1.8 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round(Math.min(0.5, 0.35 + 0.03 * (lv - 1)) * 100)}% damage taken · ${f1(2 + 0.25 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 10,
       desc: 'Rays of holy light strike down from above on the enemies around the target, one after another: each ray blasts a wide area for heavy damage, stuns and knocks enemies down (not bosses). More rays per level (max 12).',

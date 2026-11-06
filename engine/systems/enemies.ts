@@ -1575,7 +1575,8 @@ function updateEnemy(e: Enemy): void {
 
   // target: a nearby minion first, else the hero
   curMin = -1;
-  if (anyMinion && !e.boss && !e.mini) {
+  // Knight 'Guardian': while Shield Wall is up, ordinary monsters within TAUNT_R ignore the summons / pets and go for the Knight
+  if (anyMinion && !e.boss && !e.mini && !(player.guardT > 0 && (e.pos.x - player.pos.x) ** 2 + (e.pos.z - player.pos.z) ** 2 < TAUNT_R * TAUNT_R)) {
     minRe[e.id] -= dt;
     let k = minTgt[e.id];
     if (minRe[e.id] <= 0 || k < 0 || !world.minions[k].active) { minRe[e.id] = 0.4; k = nearestMinion(e.pos.x, e.pos.z, MINION_AGGRO); minTgt[e.id] = k; }
@@ -1920,8 +1921,10 @@ let lodTick = 0;
 const tgtAlly = new Uint8Array(MAX_ENEMIES), hpScaled = new Uint8Array(MAX_ENEMIES);
 const COOP_HP_MUL = 1.75;
 /** The hero this monster fights this frame (20% hysteresis so it does not flip-flop between two equally near heroes). */
+const TAUNT_R = 10;
 function chooseHero(e: Enemy, p: typeof world.player, a: typeof world.player): typeof world.player {
   if (!p.alive) return a;
+  if (p.guardT > 0 && !e.boss && !e.mini && (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2 < TAUNT_R * TAUNT_R) { tgtAlly[e.id] = 0; return p; }   // Knight Shield Wall taunt
   const dp = (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2, da = (e.pos.x - a.pos.x) ** 2 + (e.pos.z - a.pos.z) ** 2;
   const useAlly = tgtAlly[e.id] === 1 ? da < dp * 1.44 : da < dp * 0.64;
   tgtAlly[e.id] = useAlly ? 1 : 0;

@@ -17,7 +17,7 @@ import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../
 import { combo, registerUlt } from './combo';
 import type { GroundFx, GroundFxKind } from '../types';
 import {
-  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim, skillHits, DODGE_TEMP_S,
+  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim, skillHits, DODGE_TEMP_S, shareGuardianShield,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
@@ -588,6 +588,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       // Shield Wall: knockback burst, then heavy damage reduction
       if (p.guardT <= 0) { p.guardT = 2 + 0.25 * (lv - 1); p.guardRed = Math.min(0.5, 0.35 + 0.03 * (lv - 1)); }   // never refreshed while up;   // (owner: shield -50%: was 3s+0.4/lv at 50-75%)
       const wr = 8 + 0.3 * (lv - 1);
+      shareGuardianShield(stats.maxHealth * 0.08, p.pos.x, p.pos.z);   // Guardian: nearby summons / ally get a share (the wall itself is damage reduction, so the share is 4% of the Knight's max HP)
       damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 1.8, physKnock);
       events.emit('shockwave', { pos: p.pos.clone(), radius: wr, color: 0xffe08a });
       events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4, gold: true });

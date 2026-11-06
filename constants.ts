@@ -141,17 +141,17 @@ export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weapon
     NECROMANCER: {
         stats: { maxHealth: 51, maxMana: 170, moveSpeed: 9.32, damage: 20.5, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2, minionDmg: 0.25, minionLife: 1, minionHaste: 0.15 },
         weaponId: 'wand_n1',
-        description: 'Commands the dead: tougher, faster and harder-hitting summons carry the fight; its own spells stay modest. Fragile alone.'
+        description: 'Commands the dead: tougher, faster, harder-hitting summons carry the fight. Legion Bond: each living summon (max 6) gives +4% damage and +3% damage reduction; with none, basic attacks are 6% weaker. Fragile alone.'
     },
     KNIGHT: {
         stats: { maxHealth: 86, defense: 18, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.8, dmgReduce: 0.04, manaRegen: 1.0 },
         weaponId: 'sword_1',
-        description: 'Sword and shield: the sturdiest hero. Shields grow with level, steady regeneration, low damage. Holy light skills.'
+        description: 'Sword and shield: the sturdiest hero. Shields grow with level, steady regeneration, low damage. Guardian: Shield Wall, Radiant and Riposte shields also wrap nearby summons / allies (half), and Shield Wall taunts nearby monsters.'
     },
     BARBARIAN: {
         stats: { maxHealth: 84, defense: 16, moveSpeed: 8.47, damage: 15.0, fireRate: 1.05, knockback: 1.5, regen: 1.5, manaRegen: 1.0, skillDamage: 1.06 },
         weaponId: 'axe_1',
-        description: 'Balanced bruiser: axe and skills both pull their weight. Strong HP regeneration (grows with level), high defense and health. Tank.'
+        description: 'Balanced bruiser: axe and skills both pull their weight. Strong HP regeneration (grows with level) but only while fighting: x1.5 for 3 s after you deal damage, x0.5 when idle. High defense and health. Tank.'
     }
 };
 

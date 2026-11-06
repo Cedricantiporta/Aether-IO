@@ -9,7 +9,7 @@ import { world, allocZone } from '../world';
 import { events } from '../events';
 import { useGameStore } from '../../store';
 import { nearestTrap, damageTrap } from './roomTraps';
-import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, applyStatus, type DamageOpts } from './combat';
+import { damageEnemy, damageEnemiesInRadius, healPlayer, boneArmorMul, applyStatus, legion, type DamageOpts } from './combat';
 import type { Enemy } from '../types';
 import { inCurse } from './zones';
 import { abilityState } from './abilities';
@@ -370,6 +370,7 @@ export function updateMinions(dt: number): void {
   let slotI = 0, army = false, raised = false, wn = 0;   // raised = a Raise Dead MELEE skeleton stands
   let alive = 0;
   for (let i = 0; i < M.length; i++) if (M[i].active) { if (M[i].src === SRC_ULT) army = true; else if (M[i].src === SRC_RAISE && M[i].kind === MINION_WARRIOR) raised = true; if (M[i].kind === MINION_WARRIOR && M[i].src !== SRC_ALLY) fIdx[i] = wn++; if (M[i].src !== SRC_ALLY && M[i].src !== SRC_LAST) alive++; }
+  legion.n = alive;   // Necromancer 'Legion Bond' (combat.legionDmg / legionDR)
   // the last summon fell: one skeleton warrior claws up beside the hero for a few seconds (not again until a new summon has risen)
   if (alive === 0 && summonedN > 0 && pl.alive && world.room.active) {
     const st = useGameStore.getState();

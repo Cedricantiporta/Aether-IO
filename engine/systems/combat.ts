@@ -198,6 +198,22 @@ function heroDmgMul(): number { return useGameStore.getState().hero === 'ARCHER'
 /** (owner 2026-11-04) every hero has 3% base dodge (store.calculateStats); dashes / some skills add +2% for DODGE_TEMP_S seconds (p.dodgeT). */
 export const DODGE_TEMP = 0.02, DODGE_TEMP_S = 4;
 export const skillHits = { n: 0 };
+/** Barbarian: world.time of the hero's last landed hit (regen is full only while fighting, player.ts). */
+export const dealtAt = { t: -99 };
+/** Necromancer 'Legion Bond': living summons (not the run ally), refreshed by minions.updateMinions. */
+export const legion = { n: 0 };
+/** Knight 'Guardian': a share of a Knight shield (Shield Wall / Radiant / Riposte) also wraps summons and the run ally within 8 m.
+ *  Each keeps its own cap (40% of its max HP, like the hero's total shield cap). */
+export function shareGuardianShield(amount: number, x: number, z: number): void {
+  const half = amount * 0.5, R2 = 64;
+  for (const m of world.minions) {
+    if (!m.active || m.rise > 0 || (m.x - x) ** 2 + (m.z - z) ** 2 > R2) continue;
+    m.shield = Math.min(m.maxHp * 0.4, m.shield + half); m.shieldT = Math.max(m.shieldT, 5);
+  }
+}
+const LEGION_MAX = 6;
+const legionDmg = (basic: boolean): number => legion.n > 0 ? 1 + 0.04 * Math.min(LEGION_MAX, legion.n) : basic ? 0.94 : 1;   // strong with its army, a bit weaker alone
+const legionDR = (): number => 1 - 0.03 * Math.min(LEGION_MAX, legion.n);
 /** Ultimate charge (0..100) from damage dealt and kills. */
 export function addUlt(n: number): void {
   const p = world.player;
@@ -468,6 +484,7 @@ function guestHit(e: Enemy, amount: number, o: DamageOpts): void {
 }
 
 export function damageEnemy(e: Enemy, amount: number, o: DamageOpts): void {
+  if (o.source === 'PLAYER') { dealtAt.t = world.time; if (!o.dot && useGameStore.getState().hero === 'NECROMANCER') amount *= legionDmg(!!o.basic); }   // (before the co-op guest forward so both sides count)
   if (coopRoom.guest) { guestHit(e, amount, o); return; }   // co-op guest: the monsters live on the host, send it the hit (net/coopGuest.ts)
   if (!e.active || e.state === 'DYING' || e.state === 'SPAWN') return;
   if (e.shellT > 0) return; // Shellback's Tidal Shell: immune
@@ -963,7 +980,7 @@ export function damagePlayer(amount: number, o?: { /** hit for this share of the
   const def = (st.stats.defense + p.buffDef) * (p.defDownT > 0 ? 0.7 : 1) / (1 + 0.025 * Math.max(0, world.director.wave - 1));
   const holy = (p.guardT > 0 ? 1 - p.guardRed * (p.radiant > 0 || p.aegis > 0 ? 0.6 : 1) : 1);   // Shield Wall; weaker while another shield is up (no immunity stacking)   // knight Shield Wall
   // Necromancer Bone Armor: each living minion soaks a little (max 30%)
-  const bone = boneArmorMul();
+  const bone = boneArmorMul() * (st.hero === 'NECROMANCER' ? legionDR() : 1);
   let reduced = Math.max(1, amount * (100 / (100 + def)) * mods.dmg * (1 - Math.min(0.6, st.stats.dmgReduce))   /* (owner 2026-10-25: cap 60%, was 80%: stacked Bulwark cards made the hero unkillable) */ * holy * bone * dailyMods.taken * (runCards.slayer > 0 && bossAlive() ? 1 - runCards.slayer : 1));   // (dailyMods.taken: Daily Trial Glass Cannon)
   if (crit) { reduced = st.stats.maxHealth * o!.pct!; if (p.hp > st.stats.maxHealth * 0.5) reduced = Math.min(reduced, p.hp - 1); }   // mechanic hit: flat share of max HP; above 50% HP it leaves at least 1 HP, at or below 50% it can kill
   else if (o?.pct) { reduced = st.stats.maxHealth * o.pct * (trial.on ? TRIAL_PCT_MUL : 1) * (1 - Math.min(0.3, st.stats.dmgReduce * 0.5)); if (p.hp > st.stats.maxHealth * 0.25) reduced = Math.min(reduced, p.hp - 1); }   // boss phase hits: a share of max HP (bypasses defence; never lethal unless the hero is already under 25%)
