@@ -11,7 +11,7 @@ import { runCards, potionCooldown } from '../runCards';
 import { PLAYER_RADIUS } from '../../constants';
 import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target';
 import { trapAim, lockedTrap, nearestTrapPri, trapBusy, trapDist, type TrapObj } from './roomTraps';
-import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
+import { dealtAt, GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
 import { fireBasicAttack, basicAimDir, clearShot } from './projectiles';
 import { ARCHER_BASE_RANGE } from './rangeConst';
@@ -332,7 +332,7 @@ export function updatePlayer(dt: number): void {
 
   // ---- regen / vitality
   const regenCap = stats.maxHealth * runCards.regenCap;   // regeneration only heals up to 70% of max HP (85% with the Alchemist card); potions / heals ignore it
-  if (p.hp < regenCap) p.hp = Math.min(regenCap, p.hp + (stats.regen + lv.regen * 0.25) * 0.5 * dt);   // all HP regen halved; the Regeneration skill halved again (owner)
+  if (p.hp < regenCap) p.hp = Math.min(regenCap, p.hp + (stats.regen + lv.regen * 0.25) * 0.5 * dt * (st.hero === 'BARBARIAN' ? (world.time - dealtAt.t < 3 ? 1.5 : 0.5) : 1));   // Barbarian: x1.5 within 3 s of dealing damage, x0.5 otherwise   // all HP regen halved; the Regeneration skill halved again (owner)
   p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * dt);   // class bases 1.0-1.5/s (constants HERO_STATS); the sheet shows the real rate
   if (p.hp > stats.maxHealth) p.hp = stats.maxHealth;
   if (p.mana > stats.maxMana) p.mana = stats.maxMana;

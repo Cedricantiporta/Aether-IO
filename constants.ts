@@ -129,29 +129,29 @@ export const COLORS = {
 
 export const HERO_STATS: Record<HeroClass, { stats: Partial<PlayerStats>, weaponId: string, description: string }> = {
     ARCHER: {
-        stats: { moveSpeed: 9.24, fireRate: 1.75, maxHealth: 48, manaRegen: 1.2, damage: 14.6, knockback: 0.3, critRate: 0.1 }, 
+        stats: { moveSpeed: 9.24, fireRate: 1.9, maxHealth: 48, manaRegen: 1.2, damage: 13.2, knockback: 0.3, critRate: 0.16, critDamage: 1.65, lifeSteal: 0.004 }, 
         weaponId: 'bow_1',
-        description: 'Plant your feet and loose a storm of arrows. High attack rate, low health.'
+        description: 'Fast, precise and fragile. Highest attack speed, critical hits, a little life steal and the longest dash; leans on mobility and basic attacks.'
     },
     WIZARD: {
-        stats: { moveSpeed: 10, maxMana: 200, damage: 30.5, maxHealth: 30, manaRegen: 1.5, knockback: 0.5, skillDamage: 1.5 },
+        stats: { moveSpeed: 10, maxMana: 200, damage: 28.5, maxHealth: 30, manaRegen: 1.5, knockback: 0.5, skillDamage: 1.7, cooldownReduction: 0.06, stunBonus: 0.2, onHitSlowChance: 0.05, onHitBurnChance: 0.04 },
         weaponId: 'staff_1',
-        description: 'High Mana Regen & Skill Damage (grow with level). Squishy.'
+        description: 'The spell specialist: top skill damage, shorter cooldowns, stronger burn / freeze / slow / stun and a mightier ultimate. Weak basic attacks, squishy.'
     },
     NECROMANCER: {
-        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 9.32, damage: 22, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2 },
+        stats: { maxHealth: 51, maxMana: 170, moveSpeed: 9.32, damage: 20.5, fireRate: 1.2, manaRegen: 1.4, knockback: 0.4, skillDamage: 1.2, minionDmg: 0.25, minionLife: 1, minionHaste: 0.15 },
         weaponId: 'wand_n1',
-        description: 'Commands the dead: skeletons fight for you while soul bolts and curses do the rest. Fragile alone.'
+        description: 'Commands the dead: tougher, faster, harder-hitting summons carry the fight. Legion Bond: each living summon (max 6) gives +4% damage and +3% damage reduction; with none, basic attacks are 6% weaker. Fragile alone.'
     },
     KNIGHT: {
-        stats: { maxHealth: 86, defense: 18, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.6, dmgReduce: 0.03, manaRegen: 1.0 },
+        stats: { maxHealth: 86, defense: 18, moveSpeed: 8.47, damage: 15.5, fireRate: 1.25, knockback: 1.2, regen: 0.8, dmgReduce: 0.04, manaRegen: 1.0 },
         weaponId: 'sword_1',
-        description: 'Sword and shield. Wide slashes up close, the sturdiest hero. Holy light skills.'
+        description: 'Sword and shield: the sturdiest hero. Shields grow with level, steady regeneration, low damage. Guardian: Shield Wall, Radiant and Riposte shields also wrap nearby summons / allies (half), and Shield Wall taunts nearby monsters.'
     },
     BARBARIAN: {
-        stats: { maxHealth: 84, defense: 15, moveSpeed: 8.47, damage: 14.6, fireRate: 1.05, knockback: 1.5, regen: 1.0, manaRegen: 1.0 },
+        stats: { maxHealth: 84, defense: 16, moveSpeed: 8.47, damage: 15.0, fireRate: 1.05, knockback: 1.5, regen: 1.5, manaRegen: 1.0, skillDamage: 1.06 },
         weaponId: 'axe_1',
-        description: 'High Defense & HP Regen. Health & damage grow with level. Tank.'
+        description: 'Balanced bruiser: axe and skills both pull their weight. Strong HP regeneration (grows with level) but only while fighting: x1.5 for 3 s after you deal damage, x0.5 when idle. High defense and health. Tank.'
     }
 };
 

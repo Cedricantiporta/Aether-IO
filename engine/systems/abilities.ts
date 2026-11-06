@@ -17,7 +17,7 @@ import { abilityCd, lvMul, ULT_MAX, ACTIVE_ORDER, type ActiveSlot } from '../../
 import { combo, registerUlt } from './combo';
 import type { GroundFx, GroundFxKind } from '../types';
 import {
-  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim, skillHits, DODGE_TEMP_S,
+  getAimDir, aimOverride, trySpendMana, findNearestEnemy, damageEnemy, damageEnemiesInRadius, applyStatus, healPlayer, addShake, autoAim, skillHits, DODGE_TEMP_S, shareGuardianShield,
   type DamageOpts, type StatusEffect,
 } from './combat';
 import { spawnProjectile } from './projectiles';
@@ -69,7 +69,7 @@ export const abilityState = {
 };
 
 /** Ultimate cooldown after each use (s), on top of needing a full charge bar. Cooldown reduction applies. */
-export const ULT_COOLDOWN = 90;
+export const ULT_COOLDOWN = 72;   // (class identity pass 2026-11-06: -20%, was 90)
 /** True when the ultimate can be cast: full charge bar and cooldown finished. */
 export function ultReady(): boolean { const p = world.player; return p.ult >= 99.99 && abilityState.ultCd <= 0 && p.ultT <= 0; }
 
@@ -446,7 +446,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       // SHADOW ROLL (class dash). Aimed: roll toward the aim; tap/auto: end BEHIND the nearest enemy, else roll away from it.
       let mx = dx, mz = dz;
       const inv = 0.3 + 0.03 * lv;
-      p.dashT = 0.25;
+      p.dashT = 0.32;   // (archer: the longest dash, +28% range; was 0.25)
       // tap: roll exactly where the hero faces (the facing arrow under the hero); hold-to-aim: along the aimed line
       if (dashAuto) { mx = Math.sin(p.facing); mz = Math.cos(p.facing); }
       p.dashDir.set(mx, 0, mz);
@@ -588,6 +588,7 @@ function cast(slot: ActiveSlot, dash = false, index = -1): void {
       // Shield Wall: knockback burst, then heavy damage reduction
       if (p.guardT <= 0) { p.guardT = 2 + 0.25 * (lv - 1); p.guardRed = Math.min(0.5, 0.35 + 0.03 * (lv - 1)); }   // never refreshed while up;   // (owner: shield -50%: was 3s+0.4/lv at 50-75%)
       const wr = 8 + 0.3 * (lv - 1);
+      shareGuardianShield(stats.maxHealth * 0.08, p.pos.x, p.pos.z);   // Guardian: nearby summons / ally get a share (the wall itself is damage reduction, so the share is 4% of the Knight's max HP)
       damageEnemiesInRadius(p.pos.x, p.pos.z, wr, b * 1.8, physKnock);
       events.emit('shockwave', { pos: p.pos.clone(), radius: wr, color: 0xffe08a });
       events.emit('shieldBlock', { pos: p.pos.clone(), radius: 3.4, gold: true });
@@ -753,6 +754,7 @@ export function castUlt(): void {
   curMul = 1;
   const fin = registerUlt();
   if (fin) curMul += 0.5;
+  if (st.hero === 'WIZARD') curMul += 0.1;   // (class identity: the Wizard's ultimate hits 10% harder)
   a.finisher = fin; a.ultMul = curMul;
   a.windupT = a.windupDur = ULT_WINDUP;
   a.windupAim = aimOverride.on; a.windupX = aimOverride.x; a.windupZ = aimOverride.z;
