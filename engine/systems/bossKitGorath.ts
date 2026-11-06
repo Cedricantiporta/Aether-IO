@@ -23,6 +23,7 @@ import { events } from '../events';
 import type { Enemy } from '../types';
 import { edgeLimit } from '../mapgen';
 import { KB, damagePlayer } from './combat';
+import { hurtMinionsLineOnce } from './minionHurt';
 import { enter, requestYaw, fireEnemyProjectile, spawnTelegraphLine, spawnTelegraphCone } from './enemies';
 import { bossNear, closeDue, closeUsed, proxBegin, proxPressure, bossGapSet } from './bossMech';
 import { nearestHero, heroesFill, HL } from '../heroes';
@@ -47,7 +48,7 @@ const TRIAL_GAP = 2.0, TRIAL_RISE = 1.8;
 
 const G = {
   id: -1, mode: IDLE, skill: -1, t: 0, w: 0, n: 0, cycle: 0,
-  lx: 0, lz: 0, dx: 0, dz: 1, yaw: 0, hitMask: 0, set2: false, markT: 0, ring: 0, crashed: false,
+  lx: 0, lz: 0, dx: 0, dz: 1, yaw: 0, hitMask: 0, mMask: 0, set2: false, markT: 0, ring: 0, crashed: false,
   trial: { on: false, stage: 0, t: 0, gap: 0, casts: 0, max: 4, broken: 0, cd: TRIAL_CD0, n: 0 },
 };
 const pickStat: Record<string, number> = {};
@@ -133,7 +134,7 @@ function lockHero(e: Enemy): void {
 function begin(e: Enemy, s: number, ux: number, uz: number): void {
   void ux; void uz;
   const p = ph(e);
-  G.skill = s; G.hitMask = 0; G.set2 = false; G.n = 0; G.crashed = false;
+  G.skill = s; G.hitMask = 0; G.mMask = 0; G.set2 = false; G.n = 0; G.crashed = false;
   proxBegin(e);
   stop(e);
   lockHero(e);
@@ -211,7 +212,7 @@ function wind(e: Enemy, dt: number): void {
       setMode(e, ACT);
       break;
     }
-    case CHARGE: setMode(e, ACT); G.hitMask = 0; break;
+    case CHARGE: setMode(e, ACT); G.hitMask = 0; G.mMask = 0; break;
     case GAZE: setMode(e, ACT); break;
     default: setMode(e, ACT); G.ring = 0; break;
   }
@@ -275,6 +276,7 @@ function charge(e: Enemy): void {
       return;
     }
   }
+  G.mMask = hurtMinionsLineOnce(e.pos.x, e.pos.z, G.dx, G.dz, e.radius, e.radius + 3, ROLL_HW + 0.55, 0, PCT_ROLL, G.mMask);   // ...and every summon in it once
   // the roll hits every hero in its lane once
   const n = heroesFill(), cur = world.player;
   for (let i = 0; i < n; i++) {

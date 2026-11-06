@@ -15,6 +15,7 @@ import type { Enemy, EnemyKind, Zone } from '../types';
 import { damagePlayer, applyPlayerDebuff, KB } from './combat';
 import { spawnTelegraphCircle, spawnTelegraphLine, spawnTelegraphCone, fireEnemyProjectile, enter, requestYaw } from './enemies';
 import { inCone } from './bossFx';
+import { hurtMinionsCircle, hurtMinionsLine, hurtMinionsCone } from './minionHurt';
 
 export const EB = { SLAM: 20, CONE: 21, LINE: 22, RAIN: 23, RING: 24 } as const;
 export const isEliteBigTrick = (id: number): boolean => id >= EB.SLAM && id <= EB.RING;
@@ -149,6 +150,11 @@ export function resolveEliteBig(z: Zone): void {
   const rx = p.pos.x - z.pos.x, rz = p.pos.z - z.pos.z;
   const rr = z.radius + 0.6;
   const inside = p.alive && rx * rx + rz * rz < rr * rr;
+  if (z.damage > 0 && z.trick !== EB.RING) {   // the strike hurts the Necromancer's summons in the same shape (minionHurt.ts)
+    if (z.trick === EB.CONE) hurtMinionsCone(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.radius, z.aux, z.damage);
+    else if (z.trick === EB.LINE) hurtMinionsLine(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.length, z.radius * 0.5 + 0.6, z.damage);
+    else hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, z.damage);
+  }
   switch (z.trick) {
     case EB.SLAM:
       if (inside) { damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('STUN', 0.5); }

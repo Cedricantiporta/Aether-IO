@@ -23,6 +23,7 @@
 // or apply BURN (whose ticks are multiplied) so the numbers stay consistent.
 // All state is pooled in `rt` (no per-frame allocation); render/RoomTraps.tsx draws it.
 // ============================================================================
+import { hurtMinionsLine } from './minionHurt';
 import { world } from '../world';
 import { events } from '../events';
 import { useGameStore, DMG_INFLATE } from '../../store';
@@ -52,7 +53,7 @@ export const rt = {
   nTower: 0, tower: Array.from({ length: 3 }, () => ({ x: 0, z: 0, state: 0, t: 0, cd: 0, a0: 0, volley: 0, glow: 0, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   nStatue: 0, statue: Array.from({ length: 3 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, kind: 0, tier: 0, lock: 0, sw: 1, tick: 0, acc: 0, glow: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.5, flash: 0, hitSeq: 0 })),
   /** Frostpeak ice-laser turrets: idle (faces you, cd) -> telegraph (floor line, tracks then locks) -> beam -> rest */
-  nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, hitA: false, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
+  nLaser: 0, laser: Array.from({ length: 4 }, () => ({ x: 0, z: 0, yaw: 0, state: 0, t: 0, cd: 0, lock: 0, glow: 0, hit: false, hitA: false, hitM: true, tier: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.3, flash: 0, hitSeq: 0 })),
   /** Void ghost shrine + its ghosts (ghosts are plain pooled visuals + a touch check: never enemies) */
   nShrine: 0, shrine: Array.from({ length: 2 }, () => ({ x: 0, z: 0, glow: 0, t: 0, nG: 0, hp: 1, maxHp: 1, dead: false, col: null as Collider | null, rad: 1.4, flash: 0, hitSeq: 0 })),
   ghost: Array.from({ length: 8 }, () => ({ on: false, own: 0, x: 0, z: 0, vx: 0, vz: 0, state: 0, t: 0, cd: 0, ph: 0, poof: 0, dx: 0, dz: 0 })),
@@ -691,9 +692,10 @@ function trapsTick(dt: number): void {
       if (!fighting || !alive) { l.state = 0; l.cd = 2.5; continue; }
       if (l.t < LASER_AIM) { l.yaw += wrapPi(Math.atan2(px - l.x, pz - l.z) - l.yaw) * Math.min(1, dt * 8); l.lock = l.yaw; }   // aims at you, then the lane is locked
       else l.yaw = l.lock;
-      if (l.t >= LASER_WARN) { l.state = 2; l.t = 0; l.hit = false; l.hitA = false; addShake(0.12); }
+      if (l.t >= LASER_WARN) { l.state = 2; l.t = 0; l.hit = false; l.hitA = false; l.hitM = false; addShake(0.12); }
     } else if (l.state === 2) {
       l.t += dt; l.yaw = l.lock;
+      if (!l.hitM) { l.hitM = true; hurtMinionsLine(l.x + Math.sin(l.lock) * LASER_MUZZLE, l.z + Math.cos(l.lock) * LASER_MUZZLE, Math.sin(l.lock), Math.cos(l.lock), LASER_LEN, LASER_HALF_W + 0.35, 0, LASER_DMG * scale); }   // the frost laser freezes-and-hurts summons in its lane once per shot
       for (let hi = 0; hi < HN; hi++) {   // (co-op: the beam lane hurts whoever stands in it, once each)
         const h = HS[hi], ally = hi === 1;
         if (!h.alive || (ally ? l.hitA : l.hit) || h.dashT > 0 || !(armDist(h.pos.x, h.pos.z, l.x + Math.sin(l.lock) * LASER_MUZZLE, l.z + Math.cos(l.lock) * LASER_MUZZLE, l.lock, LASER_LEN) < LASER_HALF_W + 0.35)) continue;

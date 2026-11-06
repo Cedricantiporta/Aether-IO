@@ -29,6 +29,7 @@ import { useGameStore, rollDropPlus } from '../../store';
 import { rarityForDepth } from '../roomDefs';
 import { edgeLimit } from '../mapgen';
 import { bp } from './bossPhaseState';
+import { hurtMinionsCircle, hurtMinionsCone, hurtMinionsLine, hurtMinionsLineOnce } from './minionHurt';
 import { bossNear, proxTick, proxRate, closeUsed } from './bossMech';
 
 export type HumanKind = 'VARN' | 'SABLE' | 'ROOK';
@@ -70,7 +71,7 @@ export const humanTraps: HumanTrap[] = Array.from({ length: 10 }, () => ({ activ
 const S = {
   id: -1, kind: 'VARN' as HumanKind,
   cd: [0, 0, 0, 0, 0, 0, 0], gap: 0.8, strafe: 1, strafeT: 2,
-  t: 0, wind: 0, act: 0, dirX: 0, dirZ: 1, tick: 0, flag: false, inv: 0, blockText: 0,
+  t: 0, wind: 0, act: 0, dirX: 0, dirZ: 1, tick: 0, flag: false, mMask: 0, inv: 0, blockText: 0,
   wallT: 0, lockYaw: 0, bannerId: -1, bannerDone: false, bannerArmed: false,
   wardUp: false, spotX: 0, spotZ: 0, houndId: -1, volley: 0,
   turnT: 0, turnYaw: 0, vanishT: 0, footT: 0, footN: 0, huntT: 0,
@@ -133,6 +134,7 @@ function tickPending(dt: number): void {
     events.emit('explosion', { pos: tmp.clone(), radius: p.r * 0.8, color: p.color });
     if (p.r > 4.5) events.emit('quake', { pos: tmp.clone(), radius: p.r });
     if (p.r > 7) { events.emit('shake', { amount: 0.45 }); events.emit('shockwave', { pos: tmp.clone(), radius: p.r * 1.05, color: p.color }); }   // (heavy slam: screen shake + a ground ring)
+    hurtMinionsCircle(p.x, p.z, p.r, p.dmg);   // summons inside the circle take the same blow
     const hn = heroesFill(), cur = world.player;   // (co-op: everyone inside the circle)
     for (let hi = 0; hi < hn; hi++) {
       world.player = HL[hi];
@@ -376,6 +378,7 @@ function begin(e: Enemy, k: number, px: number, pz: number): void {
 function basicHit(e: Enemy): void {
   const B = BASIC_DEF[S.kind], P = pw(e) * (S.kind === 'VARN' && S.hitN >= 2 ? 1.0 : B.dmg);
   const cosH = Math.cos(B.half), reach = B.range + 0.6;
+  hurtMinionsCone(e.pos.x, e.pos.z, S.dirX, S.dirZ, B.range, B.half, P);   // the cut hits summons in the same arc
   const hn = heroesFill(), cur = world.player;
   for (let hi = 0; hi < hn; hi++) {
     const p = HL[hi];
@@ -396,7 +399,7 @@ function basicHit(e: Enemy): void {
 
 function release(e: Enemy, px: number, pz: number): void {
   const k = e.pattern, P = pw(e);
-  enter(e, 'ATTACK'); S.t = 0; humanView.charge = 0;
+  enter(e, 'ATTACK'); S.t = 0; humanView.charge = 0; S.mMask = 0;
   if (k === BASIC) { basicHit(e); return; }
   if (S.kind === 'VARN') {
     if (k === 1) { S.wallT = S.act; S.lockYaw = Math.atan2(S.dirX, S.dirZ); humanView.wall = 1; events.emit('shieldBlock', { pos: e.pos.clone(), radius: 3 }); }
@@ -411,6 +414,7 @@ function release(e: Enemy, px: number, pz: number): void {
       tmp2.set(S.spotX, 0, S.spotZ);
       events.emit('explosion', { pos: tmp2.clone(), radius: BLINK_R, color: C_VIOLET });
       events.emit('shake', { amount: 0.35 }); events.emit('quake', { pos: tmp2.clone(), radius: BLINK_R });
+      hurtMinionsCircle(S.spotX, S.spotZ, BLINK_R, P * 1.7);
       if (playerIn(S.spotX, S.spotZ, BLINK_R)) { damagePlayer(P * 1.7, { pos: tmp2, kind: 'PHYSICAL' }); effects(KNOCK | STUN | SLOW, S.spotX, S.spotZ); }   // (owner) the Hexblade's blink strike knocks down
       humanView.atk++;
     } else if (k === 3) {
@@ -442,6 +446,7 @@ function release(e: Enemy, px: number, pz: number): void {
       S.markZ = null;
       events.emit('lightning', { from: new Vector3(e.pos.x, 1.4, e.pos.z), to: new Vector3(e.pos.x + S.dirX * 36, 1.2, e.pos.z + S.dirZ * 36) });
       events.emit('shake', { amount: 0.45 });
+      hurtMinionsLine(e.pos.x, e.pos.z, S.dirX, S.dirZ, 36, MARK_W * 0.5 + 0.6, P * 3.2);   // the marked shot pierces summons in its lane
       const rx = px - e.pos.x, rz = pz - e.pos.z, t = rx * S.dirX + rz * S.dirZ, perp = Math.abs(rx * S.dirZ - rz * S.dirX);
       if (world.player.alive && t > -0.6 && t < 36.6 && perp < MARK_W * 0.5 + 0.6) { damagePlayer(P * 3.2, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM }); applyPlayerDebuff('BLEED', 3, Math.max(2, P * 0.1)); }   // (owner) the marked shot knocks down
       humanView.atk++;
@@ -462,6 +467,7 @@ function tickActive(e: Enemy, dt: number, px: number, pz: number): void {
     }
     if (k === 2) {   // Shield Bash: charge along the telegraphed line, one hit + knockback
       e.vel.set(S.dirX * BASH_SPEED, 0, S.dirZ * BASH_SPEED); requestYaw(Math.atan2(S.dirX, S.dirZ));
+      S.mMask = hurtMinionsLineOnce(e.pos.x, e.pos.z, S.dirX, S.dirZ, 0, 2, BASH_W * 0.5 - 0.5, P * 1.6, 0, S.mMask);   // the bash plows through summons in front of him (once per summon)
       if (!S.flag && playerIn(e.pos.x, e.pos.z, BASH_W * 0.5 - 0.5)) {
         S.flag = true;
         damagePlayer(P * 1.6, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });   // shield bash connects: knockdown

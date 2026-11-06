@@ -14,6 +14,7 @@
 // LICH  patterns: 0 SPIRAL, 1 FAN, 2 BLINK
 // The wave 30-70 bosses live in bosses2.ts (dispatched from updateBoss below).
 // ============================================================================
+import { hurtMinionsCircleOnce } from './minionHurt';
 import { Vector3 } from 'three';
 import { world } from '../world';
 import { edgeLimit } from '../mapgen';
@@ -55,7 +56,7 @@ const BLINK_IN = 0.4;
 const HUG_BLINK_CD = 4;
 let hugBlinkT = 0;
 const DASH_LANE_W = 5.6, DASH_HIT_R = 2.6;
-let chargeHit = false;
+let chargeHit = false, chargeMMask = 0;
 
 function setVel(e: Enemy, ux: number, uz: number, spd: number): void {
   e.vel.set(ux * spd, 0, uz * spd);
@@ -204,7 +205,7 @@ function beginCharge(e: Enemy, ux: number, uz: number): void {
   e.dir.set(ux, 0, uz);
   enter(e, 'WINDUP');
   const len = golemChargeSpeed(e) * CHARGE_DUR + e.radius;
-  chargeHit = false;
+  chargeHit = false; chargeMMask = 0;
   spawnTelegraphLine(e.pos.x, e.pos.z, ux, uz, len, DASH_LANE_W, golemWindup(e), 0xef4444);   // (owner 2026-10-26) boss dashes: a wider red lane and a bigger hit area
 }
 
@@ -234,6 +235,7 @@ function golemAttack(e: Enemy): void {
     setVel(e, e.dir.x, e.dir.z, golemChargeSpeed(e));
     requestYaw(Math.atan2(e.dir.x, e.dir.z));
     const pp = world.player;
+    chargeMMask = hurtMinionsCircleOnce(e.pos.x, e.pos.z, e.radius + DASH_HIT_R, e.projectileDamage * 1.5, 0, chargeMMask);   // the charge plows through summons too (once each)
     if (!chargeHit && pp.alive && (pp.pos.x - e.pos.x) ** 2 + (pp.pos.z - e.pos.z) ** 2 < (e.radius + DASH_HIT_R) ** 2) {
       chargeHit = true; damagePlayer(e.projectileDamage * 1.5, { pos: e.pos, kind: 'PHYSICAL', ...KB.SLAM });
     }

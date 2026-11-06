@@ -17,6 +17,7 @@ import {
 import { hitRoomTraps } from './roomTraps';
 import { resolveTrick, updateWalls } from './tricks';
 import { resolveBossZone, arenaSlow, BT } from './bossFx';
+import { hurtMinionsCircle, hurtMinionsLine, dotAmt } from './minionHurt';
 
 const FIRE_TICK = 0.25;
 const POISON_TICK = 0.5;
@@ -166,6 +167,7 @@ function holeTick(z: Zone, dt: number): void {
 let poisonZoneT = -9;
 const poisonZoneReady = (): boolean => { if (world.time - poisonZoneT < POISON_TICK * 0.9) return false; poisonZoneT = world.time; return true; };
 function poisonTick(z: Zone): void {
+  if (z.hostile) hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, dotAmt(z.damage, POISON_TICK));   // boss poison cloud: summons stand in it too
   const p = world.player;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
   const rr = z.radius + PLAYER_RADIUS;
@@ -236,6 +238,10 @@ function puddleUpdate(z: Zone, dt = 0): void {
 
 /** Hostile trick patches: affect the player only. */
 function hostilePatch(z: Zone, dt: number): void {
+  if (z.kind === 'FIREPATCH' || z.kind === 'ACID' || z.kind === 'PLAGUE' || z.kind === 'CALTROPS') {   // boss ground patches tick on summons too (same cadence as the hero's)
+    z.tickT += dt;
+    if (z.tickT >= HAZARD_TICK) { z.tickT -= HAZARD_TICK; hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, dotAmt(z.damage, HAZARD_TICK)); }
+  }
   const p = world.player;
   if (!p.alive) return;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
@@ -249,9 +255,7 @@ function hostilePatch(z: Zone, dt: number): void {
     default: break;
   }
   if (z.kind === 'FIREPATCH' || z.kind === 'ACID' || z.kind === 'PLAGUE' || z.kind === 'CALTROPS') {
-    z.tickT += dt;
-    if (z.tickT >= HAZARD_TICK) {
-      z.tickT -= HAZARD_TICK;
+    if (z.tickT < dt) {   // (this frame's tick: tickT just wrapped above)
       if (z.kind === 'FIREPATCH') applyPlayerDebuff('BURN', 1.5, z.damage);
       else if (z.kind === 'CALTROPS') applyPlayerDebuff('BLEED', 1.5, z.damage);
       else applyPlayerDebuff('POISON', 1.5, z.damage);
@@ -316,12 +320,14 @@ function lineHitsPlayer(z: Zone): boolean {
 
 /** A telegraph's strike on `world.player` (the real hero or, in co-op, the partner's stand-in). */
 function circleHit(z: Zone): void {
+  hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, z.damage);   // the strike hurts the Necromancer's summons in the same circle (minionHurt.ts)
   const p = world.player;
   const dx = p.pos.x - z.pos.x, dz = p.pos.z - z.pos.z;
   const rr = z.radius + PLAYER_RADIUS;
   if (dx * dx + dz * dz < rr * rr) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
 }
 function lineHit(z: Zone): void {
+  if (z.damage > 0) hurtMinionsLine(z.pos.x, z.pos.z, z.dir.x, z.dir.z, z.length, z.radius * 0.5 + 0.6, z.damage);
   if (z.damage > 0 && lineHitsPlayer(z)) damagePlayer(z.damage, { pos: z.pos, kind: 'PHYSICAL', tr: z.aux | 0, kb: z.kb || undefined, down: z.down || undefined });
 }
 function resolveZone(z: Zone): void { if (z.trick >= BT.VISUAL) resolveBossZone(z); else resolveTrick(z); }

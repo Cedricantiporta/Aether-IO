@@ -14,12 +14,13 @@ import { Vector3 } from 'three';
 import { world, allocZone } from '../world';
 import { events } from '../events';
 import type { Zone } from '../types';
-import { damagePlayer, applyPlayerDebuff, playerTrickImmune, KB } from './combat';
+import { damagePlayer, applyPlayerDebuff, playerTrickImmune, KB, HERO_DOT_MUL } from './combat';
 import { hooks } from './hooks';
 import { forEachHero, shoveHero } from '../heroes';
 import { coopRoom } from '../../net/coopRoom';
 import { spawnBlackHole, spawnGravityVisual } from './biomeHazards';
 import { bp } from './bossPhaseState';
+import { hurtMinionsCircle, hurtMinionsLine, hurtMinionsWhere } from './minionHurt';
 import { edgeLimit } from '../mapgen';
 
 export const C_DARK = 0x4c1d95, C_DEEP = 0x2e1065, C_VIOLET = 0x7c3aed, C_LILAC = 0xa855f7;
@@ -100,6 +101,7 @@ function tickLasers(dt: number): void {
       l.hit = true;
       events.emit('shake', { amount: 0.18 });
       events.emit('shockwave', { pos: tmp.set(l.x, 0, l.z), radius: 3, color: C_LILAC });
+      hurtMinionsLine(l.x, l.z, l.dx, l.dz, l.len, l.w * 0.5 + 0.6, 0, l.dmg);   // ...and summons in it
       forEachHero((p) => {   // (co-op: the beam hurts either hero standing in the lane)
         if (!p.alive) return;
         const rx = p.pos.x - l.x, rz = p.pos.z - l.z, along = rx * l.dx + rz * l.dz, perp = Math.abs(rx * l.dz - rz * l.dx);
@@ -118,11 +120,13 @@ export function gravityBegin(x: number, z: number, dmg: number): void {
   events.emit('telegraph', { pos: tmp.set(x, 0, z), radius: GRAV_CORE, duration: GRAV_IND });
 }
 export function gravityBusy(): boolean { return mfx.grav.ph !== 0 || mfx.grav.boom > 0; }
+let gravMinT = 0, ehMinT = 0;
 function tickGravity(dt: number): void {
   const g = mfx.grav;
   if (g.boom > 0) g.boom -= dt;
   if (g.ph === 0) return;
   g.t += dt;
+  if (g.ph === 2 && (gravMinT -= dt) <= 0) { gravMinT = 0.3; hurtMinionsCircle(g.x, g.z, GRAV_CORE, 0, g.dmg * 0.04 * 2); }   // summons in the core are crushed on the same 0.3 s tick (mid-core strength)
   if (g.ph === 1) {
     if (g.t < GRAV_IND) return;
     g.ph = 2; g.t = 0; g.tick = 0.3; g.tick2 = 0.3;
@@ -164,6 +168,7 @@ function tickGravity(dt: number): void {
     events.emit('shockwave', { pos: tmp.set(g.x, 0, g.z), radius: GRAV_CORE * 2.4, color: C_LILAC });
     events.emit('crater', { pos: tmp.set(g.x, 0, g.z), radius: GRAV_CORE * 0.6, color: 0x120620 });
     events.emit('shake', { amount: 0.8 });
+    hurtMinionsCircle(g.x, g.z, GRAV_CORE, 0, g.dmg);
     forEachHero((p) => { if (p.alive && (p.pos.x - g.x) ** 2 + (p.pos.z - g.z) ** 2 < (GRAV_CORE + 0.6) ** 2) damagePlayer(1, { pct: g.dmg, pos: tmp.set(g.x, 0, g.z), kind: 'MAGIC', ...KB.SLAM }); });   // (owner) the gravity core detonation knocks down
   }
 }
@@ -195,6 +200,7 @@ function tickMeteors(dt: number): void {
     events.emit('crater', { pos: tmp.set(m.x, 0, m.z), radius: METEOR_R * 0.7, color: 0x120620 });
     events.emit('shake', { amount: 0.35 });
     const rr = METEOR_R + 0.6;
+    hurtMinionsCircle(m.x, m.z, METEOR_R, 0, m.dmg);
     forEachHero((h) => { const dx = h.pos.x - m.x, dz = h.pos.z - m.z; if (h.alive && dx * dx + dz * dz < rr * rr) damagePlayer(1, { pct: m.dmg, pos: tmp.set(m.x, 0, m.z), kind: 'MAGIC', ...KB.SLAM }); });   // (owner) meteor impact knocks down
   }
 }
@@ -248,6 +254,7 @@ function tickBombs(dt: number): void {
     events.emit('crater', { pos: tmp.set(b.x, 0, b.z), radius: b.r * 0.5, color: 0x120620 });
     events.emit('shake', { amount: 0.3 });
     const rr = b.r + 0.4;
+    if (!b.mir) hurtMinionsCircle(b.x, b.z, b.r, 0, b.pct);   // (the mirrored soul bomb belongs to the host's hero only)
     if (b.mir) { if (p.alive && (s.x - b.x) ** 2 + (s.z - b.z) ** 2 < rr * rr) damagePlayer(1, { pct: b.pct, pos: tmp.set(b.x, 0, b.z), kind: 'MAGIC', kb: 2 }); }   // (the soul belongs to the host's hero)
     else forEachHero((h) => { if (h.alive && (h.pos.x - b.x) ** 2 + (h.pos.z - b.z) ** 2 < rr * rr) damagePlayer(1, { pct: b.pct, pos: tmp.set(b.x, 0, b.z), kind: 'MAGIC', kb: 2 }); });
   }
@@ -276,6 +283,7 @@ function pocketPos(q: Pocket, t: number): void {
   q.x = Math.cos(a) * r; q.z = Math.sin(a) * r;
 }
 export function ehBusy(): boolean { return mfx.eh.ph !== 0 || mfx.eh.boom > 0; }
+function ehOutPocket(x: number, z: number): boolean { return !inPocket(x, z); }
 export function inPocket(x: number, z: number): boolean {
   const e = mfx.eh;
   for (let i = 0; i < e.np; i++) { const q = e.pockets[i]; if ((x - q.x) ** 2 + (z - q.z) ** 2 < (EH_POCKET_R - 0.2) ** 2) return true; }
@@ -296,6 +304,7 @@ function tickEventHorizon(dt: number): void {
     events.emit('shake', { amount: 0.4 });
     return;
   }
+  if ((ehMinT -= dt) <= 0) { ehMinT = 0.5; hurtMinionsWhere(ehOutPocket, 0, 0.02); }   // the gravity wears summons down outside the light too
   forEachHero((p) => {   // (co-op: both heroes are dragged; the partner's stand-in only takes the damage ticks, his own screen does the dragging through the knock-free pull he feels as damage)
     const ally = p === coopRoom.ally;
     const safe = p.alive && inPocket(p.pos.x, p.pos.z);
@@ -318,6 +327,7 @@ function tickEventHorizon(dt: number): void {
     events.emit('shockwave', { pos: tmp.set(0, 0, 0), radius: 40, color: C_LILAC });
     events.emit('crater', { pos: tmp.set(0, 0, 0), radius: 6, color: 0x120620 });
     events.emit('shake', { amount: 1 });
+    hurtMinionsWhere(ehOutPocket, 0, EH_PCT);
     forEachHero((p) => {
       if (p.alive && !playerTrickImmune() && !inPocket(p.pos.x, p.pos.z)) damagePlayer(1, { pct: EH_PCT, pos: tmp.set(0, 0, 0), kind: 'MAGIC' });
       else if (p.alive && p !== coopRoom.ally) events.emit('floatText', { pos: p.pos, text: 'SAFE!', color: 0xfff1a8, scale: 1.2, dy: 3.5 });
@@ -398,6 +408,7 @@ export function tickVoidFx(dt: number): void {
     if (b.tick > 0) continue;
     b.tick = 0.5;
     const rr = z.radius + 0.5;
+    hurtMinionsCircle(z.pos.x, z.pos.z, z.radius, b.dmg * HERO_DOT_MUL);   // (boss fire patch: summons burn on the same 0.5 s tick)
     forEachHero((h) => { const dx = h.pos.x - z.pos.x, dz = h.pos.z - z.pos.z; if (h.alive && dx * dx + dz * dz < rr * rr) damagePlayer(b.dmg, { pos: z.pos, kind: 'FIRE', env: true }); });
   }
 }

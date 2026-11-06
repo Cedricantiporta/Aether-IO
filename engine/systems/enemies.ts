@@ -35,6 +35,7 @@ import {
 } from '../enemyDefs';
 import { KB, damagePlayer, damageEnemy, killEnemy, wallSlam, applyPlayerDebuff, freezePlayer, combatStats, staggerView } from './combat';
 import { damageMinion, nearestMinion, minionDebuff, minionTraitHit } from './minions';
+import { hurtMinionsCircle } from './minionHurt';
 import { initEliteBig, updateEliteBig, tryStartEliteBig, hasEliteBig } from './eliteBig';
 import { hooks } from './hooks';
 import { initTrick, updateTrick, tryStartTrick, spawnHostileZone, hasTrick } from './tricks';
@@ -570,6 +571,7 @@ export function onEnemyDeath(e: Enemy): void {
   if (e.affix === 'FROZEN') {
     const r = 8;
     events.emit('frostNova', { pos: e.pos, radius: r });
+    hurtMinionsCircle(e.pos.x, e.pos.z, r, hitBase * 0.5);   // (the death nova also chills / hurts summons in range)
     const dx = world.player.pos.x - e.pos.x;
     const dz = world.player.pos.z - e.pos.z;
     if (dx * dx + dz * dz < r * r && world.player.alive) {
