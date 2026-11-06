@@ -16,7 +16,7 @@ import { bp } from './bossPhaseState';
 import { S } from './bosses2';
 import { mulberry32 } from '../mapgen';
 
-const LAVA_FIRST = 3, LAVA_EVERY = 2.0, LAVA_WARN = 2.2, LAVA_CAP = 0.65, LAVA_BASE = BOSS_LAVA_START, PATCHES = 3, MAXQ = 16, T_FULL = 110;
+const LAVA_FIRST = 3, LAVA_EVERY = 2.0, LAVA_WARN = 2.2, LAVA_CAP = 0.45, LAVA_BASE = BOSS_LAVA_START, PATCHES = 3, MAXQ = 16, T_FULL = 110;
 const plan: LDisc[] = [];
 const q = Array.from({ length: MAXQ }, () => ({ on: false, x: 0, z: 0, r: 0, t: 0 }));
 export const ignarLava = { id: -1, t: 0, batches: 0, start: 0, cov: 0, fight: 0, want: 0, log: [] as number[] };

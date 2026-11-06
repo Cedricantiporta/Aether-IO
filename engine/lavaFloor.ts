@@ -19,7 +19,7 @@ import type { RoomPlan } from './types';
 import type { CaveLayout } from './caveData';
 
 export interface LDisc { x: number; z: number; r: number }
-export const EMBER_BIOME = 5, CELL = 0.5, BOSS_LAVA_START = 0.15;
+export const EMBER_BIOME = 5, CELL = 0.5, BOSS_LAVA_START = 0.12;
 export const lava = {
   on: false, heavy: false, ver: 0, coverage: 0,
   /** bumps whenever `addLavaDisc` grows the floor (Ignar's creeping lava): render/Room.tsx re-rasterises the ground mask */
