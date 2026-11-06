@@ -172,7 +172,7 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 /** Class damage trade-off for durability (owner 2026-11-06): tanks deal less, glass cannons deal more. Multiplies final.damage (basic attacks, skills, summons). */
-export const CLASS_DMG_MUL: Record<HeroClass, number> = { WIZARD: 1.12, ARCHER: 1.08, NECROMANCER: 0.9, BARBARIAN: 0.82, KNIGHT: 0.88 };   // (barbarian 0.92 -> 0.82 the same day: still too strong)
+export const CLASS_DMG_MUL: Record<HeroClass, number> = { WIZARD: 1.12, ARCHER: 1.08, NECROMANCER: 1.08, BARBARIAN: 0.82, KNIGHT: 0.88 };   // (barbarian 0.92 -> 0.82 the same day: still too strong)
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
 /** (owner 2026-10-26) the Epic (Grand) potions are sold in the Potion Shop at a steep ~6.7x the Big price (3000); their item price stays 1350 so fusing + selling is no gold loop. */
 export const SHOP_PRICE_OVERRIDE: Record<string, number> = { potion_hp_grand: 3000, potion_mana_grand: 3000 };

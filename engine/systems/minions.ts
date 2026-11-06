@@ -117,8 +117,7 @@ export function spawnMinion(kind: number, x: number, z: number, dmg: number, lif
   const st = useGameStore.getState().stats;
   // skeleton warriors grow with Raise Dead's level: +5% HP and +2% damage reduction per level (max 20%)
   const rdLv = Math.max(1, useGameStore.getState().skillLevels.q || 1), warrior = kind === MINION_WARRIOR;
-  // (owner 2026-11-06) summons were almost immortal at max level (their HP tracked the hero's max HP 1:1+ while monster damage does not): above 2000 hero HP only 30% of the extra counts
-  const hpBase = st.maxHealth <= 2000 ? st.maxHealth : 2000 + (st.maxHealth - 2000) * 0.3;
+  const hpBase = st.maxHealth;   // (owner 2026-11-06: the compression of this was reverted - the real gap was the Void Herald not damaging summons)
   m.hp = m.maxHp = hpBase * (kind === MINION_GOLEM ? 1.6 * 1.3 : warrior ? 0.5 * (src === 1 ? 1.3 : 1) : 0.22)   // Raise Dead skeletons +30% HP; archers / mages are frail (0.22, was 0.3)
     * 1.2                                                    // every summon +20% HP
     * (warrior ? 1 + 0.05 * (rdLv - 1) : 1)                 // (+5% per Raise Dead level; was 10%)
