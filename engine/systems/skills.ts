@@ -80,6 +80,8 @@ function blockEnemyProjectiles(x: number, z: number, r: number): void {
   }
 }
 
+/** Knight shields grow with the class level: +0.6% per level (x1.29 at Lv 50); the total shield cap (40% max HP, combat.ts) still applies. */
+const knightShieldGrow = (): number => 1 + 0.006 * Math.max(0, (useGameStore.getState().level || 1) - 1);
 const smiteOut: number[] = [];
 const smiteOpts: DamageOpts = { kind: 'PHYSICAL', source: 'PLAYER' };
 const smiteStun: StatusEffect = { type: 'STUN', duration: 0.6 };
@@ -97,7 +99,7 @@ function riposte(level: number): void {
     if ((e.pos.x - pl.pos.x) ** 2 + (e.pos.z - pl.pos.z) ** 2 > (R + e.radius) ** 2) continue;
     damageEnemy(e, dmg, smiteOpts); applyStatus(e, smiteStun);
   }
-  const sh = st.maxHealth * (0.02 + 0.005 * (level - 1));   // a small holy shield (shares the Radiant bar)
+  const sh = st.maxHealth * (0.02 + 0.005 * (level - 1)) * knightShieldGrow();   // a small holy shield (shares the Radiant bar)
   pl.radiant = Math.min(st.maxHealth * 0.2, pl.radiant + sh); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = Math.max(pl.radiantT, 4);
   events.emit('shockwave', { pos: pl.pos.clone(), radius: R, color: 0xfff3c0 });
   events.emit('crater', { pos: pl.pos.clone(), radius: R * 0.8, color: 0xffe08a });
@@ -298,7 +300,7 @@ export function updateSkills(dt: number): void {
     setCd('radiant', max - radT, max);
     if (radT >= max && pl.hp < stats.maxHealth * 0.6 && findNearestEnemy(pl.pos.x, pl.pos.z, 22)) {
       radT = 0;
-      const rsize = stats.maxHealth * (0.12 + 0.02 * (lv.radiant - 1));
+      const rsize = stats.maxHealth * (0.12 + 0.02 * (lv.radiant - 1)) * knightShieldGrow();
       pl.radiant = Math.max(pl.radiant, rsize); pl.radiantMax = Math.max(pl.radiantMax, pl.radiant); pl.radiantT = 5;
       events.emit('floatText', { pos: pl.pos, text: 'RADIANT SHIELD', color: 0xffe08a, scale: 0.9, dy: 2.4 });
       const n = 7 + lv.radiant, dmg = stats.damage * 1.3 * stats.skillDamage * lvScale(lv.radiant), a0 = Math.random() * Math.PI * 2;

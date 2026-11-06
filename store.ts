@@ -172,7 +172,7 @@ export const freeBuy = (s: { story: StorySave; equipment: Equipment; inventory: 
  *  so every class spends its pool in long fights without being starved; regen stays at the owner's 1.0-1.5/s.
  *  Was: Wizard x1.3, Barbarian x0.4, others x1. */
 /** Class damage trade-off for durability (owner 2026-11-06): tanks deal less, glass cannons deal more. Multiplies final.damage (basic attacks, skills, summons). */
-export const CLASS_DMG_MUL: Record<HeroClass, number> = { WIZARD: 1.12, ARCHER: 1.08, NECROMANCER: 1.08, BARBARIAN: 0.82, KNIGHT: 0.88 };   // (barbarian 0.92 -> 0.82 the same day: still too strong)
+export const CLASS_DMG_MUL: Record<HeroClass, number> = { WIZARD: 1.12, ARCHER: 1.08, NECROMANCER: 1.05, BARBARIAN: 0.85, KNIGHT: 0.86 };   // (barbarian 0.92 -> 0.82 the same day: still too strong)
 export const CLASS_MANA_MUL: Partial<Record<HeroClass, number>> = { WIZARD: 1.0, BARBARIAN: 0.7, KNIGHT: 0.85, ARCHER: 0.75 };
 /** (owner 2026-10-26) the Epic (Grand) potions are sold in the Potion Shop at a steep ~6.7x the Big price (3000); their item price stays 1350 so fusing + selling is no gold loop. */
 export const SHOP_PRICE_OVERRIDE: Record<string, number> = { potion_hp_grand: 3000, potion_mana_grand: 3000 };
@@ -345,7 +345,7 @@ const calculateStats = (base: PlayerStats, equipment: Equipment, hero: HeroClass
   for (const k of Object.keys(STAT_CAPS) as (keyof typeof STAT_CAPS)[]) if (final[k] > STAT_CAPS[k]) final[k] = STAT_CAPS[k];   // (owner) hard caps
   // (owner 2026-11-06) movement speed is capped per class (Archer gets the highest cap); the Barbarian also gets tighter healing caps
   { const cap = (HERO_STATS[hero].stats.moveSpeed ?? 9) * (hero === 'ARCHER' ? 1.5 : 1.3) * (hero === 'WIZARD' ? 0.85 : 1); if (final.moveSpeed > cap) final.moveSpeed = cap; }
-  if (hero === 'BARBARIAN') { if (final.lifeSteal > 0.015) final.lifeSteal = 0.015; const rc = final.maxHealth * HP_INFLATE * 0.006; if (final.regen > rc) final.regen = rc; }   // (regen <= 0.6% max HP per second)
+  if (hero === 'BARBARIAN') { if (final.lifeSteal > 0.015) final.lifeSteal = 0.015; const rc = final.maxHealth * HP_INFLATE * 0.009; if (final.regen > rc) final.regen = rc; }   // (regen <= 0.9% max HP per second: regen is the Barbarian's identity, class identity pass 2026-11-06)
   final.maxHealth = Math.round(final.maxHealth * HP_INFLATE);   // (owner) every HP source doubled
   return final;
 };

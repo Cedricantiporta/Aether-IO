@@ -73,11 +73,12 @@ export const freshClass = (hero: HeroClass, base: SkillLevels, lv = 1): ClassPro
 /** One level of class growth on the base stats (same numbers the old run level used). */
 export function growBase(b: PlayerStats, hero: HeroClass): PlayerStats {
   const base = { ...b, maxHealth: b.maxHealth + 5, maxMana: b.maxMana + 5, damage: b.damage + 1, defense: b.defense + 0.5 };
-  // (the archer gains no attack speed per level)
-  if (hero === 'WIZARD') { base.skillDamage += 0.03; base.manaRegen *= 1.02; }   // (owner balance: additive, was x1.03 compounding = x4.3 by Lv 50)
-  else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; }
-  else if (hero === 'NECROMANCER') { base.skillDamage += 0.025; base.maxMana += 3; base.manaRegen *= 1.015; }
-  else if (hero === 'KNIGHT') { base.maxHealth *= 1.02; base.defense += 0.3; base.damage *= 1.012; }
+  // (the archer gains no attack speed per level, but a little crit damage)
+  if (hero === 'ARCHER') base.critDamage += 0.004;
+  if (hero === 'WIZARD') { base.skillDamage += 0.035; base.manaRegen *= 1.02; base.cooldownReduction += 0.0015; }   // (owner balance: additive, was x1.03 compounding = x4.3 by Lv 50)
+  else if (hero === 'BARBARIAN') { base.maxHealth *= 1.03; base.damage *= 1.015; base.regen += 0.02; }
+  else if (hero === 'NECROMANCER') { base.skillDamage += 0.02; base.maxMana += 3; base.manaRegen *= 1.015; base.minionDmg += 0.006; }
+  else if (hero === 'KNIGHT') { base.maxHealth *= 1.02; base.defense += 0.3; base.damage *= 1.012; base.regen += 0.015; }
   return base;
 }
 

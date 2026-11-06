@@ -101,7 +101,7 @@ export const ABILITIES: Record<HeroClass, AbilityDef[]> = {
     { slot: 'q', icon: 'HOLY_WAVE', name: 'Holy Wave', mana: 18, cd: 5,
       desc: 'Swing your sword and release a wide golden crescent of light that sweeps forward through every enemy in its path, knocking them back.',
       per: (lv) => `${pct(3.4 * lvMul(lv))} dmg · pierces all · width ${f1(2 * (3.6 + 0.4 * (lv - 1)))}` },
-    { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 18,
+    { slot: 'e', icon: 'SHIELD_WALL', name: 'Shield Wall', mana: 22, cd: 17,
       desc: 'Raise your shield: a wide burst of light knocks nearby enemies back, then for a short moment you take much less damage (weaker while another shield is up, no refresh while active). +2% dodge for 4s.',
       per: (lv) => `Burst ${pct(1.8 * lvMul(lv))} dmg (radius ${f1(8 + 0.3 * (lv - 1))}) · -${Math.round(Math.min(0.5, 0.35 + 0.03 * (lv - 1)) * 100)}% damage taken · ${f1(2 + 0.25 * (lv - 1))}s` },
     { slot: 's3', icon: 'JUDGMENT', name: 'Judgment', mana: 26, cd: 10,
@@ -147,19 +147,19 @@ export function dashDef(hero: HeroClass): AbilityDef {
 
 export const ULTS: Record<HeroClass, AbilityDef> = {
   ARCHER: { slot: 'ult', icon: 'STORM_ARROWS', name: 'Storm of a Thousand Arrows', mana: 0, cd: 0,
-    desc: 'Aim a large circle (radius 14): time slows and for 2.7s arrows rain inside it. A final volley ends it and knocks enemies down (not bosses). Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'Aim a large circle (radius 14): time slows and for 2.7s arrows rain inside it. A final volley ends it and knocks enemies down (not bosses). Needs a full charge bar and its 72s cooldown finished.',
     per: (lv) => `${Math.round(54 * (1 + 0.1 * (lv - 1)))} arrows/s · ${pct(2.4 * 0.49 * lvMul(lv))} dmg each · final volley ${pct(25 * 0.49 * lvMul(lv))}` },
   WIZARD: { slot: 'ult', icon: 'METEOR_CATA', name: 'Meteor Cataclysm', mana: 0, cd: 0,
-    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns, ignites and knocks everything down (not bosses), two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A colossal meteor falls onto the target circle (1.2s shadow). The impact stuns, ignites and knocks everything down (not bosses), two fire shockwaves roll outward, and a molten crater burns for 2.5s, erupting lava. Needs a full charge bar and its 72s cooldown finished.',
     per: (lv) => `Impact ${pct(50 * 0.7 * lvMul(lv))} dmg (center) · 2 fire rings ${pct(3 * 0.7 * lvMul(lv))} each · lava ${pct(2.2 * 0.7 * lvMul(lv))}` },
   BARBARIAN: { slot: 'ult', icon: 'TITAN_WRATH', name: "Titan's Wrath", mana: 0, cd: 0,
-    desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage and every skill 40% bigger. Every step quakes the ground; the finale slam knocks enemies down (not bosses) and raises a ring of spikes and rocks around you. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'Open with a roar that stuns and terrifies nearby enemies (they cower in place, then stay 30% slowed for 3s), then grow into a giant (x2.2) for 6s with +50% damage and every skill 40% bigger. Every step quakes the ground; the finale slam knocks enemies down (not bosses) and raises a ring of spikes and rocks around you. Needs a full charge bar and its 72s cooldown finished.',
     per: (lv) => `Quake ${pct(2.3 * lvMul(lv) * 0.7)} per step · final slam ${pct(12 * lvMul(lv) * 0.7)}` },
   NECROMANCER: { slot: 'ult', icon: 'ARMY_DEAD', name: 'Bone Golem', mana: 0, cd: 0,
-    desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning, knocking down (not bosses) and battering everything in the crater, then fights for you for 26s. It is 50% bigger, swings 20% faster with a shockwave that hits everything around the target, and every 4-6s lobs a boulder at enemies 6-16m away. When its time runs out (or it falls) it EXPLODES, knocking enemies down, setting them ablaze and leaving a burning patch on the ground. Its 90s cooldown starts once the golem is gone; it also needs a full charge bar.',
+    desc: 'A hulking bone golem crashes down like a meteor where you aim, stunning, knocking down (not bosses) and battering everything in the crater, then fights for you for 26s. It is 50% bigger, swings 20% faster with a shockwave that hits everything around the target, and every 4-6s lobs a boulder at enemies 6-16m away. When its time runs out (or it falls) it EXPLODES, knocking enemies down, setting them ablaze and leaving a burning patch on the ground. Its 72s cooldown starts once the golem is gone; it also needs a full charge bar.',
     per: (lv) => `Impact ${pct(8 * lvMul(lv) * 0.7)} dmg · golem ${pct(3 * lvMul(lv) * 0.8)} per hit (area) · boulder ${pct(3 * lvMul(lv) * 0.8 * 1.5)} · explosion ${pct(3 * lvMul(lv) * 0.8 * 2.5)} + burn · 26s` },
   KNIGHT: { slot: 'ult', icon: 'DIVINE_AVATAR', name: 'Divine Avatar', mana: 0, cd: 0,
-    desc: 'A column of light crashes down around you (damage, stun and knockdown; not bosses), and you become a radiant avatar for 8s: +30% damage, +30% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a smaller Holy Wave. Needs a full charge bar and its 90s cooldown finished.',
+    desc: 'A column of light crashes down around you (damage, stun and knockdown; not bosses), and you become a radiant avatar for 8s: +30% damage, +30% attack speed, sword swings and Holy Wave turn golden and twice as big, and every swing also releases a smaller Holy Wave. Needs a full charge bar and its 72s cooldown finished.',
     per: (lv) => `Burst ${pct(9 * lvMul(lv) * 0.7)} dmg · wave ${pct(1.2 * lvMul(lv))} per swing` },
 };
 

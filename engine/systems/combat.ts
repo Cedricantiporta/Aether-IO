@@ -191,6 +191,8 @@ function gainStagger(e: Enemy, amount: number): void {
 export const ULT_PER_BASIC = 0.1, ULT_PER_SKILL = 0.3;
 /** (owner 2026-11-04) Archer: +5% damage on the basic attack and every skill; ultimate charges 7% faster. */
 export const ARCHER_DMG_MUL = 1.05, ARCHER_ULT_MUL = 1.07;
+/** (class identity pass 2026-11-06) ultimate charge x1.5 while exactly one enemy is alive (a boss / lone target); world.director.aliveCount is kept by the enemy loop. */
+export const ULT_SOLO_MUL = 1.5;
 function heroDmgMul(): number { return useGameStore.getState().hero === 'ARCHER' ? ARCHER_DMG_MUL : 1; }
 /** Count of landed non-basic, non-DoT player hits (skills / dashes); the Archer miss-refund watches it (abilities.ts). */
 /** (owner 2026-11-04) every hero has 3% base dodge (store.calculateStats); dashes / some skills add +2% for DODGE_TEMP_S seconds (p.dodgeT). */
@@ -203,7 +205,7 @@ export function addUlt(n: number): void {
   const sl = useGameStore.getState().skillLevels;
   if (sl.ult <= 0) return;   // the ult is locked until Lv 10 (no charge)
   const wl = sl.weapon;
-  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1) * (1 + runCards.ultCharge) * (useGameStore.getState().hero === 'ARCHER' ? ARCHER_ULT_MUL : 1));   // (+ Surging Heart run card) // ult charge (+40% vs 0.62)
+  p.ult = Math.min(100, p.ult + n * 0.868 * (1 + 0.1 * Math.max(0, wl - 1)) * (showcase.on ? ULT_CHARGE_MUL : 1) * (1 + runCards.ultCharge) * (useGameStore.getState().hero === 'ARCHER' ? ARCHER_ULT_MUL : 1) * (world.director.aliveCount === 1 ? ULT_SOLO_MUL : 1));   // (+ Surging Heart run card) // ult charge (+40% vs 0.62)
   if (p.ult >= 100) events.emit('ultReady', {});
 }
 

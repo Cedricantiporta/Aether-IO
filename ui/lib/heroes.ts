@@ -11,7 +11,7 @@ export interface HeroMeta {
 
 export const HERO_META: Record<HeroClass, HeroMeta> = {
   ARCHER: {
-    title: 'Archer', tagline: 'Swift Marksman', tags: ['Ranged', 'Stand and shoot', 'Fragile'],
+    title: 'Archer', tagline: 'Swift Marksman', tags: ['Ranged', 'Crits & speed', 'Mobile', 'Fragile'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.ARCHER.weaponId)?.name ?? 'Shortbow',
     abilities: [
       { key: 'R', name: "Hawk's Focus", desc: '10s of +60% attack speed and +40% damage; glowing arrows.' },
@@ -20,7 +20,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     ],
   },
   WIZARD: {
-    title: 'Wizard', tagline: 'Arcane Spellcaster', tags: ['Caster', 'Mana', 'Squishy'],
+    title: 'Wizard', tagline: 'Arcane Spellcaster', tags: ['Caster', 'Skills & status', 'Squishy'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.WIZARD.weaponId)?.name ?? 'Novice Staff',
     abilities: [
       { key: 'R', name: 'Giant Fireball', desc: 'Slow, devastating fireball.' },
@@ -29,7 +29,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     ],
   },
   BARBARIAN: {
-    title: 'Barbarian', tagline: 'Unbreakable Warrior', tags: ['Melee', 'Tank', 'Regen'],
+    title: 'Barbarian', tagline: 'Unbreakable Warrior', tags: ['Melee', 'Skills + axe', 'Regen', 'Tank'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.BARBARIAN.weaponId)?.name ?? 'Hand Axe',
     abilities: [
       { key: 'R', name: 'Axe Spin', desc: 'Spinning blade barrier.' },
@@ -38,7 +38,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     ],
   },
   NECROMANCER: {
-    title: 'Necromancer', tagline: 'Lord of the Dead', tags: ['Ranged', 'Summoner', 'Curses'],
+    title: 'Necromancer', tagline: 'Lord of the Dead', tags: ['Ranged', 'Summoner', 'Strong minions'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.NECROMANCER.weaponId)?.name ?? 'Bone Wand',
     abilities: [
       { key: 'R', name: 'Bone Golem', desc: 'A bone golem crashes down like a meteor and fights for 26s, throws boulders and explodes when it falls.' },
@@ -47,7 +47,7 @@ export const HERO_META: Record<HeroClass, HeroMeta> = {
     ],
   },
   KNIGHT: {
-    title: 'Knight', tagline: 'Holy Guardian', tags: ['Melee', 'Tank', 'Holy light'],
+    title: 'Knight', tagline: 'Holy Guardian', tags: ['Melee', 'Shields', 'Tank', 'Holy light'],
     weapon: ITEMS_POOL.find((i) => i.id === HERO_STATS.KNIGHT.weaponId)?.name ?? 'Squire Sword',
     abilities: [
       { key: 'R', name: 'Divine Avatar', desc: 'A column of light, then 8s of radiant power.' },
