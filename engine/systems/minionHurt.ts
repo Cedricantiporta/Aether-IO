@@ -10,7 +10,10 @@ import { useGameStore, DMG_INFLATE } from '../../store';
 import { HERO_DOT_MUL } from './combat';
 import { coopRoom } from '../../net/coopRoom';
 import { SRC_ALLY } from './ally';
-import { damageMinion } from './minions';
+import { damageMinion, nearestMinion } from './minions';
+import { events } from '../events';
+import type { Enemy } from '../types';
+import { Vector3 } from 'three';
 
 const HIT_CAP = 0.35;
 const PAD = 0.5;   // a summon's body radius (the hero's own pad is ~0.6)
@@ -121,4 +124,28 @@ export function hurtMinionsCircleOnce(x: number, z: number, r: number, dmg: numb
     if ((m.x - x) ** 2 + (m.z - z) ** 2 < rr) { mask |= 1 << i; hurt(i, d); }
   }
   return mask;
+}
+
+/** A boss / mini boss / Herald illusion PROJECTILE hit a summon (enemies.ts body-block). Boss shots hurt a summon like they hurt the hero: flat shots x `DMG_INFLATE`,
+ *  pct shots (orbs, thorns, gatling) a share of the hero's max HP (one hit still capped at HIT_CAP of the summon's HP). Ordinary mob shots keep `damageMinion(dmg)`. */
+export function hurtMinionShot(i: number, dmg: number, pct: number, fromBoss: boolean): void {
+  const m = world.minions[i]; if (!m || !m.active) return;
+  if (!fromBoss && pct <= 0) { damageMinion(i, dmg); return; }
+  const d = amount(dmg, pct), cap = m.maxHp * HIT_CAP;
+  damageMinion(i, d > cap ? cap : d);
+}
+
+// (owner 2026-11-06 'the last boss does not damage summons') a boss's plain melee swing only ever aimed at the HERO; while the hero kites, summons chewing on the boss
+// were never swung at. Every boss / mini boss now cleaves the nearest summon in reach (and its neighbours) every ~2.2 s with its contact damage x1.5.
+const swatT = new Float32Array(400);
+const SWAT_CD = 2.2, SWAT_REACH = 3.2, SWAT_SPLASH = 2.0;
+export function bossSwat(e: Enemy, dt: number): void {
+  if ((swatT[e.id] -= dt) > 0) return;
+  if (e.state === 'SPAWN' || e.state === 'DYING' || e.stunT > 0 || e.hideT > 0 || e.contactDamage <= 0 || !live()) { swatT[e.id] = 0.3; return; }
+  const k = nearestMinion(e.pos.x, e.pos.z, e.radius + SWAT_REACH);
+  if (k < 0) { swatT[e.id] = 0.3; return; }
+  swatT[e.id] = SWAT_CD * (0.85 + Math.random() * 0.3);
+  const c = world.minions[k];
+  events.emit('shockwave', { pos: new Vector3(c.x, 0, c.z), radius: 2.2, color: 0xff7a5a });
+  hurtMinionsCircle(c.x, c.z, SWAT_SPLASH, e.contactDamage * 1.5);
 }
