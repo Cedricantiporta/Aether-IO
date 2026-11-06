@@ -2,6 +2,8 @@
 // Player projectiles: basic attacks + every player-fired bolt in the pool.
 // Movement, obstacle/crate/enemy collision, pierce, splash, bounces, boomerang.
 // ============================================================================
+import { ARCHER_BASE_RANGE } from './rangeConst';
+export { ARCHER_BASE_RANGE };
 import { spawnMinion, minionCount, MINION_WARRIOR, MINION_MAGE, MINION_ARCHER, PERMANENT, SRC_WEAPON, SRC_GRAVE } from './minions';
 import { weaponPerk, raiseEvery, raiseCap, MULTI_ARROWS, twinSlashes, axeCount, greatMul, bigMul, bleedChance, pierceChance, elementChance } from '../../weaponPerks';
 import { GameStatus } from '../../types';
@@ -402,7 +404,6 @@ function segDist2(ax: number, az: number, bx: number, bz: number, px: number, pz
 }
 
 /** Archer base weapon reach (player.ts ATTACK_RANGE); arrows fly this + the attackRange stat + 4. */
-export const ARCHER_BASE_RANGE = 13.5;
 const losOut: Collider[] = [];
 /** Line of fire: true when a rock / tree / pillar / wall (what stops arrows) is NOT between the two points. Mirrors the projectile obstacle test. Allocation-free. */
 export function clearShot(x0: number, z0: number, x1: number, z1: number): boolean {

@@ -13,7 +13,8 @@ import { lockedEnemy, updateTarget, clickMoveTo, retaliateEnemy } from './target
 import { trapAim, lockedTrap, nearestTrapPri, trapBusy, trapDist, type TrapObj } from './roomTraps';
 import { GETUP_INVULN, autoAim, findNearestEnemy, getAimDir, healPlayer, damagePlayer, cleansePlayer, applyPlayerDebuff, ankhOffer, ankhAvailable, towerMode, SLOW_HERO } from './combat';
 import { hooks } from './hooks';
-import { fireBasicAttack, basicAimDir, clearShot, ARCHER_BASE_RANGE } from './projectiles';
+import { fireBasicAttack, basicAimDir, clearShot } from './projectiles';
+import { ARCHER_BASE_RANGE } from './rangeConst';
 import { updateAbilities, notifyCooldown, abilityState, autoCast } from './abilities';
 import { wardedBossId } from './bossMech';
 import { updateSkillInput, resetAim } from './aim';
