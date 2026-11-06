@@ -74,7 +74,7 @@ export function installInput(): () => void {
     switch (e.code) {
       case 'Escape':   // in a run: the pause menu (Esc again resumes); in town: Settings
         if (st.status === GameStatus.PAUSED) { st.togglePause(); escPaused = false; }
-        else if (st.status === GameStatus.PLAYING) { st.togglePause(); escPaused = true; useUiStore.getState().openSettings(true); }   // (owner: Esc closes windows, else opens Settings; in a run it pauses while they are open)
+        else if (st.status === GameStatus.PLAYING) { st.togglePause(); escPaused = false; }   // (owner 2026-11-06: in a run Esc opens only the pause menu - Settings stay closed - and Esc again resumes)
         else if (inGame) useUiStore.getState().openSettings(true);
         break;
       case 'Tab':   // Run Upgrades panel (runs only)
